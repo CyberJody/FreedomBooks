@@ -1,0 +1,43 @@
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ask anything about using FreedomBooks. Someone from the project or the community will try to help.
+
+        Please do not post real financial data, passwords, keys or account numbers. If you think you found a security problem, report it privately instead: https://github.com/CyberJody/FreedomBooks/security/policy
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What are you trying to do, and where are you stuck?
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you tried
+      description: The screens you used and the steps you took, if any.
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: FreedomBooks version
+      description: If you know it. See docs/REPORTING-PROBLEMS.md for how to find it.
+      placeholder: "0.1.0"
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux (Flatpak)
+        - Linux (other)
+        - macOS (built from source)
+        - Other
+    validations:
+      required: false

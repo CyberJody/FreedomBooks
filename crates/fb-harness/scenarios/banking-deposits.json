@@ -1,0 +1,344 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002711",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic banking sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002711",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic banking sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale1",
+   "ref": "sale1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002712",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic banking sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "30.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale2",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002712",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic banking sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "30.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale2",
+   "ref": "sale2",
+   "expect_error": false
+  },
+  {
+   "op": "banking_deposit",
+   "company": "c",
+   "ref": "deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002713",
+    "bank_id": "bank",
+    "date": "2026-10-02",
+    "reference": "Synthetic deposit",
+    "memo": "Banking workflow",
+    "receipt_ids": [
+     "sale1",
+     "sale2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_deposit",
+   "company": "c",
+   "ref": "deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002713",
+    "bank_id": "bank",
+    "date": "2026-10-02",
+    "reference": "Synthetic deposit",
+    "memo": "Banking workflow",
+    "receipt_ids": [
+     "sale1",
+     "sale2"
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "SR-000001 already belongs to a live deposit."
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {},
+   "result": "deposited",
+   "expect_error": false
+  },
+  {
+   "op": "banking_receipt_guard",
+   "company": "c",
+   "receipt": "sale1",
+   "date": "2026-10-03",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse deposit DEP-000001 before reversing this receipt."
+  },
+  {
+   "op": "banking_reverse",
+   "company": "c",
+   "deposit": "deposit",
+   "expected_revision": 1,
+   "date": "2026-10-05",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "banking_deposit",
+   "company": "c",
+   "ref": "early",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002714",
+    "bank_id": "bank",
+    "date": "2026-10-02",
+    "reference": "Synthetic deposit",
+    "memo": "Banking workflow",
+    "receipt_ids": [
+     "sale1"
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "SR-000001 was released from deposit DEP-000001 on 2026-10-05; the new deposit cannot be dated earlier."
+  },
+  {
+   "op": "banking_deposit",
+   "company": "c",
+   "ref": "redeposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002715",
+    "bank_id": "bank",
+    "date": "2026-10-05",
+    "reference": "Synthetic deposit",
+    "memo": "Banking workflow",
+    "receipt_ids": [
+     "sale1"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {
+    "start": "2026-10-03"
+   },
+   "result": "since-reversal",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

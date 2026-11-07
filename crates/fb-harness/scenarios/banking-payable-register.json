@@ -1,0 +1,326 @@
+{
+ "users": [
+  {
+   "username": "bill-test",
+   "is_staff": true
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "co",
+   "name": "Synthetic bills",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank",
+   "code": "100",
+   "name": "Bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap2",
+   "code": "201",
+   "name": "Other payable",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "asset",
+   "code": "150",
+   "name": "Asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "ref": "vendor",
+   "model": "vendor",
+   "values": {
+    "display_name": "Synthetic supplier",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "co",
+   "expected_revision": 0,
+   "values": {
+    "payables": "ap",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_save",
+   "company": "co",
+   "ref": "b",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "due_date": "2026-11-23",
+    "reference": "Paid",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000186ad",
+    "lines": [
+     {
+      "description": "Gross cost including supplier tax",
+      "quantity": "1.005",
+      "rate": "1.00",
+      "expense_account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_post",
+   "company": "co",
+   "bill": "b",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "payables_review_payment",
+   "company": "co",
+   "review": "p1r",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-24",
+    "amount": "0.50",
+    "method": "CHECK",
+    "reference": "100",
+    "memo": "",
+    "bank_id": "bank",
+    "request_key": "00000000-0000-0000-0000-0000000186ae",
+    "allocations": [
+     {
+      "bill_id": "b",
+      "amount": "0.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_pay",
+   "company": "co",
+   "ref": "p1",
+   "review": "p1r",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-24",
+    "amount": "0.50",
+    "method": "CHECK",
+    "reference": "100",
+    "memo": "",
+    "bank_id": "bank",
+    "request_key": "00000000-0000-0000-0000-0000000186ae",
+    "allocations": [
+     {
+      "bill_id": "b",
+      "amount": "0.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_void",
+   "company": "co",
+   "bill": "b",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Test correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse every live payment allocated to this bill before voiding it."
+  },
+  {
+   "op": "payables_pay",
+   "company": "co",
+   "ref": "p2",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-24",
+    "amount": "0.51",
+    "method": "CHECK",
+    "reference": "101",
+    "memo": "",
+    "bank_id": "bank",
+    "request_key": "00000000-0000-0000-0000-0000000186af",
+    "allocations": [
+     {
+      "bill_id": "b",
+      "amount": "0.51"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_pay",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-24",
+    "amount": "0.01",
+    "method": "CHECK",
+    "reference": "102",
+    "memo": "",
+    "bank_id": "bank",
+    "request_key": "00000000-0000-0000-0000-0000000186b0",
+    "allocations": [
+     {
+      "bill_id": "b",
+      "amount": "0.01"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Allocation exceeds the actual outstanding bill amount. Review again."
+  },
+  {
+   "op": "payables_reverse",
+   "company": "co",
+   "payment": "p1",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "payables_reverse",
+   "company": "co",
+   "payment": "p1",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "payables_reverse",
+   "company": "co",
+   "payment": "p2",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "payables_reverse",
+   "company": "co",
+   "payment": "p2",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "payables_void",
+   "company": "co",
+   "bill": "b",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Test correction",
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "co",
+   "model": "vendor",
+   "record": "vendor",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "payables_pay",
+   "company": "co",
+   "ref": "p1",
+   "review": "p1r",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-24",
+    "amount": "0.50",
+    "method": "CHECK",
+    "reference": "100",
+    "memo": "",
+    "bank_id": "bank",
+    "request_key": "00000000-0000-0000-0000-0000000186ae",
+    "allocations": [
+     {
+      "bill_id": "b",
+      "amount": "0.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_save",
+   "company": "co",
+   "ref": "b",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "due_date": "2026-11-23",
+    "reference": "Paid",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000186ad",
+    "lines": [
+     {
+      "description": "Gross cost including supplier tax",
+      "quantity": "1.005",
+      "rate": "1.00",
+      "expense_account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "co",
+   "account": "bank",
+   "values": {},
+   "result": "payables-register",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-10-23",
+  "2026-10-24",
+  "2099-12-31"
+ ]
+}

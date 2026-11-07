@@ -1,0 +1,52 @@
+{
+  "kind": "snapshot",
+  "companies": [
+    {
+      "id": "c",
+      "name": "Synthetic backup company",
+      "currency": "USD",
+      "journals": {
+        "posted": 1,
+        "draft": 1
+      },
+      "trial_balance": {
+        "debit": "123.45",
+        "credit": "123.45"
+      },
+      "accounts": [
+        {
+          "id": "cash",
+          "code": "1000",
+          "name": "Cash",
+          "kind": "ASSET",
+          "posted_debits": "123.45",
+          "posted_credits": "0.00",
+          "debit_balance": "123.45",
+          "credit_balance": "0.00"
+        },
+        {
+          "id": "capital",
+          "code": "3000",
+          "name": "Capital",
+          "kind": "EQUITY",
+          "posted_debits": "0.00",
+          "posted_credits": "123.45",
+          "debit_balance": "0.00",
+          "credit_balance": "123.45"
+        },
+        {
+          "id": "zero",
+          "code": "9000",
+          "name": "Zero account",
+          "kind": "EXPENSE",
+          "posted_debits": "0.00",
+          "posted_credits": "0.00",
+          "debit_balance": "0.00",
+          "credit_balance": "0.00"
+        }
+      ]
+    }
+  ],
+  "company_count": 1,
+  "account_count": 3
+}

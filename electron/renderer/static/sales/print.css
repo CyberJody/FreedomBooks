@@ -1,0 +1,108 @@
+/* N09 printable estimates and invoices.
+   Screen: a Letter-proportioned sheet on the app's tan background with the plum toolbar.
+   Print: black on white, Letter portrait, repeated table header, totals kept together,
+   "Page X of Y" from plain CSS page counters, test-only footer and watermark on every page. */
+
+@page { size: Letter portrait; margin: 0.7in 0.6in 0.95in 0.6in }
+/* The @bottom-center margin box (document id, test-only line, "Page X of Y") is set inline by the template. */
+
+* { box-sizing: border-box }
+html { background: #f4f2ef }
+body.print-body { margin: 0; color: #111; font: 11pt/1.4 system-ui, -apple-system, "Segoe UI", sans-serif }
+
+/* Screen-only chrome */
+.print-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 24px; background: #eee4d0; color: #58451d; font-size: 12px; font-weight: 650; letter-spacing: .04em; border-bottom: 1px solid #ddd7de }
+.print-toolbar-actions { display: flex; gap: 14px; align-items: center; white-space: nowrap }
+.print-toolbar a { color: #693f76 }
+#print-now { background: #684276; color: #fff; border: 1px solid #684276; border-radius: 7px; font: 600 14px/1.4 system-ui; padding: 9px 15px; cursor: pointer }
+#print-now:hover { background: #4b2b57 }
+.screen-note { text-align: center; color: #807487; font-size: 12px; margin: 0 0 30px }
+
+/* The sheet */
+.sheet { position: relative; background: #fff; width: 8.5in; min-height: 11in; margin: 24px auto; padding: 0.7in 0.6in 0.95in; box-shadow: 0 2px 14px rgba(53, 37, 62, .12); overflow-wrap: anywhere }
+.sheet p { margin: 0 0 2px }
+
+.doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 18px }
+.company-name { font-size: 16pt; font-weight: 700; margin: 0; letter-spacing: -.01em }
+.company-meta { color: #444; font-size: 9.5pt }
+.title-block { text-align: right; flex: 0 0 auto; max-width: 55% }
+.doc-title { font-size: 20pt; font-weight: 800; letter-spacing: .06em; margin: 0 0 6px }
+.doc-mark { display: inline-block; font-size: 11pt; font-weight: 800; letter-spacing: .12em; border: 2px solid #111; padding: 1px 8px; vertical-align: middle; margin-left: 8px }
+.revision-line { font-size: 9pt; color: #333; margin-top: 6px }
+
+table { border-collapse: collapse; width: 100% }
+th, td { padding: 4px 6px; vertical-align: top; text-align: left }
+.meta-box, .terms-box { width: auto; margin-left: auto; border: 1px solid #111 }
+.meta-box th, .meta-box td, .terms-box th, .terms-box td { border: 1px solid #111; text-align: center; min-width: 1.2in; font-size: 9.5pt }
+.meta-box th, .terms-box th, .lines thead th { text-transform: uppercase; font-size: 8.5pt; letter-spacing: .05em; font-weight: 600 }
+
+.party-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin: 6px 0 16px }
+.party-box { border: 1px solid #111; min-width: 3.2in; max-width: 4.2in; padding: 0 }
+.box-label { text-transform: uppercase; font-size: 8.5pt; letter-spacing: .05em; font-weight: 600; border-bottom: 1px solid #111; padding: 3px 8px; margin: 0 }
+.party-box p { padding: 0 8px }
+.party-box .party-name { font-weight: 700; padding-top: 5px }
+.party-box .party-contact, .party-box .party-address { padding-bottom: 5px }
+.party-contact { color: #333; font-size: 9.5pt }
+
+/* Line table: header repeats on every printed page; rows never split. */
+.lines { margin: 0 0 14px; border: 1px solid #111 }
+.lines thead { display: table-header-group }
+.lines thead th { border-bottom: 1px solid #111; background: #fff }
+.lines th, .lines td { border-left: 1px solid #ccc }
+.lines th:first-child, .lines td:first-child { border-left: 0 }
+.lines tbody tr { break-inside: avoid; page-break-inside: avoid }
+.lines tbody tr:nth-child(even) td { background: #f2f2f2 }
+.lines td { border-bottom: 1px solid #e3e3e3; font-size: 10pt }
+.lines tbody tr:last-child td { border-bottom: 1px solid #111 }
+.col-item { width: 1.1in; overflow-wrap: anywhere }
+.col-desc { overflow-wrap: anywhere; min-width: 2.4in }
+.col-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 1in }
+.col-tax { width: .45in; text-align: center }
+
+/* Footer row: memo left, totals right, never split across pages. */
+.foot-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; break-inside: avoid; page-break-inside: avoid }
+.message-box { flex: 1 1 auto; min-width: 0; border: 1px solid #111; font-size: 9.5pt; overflow-wrap: anywhere }
+.message-box .memo { padding: 5px 8px; white-space: pre-wrap }
+.message-box .posting-note { padding: 0 8px 5px; font-weight: 600 }
+.message-box .legend { padding: 0 8px 5px; color: #444; font-size: 8.5pt }
+.totals { width: auto; flex: 0 0 3.5in; border: 1px solid #111; break-inside: avoid; page-break-inside: avoid }
+.totals th { font-weight: 600; width: 2.2in; border-bottom: 1px solid #ccc }
+.totals th small { display: block; font-size: 8.5pt; font-weight: 600; color: #333; white-space: nowrap }
+.totals td { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; border-bottom: 1px solid #ccc }
+.totals tr.grand th, .totals tr.grand td { font-weight: 800; font-size: 12pt; border-top: 2px solid #111 }
+.totals tr.due th { font-size: 11pt }
+
+/* Repeating marks: fixed boxes repeat on every printed page in Chromium. */
+.watermark { position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%) rotate(-28deg); font-size: 72pt; font-weight: 900; letter-spacing: .2em; color: rgba(90, 60, 100, .09); pointer-events: none; white-space: nowrap; z-index: 2 }
+.status-stamp { position: fixed; right: 0.8in; top: 2.2in; transform: rotate(12deg); font-size: 34pt; font-weight: 900; letter-spacing: .15em; color: rgba(140, 30, 40, .28); border: 4px solid rgba(140, 30, 40, .28); padding: 2px 14px; pointer-events: none; z-index: 2 }
+
+@media screen {
+  /* On screen the sheet includes the page margins, so offset the marks by them to mirror the printed page. */
+  .watermark, .status-stamp { position: absolute }
+  .status-stamp { top: calc(2.2in + 0.7in); right: calc(0.8in + 0.6in) }
+  body.print-body { position: relative }
+}
+
+@media print {
+  html, body.print-body { background: #fff }
+  .print-toolbar, .screen-note { display: none !important }
+  .sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; background: transparent }
+  .lines tbody tr:nth-child(even) td { background: #f2f2f2; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  .watermark, .status-stamp { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  a { color: inherit; text-decoration: none }
+}
+
+@media screen and (max-width: 9in) {
+  .sheet { width: auto; margin: 12px; padding: 24px 16px }
+  .doc-head, .party-row, .foot-row { flex-direction: column; align-items: stretch }
+  .title-block { text-align: left; max-width: none }
+  .meta-box, .terms-box, .totals { margin-left: 0 }
+  .totals { flex-basis: auto }
+}
+
+/* Current business details are absent from the layout when blank. */
+.business-logo { display:block; max-width:160px; max-height:90px; object-fit:contain; margin:0 0 6px; }
+.business-contact { margin:0; overflow-wrap:anywhere; }
+.payment-instructions { margin-bottom:12px; white-space:normal; overflow-wrap:anywhere; }
+
+.payment-instructions p:not(.box-label) { padding:5px 8px; }

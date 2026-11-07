@@ -1,0 +1,766 @@
+{
+ "accounts_owner": {
+  "user_id": "uuid"
+ },
+ "assistant_connection": {
+  "account_email": "text",
+  "company_id": "uuid",
+  "created_by_id": "uuid",
+  "id": "uuid",
+  "key_last4": "text",
+  "last_error": "text",
+  "mode": "text",
+  "model": "text",
+  "model_choices": "text",
+  "status": "text"
+ },
+ "assistant_reading": {
+  "bill_id": "uuid",
+  "company_id": "uuid",
+  "content_type": "text",
+  "created_by_id": "uuid",
+  "error": "text",
+  "id": "uuid",
+  "mode": "text",
+  "model": "text",
+  "origin_bill_id": "uuid",
+  "original_name": "text",
+  "request_key": "uuid",
+  "result": "text",
+  "sha256": "text",
+  "source_file_id": "uuid",
+  "status": "text"
+ },
+ "attachments_attachment": {
+  "company_id": "uuid",
+  "content_type": "text",
+  "delete_reason": "text",
+  "deleted_at": "timestamp",
+  "deleted_by_id": "uuid",
+  "deleted_by_name": "text",
+  "deleted_number": "text",
+  "document_id": "uuid",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "nonce": "text",
+  "original_name": "text",
+  "original_sha256": "text",
+  "request_key": "uuid",
+  "sha256": "text",
+  "stored_name": "text",
+  "uploaded_at": "timestamp",
+  "uploaded_by_id": "uuid",
+  "uploaded_by_name": "text",
+  "uploaded_number": "text",
+  "wrap_nonce": "text",
+  "wrapped_key": "text"
+ },
+ "bankfeeds_account": {
+  "balance_at": "timestamp",
+  "conn_key": "text",
+  "conn_key_identity": "text",
+  "connection_id": "uuid",
+  "currency": "text",
+  "first_seen_at": "timestamp",
+  "id": "uuid",
+  "last_seen_at": "timestamp",
+  "ledger_account_id": "uuid",
+  "mapped_at": "timestamp",
+  "name": "text",
+  "org_name": "text",
+  "remote_id": "text",
+  "remote_identity": "text"
+ },
+ "bankfeeds_connection": {
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "forgotten_at": "timestamp",
+  "host": "text",
+  "id": "uuid",
+  "label": "text",
+  "last_sync_at": "timestamp",
+  "last_sync_summary": "text"
+ },
+ "bankfeeds_counter": {
+  "name": "text"
+ },
+ "bankfeeds_identity_secret": {
+  "name": "text"
+ },
+ "bankfeeds_retired": {
+  "id": "uuid",
+  "kind": "text"
+ },
+ "bankfeeds_rule": {
+  "account_id": "uuid",
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "id": "uuid",
+  "match_text": "text",
+  "name": "text",
+  "payee_name": "text",
+  "sign": "text",
+  "updated_at": "timestamp"
+ },
+ "bankfeeds_transaction": {
+  "accepted_as": "text",
+  "decided_at": "timestamp",
+  "decided_by_id": "uuid",
+  "description": "text",
+  "feed_account_id": "uuid",
+  "first_seen_at": "timestamp",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "journal_line_id": "uuid",
+  "posted_on": "text",
+  "reference": "text",
+  "reference_url": "text",
+  "remote_id": "text",
+  "remote_identity": "text",
+  "status": "text",
+  "transacted_on": "text",
+  "updated_at": "timestamp"
+ },
+ "banking_banklinestatus": {
+  "account_id": "uuid",
+  "changed_by_id": "uuid",
+  "company_id": "uuid",
+  "id": "uuid",
+  "journal_line_id": "uuid",
+  "reconciliation_id": "uuid",
+  "state": "text"
+ },
+ "banking_deposit": {
+  "actor_id": "uuid",
+  "bank_id": "uuid",
+  "company_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid"
+ },
+ "banking_depositline": {
+  "deposit_id": "uuid",
+  "id": "uuid",
+  "receipt_id": "uuid",
+  "undeposited_id": "uuid"
+ },
+ "banking_depositreversal": {
+  "actor_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "deposit_id": "uuid",
+  "id": "uuid",
+  "journal_id": "uuid"
+ },
+ "banking_reconciliation": {
+  "account_id": "uuid",
+  "company_id": "uuid",
+  "creation_digest": "text",
+  "data": "text",
+  "id": "uuid",
+  "request_key": "uuid",
+  "started_by_id": "uuid",
+  "statement_date": "date",
+  "status": "text"
+ },
+ "banking_reconciliationactor": {
+  "phase": "text",
+  "reconciliation_id": "uuid",
+  "user_id": "uuid"
+ },
+ "banking_reconciliationline": {
+  "id": "uuid",
+  "journal_line_id": "uuid",
+  "reconciliation_id": "uuid"
+ },
+ "banking_seal": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "banking_seal_due": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "checks_check": {
+  "bank_id": "uuid",
+  "company_id": "uuid",
+  "creation_digest": "text",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "number_key": "text",
+  "state": "text",
+  "vendor_id": "uuid"
+ },
+ "checks_checkline": {
+  "account_id": "uuid",
+  "account_snapshot": "text",
+  "description": "text",
+  "id": "uuid",
+  "item_id": "uuid",
+  "item_snapshot": "text",
+  "revision_id": "uuid",
+  "tab": "text"
+ },
+ "checks_checkrevision": {
+  "action": "text",
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "address": "text",
+  "bank_id": "uuid",
+  "bank_snapshot": "text",
+  "check_number": "text",
+  "company_snapshot": "text",
+  "created_at": "timestamp",
+  "date": "date",
+  "document_id": "uuid",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "memo": "text",
+  "payee_kind": "text",
+  "payee_name": "text",
+  "payee_snapshot": "text",
+  "reason": "text",
+  "reversal_id": "uuid",
+  "review_digest": "text",
+  "state": "text",
+  "vendor_id": "uuid"
+ },
+ "company_document_details": {
+  "company_id": "uuid",
+  "data": "text",
+  "logo_mime": "text"
+ },
+ "credits_creditapplication": {
+  "actor_id": "uuid",
+  "company_id": "uuid",
+  "credit_memo_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "request_key": "uuid"
+ },
+ "credits_creditapplicationline": {
+  "application_id": "uuid",
+  "data": "text",
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "invoice_revision_id": "uuid",
+  "receivables_id": "uuid"
+ },
+ "credits_creditmemo": {
+  "actor_id": "uuid",
+  "collected_tax_id": "uuid",
+  "company_id": "uuid",
+  "customer_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "receivables_id": "uuid",
+  "tax_item_id": "uuid"
+ },
+ "credits_creditmemoline": {
+  "credit_memo_id": "uuid",
+  "data": "text",
+  "id": "uuid",
+  "income_account_id": "uuid",
+  "item_id": "uuid"
+ },
+ "credits_creditmemovoid": {
+  "actor_id": "uuid",
+  "credit_memo_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid"
+ },
+ "credits_creditrefund": {
+  "actor_id": "uuid",
+  "bank_id": "uuid",
+  "check_number": "text",
+  "company_id": "uuid",
+  "credit_memo_id": "uuid",
+  "customer_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "method": "text",
+  "receivables_id": "uuid"
+ },
+ "credits_creditrefundvoid": {
+  "actor_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "refund_id": "uuid"
+ },
+ "credits_creditunapplication": {
+  "actor_id": "uuid",
+  "application_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid"
+ },
+ "credits_seal": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "credits_seal_due": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "directory_customer": {
+  "billing_address": "text",
+  "business_name": "text",
+  "company_id": "uuid",
+  "contact_name": "text",
+  "display_name": "text",
+  "email": "text",
+  "exemption_number": "text",
+  "id": "uuid",
+  "notes": "text",
+  "phone": "text",
+  "tax_status": "text"
+ },
+ "directory_item": {
+  "code": "text",
+  "company_id": "uuid",
+  "description": "text",
+  "expense_account_id": "uuid",
+  "id": "uuid",
+  "income_account_id": "uuid",
+  "kind": "text"
+ },
+ "directory_vendor": {
+  "billing_address": "text",
+  "business_name": "text",
+  "company_id": "uuid",
+  "contact_name": "text",
+  "default_expense_account_id": "uuid",
+  "default_terms": "text",
+  "display_name": "text",
+  "email": "text",
+  "id": "uuid",
+  "notes": "text",
+  "phone": "text"
+ },
+ "documents_accountingsetup": {
+  "collected_tax_id": "uuid",
+  "company_id": "uuid",
+  "customer_deposits_id": "uuid",
+  "id": "uuid",
+  "payables_id": "uuid",
+  "receivables_id": "uuid",
+  "undeposited_id": "uuid"
+ },
+ "documents_designatedbank": {
+  "account_id": "uuid",
+  "id": "uuid",
+  "setup_id": "uuid"
+ },
+ "documents_documentaccount": {
+  "account_code": "text",
+  "account_id": "uuid",
+  "account_kind": "text",
+  "account_name": "text",
+  "id": "uuid",
+  "role": "text",
+  "source_id": "uuid"
+ },
+ "documents_documentidentity": {
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "currency": "text",
+  "id": "uuid",
+  "kind": "text",
+  "number": "text",
+  "request_key": "uuid"
+ },
+ "documents_documentsequence": {
+  "company_id": "uuid",
+  "id": "uuid",
+  "kind": "text"
+ },
+ "estimate_seal": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "estimate_seal_due": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "fb_numbering": {
+  "audit_id": "uuid",
+  "company_id": "uuid",
+  "kind": "text",
+  "scope": "text",
+  "start": "text"
+ },
+ "fb_seal": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "fb_seal_due": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "fb_user": {
+  "id": "uuid",
+  "username": "text"
+ },
+ "ledger_account": {
+  "code": "text",
+  "company_id": "uuid",
+  "description": "text",
+  "detail_type": "text",
+  "id": "uuid",
+  "kind": "text",
+  "name": "text"
+ },
+ "ledger_auditevent": {
+  "action": "text",
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "company_id": "uuid",
+  "detail": "text",
+  "id": "uuid",
+  "occurred_at": "timestamp",
+  "target": "text"
+ },
+ "ledger_company": {
+  "currency": "text",
+  "id": "uuid",
+  "name": "text"
+ },
+ "ledger_company_members": {
+  "company_id": "uuid",
+  "user_id": "uuid"
+ },
+ "ledger_journal": {
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "creation_digest": "text",
+  "date": "date",
+  "entry_number": "text",
+  "id": "uuid",
+  "memo": "text",
+  "posted_at": "timestamp",
+  "posted_by_id": "uuid",
+  "request_key": "uuid",
+  "reversal_of_id": "uuid",
+  "source_id": "uuid",
+  "status": "text"
+ },
+ "ledger_journalline": {
+  "account_id": "uuid",
+  "description": "text",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "name": "text"
+ },
+ "payables_bill": {
+  "company_id": "uuid",
+  "creation_digest": "text",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "reference_key": "text",
+  "state": "text",
+  "vendor_id": "uuid"
+ },
+ "payables_billline": {
+  "account_snapshot": "text",
+  "description": "text",
+  "expense_account_id": "uuid",
+  "id": "uuid",
+  "income_account_id": "uuid",
+  "item_id": "uuid",
+  "item_snapshot": "text",
+  "revision_id": "uuid"
+ },
+ "payables_billpayment": {
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "bank_id": "uuid",
+  "company_id": "uuid",
+  "company_snapshot": "text",
+  "created_at": "timestamp",
+  "creation_digest": "text",
+  "date": "date",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "memo": "text",
+  "method": "text",
+  "reference": "text",
+  "review_digest": "text",
+  "vendor_id": "uuid",
+  "vendor_snapshot": "text"
+ },
+ "payables_billrevision": {
+  "action": "text",
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "bill_id": "uuid",
+  "company_snapshot": "text",
+  "created_at": "timestamp",
+  "date": "date",
+  "due_date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "memo": "text",
+  "reason": "text",
+  "reentry_reason": "text",
+  "reference": "text",
+  "reversal_id": "uuid",
+  "review_digest": "text",
+  "state": "text",
+  "supersedes_id": "uuid",
+  "vendor_id": "uuid",
+  "vendor_snapshot": "text"
+ },
+ "payables_paymentallocation": {
+  "bill_id": "uuid",
+  "bill_revision_id": "uuid",
+  "id": "uuid",
+  "payables_id": "uuid",
+  "payment_id": "uuid"
+ },
+ "payables_paymentreversal": {
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "created_at": "timestamp",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "payment_id": "uuid",
+  "reason": "text"
+ },
+ "plugin_credential": {
+  "company_id": "uuid",
+  "connection_id": "uuid",
+  "plugin_id": "text"
+ },
+ "prepayments_customerdeposit": {
+  "company_id": "uuid",
+  "estimate_id": "uuid",
+  "id": "uuid",
+  "liability_id": "uuid",
+  "order_reference": "text",
+  "receipt_id": "uuid"
+ },
+ "prepayments_depositapplication": {
+  "actor_id": "uuid",
+  "company_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "deposit_id": "uuid",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "invoice_id": "uuid",
+  "invoice_revision_id": "uuid",
+  "journal_id": "uuid",
+  "liability_id": "uuid",
+  "receivables_id": "uuid"
+ },
+ "prepayments_depositrefund": {
+  "actor_id": "uuid",
+  "bank_id": "uuid",
+  "check_number": "text",
+  "company_id": "uuid",
+  "customer_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "deposit_id": "uuid",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "liability_id": "uuid",
+  "method": "text"
+ },
+ "prepayments_depositrefundvoid": {
+  "actor_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "refund_id": "uuid"
+ },
+ "prepayments_depositunapplication": {
+  "actor_id": "uuid",
+  "application_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid"
+ },
+ "prepayments_due": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "prepayments_seal": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "sales_estimate": {
+  "company_id": "uuid",
+  "creation_digest": "text",
+  "id": "uuid",
+  "identity_id": "uuid"
+ },
+ "sales_estimateconversion": {
+  "digest": "text",
+  "estimate_id": "uuid",
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "revision_id": "uuid"
+ },
+ "sales_estimateline": {
+  "data": "text",
+  "expense_account_id": "uuid",
+  "id": "uuid",
+  "income_account_id": "uuid",
+  "item_id": "uuid",
+  "revision_id": "uuid"
+ },
+ "sales_estimaterevision": {
+  "actor_id": "uuid",
+  "customer_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "estimate_id": "uuid",
+  "expiry": "text",
+  "id": "uuid",
+  "state": "text"
+ },
+ "sales_invoice": {
+  "company_id": "uuid",
+  "creation_digest": "text",
+  "id": "uuid",
+  "identity_id": "uuid"
+ },
+ "sales_invoiceline": {
+  "data": "text",
+  "expense_account_id": "uuid",
+  "id": "uuid",
+  "income_account_id": "uuid",
+  "item_id": "uuid",
+  "revision_id": "uuid"
+ },
+ "sales_invoicerevision": {
+  "actor_id": "uuid",
+  "customer_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "due_date": "date",
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "journal_id": "uuid",
+  "reversal_id": "uuid",
+  "state": "text"
+ },
+ "sales_receipt": {
+  "actor_id": "uuid",
+  "company_id": "uuid",
+  "customer_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "destination": "text",
+  "destination_account_id": "uuid",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "kind": "text"
+ },
+ "sales_receiptallocation": {
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "invoice_revision_id": "uuid",
+  "receipt_id": "uuid",
+  "receivables_id": "uuid"
+ },
+ "sales_receiptreversal": {
+  "actor_id": "uuid",
+  "data": "text",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "receipt_id": "uuid"
+ },
+ "sales_salesreceipt": {
+  "data": "text",
+  "id": "uuid",
+  "receipt_id": "uuid"
+ },
+ "sales_salesreceiptline": {
+  "data": "text",
+  "id": "uuid",
+  "income_account_id": "uuid",
+  "item_id": "uuid",
+  "sale_id": "uuid"
+ },
+ "sales_seal": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "sales_seal_due": {
+  "doc_id": "text",
+  "kind": "text"
+ },
+ "salestax_salestaxsettings": {
+  "bulk_step": "text",
+  "company_id": "uuid",
+  "default_item_id": "uuid",
+  "filing_frequency": "text",
+  "id": "uuid",
+  "owed_basis": "text"
+ },
+ "salestax_taxgroupmember": {
+  "group_id": "uuid",
+  "id": "uuid",
+  "member_id": "uuid"
+ },
+ "salestax_taxitem": {
+  "agency_id": "uuid",
+  "company_id": "uuid",
+  "description": "text",
+  "id": "uuid",
+  "kind": "text",
+  "name": "text"
+ },
+ "transfers_transfer": {
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "company_id": "uuid",
+  "company_snapshot": "text",
+  "created_at": "timestamp",
+  "creation_digest": "text",
+  "date": "date",
+  "from_account_id": "uuid",
+  "from_snapshot": "text",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "memo": "text",
+  "review_digest": "text",
+  "to_account_id": "uuid",
+  "to_snapshot": "text"
+ },
+ "transfers_transfervoid": {
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "created_at": "timestamp",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "reason": "text",
+  "transfer_id": "uuid"
+ }
+}

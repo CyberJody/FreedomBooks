@@ -1,0 +1,39 @@
+/* P0-10 attachments panel: hybrid v1 palette (tan / off-white / plum), compact desktop look. Visual only. */
+body.shell .attachments-panel{margin:32px 0 8px;padding:10px 14px 12px;background:var(--fb-panel,#fff);border:1px solid var(--fb-tan-line,#d9ccb2);border-radius:4px}
+body.shell .attachments-panel h2{margin:0 0 8px}
+body.shell .attachments-count{color:var(--fb-muted,#675d6b);font-weight:500}
+body.shell .attachments-table{width:100%;border-collapse:collapse;margin:0 0 10px}
+body.shell .attachments-table th,body.shell .attachments-table td{padding:5px 8px;border-bottom:1px solid var(--fb-tan-line,#d9ccb2);text-align:left;vertical-align:baseline}
+body.shell .attachments-table th{background:var(--fb-tan,#eee4d0);font-size:12.5px;font-weight:650}
+body.shell .attachments-table .num{text-align:right;white-space:nowrap}
+body.shell .attachments-name{overflow-wrap:anywhere;max-width:340px}
+body.shell .attachments-actions{white-space:nowrap}
+body.shell .attachments-actions .attachments-download{margin-right:16px;font-weight:600}
+body.shell .attachments-remove{display:inline-block;padding:0;border:0;border-radius:0;background:none}
+body.shell .attachments-remove summary{cursor:pointer;color:#7a2c2c;display:inline;font-weight:600;list-style:none;text-decoration:underline;text-underline-offset:3px}
+body.shell .attachments-remove summary::-webkit-details-marker{display:none}
+body.shell .attachments-remove form{display:flex;gap:6px;align-items:center;margin-top:4px}
+body.shell .attachments-remove input{width:180px;padding:3px 6px}
+body.shell .attachments-remove button{padding:3px 10px;background:linear-gradient(#a14a4a,#7a2c2c);border-color:#6a2424}
+body.shell .attachments-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:var(--fb-tan-soft,#f8f3e8);border:1px dashed var(--fb-tan-line,#d9ccb2);border-radius:4px}
+body.shell .attachments-file{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:600;min-width:0;max-width:100%}
+body.shell .attachments-file input[type=file]{min-width:0;max-width:100%;padding:3px;font-size:13px;font-weight:400}
+body.shell .attachments-hint,body.shell .attachments-empty{color:var(--fb-muted,#675d6b);font-size:12.5px;margin:4px 0}
+body.shell .attachments-note{margin:0 0 8px;padding:5px 10px;border-radius:4px;font-size:13px}
+body.shell .attachments-error{background:#fbeaea;border:1px solid #d9a3a3;color:#6a1f1f}
+body.shell .attachments-ok{background:var(--fb-lavender,#eee8f1);border:1px solid #c9b8d0;color:var(--fb-plum-deep,#35253e)}
+body.shell .attachments-removed{margin-top:8px;padding:6px 10px;border-radius:4px;font-size:12.5px;color:var(--fb-muted,#675d6b)}
+body.shell .attachments-removed summary{cursor:pointer}
+body.shell .attachments-removed ul{margin:4px 0 0 18px;padding:0}
+@media (max-width:700px){
+  body.shell .attachments-table,body.shell .attachments-table tbody{display:block;width:100%}
+  body.shell .attachments-table thead{display:none}
+  body.shell .attachments-table tr{display:block;border-bottom:1px solid var(--fb-tan-line,#d9ccb2);padding:4px 0}
+  body.shell .attachments-table td{display:block;border:0;padding:2px 4px;text-align:left}
+  body.shell .attachments-table .num{text-align:left}
+  body.shell .attachments-name{max-width:none}
+  body.shell .attachments-actions{white-space:normal}
+  body.shell .attachments-remove input{width:100%}
+  body.shell .attachments-remove form{flex-wrap:wrap}
+  body.shell .attachments-file{flex-direction:column;align-items:flex-start}
+}

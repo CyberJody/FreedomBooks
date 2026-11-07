@@ -1,0 +1,289 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Supplier 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a1",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_review",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 1,
+      "review": "r",
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 1,
+      "review": "r",
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 1,
+      "review": "r",
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Supplier 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a1",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "supplier 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a2",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Choose the latest voided bill BILL-000001 and give a reason. The original voided bill is kept."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b2",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "supplier 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a3",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ],
+        "supersedes_id": "b",
+        "reentry_reason": "Corrected amount"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b2",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "b2",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Supplier 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a4",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ],
+        "supersedes_id": "b",
+        "reentry_reason": "Stale predecessor"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Choose the latest voided bill BILL-000002 and give a reason. The original voided bill is kept."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b3",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Supplier 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a4",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ],
+        "supersedes_id": "b2",
+        "reentry_reason": "Stale predecessor"
+      },
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

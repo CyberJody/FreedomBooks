@@ -1,0 +1,1 @@
+[["https://u:p@[bad]/x", "https://***"], ["https://u:p@h\uff0fx", "https://***"], ["https://u:p@h\t/path", "https://***@h /path"], ["basic ABCDEFGH1J", "basic ***"], ["https://u:p@host/x", "https://***@host/x"]]

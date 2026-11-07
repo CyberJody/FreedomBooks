@@ -1,0 +1,1393 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "income",
+      "code": "400",
+      "name": "Income provenance",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "item",
+      "model": "item",
+      "values": {
+        "code": "Part",
+        "description": "Original item",
+        "kind": "NONSTOCK",
+        "sale_rate": "90",
+        "purchase_cost": "3",
+        "income_account": "income"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Snapshot",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018702",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "2",
+            "rate": "3.25",
+            "expense_account_id": "expense",
+            "item_id": "item"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "item",
+      "model": "item",
+      "values": {
+        "description": "Changed item",
+        "purchase_cost": "99",
+        "income_account": null
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Changed vendor",
+        "billing_address": "New address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "account": "income",
+      "code": "400",
+      "name": "Income provenance",
+      "kind": "INCOME",
+      "active": false,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Snapshot",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018702",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "2",
+            "rate": "3.25",
+            "expense_account_id": "expense",
+            "item_id": "item"
+          }
+        ],
+        "bill_id": "b",
+        "expected_revision": 1
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 2,
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 3,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "archived",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Archive",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018703",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense",
+            "item_id": "item"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "co",
+      "model": "item",
+      "record": "item",
+      "active": false,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "archived",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Archive",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018703",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense",
+            "item_id": "item"
+          }
+        ],
+        "bill_id": "archived",
+        "expected_revision": 1
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Archived selection: replace it, or explicitly retain its historical snapshot. Reactivate in the directory before refreshing."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "archived",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Archive",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018703",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense",
+            "item_id": "item",
+            "keep_archived": true
+          }
+        ],
+        "bill_id": "archived",
+        "expected_revision": 1
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "archived",
+      "expected_revision": 2,
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Vendor and every selected item must be active before posting."
+    },
+    {
+      "op": "l2_active",
+      "company": "co",
+      "model": "item",
+      "record": "item",
+      "active": true,
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "archived",
+      "expected_revision": 2,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "a1",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "AP1",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018704",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "10",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "a1",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 1,
+      "values": {
+        "payables": "ap2",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "a2",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "AP2",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018705",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "20",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "a2",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 2,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_review_payment",
+      "company": "co",
+      "review": "payr",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "12",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018706",
+        "allocations": [
+          {
+            "bill_id": "a2",
+            "amount": "7"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "5"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "pay",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "12",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018706",
+        "allocations": [
+          {
+            "bill_id": "a2",
+            "amount": "7"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "5"
+          }
+        ]
+      },
+      "review": "payr",
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "1",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018707",
+        "allocations": [
+          {
+            "bill_id": "a2",
+            "amount": "1"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Check number 100 is already used by bill payment BPAY-000001 on this bank account. Choose another number or reverse that payment first."
+    },
+    {
+      "op": "payables_reverse",
+      "company": "co",
+      "payment": "pay",
+      "expected_revision": 1,
+      "date": "2026-10-24",
+      "reason": "Correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "pay2",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "1",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018707",
+        "allocations": [
+          {
+            "bill_id": "a2",
+            "amount": "1"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "pay",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "12",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018706",
+        "allocations": [
+          {
+            "bill_id": "a2",
+            "amount": "7"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "5"
+          }
+        ]
+      },
+      "review": "payr",
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "0",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018708",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "0"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Payment and allocation amounts must be positive."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "-1",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018709",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "-1"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "NaN",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-00000001870a",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "NaN"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "Infinity",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-00000001870b",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "Infinity"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "1.001",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-00000001870c",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "1.001"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "100000000000000.00",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-00000001870d",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "100000000000000.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": true,
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-00000001870e",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": true
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": 1.2,
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-00000001870f",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": 1.2
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-22",
+        "amount": "10",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018710",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "10"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Payment date cannot precede any allocated bill date."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "10.01",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018711",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "10"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Explicit allocations must equal the payment amount exactly; no on-account credit."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "10",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018712",
+        "allocations": []
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter 1–50 explicit allocations."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "10",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018713",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "5"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "5"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Allocate to each bill only once."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "10",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "ap",
+        "request_key": "00000000-0000-0000-0000-000000018714",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "10"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Bank must be active postable ASSET; original payables must be active postable LIABILITY accounts."
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "10",
+        "method": "CHECK",
+        "reference": "free text",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018715",
+        "allocations": [
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "a1",
+            "amount": "1"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter 1–50 explicit allocations."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "long",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀",
+        "memo": "漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x",
+        "request_key": "00000000-0000-0000-0000-000000018716",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "100",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "long",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "longpay",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "1",
+        "method": "CHECK",
+        "reference": "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀",
+        "memo": "漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x漢é🚀x",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018717",
+        "allocations": [
+          {
+            "bill_id": "long",
+            "amount": "1"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_reverse",
+      "company": "co",
+      "payment": "longpay",
+      "expected_revision": 1,
+      "date": "2026-10-24",
+      "reason": "漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy漢é🚀xy",
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "long",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "date0",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "20261023",
+        "due_date": "20261123",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018718",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "date1",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-W43-5",
+        "due_date": "2026-W48-1",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018719",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "date2",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026W435",
+        "due_date": "2026W481",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001871a",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "date3",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-W43",
+        "due_date": "2026-W48",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001871b",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "date4",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026W43",
+        "due_date": "2026W48",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001871c",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-1-2",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001871d",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-02-30",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001871e",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "0000-01-01",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001871f",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026W-43",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018720",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "NaN",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018721",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "٢٠٢٦-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018722",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

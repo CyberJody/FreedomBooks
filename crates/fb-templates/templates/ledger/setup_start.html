@@ -1,0 +1,17 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/setup.css') }}">{% endblock %}{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Finish setting up</h1><p>A few things to set before you send invoices and pay bills. Do them in any order. You can come back later.</p></div></div>
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+<ul class="setup-list">
+{% for item in items %}
+<li>
+<span class="setup-state{% if item.done %} is-done{% elif item.optional %} is-optional{% endif %}">{% if item.done %}Done{% elif item.optional %}Optional{% else %}Not yet{% endif %}</span>
+<div><strong>{{ item.label }}</strong><p>{{ item.detail }}</p><a href="{{ item.url }}">{{ item.link }}</a></div>
+</li>
+{% endfor %}
+</ul>
+<div class="setup-actions">
+<form method="post" action="{{ url('setup_fill', company.pk) }}">{{ fill_token|safe }}<input type="hidden" name="action" value="preview"><button type="submit">Fill Accounting setup from my chart</button></form>
+<form method="post" action="{{ url('setup_done', company.pk) }}">{{ done_token|safe }}<button type="submit" class="secondary">Finish later</button></form>
+</div>
+<p class="muted">Fill looks at account types and sets only the obvious ones. You can change every choice on Accounting setup.</p>
+{% endblock %}

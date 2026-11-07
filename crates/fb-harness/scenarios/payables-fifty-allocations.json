@@ -1,0 +1,1766 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b0",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018723",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b0",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b1",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018724",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b1",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b2",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018725",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b2",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b3",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018726",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b3",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b4",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018727",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b4",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b5",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018728",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b5",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b6",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018729",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b6",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b7",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001872a",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b7",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b8",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001872b",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b8",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b9",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001872c",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b9",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b10",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001872d",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b10",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b11",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001872e",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b11",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b12",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001872f",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b12",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b13",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018730",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b13",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b14",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018731",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b14",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b15",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018732",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b15",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b16",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018733",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b16",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b17",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018734",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b17",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b18",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018735",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b18",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b19",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018736",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b19",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b20",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018737",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b20",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b21",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018738",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b21",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b22",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018739",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b22",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b23",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001873a",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b23",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b24",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001873b",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b24",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b25",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001873c",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b25",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b26",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001873d",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b26",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b27",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001873e",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b27",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b28",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001873f",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b28",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b29",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018740",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b29",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b30",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018741",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b30",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b31",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018742",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b31",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b32",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018743",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b32",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b33",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018744",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b33",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b34",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018745",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b34",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b35",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018746",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b35",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b36",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018747",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b36",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b37",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018748",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b37",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b38",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018749",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b38",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b39",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001874a",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b39",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b40",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001874b",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b40",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b41",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001874c",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b41",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b42",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001874d",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b42",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b43",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001874e",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b43",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b44",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000001874f",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b44",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b45",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018750",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b45",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b46",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018751",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b46",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b47",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018752",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b47",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b48",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018753",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b48",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b49",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000018754",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b49",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "pay50",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-24",
+        "amount": "50",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-000000018755",
+        "allocations": [
+          {
+            "bill_id": "b49",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b48",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b47",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b46",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b45",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b44",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b43",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b42",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b41",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b40",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b39",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b38",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b37",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b36",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b35",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b34",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b33",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b32",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b31",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b30",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b29",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b28",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b27",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b26",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b25",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b24",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b23",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b22",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b21",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b20",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b19",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b18",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b17",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b16",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b15",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b14",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b13",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b12",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b11",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b10",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b9",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b8",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b7",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b6",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b5",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b4",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b3",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b2",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b1",
+            "amount": "1"
+          },
+          {
+            "bill_id": "b0",
+            "amount": "1"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_reverse",
+      "company": "co",
+      "payment": "pay50",
+      "expected_revision": 1,
+      "date": "2026-10-24",
+      "reason": "Correction",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

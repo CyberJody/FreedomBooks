@@ -1,0 +1,10 @@
+{% extends 'directory/base.html' %}
+{% block directory_content %}
+<div class="heading"><h1>{% if record %}Edit{% else %}New{% endif %} {{ singular }}</h1><a href="{{ url('directory:list', company.pk, kind) }}">Back to {{ title|lower }}</a></div>
+{% if record %}<p>{% if record.active %}Active{% else %}Inactive — saving does not reactivate this record.{% endif %}</p>{% endif %}
+{% if stale %}<div class="errorlist">{% for warning in stale %}<p>{{ warning }}</p>{% endfor %}</div>{% endif %}
+<form method="post" class="master-form" novalidate>{{ csrf_token|safe }}
+{{ form.non_field_errors|safe }}
+{% for field in form.hidden_fields %}{{ field.widget|safe }}{% endfor %}<div class="fields">{% for field in form.visible_fields %}<div class="field{% if field.name == 'notes' or field.name == 'description' or field.name == 'billing_address' %} wide{% endif %}">{{ field.label_tag|safe }}{{ field.errors|safe }}{{ field.widget|safe }}{% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}</div>
+<div class="actions"><button type="submit">Save</button>{% if record %}<a href="{{ url('directory:detail', company.pk, kind, record.pk) }}">Cancel</a>{% else %}<a href="{{ url('directory:list', company.pk, kind) }}">Cancel</a>{% endif %}</div>
+</form>{% if is_item and not record %}<script src="{{ static('directory/item_tax.js') }}" defer></script>{% endif %}{% endblock %}

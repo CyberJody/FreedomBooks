@@ -1,0 +1,34 @@
+{% extends 'ledger/base.html' %}
+
+{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/history.css') }}">{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ company.name }}</p>
+<h1>Audit history</h1>
+<p class="audit-zone">Times shown in {{ time_zone }}.</p>
+<form class="filters audit-filters" method="get" aria-label="Filter audit history">
+  {% for field in filter_form.fields %}<label>{{ field.label }} {{ field.widget|safe }}{{ field.errors|safe }}</label>{% endfor %}
+  {{ filter_form.non_field_errors|safe }}
+  <button type="submit">Apply filters</button>
+  <a href="{{ url('history', company.pk) }}">Clear</a>
+  {% if not filter_form.has_errors %}<a href="?{{ csv_query }}">Download this list</a>{% endif %}
+</form>
+<section>
+<table class="audit-history">
+  <thead><tr><th class="when">When</th><th>User</th><th>Action</th><th>Document</th><th>Reason</th></tr></thead>
+  <tbody>
+  {% for row in rows %}
+  <tr>
+    <td class="when" data-label="When">{{ row.when }}</td>
+    <td data-label="User">{{ row.operator }}</td>
+    <td data-label="Action">{{ row.action }}</td>
+    <td class="document" data-label="Document">{% if row.url %}<a href="{{ row.url }}">{{ row.number }}</a>{% else %}{{ row.number }}{% endif %}</td>
+    <td class="reason" data-label="Reason">{% if row.reason %}{{ row.reason }}{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5">{% if filter_form.has_errors %}Correct the filters above.{% elif filtered %}No history matches these filters.{% else %}No history yet.{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% include 'ledger/pager.html' %}
+{% endblock %}

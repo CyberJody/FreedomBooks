@@ -1,0 +1,195 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_receipt",
+      "company": "co",
+      "vendor": "vendor",
+      "ref": "receipt",
+      "request_key": "00000000-0000-0000-0000-000000018756",
+      "fields": {
+        "document_date": "2026-10-23",
+        "document_number": "Receipt 42",
+        "lines": [
+          {
+            "description": "Extracted purchase",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "amount": "1.01"
+          },
+          {
+            "description": "Supplier sales tax",
+            "quantity": "1",
+            "rate": "0.08",
+            "amount": "0.08"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_receipt",
+      "company": "co",
+      "vendor": "vendor",
+      "ref": "receipt",
+      "request_key": "00000000-0000-0000-0000-000000018756",
+      "fields": {
+        "document_date": "2026-10-23",
+        "document_number": "Receipt 42",
+        "lines": [
+          {
+            "description": "Extracted purchase",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "amount": "1.01"
+          },
+          {
+            "description": "Supplier sales tax",
+            "quantity": "1",
+            "rate": "0.08",
+            "amount": "0.08"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "receipt",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "receipt",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_receipt",
+      "company": "co",
+      "vendor": "vendor",
+      "ref": "receipt2",
+      "request_key": "00000000-0000-0000-0000-000000018757",
+      "fields": {
+        "document_date": "2026-10-23",
+        "document_number": "Receipt explicit due",
+        "lines": [
+          {
+            "description": "Extracted purchase",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "amount": "1.01"
+          },
+          {
+            "description": "Supplier sales tax",
+            "quantity": "1",
+            "rate": "0.08",
+            "amount": "0.08"
+          }
+        ],
+        "due_date": "2026-12-15"
+      },
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

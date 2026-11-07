@@ -1,0 +1,167 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "vendor",
+   "ref": "agency",
+   "values": {
+    "display_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "a",
+   "values": {
+    "name": "A",
+    "description": "A",
+    "rate": "50",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "b",
+   "values": {
+    "name": "B",
+    "description": "B",
+    "rate": "50",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "group",
+   "values": {
+    "name": "Group",
+    "description": "Group",
+    "member_ids": [
+     "a",
+     "b"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "a",
+   "values": {
+    "item_id": "a",
+    "expected_revision": 1,
+    "name": "A",
+    "description": "A",
+    "rate": "60",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [],
+   "result": "too-much",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A tax group cannot add up to more than 100%."
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FreedomBooks logo">
+  <rect width="64" height="64" rx="14" fill="#4f2f5e"/>
+  <path d="M32 19c-5-4-12-5-19-4v29c7-1 14 0 19 4 5-4 12-5 19-4V15c-7-1-14 0-19 4z" fill="#fbf7ef"/>
+  <path d="M32 19v29" stroke="#4f2f5e" stroke-width="2.5"/>
+  <path d="M18 24h9M18 29h9M18 34h7" stroke="#c9b48e" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M37 31l4 4 7-9" fill="none" stroke="#2f6b4a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

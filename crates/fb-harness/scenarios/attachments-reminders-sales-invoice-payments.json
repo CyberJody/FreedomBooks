@@ -1,0 +1,649 @@
+{
+  "users": [
+    {
+      "username": "sales",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic sales",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar2",
+      "code": "111",
+      "name": "ar2",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "210",
+      "name": "tax",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income2",
+      "code": "410",
+      "name": "income2",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "500",
+      "name": "expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "work",
+      "values": {
+        "code": "WORK",
+        "description": "Synthetic work",
+        "kind": "SERVICE",
+        "sale_rate": "9.99",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "MANUAL",
+        "tax_rate": "6.25",
+        "tax_label": "Combined tax",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1.0025",
+            "rate": "4.00",
+            "taxable": true,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem14-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem14-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem14-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count14",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem15-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem15-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem15-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count15",
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000014",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "1.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "1.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000014",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "1.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "1.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "ref": "payment1",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem17-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem17-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem17-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count17",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000014",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "1.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "1.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "ref": "payment1",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem18-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem18-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem18-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count18",
+      "expect_error": false
+    },
+    {
+      "op": "sales_void_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 2,
+      "date": "2026-10-03",
+      "reason": "Correction",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Reverse every live receipt allocated to this invoice before voiding it."
+    },
+    {
+      "op": "sales_review_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000015",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "3.26",
+        "method": "CHECK",
+        "destination": "BANK",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "3.26"
+          }
+        ],
+        "bank_id": "bank"
+      },
+      "review": "pay2",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000015",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "3.26",
+        "method": "CHECK",
+        "destination": "BANK",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "3.26"
+          }
+        ],
+        "bank_id": "bank"
+      },
+      "review": "pay2",
+      "ref": "payment2",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem21-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem21-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem21-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count21",
+      "expect_error": false
+    },
+    {
+      "op": "sales_reverse_receipt",
+      "company": "c",
+      "record": "payment1",
+      "expected_revision": 1,
+      "date": "2026-10-03",
+      "reason": "Correction",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem22-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem22-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem22-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count22",
+      "expect_error": false
+    },
+    {
+      "op": "sales_reverse_receipt",
+      "company": "c",
+      "record": "payment2",
+      "expected_revision": 1,
+      "date": "2026-10-03",
+      "reason": "Correction",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem23-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem23-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem23-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count23",
+      "expect_error": false
+    },
+    {
+      "op": "sales_void_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 2,
+      "date": "2026-10-03",
+      "reason": "Correction",
+      "expect_error": false
+    },
+    {
+      "op": "sales_void_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 2,
+      "date": "2026-10-03",
+      "reason": "Correction",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000014",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "1.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "1.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "ref": "payment1",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 0,
+      "ref": "rem26-0",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 10,
+      "ref": "rem26-10",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "days": 11,
+      "ref": "rem26-11",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "count26",
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "MANUAL",
+        "tax_rate": "6.25",
+        "tax_label": "Combined tax",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1.0025",
+            "rate": "4.00",
+            "taxable": true,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 3,
+      "review": "no",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Only a draft invoice can be reviewed or posted. Voided invoices cannot be reposted."
+    },
+    {
+      "op": "reminder_build",
+      "company": "c",
+      "today": "2026-12-01",
+      "ref": "final-reminder",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-09-30",
+    "2026-10-01",
+    "2026-10-02",
+    "2026-10-03"
+  ],
+  "capture_steps": true
+}

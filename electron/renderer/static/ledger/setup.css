@@ -1,0 +1,10 @@
+/* FX7 Finish setting up. Stacks on a narrow window; no new palette. */
+.setup-list{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.setup-list li{display:grid;grid-template-columns:6.5rem minmax(0,1fr);gap:8px 12px;align-items:start;background:#fff;border:1px solid #e4ddd2;border-radius:6px;padding:10px 12px}
+.setup-list p{margin:2px 0 0}
+.setup-state{font-size:12px;font-weight:650;letter-spacing:.02em;color:#58451d;background:#eee4d0;border-radius:3px;padding:2px 6px;justify-self:start}
+.setup-state.is-done{color:#2f5d38;background:#dce8de}
+.setup-state.is-optional{color:#5c5670;background:#eee8f1}
+.setup-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.setup-actions form{margin:0}
+@media(max-width:600px){.setup-list li{grid-template-columns:minmax(0,1fr)}}

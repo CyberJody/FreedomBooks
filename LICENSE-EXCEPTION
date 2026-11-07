@@ -1,0 +1,11 @@
+Additional permission under GNU AGPL version 3 section 7
+
+If you modify this Program, or any covered work, by linking or combining it
+with Electron (or a modified version of it), including Chromium, Node.js and
+the components listed in Electron's LICENSES.chromium.html, the licensors of
+this Program grant you additional permission to convey the resulting work.
+Corresponding Source for a non-source form of such a combination shall not
+include the source code for the parts of Electron and its components.
+
+This permission applies to FreedomBooks. It does not alter the licenses or
+notice obligations of Electron or any other third-party component.

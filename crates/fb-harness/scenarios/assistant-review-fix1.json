@@ -1,0 +1,914 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    },
+    {
+      "username": "member",
+      "is_staff": false
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "add_member",
+      "company": "co",
+      "user": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "synthetic@example.invalid",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.call_failed",
+      "code": "unauthorized",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.call_failed",
+      "code": "unauthorized",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "synthetic@example.invalid",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.call_failed",
+      "code": "invalid_grant",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.call_failed",
+      "code": "invalid_grant",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "synthetic@example.invalid",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.call_failed",
+      "code": "plan_not_granted",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.call_failed",
+      "code": "plan_not_granted",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "synthetic@example.invalid",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.refresh_failed",
+      "code": "unauthorized",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.refresh_failed",
+      "code": "unauthorized",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "synthetic@example.invalid",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.refresh_failed",
+      "code": "invalid_grant",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.refresh_failed",
+      "code": "invalid_grant",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "synthetic@example.invalid",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.refresh_failed",
+      "code": "plan_not_granted",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "action": "ai.refresh_failed",
+      "code": "plan_not_granted",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_disconnect",
+      "company": "co",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_needs_signin",
+      "company": "co",
+      "actor": "member",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Nothing is connected."
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "siwc",
+        "key_last4": "",
+        "account_email": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ],
+        "models_error": "timeout"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_switch",
+      "company": "co",
+      "enabled": true,
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "invalid_address",
+      "request_key": "00000000-0000-0000-0000-00000001880f",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018810",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "invalid_address",
+      "code": "invalid_address",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "missing_host",
+      "request_key": "00000000-0000-0000-0000-000000018811",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018812",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "missing_host",
+      "code": "missing_host",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "insecure_address",
+      "request_key": "00000000-0000-0000-0000-000000018813",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018814",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "insecure_address",
+      "code": "insecure_address",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "address_credentials",
+      "request_key": "00000000-0000-0000-0000-000000018815",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018816",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "address_credentials",
+      "code": "address_credentials",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "redirect",
+      "request_key": "00000000-0000-0000-0000-000000018817",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018818",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "redirect",
+      "code": "redirect",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "certificate",
+      "request_key": "00000000-0000-0000-0000-000000018819",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001881a",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "certificate",
+      "code": "certificate",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "timeout",
+      "request_key": "00000000-0000-0000-0000-00000001881b",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001881c",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "timeout",
+      "code": "timeout",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "unreachable",
+      "request_key": "00000000-0000-0000-0000-00000001881d",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001881e",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "unreachable",
+      "code": "unreachable",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "response_unreadable",
+      "request_key": "00000000-0000-0000-0000-00000001881f",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018820",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "response_unreadable",
+      "code": "response_unreadable",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "response_oversized",
+      "request_key": "00000000-0000-0000-0000-000000018821",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018822",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "response_oversized",
+      "code": "response_oversized",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "token_incomplete",
+      "request_key": "00000000-0000-0000-0000-000000018823",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018824",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "token_incomplete",
+      "code": "token_incomplete",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "metadata_no_key_set",
+      "request_key": "00000000-0000-0000-0000-000000018825",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018826",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "metadata_no_key_set",
+      "code": "metadata_no_key_set",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "metadata_no_keys",
+      "request_key": "00000000-0000-0000-0000-000000018827",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018828",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "metadata_no_keys",
+      "code": "metadata_no_keys",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "invalid_model_list",
+      "request_key": "00000000-0000-0000-0000-000000018829",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001882a",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "invalid_model_list",
+      "code": "invalid_model_list",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "invalid_responses_request",
+      "request_key": "00000000-0000-0000-0000-00000001882b",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001882c",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "invalid_responses_request",
+      "code": "invalid_responses_request",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "stream_interrupted",
+      "request_key": "00000000-0000-0000-0000-00000001882d",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001882e",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "stream_interrupted",
+      "code": "stream_interrupted",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "stream_oversized",
+      "request_key": "00000000-0000-0000-0000-00000001882f",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018830",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "stream_oversized",
+      "code": "stream_oversized",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "plan_not_granted",
+      "request_key": "00000000-0000-0000-0000-000000018831",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018832",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "plan_not_granted",
+      "code": "plan_not_granted",
+      "actor": "member",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ],
+  "capture_steps": true
+}

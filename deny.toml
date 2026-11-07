@@ -1,0 +1,98 @@
+# cargo-deny configuration for FreedomBooks v2.
+#
+# FreedomBooks v2 is distributed as a combined work under AGPL-3.0-or-later.
+# Every license in `licenses.allow` below has been reviewed as compatible with
+# distributing the combined binary under AGPL-3.0-or-later (permissive /
+# public-domain-equivalent licenses whose only obligations are notice
+# preservation, which THIRD-PARTY-NOTICES.md satisfies). See
+# LICENSE-AUDIT-2026-11.md for the reasoning behind each entry.
+#
+# Run:  cargo deny check licenses advisories bans sources
+
+[graph]
+# Check every target we intend to ship on (Linux/Flatpak, Windows, macOS),
+# not only the host, so platform-only crates (windows-*, core-foundation...)
+# are audited too.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+all-features = false
+
+[output]
+feature-depth = 1
+
+# ---------------------------------------------------------------------------
+[advisories]
+# RustSec advisory DB. Vulnerabilities are always errors; this section only
+# controls the non-vulnerability informational kinds.
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "warn"
+unmaintained = "workspace"
+unsound = "all"
+ignore = [
+    # Add entries here only with an `id` + `reason`, after review, e.g.
+    # { id = "RUSTSEC-0000-0000", reason = "..." },
+]
+
+# ---------------------------------------------------------------------------
+[licenses]
+# Only licenses compatible with distributing the combined work under
+# AGPL-3.0-or-later. Do NOT add a license here without recording the review in
+# the current LICENSE-AUDIT-*.md.
+allow = [
+    "MIT",
+    "Apache-2.0",                  # GPLv3/AGPLv3-compatible (not GPLv2-only)
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "0BSD",
+    "Zlib",
+    "BSL-1.0",
+    "Unlicense",
+    "Unicode-3.0",                 # ICU4X / unicode-ident data tables
+    "CDLA-Permissive-2.0",         # webpki-roots (Mozilla CA list data)
+    "blessing",                    # SQLite public-domain blessing (sqlcipher-src)
+    "WTFPL",                       # libtomcrypt portion of sqlcipher-src
+]
+# Minimum confidence for license-text detection when a crate has no SPDX
+# expression and the license is inferred from LICENSE files.
+confidence-threshold = 0.93
+exceptions = []
+
+# Some crates use the deprecated "/" separator ("MIT/Apache-2.0"); cargo-deny
+# already treats it as OR, so no clarification is needed for those.
+
+[licenses.private]
+# Workspace crates carry no `license` field yet (it is added at publication),
+# and they are all `publish = false`. Skip them here; their license is the
+# project's AGPL-3.0-or-later.
+ignore = true
+registries = []
+
+# ---------------------------------------------------------------------------
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+# Internal workspace path dependencies (all publish = false) are not wildcards
+# in any meaningful sense; only flag registry wildcards.
+allow-wildcard-paths = true
+highlight = "all"
+workspace-default-features = "allow"
+external-default-features = "allow"
+allow = []
+deny = []
+skip = []
+skip-tree = []
+
+# ---------------------------------------------------------------------------
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

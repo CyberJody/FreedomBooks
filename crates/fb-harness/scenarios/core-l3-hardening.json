@@ -1,0 +1,635 @@
+{
+  "users": [
+    {
+      "username": "combined",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic combined sales and payables",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar2",
+      "code": "111",
+      "name": "ar2",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "210",
+      "name": "tax",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income2",
+      "code": "410",
+      "name": "income2",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "500",
+      "name": "expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "work",
+      "values": {
+        "code": "WORK",
+        "description": "Synthetic work",
+        "kind": "SERVICE",
+        "sale_rate": "9.99",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank"
+        ],
+        "payables": "ap"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "account": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "account": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "draftinv",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "draftbill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Paid",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186ad",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "c",
+      "model": "customer",
+      "record": "buyer",
+      "active": false,
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "c",
+      "model": "vendor",
+      "record": "vendor",
+      "active": false,
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "c",
+      "model": "item",
+      "record": "work",
+      "active": false,
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "refused-invoice",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000051",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Archived selection: replace it, or explicitly retain its historical snapshot. Reactivate in the directory before refreshing."
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "refused-bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Other",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000000052",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Archived selection: replace it, or explicitly retain its historical snapshot. Reactivate in the directory before refreshing."
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "draftinv",
+      "record": "draftinv",
+      "expected_revision": 1,
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Archived selection: replace it, or explicitly retain its historical snapshot. Reactivate in the directory before refreshing."
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "draftbill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Paid",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186ad",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work"
+          }
+        ],
+        "bill_id": "draftbill",
+        "expected_revision": 1
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Archived selection: replace it, or explicitly retain its historical snapshot. Reactivate in the directory before refreshing."
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "draftinv",
+      "record": "draftinv",
+      "expected_revision": 1,
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income",
+            "keep_archived": true
+          }
+        ],
+        "keep_archived": true
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "draftbill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Paid",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186ad",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work",
+            "keep_archived": true
+          }
+        ],
+        "bill_id": "draftbill",
+        "expected_revision": 1,
+        "keep_archived": true
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "draftinv",
+      "expected_revision": 2,
+      "review": "archived",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Customer and every selected item must be active before posting."
+    },
+    {
+      "op": "payables_review",
+      "company": "c",
+      "bill": "draftbill",
+      "expected_revision": 2,
+      "review": "archived",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Vendor and every selected item must be active before posting."
+    },
+    {
+      "op": "l2_active",
+      "company": "c",
+      "model": "customer",
+      "record": "buyer",
+      "active": true,
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "c",
+      "model": "vendor",
+      "record": "vendor",
+      "active": true,
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "c",
+      "model": "item",
+      "record": "work",
+      "active": true,
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "invalid-invoice",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000053",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": [],
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter text up to 2000 characters."
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "invalid-invoice",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000053",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ],
+        "refresh_customer": null
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Invalid checkbox value."
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "invalid-invoice",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000053",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ],
+        "keep_archived": 0
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Invalid checkbox value."
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "invalid-bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Other",
+        "memo": [],
+        "request_key": "00000000-0000-0000-0000-000000000052",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter text up to 2000 characters."
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "invalid-bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Other",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000000052",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work"
+          }
+        ],
+        "refresh_vendor": null
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Invalid checkbox value."
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "invalid-bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": null,
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-000000000052",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense",
+            "item_id": "work"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a vendor reference up to 120 characters."
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "draftinv",
+      "expected_revision": 2,
+      "review": "ready",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "draftinv",
+      "expected_revision": 2,
+      "review": "ready",
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "c",
+      "bill": "draftbill",
+      "expected_revision": 2,
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-09-30",
+    "2026-10-01",
+    "2026-10-02"
+  ]
+}

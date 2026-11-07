@@ -1,0 +1,13 @@
+{
+  "name": "d7b-existing-core-validation-gaps",
+  "users": [{"username":"owner","is_staff":true}],
+  "as_of": ["2026-10-31"],
+  "steps": [
+    {"op":"create_company","ref":"c","name":"D7b synthetic core-gap reproduction","expect_error":false},
+    {"op":"save_account","company":"c","ref":"bank","code":"1000","name":"Statement bank","detail_type":"BANK","expect_error":false},
+    {"op":"banking_begin","company":"c","account":"bank","ref":"invalid","values":{"request_key":"00000000-0000-0000-0000-000000d7b001","statement_date":"2026-10-31","ending_balance":"bad"},"expect_error":true,"expect_kind":"ValidationError","expect_message":"Enter the statement ending balance as an amount such as 1250.00."},
+    {"op":"banking_begin","company":"c","account":"bank","ref":"statement","values":{"request_key":"00000000-0000-0000-0000-000000d7b002","statement_date":"2026-10-31","ending_balance":"0.00"},"expect_error":false},
+    {"op":"banking_finish","company":"c","account":"bank","reconciliation":"statement","expected_revision":1,"completion_key":"00000000-0000-0000-0000-000000d7b003","expect_error":false},
+    {"op":"banking_undo","company":"c","account":"bank","reconciliation":"statement","expected_revision":2,"reason":"","undo_key":"00000000-0000-0000-0000-000000d7b004","expect_error":true,"expect_kind":"ValidationError","expect_message":"Give a reason for undoing this reconciliation."}
+  ]
+}

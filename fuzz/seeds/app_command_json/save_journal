@@ -1,0 +1,1 @@
+{"type": "SaveJournal", "company_id": "0195b4a4-55af-719e-96cb-a2f946b067bf", "journal_id": null, "date": "2026-10-05", "memo": "m", "entry_number": "", "adjusting": false, "request_key": null, "expected_revision": null, "lines": [{"account": "0195b4a4-55af-719e-96cb-a2f946b067c0", "debit": "1.00", "credit": "", "description": "", "name": ""}]}

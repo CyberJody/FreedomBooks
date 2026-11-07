@@ -1,0 +1,22 @@
+/target
+node_modules/
+/electron/node_modules
+/electron/dist/
+/electron/out/
+*.fbook
+*.sqlite
+*.db
+/staging-run/
+
+# D2 local test books and generated Python caches
+/staging/
+__pycache__/
+
+*.fbbook
+*.fbbook-wal
+*.fbbook-shm
+
+/packaging/node_modules/
+/packaging/node_modules
+/packaging/.work/
+/packaging/dist/

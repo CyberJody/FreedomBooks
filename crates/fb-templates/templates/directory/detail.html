@@ -1,0 +1,11 @@
+{% extends 'directory/base.html' %}
+{% block directory_content %}
+<div class="heading"><div><h1>{{ record.label }}</h1><p>{{ singular|capfirst }} · <span class="record-status">{% if record.active %}Active{% else %}Inactive{% endif %}</span></p></div><a class="button" href="{{ url('directory:edit', company.pk, kind, record.pk) }}">Edit {{ singular }}</a></div>
+<p><a href="{{ url('directory:list', company.pk, kind) }}">Back to {{ title|lower }}</a></p>
+<dl class="record-fields">{% for label,value in fields %}<div><dt>{{ label }}</dt><dd>{% if value is none or value == '' %}—{% else %}{{ value|linebreaksbr }}{% endif %}</dd></div>{% endfor %}</dl>
+<form method="post" action="{{ url('directory:status', company.pk, kind, record.pk) }}" class="status-action">{{ csrf_token|safe }}<input type="hidden" name="active" value="{% if record.active %}0{% else %}1{% endif %}"><button class="secondary" type="submit">{% if record.active %}Archive{% else %}Reactivate{% endif %} {{ singular }}</button><span>Archiving preserves identity and history. It does not delete the record.</span></form>
+<details><summary>Recent changes (up to 20)</summary><ul>{% for event in events %}<li>{{ event.occurred_at|date('Y-m-d H:i:s') }} UTC · {{ event.actor_name }} · {{ event.action }}</li>{% else %}<li>No recorded changes.</li>{% endfor %}</ul><a href="{{ url('history', company.pk) }}">Full company audit history and change details</a></details>
+{% if singular == 'customer' %}{% include 'sales/receipts/customer_activity.html' %}
+{% include 'credits/customer_activity.html' %}{% include 'prepayments/customer_deposits.html' %}{% endif %}
+{% if singular == 'vendor' %}{% include 'payables/bills/vendor_activity.html' %}{% include 'checks/vendor_activity.html' %}{% endif %}
+{% endblock %}

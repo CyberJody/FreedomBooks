@@ -1,0 +1,21 @@
+[package]
+name = "fb-screendiff"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Screen diff (ARCHITECTURE 9.4): render each ported screen in Django and in fb-templates from the same scenario state and compare normalized HTML."
+
+[dependencies]
+fb-core = { path = "../fb-core" }
+chrono = "0.4"
+chrono-tz = "0.10"
+fb-app = { path = "../fb-app" }
+fb-harness = { path = "../fb-harness" }
+fb-db = { path = "../fb-db" }
+serde_json = { version = "1", features = ["preserve_order"] }
+fb-templates = { path = "../fb-templates" }
+regex = "1"
+
+[features]
+# FB_SCREENDIFF_PLUGINS=1: compare the plugin screens too (dev build).
+plugins = ["fb-app/plugins"]

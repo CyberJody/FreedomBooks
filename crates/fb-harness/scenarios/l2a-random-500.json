@@ -1,0 +1,7269 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "vendor",
+   "ref": "agency",
+   "values": {
+    "display_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "name": "Rate 0",
+    "description": "Rate zero",
+    "rate": "3",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "name": "Rate 1",
+    "description": "Rate one",
+    "rate": "4",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "g",
+   "values": {
+    "name": "Combined",
+    "description": "Combined tax",
+    "member_ids": [
+     "r0",
+     "r1"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c1",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i4",
+   "values": {
+    "code": "Item 4",
+    "kind": "SERVICE",
+    "sale_rate": "1359.03",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i5",
+   "values": {
+    "code": "Item 5",
+    "kind": "NONSTOCK",
+    "sale_rate": "7228.69",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 1,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.3601",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 4
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 5
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c1",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 9"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i10",
+   "values": {
+    "code": "Item 10",
+    "kind": "SERVICE",
+    "sale_rate": "80.58",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i11",
+   "values": {
+    "code": "Item 11",
+    "kind": "NONSTOCK",
+    "sale_rate": "7834.72",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i12",
+   "values": {
+    "code": "Item 12",
+    "kind": "SERVICE",
+    "sale_rate": "1649.61",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c13",
+   "values": {
+    "display_name": "Customer 15",
+    "tax_status": "EXEMPT",
+    "exemption_number": "13"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 6
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c1",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 15"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "681.6108",
+     "rate": "73.88",
+     "taxable": true
+    },
+    {
+     "quantity": "215.7110",
+     "rate": "629.34",
+     "taxable": true
+    },
+    {
+     "quantity": "784.5151",
+     "rate": "99.34",
+     "taxable": false
+    },
+    {
+     "quantity": "927.8545",
+     "rate": "277.25",
+     "taxable": true
+    },
+    {
+     "quantity": "272.5782",
+     "rate": "959.84",
+     "taxable": true
+    },
+    {
+     "quantity": "662.1336",
+     "rate": "40.93",
+     "taxable": false
+    }
+   ],
+   "result": "calc16",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 7
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 2,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.2742",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "299.5941",
+     "rate": "733.54",
+     "taxable": true
+    },
+    {
+     "quantity": "924.5914",
+     "rate": "795.40",
+     "taxable": true
+    },
+    {
+     "quantity": "722.3154",
+     "rate": "387.79",
+     "taxable": true
+    },
+    {
+     "quantity": "665.1099",
+     "rate": "202.10",
+     "taxable": false
+    },
+    {
+     "quantity": "756.4882",
+     "rate": "422.74",
+     "taxable": true
+    },
+    {
+     "quantity": "916.4769",
+     "rate": "373.30",
+     "taxable": false
+    },
+    {
+     "quantity": "760.4629",
+     "rate": "929.83",
+     "taxable": false
+    }
+   ],
+   "result": "calc19",
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i4",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c13",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 21"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 1,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.8223",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 8
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i24",
+   "values": {
+    "code": "Item 24",
+    "kind": "NONSTOCK",
+    "sale_rate": "2848.11",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "48.8879",
+     "rate": "380.37",
+     "taxable": true
+    }
+   ],
+   "result": "calc25",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c26",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "TAXABLE",
+    "exemption_number": "26"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c27",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "TAXABLE",
+    "exemption_number": "27"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i28",
+   "values": {
+    "code": "Item 28",
+    "kind": "SERVICE",
+    "sale_rate": "8189.70",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "745.4961",
+     "rate": "905.25",
+     "taxable": true
+    },
+    {
+     "quantity": "981.8405",
+     "rate": "890.34",
+     "taxable": true
+    },
+    {
+     "quantity": "840.0424",
+     "rate": "646.06",
+     "taxable": true
+    },
+    {
+     "quantity": "647.4071",
+     "rate": "131.11",
+     "taxable": true
+    }
+   ],
+   "result": "calc29",
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i10",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i5",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 9
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 2,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.0206",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c13",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 34"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 3,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.7337",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 10
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c37",
+   "values": {
+    "display_name": "Customer 4",
+    "tax_status": "TAXABLE",
+    "exemption_number": "37"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c1",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 38"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c39",
+   "values": {
+    "display_name": "Customer 0",
+    "tax_status": "TAXABLE",
+    "exemption_number": "39"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i4",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "831.5961",
+     "rate": "833.90",
+     "taxable": true
+    },
+    {
+     "quantity": "878.2353",
+     "rate": "297.44",
+     "taxable": false
+    },
+    {
+     "quantity": "891.8130",
+     "rate": "879.20",
+     "taxable": false
+    },
+    {
+     "quantity": "492.4710",
+     "rate": "108.85",
+     "taxable": false
+    },
+    {
+     "quantity": "639.1839",
+     "rate": "241.91",
+     "taxable": true
+    },
+    {
+     "quantity": "827.3384",
+     "rate": "839.95",
+     "taxable": true
+    }
+   ],
+   "result": "calc41",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i42",
+   "values": {
+    "code": "Item 42",
+    "kind": "NONSTOCK",
+    "sale_rate": "9369.00",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 11
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 12
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 13
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c46",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "EXEMPT",
+    "exemption_number": "46"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c13",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 47"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i24",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c49",
+   "values": {
+    "display_name": "Customer 1",
+    "tax_status": "TAXABLE",
+    "exemption_number": "49"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "105.7246",
+     "rate": "99.99",
+     "taxable": false
+    },
+    {
+     "quantity": "697.6527",
+     "rate": "200.02",
+     "taxable": true
+    },
+    {
+     "quantity": "229.3282",
+     "rate": "559.47",
+     "taxable": false
+    },
+    {
+     "quantity": "972.3532",
+     "rate": "579.99",
+     "taxable": true
+    },
+    {
+     "quantity": "690.3866",
+     "rate": "549.62",
+     "taxable": false
+    },
+    {
+     "quantity": "50.5298",
+     "rate": "846.58",
+     "taxable": false
+    }
+   ],
+   "result": "calc50",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "782.3008",
+     "rate": "250.29",
+     "taxable": true
+    }
+   ],
+   "result": "calc51",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "975.2928",
+     "rate": "870.43",
+     "taxable": false
+    }
+   ],
+   "result": "calc52",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c53",
+   "values": {
+    "display_name": "Customer 9",
+    "tax_status": "EXEMPT",
+    "exemption_number": "53"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 14
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i42",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c56",
+   "values": {
+    "display_name": "Customer 13",
+    "tax_status": "TAXABLE",
+    "exemption_number": "56"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c49",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 57"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i58",
+   "values": {
+    "code": "Item 58",
+    "kind": "SERVICE",
+    "sale_rate": "1167.13",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 4,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "3.7393",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 15
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c61",
+   "values": {
+    "display_name": "Customer 15",
+    "tax_status": "TAXABLE",
+    "exemption_number": "61"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 5,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "3.4749",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i63",
+   "values": {
+    "code": "Item 63",
+    "kind": "SERVICE",
+    "sale_rate": "567.00",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 6,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.633",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i65",
+   "values": {
+    "code": "Item 65",
+    "kind": "SERVICE",
+    "sale_rate": "936.62",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c66",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "66"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c67",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "TAXABLE",
+    "exemption_number": "67"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "105.4543",
+     "rate": "140.57",
+     "taxable": true
+    },
+    {
+     "quantity": "649.5777",
+     "rate": "138.77",
+     "taxable": true
+    },
+    {
+     "quantity": "324.8488",
+     "rate": "353.92",
+     "taxable": true
+    },
+    {
+     "quantity": "123.5387",
+     "rate": "978.24",
+     "taxable": false
+    },
+    {
+     "quantity": "732.0616",
+     "rate": "102.50",
+     "taxable": false
+    }
+   ],
+   "result": "calc68",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c46",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 69"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 16
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i71",
+   "values": {
+    "code": "Item 71",
+    "kind": "NONSTOCK",
+    "sale_rate": "8902.91",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c72",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "EXEMPT",
+    "exemption_number": "72"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 17
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c74",
+   "values": {
+    "display_name": "Customer 11",
+    "tax_status": "EXEMPT",
+    "exemption_number": "74"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i75",
+   "values": {
+    "code": "Item 75",
+    "kind": "SERVICE",
+    "sale_rate": "3241.36",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 18
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i42",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c78",
+   "values": {
+    "display_name": "Customer 4",
+    "tax_status": "TAXABLE",
+    "exemption_number": "78"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c79",
+   "values": {
+    "display_name": "Customer 5",
+    "tax_status": "EXEMPT",
+    "exemption_number": "79"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "713.4242",
+     "rate": "140.20",
+     "taxable": false
+    },
+    {
+     "quantity": "675.0029",
+     "rate": "95.88",
+     "taxable": true
+    }
+   ],
+   "result": "calc80",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 19
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 20
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i83",
+   "values": {
+    "code": "Item 83",
+    "kind": "NONSTOCK",
+    "sale_rate": "5532.73",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 7,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "1.2261",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i12",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c86",
+   "values": {
+    "display_name": "Customer 3",
+    "tax_status": "TAXABLE",
+    "exemption_number": "86"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i71",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 3,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.6551",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c89",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "EXEMPT",
+    "exemption_number": "89"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 21
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 4,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.2742",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i92",
+   "values": {
+    "code": "Item 92",
+    "kind": "NONSTOCK",
+    "sale_rate": "389.81",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i93",
+   "values": {
+    "code": "Item 93",
+    "kind": "NONSTOCK",
+    "sale_rate": "7682.86",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i94",
+   "values": {
+    "code": "Item 94",
+    "kind": "NONSTOCK",
+    "sale_rate": "2469.78",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c95",
+   "values": {
+    "display_name": "Customer 8",
+    "tax_status": "TAXABLE",
+    "exemption_number": "95"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i71",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c97",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "TAXABLE",
+    "exemption_number": "97"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "405.2779",
+     "rate": "159.99",
+     "taxable": true
+    },
+    {
+     "quantity": "153.6725",
+     "rate": "63.05",
+     "taxable": true
+    },
+    {
+     "quantity": "32.8854",
+     "rate": "104.28",
+     "taxable": false
+    },
+    {
+     "quantity": "425.5474",
+     "rate": "252.83",
+     "taxable": true
+    },
+    {
+     "quantity": "922.9281",
+     "rate": "571.34",
+     "taxable": true
+    },
+    {
+     "quantity": "151.2560",
+     "rate": "532.52",
+     "taxable": false
+    },
+    {
+     "quantity": "584.3845",
+     "rate": "892.12",
+     "taxable": true
+    }
+   ],
+   "result": "calc98",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c99",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "TAXABLE",
+    "exemption_number": "99"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 5,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.4951",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i101",
+   "values": {
+    "code": "Item 101",
+    "kind": "NONSTOCK",
+    "sale_rate": "8663.31",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "13.9320",
+     "rate": "208.03",
+     "taxable": false
+    },
+    {
+     "quantity": "882.8937",
+     "rate": "370.72",
+     "taxable": true
+    },
+    {
+     "quantity": "573.9456",
+     "rate": "807.44",
+     "taxable": false
+    }
+   ],
+   "result": "calc102",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c78",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 103"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 22
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c105",
+   "values": {
+    "display_name": "Customer 8",
+    "tax_status": "TAXABLE",
+    "exemption_number": "105"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c66",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 106"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i107",
+   "values": {
+    "code": "Item 107",
+    "kind": "NONSTOCK",
+    "sale_rate": "6597.12",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i108",
+   "values": {
+    "code": "Item 108",
+    "kind": "NONSTOCK",
+    "sale_rate": "3782.70",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i109",
+   "values": {
+    "code": "Item 109",
+    "kind": "NONSTOCK",
+    "sale_rate": "5868.81",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c49",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 110"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i109",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c1",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 112"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c113",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "EXEMPT",
+    "exemption_number": "113"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c114",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "EXEMPT",
+    "exemption_number": "114"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 8,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.4927",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 9,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "3.8547",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "509.6076",
+     "rate": "694.95",
+     "taxable": false
+    },
+    {
+     "quantity": "874.6345",
+     "rate": "180.73",
+     "taxable": false
+    }
+   ],
+   "result": "calc117",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 10,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "4.7004",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 23
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i120",
+   "values": {
+    "code": "Item 120",
+    "kind": "SERVICE",
+    "sale_rate": "6549.88",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "688.4230",
+     "rate": "430.43",
+     "taxable": false
+    },
+    {
+     "quantity": "149.6659",
+     "rate": "160.04",
+     "taxable": false
+    },
+    {
+     "quantity": "279.0317",
+     "rate": "309.20",
+     "taxable": false
+    },
+    {
+     "quantity": "225.4001",
+     "rate": "3.24",
+     "taxable": false
+    }
+   ],
+   "result": "calc121",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 24
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i123",
+   "values": {
+    "code": "Item 123",
+    "kind": "NONSTOCK",
+    "sale_rate": "9177.65",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 11,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.9895",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i125",
+   "values": {
+    "code": "Item 125",
+    "kind": "NONSTOCK",
+    "sale_rate": "2478.49",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 25
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c105",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 127"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 12,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "3.2987",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i28",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i130",
+   "values": {
+    "code": "Item 130",
+    "kind": "NONSTOCK",
+    "sale_rate": "4288.35",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 26
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i10",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c133",
+   "values": {
+    "display_name": "Customer 11",
+    "tax_status": "EXEMPT",
+    "exemption_number": "133"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 27
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i135",
+   "values": {
+    "code": "Item 135",
+    "kind": "SERVICE",
+    "sale_rate": "2965.32",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c136",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "TAXABLE",
+    "exemption_number": "136"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "208.9184",
+     "rate": "874.36",
+     "taxable": true
+    },
+    {
+     "quantity": "852.6658",
+     "rate": "359.65",
+     "taxable": false
+    },
+    {
+     "quantity": "603.4225",
+     "rate": "679.25",
+     "taxable": true
+    }
+   ],
+   "result": "calc137",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i138",
+   "values": {
+    "code": "Item 138",
+    "kind": "NONSTOCK",
+    "sale_rate": "3715.31",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c95",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 139"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c140",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "EXEMPT",
+    "exemption_number": "140"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i141",
+   "values": {
+    "code": "Item 141",
+    "kind": "SERVICE",
+    "sale_rate": "3934.51",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i123",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 28
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c144",
+   "values": {
+    "display_name": "Customer 0",
+    "tax_status": "EXEMPT",
+    "exemption_number": "144"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c145",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "TAXABLE",
+    "exemption_number": "145"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c146",
+   "values": {
+    "display_name": "Customer 5",
+    "tax_status": "EXEMPT",
+    "exemption_number": "146"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c147",
+   "values": {
+    "display_name": "Customer 1",
+    "tax_status": "TAXABLE",
+    "exemption_number": "147"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 29
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 6,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "1.2782",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i24",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c151",
+   "values": {
+    "display_name": "Customer 3",
+    "tax_status": "EXEMPT",
+    "exemption_number": "151"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c95",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 152"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c151",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 153"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i154",
+   "values": {
+    "code": "Item 154",
+    "kind": "SERVICE",
+    "sale_rate": "4879.61",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i65",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c156",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "TAXABLE",
+    "exemption_number": "156"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c157",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "TAXABLE",
+    "exemption_number": "157"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c158",
+   "values": {
+    "display_name": "Customer 4",
+    "tax_status": "TAXABLE",
+    "exemption_number": "158"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i159",
+   "values": {
+    "code": "Item 159",
+    "kind": "SERVICE",
+    "sale_rate": "3281.17",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 7,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.1035",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i161",
+   "values": {
+    "code": "Item 161",
+    "kind": "SERVICE",
+    "sale_rate": "8456.23",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i11",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 30
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i164",
+   "values": {
+    "code": "Item 164",
+    "kind": "NONSTOCK",
+    "sale_rate": "5514.08",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c165",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "EXEMPT",
+    "exemption_number": "165"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 13,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.0661",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 14,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "4.5991",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c168",
+   "values": {
+    "display_name": "Customer 10",
+    "tax_status": "TAXABLE",
+    "exemption_number": "168"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "157.9085",
+     "rate": "462.12",
+     "taxable": true
+    },
+    {
+     "quantity": "344.9446",
+     "rate": "135.70",
+     "taxable": false
+    },
+    {
+     "quantity": "434.1159",
+     "rate": "976.57",
+     "taxable": true
+    },
+    {
+     "quantity": "832.3854",
+     "rate": "128.10",
+     "taxable": false
+    },
+    {
+     "quantity": "376.7448",
+     "rate": "416.03",
+     "taxable": true
+    }
+   ],
+   "result": "calc169",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 8,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "2.5913",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 9,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.8195",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "312.1248",
+     "rate": "994.27",
+     "taxable": false
+    },
+    {
+     "quantity": "548.5439",
+     "rate": "126.86",
+     "taxable": true
+    },
+    {
+     "quantity": "992.4304",
+     "rate": "796.55",
+     "taxable": false
+    },
+    {
+     "quantity": "45.9180",
+     "rate": "522.07",
+     "taxable": true
+    },
+    {
+     "quantity": "849.2915",
+     "rate": "260.91",
+     "taxable": true
+    }
+   ],
+   "result": "calc172",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 31
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 32
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i161",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c176",
+   "values": {
+    "display_name": "Customer 0",
+    "tax_status": "EXEMPT",
+    "exemption_number": "176"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 33
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 15,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "3.7243",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "216.2609",
+     "rate": "412.86",
+     "taxable": true
+    },
+    {
+     "quantity": "381.8365",
+     "rate": "720.40",
+     "taxable": true
+    }
+   ],
+   "result": "calc179",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c180",
+   "values": {
+    "display_name": "Customer 9",
+    "tax_status": "EXEMPT",
+    "exemption_number": "180"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c181",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "TAXABLE",
+    "exemption_number": "181"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c74",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 182"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i183",
+   "values": {
+    "code": "Item 183",
+    "kind": "NONSTOCK",
+    "sale_rate": "1275.96",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 34
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 35
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c186",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "TAXABLE",
+    "exemption_number": "186"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i4",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "642.5717",
+     "rate": "288.18",
+     "taxable": false
+    },
+    {
+     "quantity": "765.2913",
+     "rate": "444.07",
+     "taxable": true
+    }
+   ],
+   "result": "calc188",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c189",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "EXEMPT",
+    "exemption_number": "189"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 36
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c191",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "TAXABLE",
+    "exemption_number": "191"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i192",
+   "values": {
+    "code": "Item 192",
+    "kind": "SERVICE",
+    "sale_rate": "8109.51",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 37
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 38
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i195",
+   "values": {
+    "code": "Item 195",
+    "kind": "NONSTOCK",
+    "sale_rate": "1225.15",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c78",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 196"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i63",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 16,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.897",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "385.6427",
+     "rate": "935.45",
+     "taxable": true
+    },
+    {
+     "quantity": "430.7237",
+     "rate": "921.76",
+     "taxable": true
+    },
+    {
+     "quantity": "891.7658",
+     "rate": "100.85",
+     "taxable": true
+    },
+    {
+     "quantity": "722.5259",
+     "rate": "465.41",
+     "taxable": true
+    },
+    {
+     "quantity": "303.4305",
+     "rate": "215.10",
+     "taxable": true
+    },
+    {
+     "quantity": "557.1086",
+     "rate": "153.59",
+     "taxable": false
+    },
+    {
+     "quantity": "30.5406",
+     "rate": "798.28",
+     "taxable": false
+    }
+   ],
+   "result": "calc199",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i200",
+   "values": {
+    "code": "Item 200",
+    "kind": "NONSTOCK",
+    "sale_rate": "4336.99",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c72",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 201"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "441.5158",
+     "rate": "799.39",
+     "taxable": false
+    },
+    {
+     "quantity": "154.1724",
+     "rate": "627.68",
+     "taxable": false
+    },
+    {
+     "quantity": "462.9868",
+     "rate": "595.86",
+     "taxable": true
+    },
+    {
+     "quantity": "50.7122",
+     "rate": "845.16",
+     "taxable": true
+    },
+    {
+     "quantity": "350.9021",
+     "rate": "742.56",
+     "taxable": true
+    }
+   ],
+   "result": "calc202",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 39
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "859.2244",
+     "rate": "121.16",
+     "taxable": false
+    }
+   ],
+   "result": "calc204",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i205",
+   "values": {
+    "code": "Item 205",
+    "kind": "NONSTOCK",
+    "sale_rate": "1250.24",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 40
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c189",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 207"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c56",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 208"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c209",
+   "values": {
+    "display_name": "Customer 19",
+    "tax_status": "TAXABLE",
+    "exemption_number": "209"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c210",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "EXEMPT",
+    "exemption_number": "210"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c78",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 211"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c212",
+   "values": {
+    "display_name": "Customer 5",
+    "tax_status": "EXEMPT",
+    "exemption_number": "212"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c39",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 213"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c214",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "EXEMPT",
+    "exemption_number": "214"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c186",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 215"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c216",
+   "values": {
+    "display_name": "Customer 19",
+    "tax_status": "EXEMPT",
+    "exemption_number": "216"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c217",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "TAXABLE",
+    "exemption_number": "217"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c218",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "EXEMPT",
+    "exemption_number": "218"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 10,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.0631",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "677.8210",
+     "rate": "301.13",
+     "taxable": false
+    },
+    {
+     "quantity": "806.4827",
+     "rate": "519.72",
+     "taxable": true
+    },
+    {
+     "quantity": "895.1948",
+     "rate": "385.65",
+     "taxable": false
+    }
+   ],
+   "result": "calc220",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 17,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.9654",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 41
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 42
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 11,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.975",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "59.5764",
+     "rate": "806.77",
+     "taxable": true
+    },
+    {
+     "quantity": "284.1778",
+     "rate": "173.28",
+     "taxable": true
+    },
+    {
+     "quantity": "890.9287",
+     "rate": "761.72",
+     "taxable": true
+    },
+    {
+     "quantity": "144.1394",
+     "rate": "345.65",
+     "taxable": false
+    },
+    {
+     "quantity": "528.9447",
+     "rate": "232.54",
+     "taxable": false
+    },
+    {
+     "quantity": "430.6350",
+     "rate": "930.43",
+     "taxable": true
+    },
+    {
+     "quantity": "184.8934",
+     "rate": "421.92",
+     "taxable": false
+    }
+   ],
+   "result": "calc225",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i226",
+   "values": {
+    "code": "Item 226",
+    "kind": "NONSTOCK",
+    "sale_rate": "1074.93",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "469.8675",
+     "rate": "787.10",
+     "taxable": true
+    },
+    {
+     "quantity": "711.1978",
+     "rate": "977.26",
+     "taxable": true
+    },
+    {
+     "quantity": "115.9049",
+     "rate": "483.14",
+     "taxable": false
+    },
+    {
+     "quantity": "71.4143",
+     "rate": "103.97",
+     "taxable": false
+    },
+    {
+     "quantity": "314.0541",
+     "rate": "714.05",
+     "taxable": true
+    },
+    {
+     "quantity": "756.6649",
+     "rate": "116.15",
+     "taxable": false
+    }
+   ],
+   "result": "calc227",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c228",
+   "values": {
+    "display_name": "Customer 11",
+    "tax_status": "EXEMPT",
+    "exemption_number": "228"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i229",
+   "values": {
+    "code": "Item 229",
+    "kind": "NONSTOCK",
+    "sale_rate": "8725.43",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 18,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.8135",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i231",
+   "values": {
+    "code": "Item 231",
+    "kind": "NONSTOCK",
+    "sale_rate": "448.35",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 19,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "4.1096",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c233",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "EXEMPT",
+    "exemption_number": "233"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i234",
+   "values": {
+    "code": "Item 234",
+    "kind": "SERVICE",
+    "sale_rate": "6000.22",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 43
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i236",
+   "values": {
+    "code": "Item 236",
+    "kind": "SERVICE",
+    "sale_rate": "3759.02",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i192",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 44
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i130",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i109",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "217.5794",
+     "rate": "594.73",
+     "taxable": true
+    },
+    {
+     "quantity": "853.9421",
+     "rate": "806.05",
+     "taxable": false
+    },
+    {
+     "quantity": "60.1890",
+     "rate": "740.73",
+     "taxable": true
+    }
+   ],
+   "result": "calc241",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "680.8268",
+     "rate": "50.29",
+     "taxable": false
+    },
+    {
+     "quantity": "456.5059",
+     "rate": "793.25",
+     "taxable": true
+    },
+    {
+     "quantity": "542.1956",
+     "rate": "500.11",
+     "taxable": false
+    },
+    {
+     "quantity": "283.1291",
+     "rate": "161.86",
+     "taxable": true
+    },
+    {
+     "quantity": "509.7012",
+     "rate": "254.94",
+     "taxable": false
+    },
+    {
+     "quantity": "809.5054",
+     "rate": "146.24",
+     "taxable": true
+    },
+    {
+     "quantity": "959.4264",
+     "rate": "885.02",
+     "taxable": true
+    }
+   ],
+   "result": "calc242",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c209",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 243"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c244",
+   "values": {
+    "display_name": "Customer 3",
+    "tax_status": "EXEMPT",
+    "exemption_number": "244"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i159",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i246",
+   "values": {
+    "code": "Item 246",
+    "kind": "NONSTOCK",
+    "sale_rate": "2326.43",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i123",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c248",
+   "values": {
+    "display_name": "Customer 15",
+    "tax_status": "EXEMPT",
+    "exemption_number": "248"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "120.4588",
+     "rate": "286.40",
+     "taxable": false
+    },
+    {
+     "quantity": "658.5849",
+     "rate": "844.58",
+     "taxable": true
+    },
+    {
+     "quantity": "650.7615",
+     "rate": "183.87",
+     "taxable": false
+    },
+    {
+     "quantity": "235.3038",
+     "rate": "99.59",
+     "taxable": false
+    }
+   ],
+   "result": "calc249",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c56",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 250"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c99",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 251"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "583.0613",
+     "rate": "879.06",
+     "taxable": false
+    }
+   ],
+   "result": "calc252",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i253",
+   "values": {
+    "code": "Item 253",
+    "kind": "NONSTOCK",
+    "sale_rate": "1408.59",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c254",
+   "values": {
+    "display_name": "Customer 6",
+    "tax_status": "EXEMPT",
+    "exemption_number": "254"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 12,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.9748",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c256",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "EXEMPT",
+    "exemption_number": "256"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c257",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "257"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c258",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "258"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c259",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "TAXABLE",
+    "exemption_number": "259"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c168",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 260"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 45
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 46
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 47
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i109",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c265",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "EXEMPT",
+    "exemption_number": "265"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 48
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i28",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i268",
+   "values": {
+    "code": "Item 268",
+    "kind": "SERVICE",
+    "sale_rate": "2841.11",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i269",
+   "values": {
+    "code": "Item 269",
+    "kind": "SERVICE",
+    "sale_rate": "6694.47",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 13,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "2.959",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i63",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i108",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c273",
+   "values": {
+    "display_name": "Customer 10",
+    "tax_status": "TAXABLE",
+    "exemption_number": "273"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c274",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "EXEMPT",
+    "exemption_number": "274"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 49
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c37",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 276"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i183",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i278",
+   "values": {
+    "code": "Item 278",
+    "kind": "SERVICE",
+    "sale_rate": "2999.97",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c279",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "TAXABLE",
+    "exemption_number": "279"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i183",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "950.6381",
+     "rate": "303.31",
+     "taxable": false
+    },
+    {
+     "quantity": "147.5674",
+     "rate": "144.32",
+     "taxable": false
+    },
+    {
+     "quantity": "470.2611",
+     "rate": "685.70",
+     "taxable": true
+    },
+    {
+     "quantity": "153.0595",
+     "rate": "355.20",
+     "taxable": true
+    },
+    {
+     "quantity": "639.2558",
+     "rate": "640.29",
+     "taxable": false
+    },
+    {
+     "quantity": "94.0758",
+     "rate": "871.02",
+     "taxable": false
+    }
+   ],
+   "result": "calc281",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 14,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.6751",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "289.4645",
+     "rate": "185.56",
+     "taxable": true
+    },
+    {
+     "quantity": "476.7280",
+     "rate": "323.22",
+     "taxable": true
+    }
+   ],
+   "result": "calc283",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i284",
+   "values": {
+    "code": "Item 284",
+    "kind": "NONSTOCK",
+    "sale_rate": "3206.20",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i285",
+   "values": {
+    "code": "Item 285",
+    "kind": "SERVICE",
+    "sale_rate": "4126.31",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "702.3893",
+     "rate": "399.99",
+     "taxable": true
+    }
+   ],
+   "result": "calc286",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c180",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 287"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 50
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 51
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 20,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "1.5325",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i291",
+   "values": {
+    "code": "Item 291",
+    "kind": "SERVICE",
+    "sale_rate": "2740.08",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i138",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c293",
+   "values": {
+    "display_name": "Customer 13",
+    "tax_status": "EXEMPT",
+    "exemption_number": "293"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c37",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 294"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i295",
+   "values": {
+    "code": "Item 295",
+    "kind": "NONSTOCK",
+    "sale_rate": "1688.26",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c296",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "EXEMPT",
+    "exemption_number": "296"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 15,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.3013",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c298",
+   "values": {
+    "display_name": "Customer 15",
+    "tax_status": "EXEMPT",
+    "exemption_number": "298"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i299",
+   "values": {
+    "code": "Item 299",
+    "kind": "SERVICE",
+    "sale_rate": "9765.26",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c300",
+   "values": {
+    "display_name": "Customer 10",
+    "tax_status": "EXEMPT",
+    "exemption_number": "300"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "30.6025",
+     "rate": "824.73",
+     "taxable": false
+    },
+    {
+     "quantity": "626.3650",
+     "rate": "424.50",
+     "taxable": true
+    },
+    {
+     "quantity": "853.8739",
+     "rate": "605.12",
+     "taxable": true
+    },
+    {
+     "quantity": "410.9924",
+     "rate": "718.52",
+     "taxable": false
+    },
+    {
+     "quantity": "33.3090",
+     "rate": "350.68",
+     "taxable": true
+    }
+   ],
+   "result": "calc301",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 52
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c303",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "303"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c304",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "TAXABLE",
+    "exemption_number": "304"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i305",
+   "values": {
+    "code": "Item 305",
+    "kind": "NONSTOCK",
+    "sale_rate": "4437.36",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c74",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 306"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c307",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "TAXABLE",
+    "exemption_number": "307"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c308",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "TAXABLE",
+    "exemption_number": "308"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c165",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 309"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c310",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "EXEMPT",
+    "exemption_number": "310"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c311",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "EXEMPT",
+    "exemption_number": "311"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 21,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "1.7878",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "983.7927",
+     "rate": "9.91",
+     "taxable": false
+    },
+    {
+     "quantity": "957.5920",
+     "rate": "150.25",
+     "taxable": true
+    },
+    {
+     "quantity": "72.1712",
+     "rate": "157.09",
+     "taxable": true
+    },
+    {
+     "quantity": "102.1386",
+     "rate": "283.74",
+     "taxable": false
+    }
+   ],
+   "result": "calc313",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "46.9183",
+     "rate": "82.00",
+     "taxable": true
+    },
+    {
+     "quantity": "488.2626",
+     "rate": "343.95",
+     "taxable": true
+    },
+    {
+     "quantity": "671.2426",
+     "rate": "424.90",
+     "taxable": false
+    },
+    {
+     "quantity": "619.5789",
+     "rate": "874.76",
+     "taxable": true
+    }
+   ],
+   "result": "calc314",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i315",
+   "values": {
+    "code": "Item 315",
+    "kind": "SERVICE",
+    "sale_rate": "3619.60",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i316",
+   "values": {
+    "code": "Item 316",
+    "kind": "SERVICE",
+    "sale_rate": "8992.22",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c317",
+   "values": {
+    "display_name": "Customer 4",
+    "tax_status": "EXEMPT",
+    "exemption_number": "317"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c317",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 318"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i42",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 16,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.7738",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 17,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "1.5252",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 18,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.7237",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c323",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "TAXABLE",
+    "exemption_number": "323"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i205",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "910.5966",
+     "rate": "348.44",
+     "taxable": false
+    },
+    {
+     "quantity": "877.1306",
+     "rate": "5.67",
+     "taxable": true
+    }
+   ],
+   "result": "calc325",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 19,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.2761",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i93",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "404.2683",
+     "rate": "99.74",
+     "taxable": false
+    },
+    {
+     "quantity": "762.0173",
+     "rate": "4.88",
+     "taxable": true
+    }
+   ],
+   "result": "calc328",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "218.8709",
+     "rate": "29.54",
+     "taxable": true
+    },
+    {
+     "quantity": "209.8773",
+     "rate": "754.63",
+     "taxable": false
+    },
+    {
+     "quantity": "340.9426",
+     "rate": "899.47",
+     "taxable": true
+    },
+    {
+     "quantity": "17.7028",
+     "rate": "459.45",
+     "taxable": false
+    },
+    {
+     "quantity": "469.7732",
+     "rate": "152.48",
+     "taxable": false
+    }
+   ],
+   "result": "calc329",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "744.6933",
+     "rate": "460.01",
+     "taxable": false
+    },
+    {
+     "quantity": "360.1742",
+     "rate": "152.86",
+     "taxable": true
+    },
+    {
+     "quantity": "882.9436",
+     "rate": "349.22",
+     "taxable": false
+    },
+    {
+     "quantity": "387.7077",
+     "rate": "41.59",
+     "taxable": true
+    }
+   ],
+   "result": "calc330",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i331",
+   "values": {
+    "code": "Item 331",
+    "kind": "NONSTOCK",
+    "sale_rate": "9996.36",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "622.2077",
+     "rate": "844.51",
+     "taxable": true
+    }
+   ],
+   "result": "calc332",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c333",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "333"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 20,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.9211",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "787.5830",
+     "rate": "605.90",
+     "taxable": true
+    },
+    {
+     "quantity": "131.7647",
+     "rate": "787.44",
+     "taxable": false
+    },
+    {
+     "quantity": "370.6323",
+     "rate": "743.71",
+     "taxable": true
+    }
+   ],
+   "result": "calc335",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c336",
+   "values": {
+    "display_name": "Customer 11",
+    "tax_status": "TAXABLE",
+    "exemption_number": "336"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 53
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 54
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i101",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c340",
+   "values": {
+    "display_name": "Customer 8",
+    "tax_status": "EXEMPT",
+    "exemption_number": "340"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "91.3487",
+     "rate": "341.92",
+     "taxable": false
+    }
+   ],
+   "result": "calc341",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 55
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i71",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 22,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.299",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i83",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c346",
+   "values": {
+    "display_name": "Customer 4",
+    "tax_status": "EXEMPT",
+    "exemption_number": "346"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c347",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "347"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i348",
+   "values": {
+    "code": "Item 348",
+    "kind": "SERVICE",
+    "sale_rate": "1681.24",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 56
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 57
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 58
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i108",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "105.5215",
+     "rate": "957.51",
+     "taxable": true
+    },
+    {
+     "quantity": "854.9598",
+     "rate": "322.84",
+     "taxable": false
+    }
+   ],
+   "result": "calc353",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c354",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "TAXABLE",
+    "exemption_number": "354"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i65",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c356",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "356"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 59
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c358",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "TAXABLE",
+    "exemption_number": "358"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c140",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 359"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 60
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c361",
+   "values": {
+    "display_name": "Customer 11",
+    "tax_status": "EXEMPT",
+    "exemption_number": "361"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 23,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "4.1487",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 21,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.24",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i364",
+   "values": {
+    "code": "Item 364",
+    "kind": "NONSTOCK",
+    "sale_rate": "9814.56",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i125",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 22,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "2.3542",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i285",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 61
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c369",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "TAXABLE",
+    "exemption_number": "369"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i370",
+   "values": {
+    "code": "Item 370",
+    "kind": "SERVICE",
+    "sale_rate": "1659.20",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 23,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.243",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c372",
+   "values": {
+    "display_name": "Customer 4",
+    "tax_status": "TAXABLE",
+    "exemption_number": "372"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c373",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "EXEMPT",
+    "exemption_number": "373"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i374",
+   "values": {
+    "code": "Item 374",
+    "kind": "NONSTOCK",
+    "sale_rate": "9122.55",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 62
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 24,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "1.2712",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "265.3039",
+     "rate": "980.02",
+     "taxable": false
+    },
+    {
+     "quantity": "823.0946",
+     "rate": "322.70",
+     "taxable": false
+    },
+    {
+     "quantity": "876.8606",
+     "rate": "885.75",
+     "taxable": true
+    },
+    {
+     "quantity": "520.1285",
+     "rate": "585.24",
+     "taxable": false
+    },
+    {
+     "quantity": "328.3228",
+     "rate": "477.23",
+     "taxable": false
+    },
+    {
+     "quantity": "913.9586",
+     "rate": "91.58",
+     "taxable": true
+    }
+   ],
+   "result": "calc377",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c378",
+   "values": {
+    "display_name": "Customer 3",
+    "tax_status": "TAXABLE",
+    "exemption_number": "378"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i379",
+   "values": {
+    "code": "Item 379",
+    "kind": "SERVICE",
+    "sale_rate": "4879.97",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 63
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 25,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.6742",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c382",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "EXEMPT",
+    "exemption_number": "382"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i130",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i384",
+   "values": {
+    "code": "Item 384",
+    "kind": "NONSTOCK",
+    "sale_rate": "291.09",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c385",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "TAXABLE",
+    "exemption_number": "385"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c386",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "TAXABLE",
+    "exemption_number": "386"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "599.4858",
+     "rate": "137.79",
+     "taxable": false
+    },
+    {
+     "quantity": "483.9739",
+     "rate": "22.21",
+     "taxable": true
+    }
+   ],
+   "result": "calc387",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "25.4664",
+     "rate": "147.45",
+     "taxable": true
+    },
+    {
+     "quantity": "27.8638",
+     "rate": "966.00",
+     "taxable": true
+    },
+    {
+     "quantity": "851.9071",
+     "rate": "247.09",
+     "taxable": true
+    },
+    {
+     "quantity": "791.7367",
+     "rate": "281.14",
+     "taxable": true
+    },
+    {
+     "quantity": "169.5602",
+     "rate": "874.26",
+     "taxable": false
+    },
+    {
+     "quantity": "608.9366",
+     "rate": "497.69",
+     "taxable": false
+    }
+   ],
+   "result": "calc388",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 26,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.9263",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "568.7470",
+     "rate": "578.76",
+     "taxable": false
+    },
+    {
+     "quantity": "425.4243",
+     "rate": "366.75",
+     "taxable": false
+    },
+    {
+     "quantity": "761.6919",
+     "rate": "799.55",
+     "taxable": true
+    },
+    {
+     "quantity": "891.2446",
+     "rate": "552.21",
+     "taxable": true
+    }
+   ],
+   "result": "calc390",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 27,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "2.0776",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c392",
+   "values": {
+    "display_name": "Customer 6",
+    "tax_status": "EXEMPT",
+    "exemption_number": "392"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c37",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 393"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c394",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "TAXABLE",
+    "exemption_number": "394"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 64
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c396",
+   "values": {
+    "display_name": "Customer 3",
+    "tax_status": "EXEMPT",
+    "exemption_number": "396"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i130",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c398",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "EXEMPT",
+    "exemption_number": "398"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 65
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 66
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 28,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "1.9738",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c402",
+   "values": {
+    "display_name": "Customer 19",
+    "tax_status": "EXEMPT",
+    "exemption_number": "402"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 24,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.285",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "63.8046",
+     "rate": "707.23",
+     "taxable": true
+    }
+   ],
+   "result": "calc404",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "155.8645",
+     "rate": "608.23",
+     "taxable": false
+    },
+    {
+     "quantity": "439.1330",
+     "rate": "81.93",
+     "taxable": true
+    },
+    {
+     "quantity": "345.4214",
+     "rate": "999.88",
+     "taxable": true
+    },
+    {
+     "quantity": "689.6356",
+     "rate": "916.12",
+     "taxable": false
+    },
+    {
+     "quantity": "320.9238",
+     "rate": "407.45",
+     "taxable": true
+    },
+    {
+     "quantity": "673.1375",
+     "rate": "846.43",
+     "taxable": true
+    }
+   ],
+   "result": "calc405",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c406",
+   "values": {
+    "display_name": "Customer 0",
+    "tax_status": "EXEMPT",
+    "exemption_number": "406"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 67
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c408",
+   "values": {
+    "display_name": "Customer 0",
+    "tax_status": "EXEMPT",
+    "exemption_number": "408"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 68
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c410",
+   "values": {
+    "display_name": "Customer 5",
+    "tax_status": "TAXABLE",
+    "exemption_number": "410"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i411",
+   "values": {
+    "code": "Item 411",
+    "kind": "NONSTOCK",
+    "sale_rate": "6394.81",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i412",
+   "values": {
+    "code": "Item 412",
+    "kind": "SERVICE",
+    "sale_rate": "9375.32",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c413",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "TAXABLE",
+    "exemption_number": "413"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i414",
+   "values": {
+    "code": "Item 414",
+    "kind": "NONSTOCK",
+    "sale_rate": "6354.51",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c415",
+   "values": {
+    "display_name": "Customer 5",
+    "tax_status": "EXEMPT",
+    "exemption_number": "415"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c136",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 416"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c417",
+   "values": {
+    "display_name": "Customer 10",
+    "tax_status": "TAXABLE",
+    "exemption_number": "417"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c265",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 418"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c258",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 419"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c420",
+   "values": {
+    "display_name": "Customer 19",
+    "tax_status": "EXEMPT",
+    "exemption_number": "420"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c421",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "TAXABLE",
+    "exemption_number": "421"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 25,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.1387",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 26,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "4.0103",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c424",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "EXEMPT",
+    "exemption_number": "424"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c72",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 425"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i426",
+   "values": {
+    "code": "Item 426",
+    "kind": "SERVICE",
+    "sale_rate": "18.97",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c427",
+   "values": {
+    "display_name": "Customer 6",
+    "tax_status": "EXEMPT",
+    "exemption_number": "427"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "437.4535",
+     "rate": "554.15",
+     "taxable": true
+    },
+    {
+     "quantity": "334.7489",
+     "rate": "119.94",
+     "taxable": false
+    },
+    {
+     "quantity": "61.2270",
+     "rate": "577.08",
+     "taxable": false
+    }
+   ],
+   "result": "calc428",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 69
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c86",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 430"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c420",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 431"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c293",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 432"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c340",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 433"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "87.7156",
+     "rate": "915.57",
+     "taxable": false
+    }
+   ],
+   "result": "calc434",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c435",
+   "values": {
+    "display_name": "Customer 7",
+    "tax_status": "EXEMPT",
+    "exemption_number": "435"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c436",
+   "values": {
+    "display_name": "Customer 5",
+    "tax_status": "TAXABLE",
+    "exemption_number": "436"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 27,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "0.1245",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i125",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "182.1947",
+     "rate": "766.31",
+     "taxable": true
+    },
+    {
+     "quantity": "615.9509",
+     "rate": "979.62",
+     "taxable": true
+    },
+    {
+     "quantity": "581.7590",
+     "rate": "603.17",
+     "taxable": true
+    },
+    {
+     "quantity": "665.3422",
+     "rate": "492.09",
+     "taxable": true
+    },
+    {
+     "quantity": "692.5522",
+     "rate": "125.47",
+     "taxable": true
+    },
+    {
+     "quantity": "823.3821",
+     "rate": "7.04",
+     "taxable": false
+    }
+   ],
+   "result": "calc439",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i440",
+   "values": {
+    "code": "Item 440",
+    "kind": "SERVICE",
+    "sale_rate": "9007.40",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i441",
+   "values": {
+    "code": "Item 441",
+    "kind": "NONSTOCK",
+    "sale_rate": "2495.51",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c442",
+   "values": {
+    "display_name": "Customer 1",
+    "tax_status": "TAXABLE",
+    "exemption_number": "442"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 28,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.621",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "28.3385",
+     "rate": "557.08",
+     "taxable": false
+    },
+    {
+     "quantity": "385.7177",
+     "rate": "441.76",
+     "taxable": false
+    },
+    {
+     "quantity": "190.9074",
+     "rate": "742.83",
+     "taxable": true
+    },
+    {
+     "quantity": "925.5033",
+     "rate": "988.71",
+     "taxable": false
+    },
+    {
+     "quantity": "633.1211",
+     "rate": "68.02",
+     "taxable": true
+    }
+   ],
+   "result": "calc444",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 70
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i446",
+   "values": {
+    "code": "Item 446",
+    "kind": "SERVICE",
+    "sale_rate": "6029.43",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c259",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 447"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i183",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c449",
+   "values": {
+    "display_name": "Customer 15",
+    "tax_status": "TAXABLE",
+    "exemption_number": "449"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "898.5841",
+     "rate": "339.88",
+     "taxable": true
+    }
+   ],
+   "result": "calc450",
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i234",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i440",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "349.4018",
+     "rate": "71.45",
+     "taxable": true
+    },
+    {
+     "quantity": "143.9714",
+     "rate": "451.30",
+     "taxable": false
+    },
+    {
+     "quantity": "863.0212",
+     "rate": "68.39",
+     "taxable": true
+    }
+   ],
+   "result": "calc453",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c454",
+   "values": {
+    "display_name": "Customer 18",
+    "tax_status": "EXEMPT",
+    "exemption_number": "454"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c233",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 455"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 29,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "4.5243",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 29,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.285",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c458",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "TAXABLE",
+    "exemption_number": "458"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "351.8012",
+     "rate": "664.59",
+     "taxable": true
+    },
+    {
+     "quantity": "417.0418",
+     "rate": "376.97",
+     "taxable": false
+    },
+    {
+     "quantity": "762.9238",
+     "rate": "107.31",
+     "taxable": true
+    },
+    {
+     "quantity": "498.7495",
+     "rate": "887.88",
+     "taxable": true
+    },
+    {
+     "quantity": "466.3815",
+     "rate": "275.10",
+     "taxable": true
+    },
+    {
+     "quantity": "897.5808",
+     "rate": "235.43",
+     "taxable": true
+    },
+    {
+     "quantity": "792.0057",
+     "rate": "802.54",
+     "taxable": false
+    }
+   ],
+   "result": "calc459",
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i370",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c398",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 461"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c462",
+   "values": {
+    "display_name": "Customer 19",
+    "tax_status": "EXEMPT",
+    "exemption_number": "462"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "781.2217",
+     "rate": "449.05",
+     "taxable": true
+    },
+    {
+     "quantity": "528.7473",
+     "rate": "764.79",
+     "taxable": false
+    },
+    {
+     "quantity": "385.4711",
+     "rate": "749.59",
+     "taxable": false
+    },
+    {
+     "quantity": "252.9212",
+     "rate": "674.88",
+     "taxable": true
+    },
+    {
+     "quantity": "88.6436",
+     "rate": "564.28",
+     "taxable": false
+    },
+    {
+     "quantity": "229.7529",
+     "rate": "262.68",
+     "taxable": false
+    }
+   ],
+   "result": "calc463",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 30,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "4.1904",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 31,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "1.2798",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c466",
+   "values": {
+    "display_name": "Customer 19",
+    "tax_status": "EXEMPT",
+    "exemption_number": "466"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i467",
+   "values": {
+    "code": "Item 467",
+    "kind": "NONSTOCK",
+    "sale_rate": "9076.73",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i467",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 71
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 30,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3.4292",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c471",
+   "values": {
+    "display_name": "Customer 8",
+    "tax_status": "TAXABLE",
+    "exemption_number": "471"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c157",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 472"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "933.7107",
+     "rate": "19.27",
+     "taxable": false
+    },
+    {
+     "quantity": "380.2820",
+     "rate": "555.23",
+     "taxable": true
+    },
+    {
+     "quantity": "337.0116",
+     "rate": "926.95",
+     "taxable": false
+    }
+   ],
+   "result": "calc473",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c56",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 474"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c95",
+   "values": {
+    "tax_status": "EXEMPT",
+    "notes": "edit 475"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c476",
+   "values": {
+    "display_name": "Customer 10",
+    "tax_status": "TAXABLE",
+    "exemption_number": "476"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "547.8111",
+     "rate": "32.80",
+     "taxable": false
+    },
+    {
+     "quantity": "971.0295",
+     "rate": "786.25",
+     "taxable": true
+    }
+   ],
+   "result": "calc477",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 31,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "2.6232",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 32,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "2.3092",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c392",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 480"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c481",
+   "values": {
+    "display_name": "Customer 14",
+    "tax_status": "EXEMPT",
+    "exemption_number": "481"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c482",
+   "values": {
+    "display_name": "Customer 17",
+    "tax_status": "EXEMPT",
+    "exemption_number": "482"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r1",
+   "values": {
+    "item_id": "r1",
+    "expected_revision": 33,
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "2.4928",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c484",
+   "values": {
+    "display_name": "Customer 2",
+    "tax_status": "TAXABLE",
+    "exemption_number": "484"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 72
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c486",
+   "values": {
+    "display_name": "Customer 10",
+    "tax_status": "EXEMPT",
+    "exemption_number": "486"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "r0",
+   "values": {
+    "item_id": "r0",
+    "expected_revision": 32,
+    "name": "Rate 0",
+    "description": "Rate 0",
+    "rate": "0.913",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 73
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c489",
+   "values": {
+    "display_name": "Customer 16",
+    "tax_status": "TAXABLE",
+    "exemption_number": "489"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c421",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 490"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i491",
+   "values": {
+    "code": "Item 491",
+    "kind": "NONSTOCK",
+    "sale_rate": "4284.53",
+    "taxable": true
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "i492",
+   "values": {
+    "code": "Item 492",
+    "kind": "SERVICE",
+    "sale_rate": "2108.62",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "g"
+   },
+   "lines": [
+    {
+     "quantity": "123.4756",
+     "rate": "454.38",
+     "taxable": true
+    },
+    {
+     "quantity": "378.0615",
+     "rate": "323.12",
+     "taxable": true
+    },
+    {
+     "quantity": "223.8845",
+     "rate": "551.76",
+     "taxable": true
+    },
+    {
+     "quantity": "388.8029",
+     "rate": "868.13",
+     "taxable": false
+    },
+    {
+     "quantity": "705.1203",
+     "rate": "961.56",
+     "taxable": false
+    }
+   ],
+   "result": "calc493",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "record": "c217",
+   "values": {
+    "tax_status": "TAXABLE",
+    "notes": "edit 494"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "CASH",
+    "filing_frequency": "ANNUALLY",
+    "expected_revision": 74
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c496",
+   "values": {
+    "display_name": "Customer 12",
+    "tax_status": "EXEMPT",
+    "exemption_number": "496"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c497",
+   "values": {
+    "display_name": "Customer 9",
+    "tax_status": "EXEMPT",
+    "exemption_number": "497"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "c498",
+   "values": {
+    "display_name": "Customer 0",
+    "tax_status": "EXEMPT",
+    "exemption_number": "498"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "i24",
+   "active": true,
+   "expect_error": false
+  }
+ ]
+}

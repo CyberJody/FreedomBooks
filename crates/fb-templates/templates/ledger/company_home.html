@@ -1,0 +1,39 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/home.css') }}">{% endblock %}{% block content %}<div class="company-home">
+<div class="heading home-heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Home</h1><p>Follow a workflow, or go straight to the task you need. Each action opens its working screen.</p></div></div>
+<div class="home-grid"><div class="home-flows">
+<section class="flow" aria-labelledby="flow-customers"><header class="flow-head"><h2 id="flow-customers"><span class="flow-mark mark-customers" aria-hidden="true"></span>Customers</h2><p>Proposal, sale, recorded payment</p></header>
+<ol class="flow-steps cols-4">
+<li class="step connected"><a href="{{ url('sales:new', company.pk) }}">{{ icon('estimate', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Create estimate</span><span class="step-note">Optional quote; posts nothing</span></div></a></li>
+<li class="step connected"><a href="{{ url('invoices:new', company.pk) }}">{{ icon('invoice', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Create invoice</span><span class="step-note">Record a customer sale</span></div></a></li>
+<li class="step"><a href="{{ url('receipts:new', company.pk) }}">{{ icon('payment', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Receive payment</span><span class="step-note">Record a customer payment</span></div></a></li>
+<li class="step companion"><a href="{{ url('sales_receipts:new', company.pk) }}">{{ icon('sales-receipt', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Create sales receipt</span><span class="step-note">Cash sale paid on the spot</span></div></a></li>
+</ol><p class="flow-note">An estimate is optional: start with an invoice when no quote is needed. Payments held in undeposited funds go to the bank with Record deposit below.</p></section>
+<section class="flow" aria-labelledby="flow-vendors"><header class="flow-head"><h2 id="flow-vendors"><span class="flow-mark mark-vendors" aria-hidden="true"></span>Vendors</h2><p>Bills and their due dates, together</p></header>
+<ol class="flow-steps cols-3">
+<li class="step connected"><a href="{{ url('bills:new', company.pk) }}">{{ icon('bill', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Enter bill</span><span class="step-note">Record a vendor bill</span></div></a></li>
+<li class="step"><a href="{{ url('payments:new', company.pk) }}">{{ icon('pay-bill', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Pay bills</span><span class="step-note">Record a bill payment</span></div></a></li>
+<li class="step companion"><a href="{{ url('bills:calendar', company.pk) }}">{{ icon('calendar', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Bill calendar</span><span class="step-note">See bills by due date</span></div></a></li>
+</ol><p class="flow-note">The calendar is a companion view, not a required payment step.</p></section>
+<section class="flow" aria-labelledby="flow-banking"><header class="flow-head"><h2 id="flow-banking"><span class="flow-mark mark-banking" aria-hidden="true"></span>Banking</h2><p>Bookkeeping only · no money movement</p></header>
+<ul class="flow-steps cols-4">
+<li class="step"><a href="{{ url('deposits:new', company.pk) }}">{{ icon('deposit', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Record deposit</span><span class="step-note">Group received payments</span></div></a></li>
+<li class="step"><a href="{{ url('checks:new', company.pk) }}">{{ icon('check', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Write check</span><span class="step-note">Pay an expense from a bank</span></div></a></li>
+<li class="step"><a href="{{ url('transfers:new', company.pk) }}">{{ icon('transfer', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Transfer funds</span><span class="step-note">Between your bank accounts</span></div></a></li>
+<li class="step registers">{% if banks|length == 1 %}<a href="{{ url('register', company.pk, banks[0].pk) }}">{{ icon('register', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Bank register</span><span class="step-note">{{ banks[0].code }} · {{ banks[0].name }}</span></div></a>{% elif banks %}<div class="step-box">{{ icon('register', 48, 'step-icon') }}<div class="step-text"><span class="step-label" id="bank-registers">Bank registers</span><ul class="register-links" aria-labelledby="bank-registers">{% for account in banks %}<li><a href="{{ url('register', company.pk, account.pk) }}">{{ account.code }} · {{ account.name }}</a></li>{% endfor %}{% if more_banks %}<li><a href="{{ url('accounts', company.pk) }}">More in Chart of accounts</a></li>{% endif %}</ul></div></div>{% else %}<a class="needs-setup" href="{{ url('documents:setup', company.pk) }}">{{ icon('register', 48, 'step-icon') }}<div class="step-text"><span class="step-label">Bank register</span><span class="step-note"><span class="setup-flag">Needs setup</span> Choose bank accounts in Accounting setup</span></div></a>{% endif %}</li>
+</ul></section>
+</div>
+<aside class="home-shelf" aria-label="Lists, company and reports">
+<section class="shelf" aria-labelledby="shelf-lists"><header class="shelf-head"><h2 id="shelf-lists"><span class="flow-mark mark-lists" aria-hidden="true"></span>Lists</h2><p>The people and details behind the work</p></header><ul class="shelf-rows">
+<li><a href="{{ url('directory:list', company.pk, 'customers') }}">{{ icon('customers', 36, 'row-icon') }}<span><span class="row-label">Customers</span><span class="row-note">People and businesses you sell to</span></span></a></li>
+<li><a href="{{ url('directory:list', company.pk, 'vendors') }}">{{ icon('vendors', 36, 'row-icon') }}<span><span class="row-label">Vendors</span><span class="row-note">People and businesses you buy from</span></span></a></li>
+<li><a href="{{ url('directory:list', company.pk, 'items') }}">{{ icon('items', 36, 'row-icon') }}<span><span class="row-label">Items &amp; services</span><span class="row-note">What you sell or purchase</span></span></a></li>
+<li><a href="{{ url('accounts', company.pk) }}">{{ icon('accounts', 36, 'row-icon') }}<span><span class="row-label">Chart of accounts</span><span class="row-note">How your books are organized</span></span></a></li>
+</ul></section>
+<section class="shelf" aria-labelledby="shelf-company"><header class="shelf-head"><h2 id="shelf-company"><span class="flow-mark mark-company" aria-hidden="true"></span>Company &amp; reports</h2><p>Adjust, review and check the books</p></header><ul class="shelf-rows">
+<li><a href="{{ url('journal_new', company.pk) }}">{{ icon('journal', 36, 'row-icon') }}<span><span class="row-label">Make journal entry</span><span class="row-note">A balanced general journal draft</span></span></a></li>
+<li><a href="{{ url('trial_balance', company.pk) }}">{{ icon('trial-balance', 36, 'row-icon') }}<span><span class="row-label">Trial balance</span><span class="row-note">Posted balances as of a date</span></span></a></li>
+<li><a href="{{ url('history', company.pk) }}">{{ icon('history', 36, 'row-icon') }}<span><span class="row-label">Audit history</span><span class="row-note">Who changed what, and when</span></span></a></li>
+<li><a href="{{ url('documents:setup', company.pk) }}">{{ icon('setup', 36, 'row-icon') }}<span><span class="row-label">Accounting setup</span><span class="row-note">Control accounts and banks</span></span></a></li>
+</ul></section>
+</aside></div>
+</div>{% endblock %}

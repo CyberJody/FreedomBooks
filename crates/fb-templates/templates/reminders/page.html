@@ -1,0 +1,28 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('reminders/reminders.css') }}">{% endblock %}
+{% block content %}<h1>Reminders</h1>
+<p class="reminders-intro">Money to pay and money to collect, as of <time datetime="{{ built.today|date('Y-m-d') }}">{{ built.today|date('l j F Y') }}</time>. Read only: nothing is sent and nothing is posted. <a href="{{ links.calendar }}">Bill calendar</a></p>
+{% if conflict %}<p class="errorlist" role="alert">{{ conflict }}</p>{% endif %}
+{% with group=built.bills %}<details class="reminder-group" id="bills-to-pay" open>
+<summary><span class="reminder-title">Bills to pay</span> <span class="reminder-count">{{ group.count }} bill{{ group.count|pluralize }}</span> <span class="reminder-total"><span class="amount">{{ group.total|money }}</span> {{ company.currency }}</span></summary>
+<p class="reminder-note">Overdue bills plus bills due through <time datetime="{{ built.through|date('Y-m-d') }}">{{ built.through|date('j F Y') }}</time> ({{ built.days }} day{{ built.days|pluralize }} ahead).{% if group.overdue_count %} <strong class="overdue-word">{{ group.overdue_count }} overdue</strong>: <span class="amount">{{ group.overdue_total|money }}</span> {{ company.currency }}.{% endif %}</p>
+{% if group.rows %}<div class="reminder-scroll"><table class="reminder-table"><thead><tr><th scope="col" class="due-col">Due</th><th scope="col">Bill</th><th scope="col">Vendor</th><th scope="col">When</th><th scope="col" class="num">Open balance</th></tr></thead>
+<tbody>{% for row in group.rows %}<tr class="{% if row.overdue %}is-overdue{% elif row.days == 0 %}is-today{% endif %}"><td class="due-col">{{ row.due_date|date('Y-m-d') }}</td><td><a href="{{ url('bills:detail', company.pk, row.document_id) }}">{{ row.number }}</a></td><td>{{ row.party }}</td><td>{{ row.when }}</td><td class="num amount">{{ row.balance|money }}</td></tr>{% endfor %}</tbody>
+<tfoot><tr><td class="due-col"></td><th scope="row" colspan="3">Total{% if group.capped %} (all {{ group.count }}){% endif %}</th><td class="num amount">{{ group.total|money }}</td></tr></tfoot></table></div>
+<p class="reminder-more">{% if group.capped %}Showing {{ group.rows|length }} of {{ group.count }}, oldest due first. <a href="{{ links.bills }}">Show all in the bill list</a>{% else %}<a href="{{ links.bills }}">Open these in the bill list</a>{% endif %}</p>
+{% else %}<p class="reminder-none">Nothing to pay: no bills are overdue or due in the next {{ built.days }} day{{ built.days|pluralize }}.</p>{% endif %}
+</details>{% endwith %}
+{% with group=built.invoices %}<details class="reminder-group" id="overdue-invoices" open>
+<summary><span class="reminder-title">Overdue invoices</span> <span class="reminder-count">{{ group.count }} invoice{{ group.count|pluralize }}</span> <span class="reminder-total"><span class="amount">{{ group.total|money }}</span> {{ company.currency }}</span></summary>
+<p class="reminder-note">Posted invoices with a balance due before today, after receipts and credits.</p>
+{% if group.rows %}<div class="reminder-scroll"><table class="reminder-table"><thead><tr><th scope="col" class="due-col">Due</th><th scope="col">Invoice</th><th scope="col">Customer</th><th scope="col">When</th><th scope="col" class="num">Open balance</th></tr></thead>
+<tbody>{% for row in group.rows %}<tr class="is-overdue"><td class="due-col">{{ row.due_date|date('Y-m-d') }}</td><td><a href="{{ url('invoices:detail', company.pk, row.document_id) }}">{{ row.number }}</a></td><td>{{ row.party }}</td><td>{{ row.when }}</td><td class="num amount">{{ row.balance|money }}</td></tr>{% endfor %}</tbody>
+<tfoot><tr><td class="due-col"></td><th scope="row" colspan="3">Total{% if group.capped %} (all {{ group.count }}){% endif %}</th><td class="num amount">{{ group.total|money }}</td></tr></tfoot></table></div>
+<p class="reminder-more">{% if group.capped %}Showing {{ group.rows|length }} of {{ group.count }}, oldest due first. <a href="{{ links.invoices }}">Show all in the invoice list</a>{% else %}<a href="{{ links.invoices }}">Open these in the invoice list</a>{% endif %}</p>
+{% else %}<p class="reminder-none">No overdue invoices.</p>{% endif %}
+</details>{% endwith %}
+<section class="reminder-settings" aria-labelledby="reminder-settings-title"><h2 id="reminder-settings-title">Reminder setting</h2>
+{% if staff %}<form method="post" action="{{ url('reminders:settings', company.pk) }}" class="reminder-settings-form">{{ csrf_token|safe }}{{ settings_form.f.expected.widget|safe }}
+<label for="{{ settings_form.f.days.id_for_label }}">{{ settings_form.f.days.label }}</label> {{ settings_form.f.days.widget|safe }} <span>days (0 to 90)</span> <button type="submit">Save</button>
+{% if settings_form.has_errors %}<div class="errorlist" role="alert">{% for error in settings_errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}</form>
+{% else %}<p>Bills show here {{ company.bill_reminder_days }} day{{ company.bill_reminder_days|pluralize }} before they're due. Only a staff operator can change this.</p>{% endif %}
+</section>{% endblock %}

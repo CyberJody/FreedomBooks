@@ -1,0 +1,368 @@
+{
+  "users": [
+    {
+      "username": "credits",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic credits",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank2",
+      "code": "101",
+      "name": "bank2",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar2",
+      "code": "111",
+      "name": "ar2",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ap",
+      "code": "200",
+      "name": "ap",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "210",
+      "name": "tax",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income2",
+      "code": "410",
+      "name": "income2",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "500",
+      "name": "expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer2",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "work",
+      "values": {
+        "code": "WORK",
+        "description": "Synthetic work",
+        "kind": "SERVICE",
+        "sale_rate": "9.99",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "payables": "ap",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank",
+          "bank2"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "credits_review_memo",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000092ae0",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "memo": "Returned synthetic service",
+        "tax_mode": "MANUAL",
+        "tax_rate": "8",
+        "tax_label": "Tax",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Taxable return",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": true,
+            "income_account_id": "income"
+          },
+          {
+            "item_id": null,
+            "description": "Untaxed",
+            "quantity": "1",
+            "rate": "2.50",
+            "taxable": false,
+            "income_account_id": "income2"
+          }
+        ]
+      },
+      "review": "catalog",
+      "expect_error": false
+    },
+    {
+      "op": "credits_record_memo",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000092ae0",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "memo": "Returned synthetic service",
+        "tax_mode": "MANUAL",
+        "tax_rate": "8",
+        "tax_label": "Tax",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Taxable return",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": true,
+            "income_account_id": "income"
+          },
+          {
+            "item_id": null,
+            "description": "Untaxed",
+            "quantity": "1",
+            "rate": "2.50",
+            "taxable": false,
+            "income_account_id": "income2"
+          }
+        ]
+      },
+      "review": "catalog",
+      "ref": "catalog",
+      "expect_error": false
+    },
+    {
+      "op": "credits_review_refund",
+      "company": "c",
+      "record": "catalog",
+      "review": "bad-bank-0",
+      "expect_error": true,
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000f2eb8",
+        "date": "2026-10-11",
+        "amount": "1.00",
+        "bank_id": "ar",
+        "method": "CASH"
+      },
+      "expect_kind": "ValidationError",
+      "expect_message": "A refund cannot be paid from a receivables, undeposited-funds or other control account. Choose a designated bank."
+    },
+    {
+      "op": "credits_review_refund",
+      "company": "c",
+      "record": "catalog",
+      "review": "bad-bank-1",
+      "expect_error": true,
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000f2eb9",
+        "date": "2026-10-11",
+        "amount": "1.00",
+        "bank_id": "missing-bank",
+        "method": "CASH"
+      },
+      "expect_kind": "ValidationError",
+      "expect_message": "Choose a designated bank account in this company, separate from receivables."
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 1,
+      "values": {
+        "receivables": null,
+        "payables": "ap",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank",
+          "bank2"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "credits_review_memo",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000f32a1",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "memo": "Returned synthetic service",
+        "tax_mode": "MANUAL",
+        "tax_rate": "8",
+        "tax_label": "Tax",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Taxable return",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": true,
+            "income_account_id": "income"
+          },
+          {
+            "item_id": null,
+            "description": "Untaxed",
+            "quantity": "1",
+            "rate": "2.50",
+            "taxable": false,
+            "income_account_id": "income2"
+          }
+        ]
+      },
+      "review": "missing-receivables",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Configure a receivables (A/R) account in Accounting setup before recording a credit memo."
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 2,
+      "values": {
+        "receivables": "ar",
+        "payables": "ap",
+        "undeposited": "uf",
+        "collected_tax": null,
+        "banks": [
+          "bank",
+          "bank2"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "credits_review_memo",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000f32a2",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "memo": "Returned synthetic service",
+        "tax_mode": "MANUAL",
+        "tax_rate": "8",
+        "tax_label": "Tax",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Taxable return",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": true,
+            "income_account_id": "income"
+          },
+          {
+            "item_id": null,
+            "description": "Untaxed",
+            "quantity": "1",
+            "rate": "2.50",
+            "taxable": false,
+            "income_account_id": "income2"
+          }
+        ]
+      },
+      "review": "missing-collected_tax",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Configure collected tax in Accounting setup before recording a taxed credit memo."
+    }
+  ],
+  "as_of": [
+    "2026-10-01",
+    "2026-10-08",
+    "2026-10-11",
+    "2026-10-20",
+    "2026-12-31"
+  ]
+}

@@ -1,0 +1,14 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('sales/estimates.css') }}"><script src="{{ static('sales/estimates.js') }}" defer></script><script src="{{ static('sales/line_tax.js') }}" defer></script>{% endblock %}
+{% block content %}<h1>{% if estimate %}Revise {{ estimate.identity.number }}{% else %}New estimate{% endif %}</h1>
+<p>Non-posting estimate · Not money owed. No accounts setup required. Up to 50 lines.</p>
+{% if current and current.state != 'DRAFT' %}<p class="errorlist">This estimate is {{ current.get_state_display }}. Reopen from its detail page before editing; cancelled estimates cannot be reopened.</p>{% endif %}
+<p>Customer and item names on saved documents stay as they were when you saved. Use Update on the form to pull current directory details. Replace archived customers or items before you post.</p>
+{% if form.has_errors or formset.total_error_count %}<p class="errorlist" role="alert">Estimate not saved. Review the errors below; your entered values are retained.</p>{% endif %}<form method="post" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{{ form.f.request_key.widget|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.f.request_key.errors|safe }}{{ form.f.expected_revision.errors|safe }}
+<div class="estimate-header">{% for field in form.visible_fields %}<div>{{ field.label_tag|safe }} {{ field.widget|safe }}{{ field.errors|safe }}</div>{% endfor %}</div><p class="customer-tax-note" id="customer-tax-note" hidden></p>
+<h2>Lines</h2><p>Choosing an item fills description and rate on that row. You can edit both. Picking a different item replaces those fields.</p>
+{{ formset.management_form|safe }}{{ formset.non_form_errors|safe }}
+<div id="estimate-lines">{% for line in formset.forms %}<fieldset class="estimate-line"><legend>Line {{ loop.index }}</legend>{{ line.as_p|safe }}</fieldset>{% endfor %}</div>
+<template id="empty-line"><fieldset class="estimate-line"><legend>Additional line</legend>{{ formset.empty_form.as_p|safe }}</fieldset></template>
+<button type="button" id="add-line">Add line</button><button type="submit">Save estimate</button>
+<a href="{{ url('sales:list', company.pk) }}">Estimate list</a></form>{{ catalog|json_script('estimate-catalog') }}{{ customer_tax|json_script('customer-tax') }}{% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}"><link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Reconcile</h1>
+<p>Match a bank or credit card account to its statement: enter the statement ending balance, tick the lines the statement shows, and reconcile when the difference is 0.00.</p></div></div>
+{% if request.GET.left %}<p class="notice" role="status">Your ticks are saved. Continue that reconciliation any time.</p>{% endif %}
+<section><table class="registers-list reconcile-list"><thead><tr><th scope="col">Account</th><th scope="col">Type</th><th scope="col">Last statement</th><th scope="col" class="amount">Last ending balance</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+{% for account in page.object_list %}<tr><td data-label="Account">{{ account.code }} · {{ account.name }}</td><td data-label="Type">{{ account.get_detail_type_display }}</td>
+<td data-label="Last statement">{% if account.last_rec %}<a href="{{ url('reconcile:report', company.pk, account.last_rec.pk) }}">{{ account.last_rec.statement_date|date('Y-m-d') }}</a>{% else %}Never reconciled{% endif %}</td>
+<td data-label="Last ending balance" class="amount">{% if account.last_rec %}{{ account.last_rec.ending_balance }}{% else %}0.00{% endif %}</td>
+<td data-label="Status">{% if account.open_rec %}<span class="badge in-progress">In progress · statement {{ account.open_rec.statement_date|date('Y-m-d') }}</span>{% endif %}</td>
+<td class="actions-cell">{% if account.open_rec %}<a class="button" href="{{ url('reconcile:screen', company.pk, account.pk) }}">Continue</a>{% else %}<a class="button" href="{{ url('reconcile:begin', company.pk, account.pk) }}">Begin</a>{% endif %} <a href="{{ url('reconcile:history', company.pk, account.pk) }}">History</a></td></tr>
+{% else %}<tr><td colspan="6">No active bank or credit card accounts. <a href="{{ url('account_new', company.pk) }}">Add an account</a> with the type Bank or Credit card, or choose a bank in <a href="{{ url('documents:setup', company.pk) }}">Accounting setup</a>.</td></tr>{% endfor %}
+</tbody></table></section>{% include 'ledger/pager.html' %}
+<p class="muted">Ticks are the same cleared marks as in <a href="{{ url('registers:list', company.pk) }}">Registers</a>. Reconciled lines show R there and can no longer be changed or voided.</p>
+{% endblock %}

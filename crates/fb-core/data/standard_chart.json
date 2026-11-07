@@ -1,0 +1,240 @@
+[
+  {
+    "code": "1000",
+    "name": "Checking",
+    "detail_type": "BANK",
+    "is_contra": false,
+    "description": "Business checking account."
+  },
+  {
+    "code": "1100",
+    "name": "Accounts Receivable",
+    "detail_type": "RECEIVABLE",
+    "is_contra": false,
+    "description": "Money customers owe the business."
+  },
+  {
+    "code": "1200",
+    "name": "Undeposited Funds",
+    "detail_type": "OTHER_CURRENT_ASSET",
+    "is_contra": false,
+    "description": "Customer payments awaiting deposit."
+  },
+  {
+    "code": "1500",
+    "name": "Equipment",
+    "detail_type": "FIXED_ASSET",
+    "is_contra": false,
+    "description": "Business equipment recorded as an asset."
+  },
+  {
+    "code": "1590",
+    "name": "Accumulated Depreciation",
+    "detail_type": "FIXED_ASSET",
+    "is_contra": true,
+    "description": "Accumulated depreciation of business equipment."
+  },
+  {
+    "code": "2000",
+    "name": "Accounts Payable",
+    "detail_type": "PAYABLE",
+    "is_contra": false,
+    "description": "Unpaid vendor bills."
+  },
+  {
+    "code": "2100",
+    "name": "Sales Tax Payable",
+    "detail_type": "OTHER_CURRENT_LIABILITY",
+    "is_contra": false,
+    "description": "Sales tax collected and owed to tax agencies."
+  },
+  {
+    "code": "3000",
+    "name": "Opening Balance Equity",
+    "detail_type": "EQUITY",
+    "is_contra": false,
+    "description": "Temporary offset for opening balances; review with your accountant."
+  },
+  {
+    "code": "3100",
+    "name": "Owner's Equity",
+    "detail_type": "EQUITY",
+    "is_contra": false,
+    "description": "Owner contributions and capital."
+  },
+  {
+    "code": "3200",
+    "name": "Owner's Draw",
+    "detail_type": "EQUITY",
+    "is_contra": true,
+    "description": "Owner withdrawals; not a business expense."
+  },
+  {
+    "code": "4000",
+    "name": "Services",
+    "detail_type": "INCOME",
+    "is_contra": false,
+    "description": "Schedule C: Gross receipts or sales from services."
+  },
+  {
+    "code": "4100",
+    "name": "Sales",
+    "detail_type": "INCOME",
+    "is_contra": false,
+    "description": "Schedule C: Gross receipts or sales from goods."
+  },
+  {
+    "code": "4200",
+    "name": "Reimbursed Expenses",
+    "detail_type": "INCOME",
+    "is_contra": false,
+    "description": "Schedule C: Customer expense reimbursements included in gross receipts."
+  },
+  {
+    "code": "4900",
+    "name": "Other Income",
+    "detail_type": "OTHER_INCOME",
+    "is_contra": false,
+    "description": "Schedule C: Other business income."
+  },
+  {
+    "code": "5000",
+    "name": "Cost of Goods Sold",
+    "detail_type": "COST_OF_GOODS_SOLD",
+    "is_contra": false,
+    "description": "Schedule C: Cost of goods sold (Part III)."
+  },
+  {
+    "code": "6000",
+    "name": "Advertising",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Advertising."
+  },
+  {
+    "code": "6010",
+    "name": "Car and Truck",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Car and truck expenses; business use only."
+  },
+  {
+    "code": "6020",
+    "name": "Commissions and Fees",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Commissions and fees."
+  },
+  {
+    "code": "6030",
+    "name": "Contract Labor",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Contract labor."
+  },
+  {
+    "code": "6040",
+    "name": "Insurance",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Insurance other than health insurance."
+  },
+  {
+    "code": "6050",
+    "name": "Interest",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Business interest; separate mortgage and other interest when preparing taxes."
+  },
+  {
+    "code": "6060",
+    "name": "Legal and Professional",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Legal and professional services."
+  },
+  {
+    "code": "6070",
+    "name": "Office",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Office expense."
+  },
+  {
+    "code": "6080",
+    "name": "Rent or Lease",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Rent or lease; separate equipment and other business property when preparing taxes."
+  },
+  {
+    "code": "6090",
+    "name": "Repairs and Maintenance",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Repairs and maintenance."
+  },
+  {
+    "code": "6100",
+    "name": "Supplies",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Supplies not included in cost of goods sold."
+  },
+  {
+    "code": "6110",
+    "name": "Taxes and Licenses",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Business taxes and licenses; excludes personal income taxes and sales tax collected."
+  },
+  {
+    "code": "6120",
+    "name": "Travel",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Travel expenses."
+  },
+  {
+    "code": "6130",
+    "name": "Meals",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Business meals; record the full business cost and apply tax limits when preparing taxes."
+  },
+  {
+    "code": "6140",
+    "name": "Utilities",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Utilities."
+  },
+  {
+    "code": "6150",
+    "name": "Wages",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Wages paid to employees; excludes owner draws."
+  },
+  {
+    "code": "6160",
+    "name": "Bank Service Charges",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Other expenses (Part V), business bank service charges."
+  },
+  {
+    "code": "6170",
+    "name": "Depreciation",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Depreciation and section 179 expense; review asset treatment when preparing taxes."
+  },
+  {
+    "code": "6190",
+    "name": "Other Expenses",
+    "detail_type": "EXPENSE",
+    "is_contra": false,
+    "description": "Schedule C: Other expenses (Part V); describe each category when preparing taxes."
+  }
+]

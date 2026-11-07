@@ -1,0 +1,1 @@
+{"errors": ["Connection to Example Bank may need attention"], "accounts": [{"id": "a", "currency": "USD", "balance": 1.5, "transactions": "nope"}]}

@@ -1,0 +1,249 @@
+fb_customer_deposit_guard
+
+DECLARE r sales_receipt; v sales_estimaterevision;
+BEGIN
+ IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'Customer deposit history is immutable' USING ERRCODE='23514', CONSTRAINT='customer_deposit_immutable'; END IF;
+ SELECT * INTO r FROM sales_receipt WHERE id=NEW.receipt_id;
+ IF r.id IS NULL OR r.kind IS DISTINCT FROM 'CDP' OR r.company_id IS DISTINCT FROM NEW.company_id OR r.writer_xid IS DISTINCT FROM txid_current() OR
+    NOT EXISTS(SELECT 1 FROM ledger_account WHERE id=NEW.liability_id AND company_id=NEW.company_id AND kind='LIABILITY' AND detail_type='OTHER_CURRENT_LIABILITY') OR
+    char_length(NEW.order_reference)>120 THEN
+   RAISE EXCEPTION 'Invalid customer deposit detail' USING ERRCODE='23514', CONSTRAINT='customer_deposit_scope';
+ END IF;
+ IF NEW.estimate_id IS NOT NULL THEN
+   SELECT v2.* INTO v FROM sales_estimate e JOIN sales_estimaterevision v2 ON v2.estimate_id=e.id AND v2.number=e.revision
+    WHERE e.id=NEW.estimate_id AND e.company_id=NEW.company_id;
+   IF v.id IS NULL OR v.customer_id IS DISTINCT FROM r.customer_id THEN
+     RAISE EXCEPTION 'A linked estimate must be the same customer''s' USING ERRCODE='23514', CONSTRAINT='customer_deposit_scope';
+   END IF;
+ END IF;
+ RETURN NEW;
+END
+
+fb_customer_deposit_reversal
+
+DECLARE r sales_receipt; released date;
+BEGIN
+ SELECT * INTO r FROM sales_receipt WHERE id=NEW.receipt_id;
+ IF r.kind='CDP' THEN
+  PERFORM 1 FROM ledger_company WHERE id=r.company_id FOR NO KEY UPDATE;
+  IF fb_customer_deposit_live_use(r.id) <> 0 THEN
+    RAISE EXCEPTION 'Unapply and void refunds before voiding a customer deposit' USING ERRCODE='23514', CONSTRAINT='customer_deposit_live_dependency';
+  END IF;
+  SELECT max(d) INTO released FROM (
+    SELECT u.date d FROM prepayments_depositunapplication u JOIN prepayments_depositapplication a ON a.id=u.application_id WHERE a.deposit_id=r.id
+    UNION ALL SELECT v.date FROM prepayments_depositrefundvoid v JOIN prepayments_depositrefund f ON f.id=v.refund_id WHERE f.deposit_id=r.id) x;
+  IF released IS NOT NULL AND NEW.date<released THEN
+    RAISE EXCEPTION 'Customer deposit void cannot precede its last release' USING ERRCODE='23514', CONSTRAINT='customer_deposit_release_date';
+  END IF;
+ END IF;
+ RETURN NEW;
+END
+
+fb_deposit_application_complete
+
+DECLARE a prepayments_depositapplication;
+BEGIN
+ SELECT * INTO a FROM prepayments_depositapplication WHERE id=NEW.id;
+ IF EXISTS(
+  WITH expected AS (SELECT a.liability_id account_id, a.amount debit, 0::numeric credit UNION ALL SELECT a.receivables_id, 0::numeric, a.amount),
+       actual AS (SELECT account_id, debit, credit FROM ledger_journalline WHERE journal_id=a.journal_id)
+  (SELECT * FROM expected EXCEPT ALL SELECT * FROM actual) UNION ALL (SELECT * FROM actual EXCEPT ALL SELECT * FROM expected)
+ ) THEN RAISE EXCEPTION 'Deposit application journal must debit customer deposits and credit receivables exactly' USING ERRCODE='23514', CONSTRAINT='deposit_application_complete'; END IF;
+ IF EXISTS(
+  WITH expected AS (SELECT 'customer_deposits'::varchar role, a.liability_id account_id UNION ALL SELECT 'receivables', a.receivables_id),
+       actual AS (SELECT role, account_id FROM documents_documentaccount WHERE source_id=a.identity_id)
+  (SELECT * FROM expected EXCEPT ALL SELECT * FROM actual) UNION ALL (SELECT * FROM actual EXCEPT ALL SELECT * FROM expected)
+ ) THEN RAISE EXCEPTION 'Deposit application account evidence mismatch' USING ERRCODE='23514', CONSTRAINT='deposit_application_complete'; END IF;
+ -- Re-assert OPEN at COMMIT under the invoice row lock (the N14 0003 backstop, built in from the start).
+ IF NOT EXISTS(SELECT 1 FROM prepayments_depositunapplication WHERE application_id=a.id) THEN
+   PERFORM 1 FROM sales_invoice WHERE id=a.invoice_id FOR UPDATE;
+   IF EXISTS(SELECT 1 FROM sales_invoice i JOIN sales_invoicerevision v ON v.invoice_id=i.id AND v.number=i.revision
+             WHERE i.id=a.invoice_id AND (v.id IS DISTINCT FROM a.invoice_revision_id OR v.state IS DISTINCT FROM 'OPEN')) THEN
+     RAISE EXCEPTION 'A deposit can stay applied only to the open invoice it was applied to' USING ERRCODE='23514', CONSTRAINT='deposit_application_open_at_commit';
+   END IF;
+ END IF;
+ IF EXISTS(SELECT 1 FROM sales_invoice i JOIN sales_invoicerevision v ON v.invoice_id=i.id AND v.number=i.revision
+           WHERE i.id=a.invoice_id AND fb_invoice_live_settled(i.id)>v.total) THEN
+   RAISE EXCEPTION 'Receipts, credits and deposits cannot settle more than an invoice total' USING ERRCODE='23514', CONSTRAINT='invoice_overcredited';
+ END IF;
+ IF fb_customer_deposit_live_use(a.deposit_id) > (SELECT r.amount FROM sales_receipt r WHERE r.id=a.deposit_id) THEN
+   RAISE EXCEPTION 'A customer deposit''s remaining balance cannot go negative' USING ERRCODE='23514', CONSTRAINT='customer_deposit_overused';
+ END IF;
+ RETURN NULL;
+END
+
+fb_deposit_application_guard
+
+DECLARE r sales_receipt; c prepayments_customerdeposit; i sales_invoice; v sales_invoicerevision;
+BEGIN
+ IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'Deposit application history is immutable' USING ERRCODE='23514', CONSTRAINT='customer_deposit_immutable'; END IF;
+ PERFORM 1 FROM ledger_company WHERE id=NEW.company_id FOR NO KEY UPDATE;
+ SELECT * INTO r FROM sales_receipt WHERE id=NEW.deposit_id;
+ SELECT * INTO c FROM prepayments_customerdeposit WHERE receipt_id=NEW.deposit_id;
+ IF r.kind IS DISTINCT FROM 'CDP' OR r.company_id IS DISTINCT FROM NEW.company_id OR EXISTS(SELECT 1 FROM sales_receiptreversal WHERE receipt_id=r.id) OR
+    NEW.date<r.date OR NEW.liability_id IS DISTINCT FROM c.liability_id OR
+    NOT EXISTS(SELECT 1 FROM documents_documentidentity WHERE id=NEW.identity_id AND company_id=NEW.company_id AND kind='CDA') OR
+    NOT EXISTS(SELECT 1 FROM ledger_journal WHERE id=NEW.journal_id AND company_id=NEW.company_id AND source_id=NEW.identity_id
+               AND status='POSTED' AND reversal_of_id IS NULL AND date=NEW.date) OR
+    char_length(NEW.creation_digest)<>64 OR char_length(NEW.review_digest)<>64 THEN
+   RAISE EXCEPTION 'Invalid deposit application ownership/posting' USING ERRCODE='23514', CONSTRAINT='deposit_application_scope';
+ END IF;
+ SELECT * INTO i FROM sales_invoice WHERE id=NEW.invoice_id FOR UPDATE;
+ SELECT * INTO v FROM sales_invoicerevision WHERE id=NEW.invoice_revision_id;
+ IF i.company_id IS DISTINCT FROM NEW.company_id OR v.invoice_id IS DISTINCT FROM i.id OR v.number IS DISTINCT FROM i.revision OR v.state IS DISTINCT FROM 'OPEN' OR
+    v.customer_id IS DISTINCT FROM r.customer_id OR v.date>NEW.date OR
+    NOT EXISTS(SELECT 1 FROM documents_documentaccount WHERE source_id=i.identity_id AND role='receivables' AND account_id=NEW.receivables_id) THEN
+   RAISE EXCEPTION 'Invalid deposit application target' USING ERRCODE='23514', CONSTRAINT='deposit_application_target';
+ END IF;
+ NEW.writer_xid := txid_current();
+ RETURN NEW;
+END
+
+fb_deposit_refund_complete
+
+DECLARE f prepayments_depositrefund;
+BEGIN
+ SELECT * INTO f FROM prepayments_depositrefund WHERE id=NEW.id;
+ IF EXISTS(
+  WITH expected AS (SELECT f.liability_id account_id, f.amount debit, 0::numeric credit UNION ALL SELECT f.bank_id, 0::numeric, f.amount),
+       actual AS (SELECT account_id, debit, credit FROM ledger_journalline WHERE journal_id=f.journal_id)
+  (SELECT * FROM expected EXCEPT ALL SELECT * FROM actual) UNION ALL (SELECT * FROM actual EXCEPT ALL SELECT * FROM expected)
+ ) THEN RAISE EXCEPTION 'Deposit refund journal must be exactly one customer deposits debit and one bank credit' USING ERRCODE='23514', CONSTRAINT='deposit_refund_journal_split'; END IF;
+ IF EXISTS(
+  WITH expected AS (SELECT 'bank'::varchar role, f.bank_id account_id UNION ALL SELECT 'customer_deposits', f.liability_id),
+       actual AS (SELECT role, account_id FROM documents_documentaccount WHERE source_id=f.identity_id)
+  (SELECT * FROM expected EXCEPT ALL SELECT * FROM actual) UNION ALL (SELECT * FROM actual EXCEPT ALL SELECT * FROM expected)
+ ) THEN RAISE EXCEPTION 'Deposit refund account evidence must be exactly bank and customer deposits' USING ERRCODE='23514', CONSTRAINT='deposit_refund_account_evidence'; END IF;
+ IF fb_customer_deposit_live_use(f.deposit_id) > (SELECT r.amount FROM sales_receipt r WHERE r.id=f.deposit_id) THEN
+   RAISE EXCEPTION 'A customer deposit''s remaining balance cannot go negative' USING ERRCODE='23514', CONSTRAINT='customer_deposit_overused';
+ END IF;
+ RETURN NULL;
+END
+
+fb_deposit_refund_guard
+
+DECLARE r sales_receipt; c prepayments_customerdeposit;
+BEGIN
+ IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'Deposit refund history is immutable' USING ERRCODE='23514', CONSTRAINT='customer_deposit_immutable'; END IF;
+ PERFORM 1 FROM ledger_company WHERE id=NEW.company_id FOR NO KEY UPDATE;
+ SELECT * INTO r FROM sales_receipt WHERE id=NEW.deposit_id;
+ SELECT * INTO c FROM prepayments_customerdeposit WHERE receipt_id=NEW.deposit_id;
+ IF NOT EXISTS(SELECT 1 FROM documents_documentidentity WHERE id=NEW.identity_id AND company_id=NEW.company_id AND kind='CDR') OR
+    r.kind IS DISTINCT FROM 'CDP' OR r.company_id IS DISTINCT FROM NEW.company_id OR EXISTS(SELECT 1 FROM sales_receiptreversal WHERE receipt_id=r.id) OR
+    NEW.customer_id IS DISTINCT FROM r.customer_id OR NEW.liability_id IS DISTINCT FROM c.liability_id OR NEW.date<r.date OR
+    NOT EXISTS(SELECT 1 FROM ledger_journal WHERE id=NEW.journal_id AND company_id=NEW.company_id AND source_id=NEW.identity_id
+               AND status='POSTED' AND reversal_of_id IS NULL AND date=NEW.date) THEN
+   RAISE EXCEPTION 'Invalid deposit refund ownership/posting' USING ERRCODE='23514', CONSTRAINT='deposit_refund_scope';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM ledger_account WHERE id=NEW.bank_id AND company_id=NEW.company_id AND kind='ASSET' AND active AND postable) OR
+    NOT EXISTS(SELECT 1 FROM documents_designatedbank b JOIN documents_accountingsetup s ON s.id=b.setup_id WHERE s.company_id=NEW.company_id AND b.account_id=NEW.bank_id) OR
+    fb_control_account_role(NEW.company_id, NEW.bank_id) IS NOT NULL THEN
+   RAISE EXCEPTION 'Deposit refunds are paid from a designated bank that is not a control account' USING ERRCODE='23514', CONSTRAINT='deposit_refund_bank';
+ END IF;
+ IF NEW.method NOT IN ('CHECK','CASH','OTHER') OR (NEW.method<>'CHECK' AND NEW.check_number<>'') OR char_length(NEW.check_number)>20 OR
+    NEW.check_number<>btrim(NEW.check_number) OR char_length(NEW.memo)>2000 OR char_length(NEW.creation_digest)<>64 OR char_length(NEW.review_digest)<>64 THEN
+   RAISE EXCEPTION 'Invalid deposit refund fields' USING ERRCODE='23514', CONSTRAINT='deposit_refund_fields';
+ END IF;
+ IF NEW.check_number<>'' AND (fb_live_check_holder(NEW.company_id, NEW.bank_id, NEW.check_number) OR
+                              fb_live_deposit_refund_check(NEW.company_id, NEW.bank_id, NEW.check_number, NEW.id)) THEN
+   RAISE EXCEPTION 'Check number already used on this bank' USING ERRCODE='23514', CONSTRAINT='deposit_refund_number_in_use';
+ END IF;
+ NEW.writer_xid := txid_current();
+ RETURN NEW;
+END
+
+fb_deposit_refund_void_guard
+
+DECLARE f prepayments_depositrefund;
+BEGIN
+ IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'Deposit refund void history is immutable' USING ERRCODE='23514', CONSTRAINT='customer_deposit_immutable'; END IF;
+ SELECT * INTO f FROM prepayments_depositrefund WHERE id=NEW.refund_id;
+ PERFORM 1 FROM ledger_company WHERE id=f.company_id FOR NO KEY UPDATE;
+ IF btrim(NEW.reason)='' OR char_length(NEW.reason)>500 OR NEW.date<f.date OR NOT EXISTS(
+   SELECT 1 FROM ledger_journal WHERE id=NEW.journal_id AND source_id=f.identity_id AND company_id=f.company_id AND status='POSTED' AND reversal_of_id=f.journal_id AND date=NEW.date) THEN
+   RAISE EXCEPTION 'Invalid deposit refund void' USING ERRCODE='23514', CONSTRAINT='deposit_refund_void_link';
+ END IF;
+ RETURN NEW;
+END
+
+fb_deposit_unapplication_guard
+
+DECLARE a prepayments_depositapplication;
+BEGIN
+ IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'Unapply history is immutable' USING ERRCODE='23514', CONSTRAINT='customer_deposit_immutable'; END IF;
+ SELECT * INTO a FROM prepayments_depositapplication WHERE id=NEW.application_id;
+ PERFORM 1 FROM ledger_company WHERE id=a.company_id FOR NO KEY UPDATE;
+ IF btrim(NEW.reason)='' OR char_length(NEW.reason)>500 OR NEW.date<a.date OR NOT EXISTS(
+   SELECT 1 FROM ledger_journal WHERE id=NEW.journal_id AND source_id=a.identity_id AND company_id=a.company_id AND status='POSTED' AND reversal_of_id=a.journal_id AND date=NEW.date) THEN
+   RAISE EXCEPTION 'Invalid deposit unapply' USING ERRCODE='23514', CONSTRAINT='deposit_unapplication_link';
+ END IF;
+ RETURN NEW;
+END
+
+fb_invoice_live_deposits
+
+DECLARE released date; void_date date;
+BEGIN
+ IF NEW.state='VOID' THEN
+  IF EXISTS(SELECT 1 FROM prepayments_depositapplication a LEFT JOIN prepayments_depositunapplication u ON u.application_id=a.id
+            WHERE a.invoice_id=NEW.invoice_id AND u.id IS NULL) THEN
+    RAISE EXCEPTION 'Unapply live customer deposits before voiding an invoice' USING ERRCODE='23514', CONSTRAINT='invoice_live_deposits';
+  END IF;
+  SELECT max(u.date) INTO released FROM prepayments_depositunapplication u JOIN prepayments_depositapplication a ON a.id=u.application_id WHERE a.invoice_id=NEW.invoice_id;
+  SELECT date INTO void_date FROM ledger_journal WHERE id=NEW.reversal_id;
+  IF released IS NOT NULL AND void_date < released THEN
+    RAISE EXCEPTION 'Invoice void cannot precede the latest deposit unapply' USING ERRCODE='23514', CONSTRAINT='invoice_deposit_release_date';
+  END IF;
+ END IF;
+ RETURN NEW;
+END
+
+fb_invoice_live_settled
+
+ SELECT COALESCE((SELECT sum(x.amount) FROM sales_receiptallocation x LEFT JOIN sales_receiptreversal z ON z.receipt_id=x.receipt_id
+                  WHERE x.invoice_id=p_invoice AND z.id IS NULL),0)
+      + COALESCE((SELECT sum(l.amount) FROM credits_creditapplicationline l LEFT JOIN credits_creditunapplication u ON u.application_id=l.application_id
+                  WHERE l.invoice_id=p_invoice AND u.id IS NULL),0)
+      + COALESCE((SELECT sum(a.amount) FROM prepayments_depositapplication a LEFT JOIN prepayments_depositunapplication u ON u.application_id=a.id
+                  WHERE a.invoice_id=p_invoice AND u.id IS NULL),0)
+
+
+fb_prepayment_journal_owner
+
+DECLARE j ledger_journal; k text;
+BEGIN
+ SELECT * INTO j FROM ledger_journal WHERE id=NEW.id;
+ SELECT kind INTO k FROM documents_documentidentity WHERE id=j.source_id;
+ IF k='CDP' AND (j.status <> 'POSTED' OR
+    (j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM sales_receipt WHERE identity_id=j.source_id AND journal_id=j.id AND kind='CDP')) OR
+    (j.reversal_of_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM sales_receiptreversal z JOIN sales_receipt r ON r.id=z.receipt_id
+                                                 WHERE r.identity_id=j.source_id AND r.journal_id=j.reversal_of_id AND z.journal_id=j.id))) THEN
+   RAISE EXCEPTION 'Customer deposit journals require the owning deposit lifecycle' USING ERRCODE='23514', CONSTRAINT='customer_deposit_journal_owner';
+ END IF;
+ IF k='CDA' AND (j.status <> 'POSTED' OR
+    (j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM prepayments_depositapplication WHERE identity_id=j.source_id AND journal_id=j.id)) OR
+    (j.reversal_of_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM prepayments_depositunapplication u JOIN prepayments_depositapplication a ON a.id=u.application_id
+                                                 WHERE a.identity_id=j.source_id AND a.journal_id=j.reversal_of_id AND u.journal_id=j.id))) THEN
+   RAISE EXCEPTION 'Deposit application journals require the owning application lifecycle' USING ERRCODE='23514', CONSTRAINT='deposit_application_journal_owner';
+ END IF;
+ IF k='CDR' AND (j.status <> 'POSTED' OR
+    (j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM prepayments_depositrefund WHERE identity_id=j.source_id AND journal_id=j.id)) OR
+    (j.reversal_of_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM prepayments_depositrefundvoid v JOIN prepayments_depositrefund f ON f.id=v.refund_id
+                                                 WHERE f.identity_id=j.source_id AND f.journal_id=j.reversal_of_id AND v.journal_id=j.id))) THEN
+   RAISE EXCEPTION 'Deposit refund journals require the owning refund lifecycle' USING ERRCODE='23514', CONSTRAINT='deposit_refund_journal_owner';
+ END IF;
+ RETURN NULL;
+END
+
+fb_prepayment_reference_insert
+
+DECLARE xid bigint;
+BEGIN
+ SELECT writer_xid INTO xid FROM sales_receipt WHERE identity_id=NEW.source_id AND kind='CDP';
+ IF NOT FOUND THEN SELECT writer_xid INTO xid FROM prepayments_depositapplication WHERE identity_id=NEW.source_id; END IF;
+ IF NOT FOUND THEN SELECT writer_xid INTO xid FROM prepayments_depositrefund WHERE identity_id=NEW.source_id; END IF;
+ IF xid IS NOT NULL AND xid IS DISTINCT FROM txid_current() THEN
+  RAISE EXCEPTION 'Cannot append customer deposit account evidence after commit' USING ERRCODE='23514', CONSTRAINT='deposit_late_reference';
+ END IF;
+ RETURN NEW;
+END

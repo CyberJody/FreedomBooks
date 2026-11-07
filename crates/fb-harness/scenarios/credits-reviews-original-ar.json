@@ -1,0 +1,553 @@
+{
+ "users": [
+  {
+   "username": "credits",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic credits",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank2",
+   "code": "101",
+   "name": "bank2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "200",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer2",
+   "values": {
+    "display_name": "Other buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "payables": "ap",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "inv60",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927fc",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "30.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "inv60",
+   "expected_revision": 1,
+   "review": "inv60",
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "inv60",
+   "expected_revision": 1,
+   "review": "inv60",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927fd",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "review": "cm61",
+   "expect_error": false
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927fd",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "review": "cm61",
+   "ref": "cm61",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927fe",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "stale",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927ff",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "2.00"
+     }
+    ]
+   },
+   "review": "app63",
+   "expect_error": false
+  },
+  {
+   "op": "credits_apply",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927ff",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "2.00"
+     }
+    ]
+   },
+   "review": "app63",
+   "ref": "app63",
+   "expect_error": false
+  },
+  {
+   "op": "credits_apply",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000927fe",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "stale",
+   "ref": "stale",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Invoice balances or available credit changed. Open a fresh review before applying."
+  },
+  {
+   "op": "credits_unapply",
+   "company": "c",
+   "record": "app63",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_refund",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092800",
+    "date": "2026-10-11",
+    "amount": "2.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "64",
+    "memo": "Synthetic refund"
+   },
+   "review": "stale-refund",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092801",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "app65",
+   "expect_error": false
+  },
+  {
+   "op": "credits_apply",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092801",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "app65",
+   "ref": "app65",
+   "expect_error": false
+  },
+  {
+   "op": "credits_refund",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092800",
+    "date": "2026-10-11",
+    "amount": "2.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "64",
+    "memo": "Synthetic refund"
+   },
+   "review": "stale-refund",
+   "ref": "no",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Available credit, check number or posting mapping changed. Open a fresh review before recording."
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 1,
+   "values": {
+    "receivables": "ar2",
+    "payables": "ap",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "inv66",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092802",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "30.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "inv66",
+   "expected_revision": 1,
+   "review": "inv66",
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "inv66",
+   "expected_revision": 1,
+   "review": "inv66",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092803",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv66",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "cross-ar",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Invoice INV-000002 was posted to receivables account 111 · ar2, but this credit memo credited a different receivables account. Apply credit only to invoices on the same receivables account."
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092804",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "app68",
+   "expect_error": false
+  },
+  {
+   "op": "credits_apply",
+   "company": "c",
+   "record": "cm61",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092804",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "inv60",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "app68",
+   "ref": "app68",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-10-01",
+  "2026-10-08",
+  "2026-10-11",
+  "2026-10-20",
+  "2026-12-31"
+ ]
+}

@@ -1,0 +1,121 @@
+{
+  "users": [
+    {
+      "username": "owner",
+      "is_staff": true
+    }
+  ],
+  "as_of": [
+    "2026-12-31"
+  ],
+  "steps": [
+    {
+      "op": "backups_retention",
+      "label": "plain_label",
+      "keep": 1,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "plain_label",
+      "keep": 2,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "plain_label",
+      "keep": 5,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "a b",
+      "keep": 1,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "a b",
+      "keep": 2,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "a b",
+      "keep": 5,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "bad/name",
+      "keep": 1,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "bad/name",
+      "keep": 2,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "bad/name",
+      "keep": 5,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "é",
+      "keep": 1,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "é",
+      "keep": 2,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "é",
+      "keep": 5,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "keep": 1,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "keep": 2,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "keep": 5,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "synthetic-foo",
+      "keep": 1,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "synthetic-foo",
+      "keep": 2,
+      "expect_error": false
+    },
+    {
+      "op": "backups_retention",
+      "label": "synthetic-foo",
+      "keep": 5,
+      "expect_error": false
+    }
+  ]
+}

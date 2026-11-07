@@ -1,0 +1,4 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('bankfeeds/bankfeeds.css') }}">{% endblock %}{% block content %}<div class="bankfeed"><h1>Forget this connection</h1>
+<p><a href="{{ url('bankfeeds:list', company.pk) }}">Bank feeds</a> · {{ connection.label }} ({{ connection.host }})</p>
+<p class="notice">Forgetting wipes the stored SimpleFIN access for <strong>{{ connection.label }}</strong>. Downloaded transactions, your mapping and every decision stay in the books. To download again later, connect with a new setup token. You may also disable the app at SimpleFIN.</p>
+<form method="post" id="bankfeed-forget">{{ csrf_token|safe }}<p class="buttons"><button type="submit">Forget connection</button> <a href="{{ url('bankfeeds:list', company.pk) }}">Keep it</a></p></form></div>{% endblock %}

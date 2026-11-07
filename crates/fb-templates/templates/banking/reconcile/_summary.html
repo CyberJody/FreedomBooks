@@ -1,0 +1,12 @@
+<section class="rec-summary" aria-labelledby="summary-title"><h2 id="summary-title">Summary</h2>
+<table class="rec-summary-table"><tbody>
+<tr><th scope="row">Beginning balance</th><td></td><td class="amount" id="report-beginning">{{ rec.beginning_balance }}</td></tr>
+{% for side in sides %}<tr><th scope="row">{{ side.summary_label }}</th><td class="count">{{ side.count }} item{{ side.count|pluralize }}</td><td class="amount" id="report-{{ side.key }}">{{ side.signed }}</td></tr>{% endfor %}
+<tr class="total"><th scope="row">Cleared balance</th><td></td><td class="amount" id="report-cleared">{{ rec.ending_balance }}</td></tr>
+<tr><th scope="row">Statement ending balance</th><td></td><td class="amount" id="report-ending">{{ rec.ending_balance }}</td></tr>
+<tr class="total"><th scope="row">Difference</th><td></td><td class="amount" id="report-difference">0.00</td></tr>
+<tr class="spacer"><td colspan="3"></td></tr>
+<tr><th scope="row">Register balance as of {{ rec.statement_date|date('Y-m-d') }}</th><td></td><td class="amount" id="report-register">{{ summary.register_balance }}</td></tr>
+<tr><th scope="row">Not reconciled yet, dated on or before the statement date: {{ words.left_short }}</th><td></td><td class="amount" id="report-open-left">{{ summary.open_credit }}</td></tr>
+<tr><th scope="row">Not reconciled yet, dated on or before the statement date: {{ words.right_short }}</th><td></td><td class="amount" id="report-open-right">{{ summary.open_debit }}</td></tr>
+</tbody></table></section>

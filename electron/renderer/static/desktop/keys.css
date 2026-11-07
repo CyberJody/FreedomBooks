@@ -1,0 +1,6 @@
+.recovery-key { font-family: ui-monospace, monospace; font-size: 1.25rem; letter-spacing: .035em; overflow-wrap: anywhere; padding: 16px; border: 1px solid #807487; border-radius: 6px; }
+.sheet.emergency-kit p { margin: 0 0 14px; }
+.emergency-kit h1 { margin: 0 0 24px; font-size: 23pt; }
+.emergency-kit h2 { margin: 28px 0 12px; font-size: 15pt; }
+.emergency-kit li { margin: 8px 0; }
+@media print { .emergency-kit .recovery-key { font-size: 13pt; break-inside: avoid; } }

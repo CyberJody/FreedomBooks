@@ -1,0 +1,12 @@
+{% extends 'salestax/base.html' %}
+{% block salestax_content %}
+<div class="heading"><h1>Sales tax settings</h1></div>
+<form method="post" class="master-form tax-settings" novalidate>{{ csrf_token|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.non_field_errors|safe }}
+<fieldset class="choice-row"><legend>{{ form.f.charge_tax.label }}</legend>{{ form.f.charge_tax.widget|safe }}{{ form.f.charge_tax.errors|safe }}</fieldset>
+<div class="field">{{ form.f.default_item.label_tag|safe }}{{ form.f.default_item.errors|safe }}{{ form.f.default_item.widget|safe }}<div class="helptext">{{ form.f.default_item.help_text }} {% if not counts.rates %}<a href="{{ url('salestax:rate_new', company.pk) }}">Add a tax rate</a> first.{% endif %}</div></div>
+<fieldset class="choice-row"><legend>{{ form.f.owed_basis.label }}</legend>{{ form.f.owed_basis.widget|safe }}{{ form.f.owed_basis.errors|safe }}</fieldset>
+<fieldset class="choice-row"><legend>{{ form.f.filing_frequency.label }}</legend>{{ form.f.filing_frequency.widget|safe }}{{ form.f.filing_frequency.errors|safe }}</fieldset>
+<p class="helptext">Owed basis and filing frequency set the period for sales tax reports.</p>
+<div class="actions"><button type="submit">Save settings</button><span class="helptext">{{ counts.rates }} active rate{{ counts.rates|pluralize }} · {{ counts.groups }} active group{{ counts.groups|pluralize }}</span></div>
+</form>
+{% endblock %}

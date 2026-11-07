@@ -1,0 +1,192 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "account": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "reclassified",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e2c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "1.00",
+    "interest": "1.00",
+    "interest_account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reclassified",
+   "result": "auto-screen-14",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reclassified",
+   "expected_revision": 1,
+   "completion_key": "00000000-0000-0000-0000-000000004e2d",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reclassified",
+   "result": "auto-report-14",
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {},
+   "result": "reclassified-register",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

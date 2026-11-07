@@ -1,0 +1,441 @@
+{
+ "users": [
+  {
+   "username": "feeds",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-15",
+  "2099-12-31"
+ ],
+ "strict_outcomes": true,
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "co",
+   "name": "Synthetic feeds",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "vendor",
+   "ref": "vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "co",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "payables": "ap",
+    "banks": [
+     "bank",
+     "savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "conn",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-06T15:00:00Z",
+   "result": "first",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "https://first:pw-first@ids.example.test/acct",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "https://first:pw-first@ids.example.test/tx",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "25.00",
+        "description": "Deposit first",
+        "pending": false,
+        "ref": "tx-a"
+       },
+       {
+        "remote_id": "https://first:pw-first@ids.example.test/hold",
+        "posted_on": null,
+        "transacted_on": "2026-10-05",
+        "amount": "-3.00",
+        "description": "Pending hold",
+        "pending": true,
+        "ref": "hold-first"
+       }
+      ],
+      "ref": "acct-a"
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "https://second:pw-second@ids.example.test/acct",
+      "name": "Second checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "https://second:pw-second@ids.example.test/tx",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "40.00",
+        "description": "Deposit second",
+        "pending": false,
+        "ref": "tx-b"
+       }
+      ],
+      "ref": "acct-b"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/~/acct-a",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/~/acct-b/tx-b",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "income"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Map Synthetic Bank · Second checking to a ledger account before accepting its transactions."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/~/acct-b",
+   "account": "savings",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/~/acct-a/tx-a",
+   "ref": "acc-a",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_items",
+   "company": "co",
+   "result": "review-after-first",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-07T15:00:00Z",
+   "force": true,
+   "result": "swap",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "https://first:pw-first@ids.example.test/acct",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "https://first:pw-first@ids.example.test/tx",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "25.00",
+        "description": "Deposit first",
+        "pending": false,
+        "ref": "tx-a"
+       },
+       {
+        "remote_id": "https://second:pw-second@ids.example.test/hold",
+        "posted_on": null,
+        "transacted_on": "2026-10-05",
+        "amount": "-3.00",
+        "description": "Pending hold",
+        "pending": true,
+        "ref": "hold-second"
+       }
+      ],
+      "ref": "acct-a"
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "https://second:pw-second@ids.example.test/acct",
+      "name": "Second checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "https://second:pw-second@ids.example.test/tx",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "40.00",
+        "description": "Deposit second",
+        "pending": false,
+        "ref": "tx-b"
+       }
+      ],
+      "ref": "acct-b"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/~/acct-b/tx-b",
+   "ref": "acc-b",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-08T15:00:00Z",
+   "force": true,
+   "result": "again",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "https://first:pw-first@ids.example.test/acct",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "https://first:pw-first@ids.example.test/tx",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "25.00",
+        "description": "Deposit first",
+        "pending": false,
+        "ref": "tx-a"
+       },
+       {
+        "remote_id": "https://second:pw-second@ids.example.test/hold",
+        "posted_on": null,
+        "transacted_on": "2026-10-05",
+        "amount": "-3.00",
+        "description": "Pending hold",
+        "pending": true,
+        "ref": "hold-second"
+       }
+      ],
+      "ref": "acct-a"
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "https://second:pw-second@ids.example.test/acct",
+      "name": "Second checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "https://second:pw-second@ids.example.test/tx",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "40.00",
+        "description": "Deposit second",
+        "pending": false,
+        "ref": "tx-b"
+       }
+      ],
+      "ref": "acct-b"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_items",
+   "company": "co",
+   "result": "review-last",
+   "expect_error": false
+  }
+ ]
+}

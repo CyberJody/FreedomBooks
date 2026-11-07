@@ -1,0 +1,359 @@
+{
+  "name": "screens-d2",
+  "users": [
+    {
+      "username": "owner",
+      "is_staff": true
+    }
+  ],
+  "as_of": [
+    "2026-10-31"
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Kettle Pond Supply",
+      "currency": "USD",
+      "expect_error": false
+    },
+    {
+      "op": "create_company",
+      "ref": "other",
+      "name": "Other synthetic books",
+      "expect_error": false,
+      "open_first_run": true
+    },
+    {
+      "op": "save_account",
+      "company": "other",
+      "ref": "other-income",
+      "code": "4000",
+      "name": "Other income",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "other",
+      "model": "customer",
+      "ref": "other-buyer",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "other",
+      "model": "item",
+      "ref": "other-item",
+      "values": {
+        "code": "OTHER",
+        "description": "Other item",
+        "kind": "SERVICE",
+        "sale_rate": "1.00",
+        "income_account": "other-income"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "1000",
+      "name": "Checking",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "1100",
+      "name": "Accounts receivable",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "1200",
+      "name": "Undeposited funds",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "equip",
+      "code": "1500",
+      "name": "Equipment",
+      "detail_type": "FIXED_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "accdep",
+      "code": "1590",
+      "name": "Accumulated depreciation",
+      "detail_type": "FIXED_ASSET",
+      "is_contra": true,
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "2200",
+      "name": "Sales tax payable",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "equity",
+      "code": "3000",
+      "name": "Owner's equity",
+      "detail_type": "EQUITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "4000",
+      "name": "Sales & services",
+      "detail_type": "INCOME",
+      "description": "Lawn & garden <work>",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "5000",
+      "name": "Supplies",
+      "detail_type": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Maple & Birch Caf\u00e9"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer2",
+      "values": {
+        "display_name": "Otter Creek Farm"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "mow",
+      "values": {
+        "code": "MOW",
+        "description": "Lawn mowing",
+        "kind": "SERVICE",
+        "sale_rate": "45.00",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000a1",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "October mowing",
+        "tax_mode": "MANUAL",
+        "tax_rate": "6.25",
+        "tax_label": "State tax",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Lawn mowing",
+            "quantity": "4",
+            "rate": "45.00",
+            "taxable": true,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv2",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000a2",
+        "customer_id": "buyer2",
+        "date": "2026-10-20",
+        "memo": "Hedge trimming",
+        "tax_mode": "MANUAL",
+        "tax_rate": "0",
+        "tax_label": "Exempt",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Hedge trimming",
+            "quantity": "2",
+            "rate": "30.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000b1",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "50.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "50.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "ref": "payment1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000b1",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "50.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "50.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "c",
+      "ref": "manual",
+      "date": "2026-10-31",
+      "memo": "Depreciation adjustment",
+      "entry_number": "JE-3",
+      "adjusting": true,
+      "request_key": "00000000-0000-0000-0000-0000000000c0",
+      "lines": [
+        {
+          "account": "expense",
+          "debit": "12.34",
+          "credit": "0",
+          "description": "Equipment",
+          "name": "Dana"
+        },
+        {
+          "account": "accdep",
+          "debit": "0",
+          "credit": "12.34",
+          "description": "Equipment",
+          "name": "Dana"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "twin1",
+      "values": {
+        "display_name": "Twin buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "twin2",
+      "values": {
+        "display_name": "Twin buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "banking_begin",
+      "company": "c",
+      "account": "bank",
+      "ref": "history-reconciliation",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000de",
+        "statement_date": "2026-10-31",
+        "ending_balance": "0.00"
+      },
+      "expect_error": false
+    }
+  ]
+}

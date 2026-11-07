@@ -1,0 +1,25 @@
+[package]
+name = "fb-plugin-openai"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[features]
+# Never enable in a production host: lets fb-net's fake-network build point the plugin at a
+# numeric-loopback fake provider. Production builds keep the fixed auth.openai.com endpoints.
+test-support = ["fb-plugin-api/test-support"]
+
+[dependencies]
+fb-plugin-api = { path = "../../fb-plugin-api" }
+base64 = "0.22.1"
+jsonwebtoken = { version = "9.3.1", default-features = false, features = ["use_pem"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+unicode-normalization = "0.1"
+unicode-general-category = "1.1"
+url = "2.5"
+zeroize = "1.9"
+
+[dev-dependencies]
+fb-plugin-testkit = { path = "../../fb-plugin-testkit" }
+ring = "0.17"

@@ -1,0 +1,153 @@
+[package]
+name = "freedombooks-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+description = "cargo-fuzz targets for every parser of untrusted input in the FreedomBooks v2 workspace (find-don't-fix audit, 2026-11)."
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tar = "0.4"
+tempfile = "3"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = "0.10"
+rust_decimal = "1"
+sha2 = "0.10"
+url = "2.5"
+zeroize = "1"
+
+fb-money = { path = "../crates/fb-money" }
+fb-ids = { path = "../crates/fb-ids" }
+fb-db = { path = "../crates/fb-db" }
+fb-core = { path = "../crates/fb-core" }
+fb-app = { path = "../crates/fb-app" }
+fb-templates = { path = "../crates/fb-templates" }
+fb-plugin-api = { path = "../crates/fb-plugin-api" }
+fb-plugin-simplefin = { path = "../crates/fb-plugins/simplefin" }
+fb-plugin-openai = { path = "../crates/fb-plugins/openai" }
+
+# Independent workspace: the product workspace is not touched.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+# One [[bin]] per parser; fuzz/README.md says what each one covers and how it was run.
+
+[[bin]]
+name = "money_text"
+path = "fuzz_targets/money_text.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "py_dates"
+path = "fuzz_targets/py_dates.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "py_int_uuid"
+path = "fuzz_targets/py_int_uuid.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "calculations"
+path = "fuzz_targets/calculations.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "simplefin_account_set"
+path = "fuzz_targets/simplefin_account_set.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "simplefin_scalars"
+path = "fuzz_targets/simplefin_scalars.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "simplefin_setup_token"
+path = "fuzz_targets/simplefin_setup_token.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "openai_receipt"
+path = "fuzz_targets/openai_receipt.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "app_command_json"
+path = "fuzz_targets/app_command_json.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "app_query_string"
+path = "fuzz_targets/app_query_string.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "app_form"
+path = "fuzz_targets/app_form.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "attachments_inspect"
+path = "fuzz_targets/attachments_inspect.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bankfeeds_text"
+path = "fuzz_targets/bankfeeds_text.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fbdb_validators"
+path = "fuzz_targets/fbdb_validators.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "backup_archive"
+path = "fuzz_targets/backup_archive.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "oauth_callback"
+path = "fuzz_targets/oauth_callback.rs"
+test = false
+doc = false
+bench = false

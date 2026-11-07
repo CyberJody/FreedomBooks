@@ -1,0 +1,4 @@
+{% extends 'ledger/base.html' %}{% block content %}<h1>Open this backup</h1>
+<p>This backup is from another computer. Enter your password or recovery key.</p>
+{% if errors %}<section class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</section>{% endif %}
+<form class="narrow" method="post">{{ csrf_token|safe }}<p><label for="id_secret">Password or recovery key</label><input type="password" name="secret" id="id_secret" autocomplete="off" required></p><button name="action" value="restore">Restore as a new book</button> <button name="action" value="cancel" class="secondary" formnovalidate>Cancel</button></form>{% endblock %}

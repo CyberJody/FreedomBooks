@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>FreedomBooks Emergency Kit · {{ company.name }}</title>
+<link rel="stylesheet" href="{{ static('sales/print.css') }}"><link rel="stylesheet" href="{{ static('desktop/keys.css') }}"></head>
+<body class="print-body"><div class="print-toolbar" role="toolbar" aria-label="Print actions"><span>Keep this kit separate from your computer and backups.</span><span class="print-toolbar-actions"><button type="button" id="print-now">Print / Save as PDF</button><a href="/settings/recovery-key/">Back to recovery key</a></span></div>
+<main class="sheet emergency-kit"><h1>FreedomBooks Emergency Kit</h1><p><strong>{{ company.name }}</strong></p><p>Created {{ date }}</p>
+<h2>Your recovery key</h2><p class="recovery-key"><strong>{{ recovery_key }}</strong></p>
+<p>This key opens your books and backups if you forget your password.</p>
+<h2>Restore your books</h2><ol><li>Install FreedomBooks on the computer you want to use.</li><li>Choose Restore a backup and give the restored books a name.</li><li>Enter the recovery key above, choose your backup file, and restore it as a new book.</li></ol>
+<h2>Keep this kit safe</h2><p>Anyone with this key and a backup can open your books. Keep it separate from your backup files.</p><p>Print this page or save it on a USB drive you keep somewhere safe. Saving it only on this computer will not help if the computer is lost or stops working.</p></main>
+<script src="{{ static('sales/print.js') }}" defer></script></body></html>

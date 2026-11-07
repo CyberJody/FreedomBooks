@@ -1,0 +1,906 @@
+{
+ "users": [
+  {
+   "username": "review",
+   "is_staff": true
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic hand-computed reports review",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "bank2",
+   "code": "101",
+   "name": "bank2",
+   "kind": "ASSET"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "uf",
+   "code": "105",
+   "name": "uf",
+   "kind": "ASSET"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "ap",
+   "code": "200",
+   "name": "ap",
+   "kind": "LIABILITY"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "liability",
+   "code": "220",
+   "name": "liability",
+   "kind": "LIABILITY"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "equity",
+   "code": "300",
+   "name": "equity",
+   "kind": "EQUITY"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME"
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "expect_error": false,
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE"
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "expect_error": false,
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Synthetic customer"
+   }
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "expect_error": false,
+   "model": "vendor",
+   "ref": "vendor",
+   "values": {
+    "display_name": "Synthetic supplier"
+   }
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "expect_error": false,
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "SVC",
+    "description": "Synthetic service",
+    "kind": "SERVICE",
+    "sale_rate": "10.00",
+    "income_account": "income"
+   }
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expect_error": false,
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "payables": "ap",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   }
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "expect_error": false,
+   "ref": "prior",
+   "date": "2025-12-15",
+   "memo": "prior",
+   "adjusting": false,
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "50.00"
+    },
+    {
+     "account": "income",
+     "credit": "50.00"
+    }
+   ]
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "expect_error": false,
+   "journal": "prior"
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "expect_error": false,
+   "ref": "capital",
+   "date": "2026-10-01",
+   "memo": "capital",
+   "adjusting": false,
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "1000.00"
+    },
+    {
+     "account": "equity",
+     "credit": "1000.00"
+    }
+   ]
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "expect_error": false,
+   "journal": "capital"
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "expect_error": false,
+   "ref": "i1",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1201",
+    "customer_id": "buyer",
+    "date": "2026-10-05",
+    "due_date": "2026-11-04",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "3",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i1",
+   "expected_revision": 1,
+   "review": "i1"
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i1",
+   "expected_revision": 1,
+   "review": "i1"
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "expect_error": false,
+   "ref": "i2",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1202",
+    "customer_id": "buyer",
+    "date": "2026-10-05",
+    "due_date": "2026-11-04",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "20.00",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i2",
+   "expected_revision": 1,
+   "review": "i2"
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i2",
+   "expected_revision": 1,
+   "review": "i2"
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "expect_error": false,
+   "ref": "i3",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1203",
+    "customer_id": "buyer",
+    "date": "2026-10-06",
+    "due_date": "2026-11-04",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "3",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i3",
+   "expected_revision": 1,
+   "review": "i3"
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i3",
+   "expected_revision": 1,
+   "review": "i3"
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "expect_error": false,
+   "review": "r1",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1204",
+    "customer_id": "buyer",
+    "date": "2026-10-10",
+    "amount": "32.40",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "i1",
+      "amount": "32.40"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "expect_error": false,
+   "review": "r1",
+   "ref": "r1",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1204",
+    "customer_id": "buyer",
+    "date": "2026-10-10",
+    "amount": "32.40",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "i1",
+      "amount": "32.40"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "expect_error": false,
+   "review": "r3",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1205",
+    "customer_id": "buyer",
+    "date": "2026-10-07",
+    "amount": "32.40",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "i3",
+      "amount": "32.40"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "expect_error": false,
+   "review": "r3",
+   "ref": "r3",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1205",
+    "customer_id": "buyer",
+    "date": "2026-10-07",
+    "amount": "32.40",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "i3",
+      "amount": "32.40"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "expect_error": false,
+   "record": "r3",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction"
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "expect_error": false,
+   "record": "i3",
+   "expected_revision": 2,
+   "date": "2026-10-21",
+   "reason": "Synthetic void"
+  },
+  {
+   "op": "credits_review_memo",
+   "company": "c",
+   "expect_error": false,
+   "review": "cm",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1206",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   }
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "expect_error": false,
+   "review": "cm",
+   "ref": "cm",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1206",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   }
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "expect_error": false,
+   "review": "app",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1207",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "i2",
+      "amount": "5.40"
+     }
+    ]
+   },
+   "record": "cm"
+  },
+  {
+   "op": "credits_apply",
+   "company": "c",
+   "expect_error": false,
+   "review": "app",
+   "ref": "app",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1207",
+    "date": "2026-10-09",
+    "allocations": [
+     {
+      "invoice_id": "i2",
+      "amount": "5.40"
+     }
+    ]
+   },
+   "record": "cm"
+  },
+  {
+   "op": "credits_review_refund",
+   "company": "c",
+   "expect_error": false,
+   "review": "refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1208",
+    "date": "2026-10-11",
+    "amount": "5.40",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "",
+    "memo": "Synthetic refund"
+   },
+   "record": "cm"
+  },
+  {
+   "op": "credits_refund",
+   "company": "c",
+   "expect_error": false,
+   "review": "refund",
+   "ref": "refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1208",
+    "date": "2026-10-11",
+    "amount": "5.40",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "",
+    "memo": "Synthetic refund"
+   },
+   "record": "cm"
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "expect_error": false,
+   "review": "r2",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1209",
+    "customer_id": "buyer",
+    "date": "2026-10-12",
+    "amount": "10.00",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "i2",
+      "amount": "10.00"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "expect_error": false,
+   "review": "r2",
+   "ref": "r2",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a1209",
+    "customer_id": "buyer",
+    "date": "2026-10-12",
+    "amount": "10.00",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "i2",
+      "amount": "10.00"
+     }
+    ]
+   }
+  },
+  {
+   "op": "payables_save",
+   "company": "c",
+   "expect_error": false,
+   "ref": "bill",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120a",
+    "vendor_id": "vendor",
+    "date": "2026-10-03",
+    "due_date": "2026-11-02",
+    "memo": "Synthetic bill",
+    "lines": [
+     {
+      "description": "Synthetic supplies",
+      "quantity": "2",
+      "rate": "15.25",
+      "expense_account_id": "expense"
+     }
+    ]
+   }
+  },
+  {
+   "op": "payables_post",
+   "company": "c",
+   "expect_error": false,
+   "bill": "bill",
+   "expected_revision": 1
+  },
+  {
+   "op": "payables_review_payment",
+   "company": "c",
+   "expect_error": false,
+   "review": "payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120b",
+    "vendor_id": "vendor",
+    "date": "2026-10-14",
+    "amount": "20.00",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "20.00"
+     }
+    ]
+   }
+  },
+  {
+   "op": "payables_pay",
+   "company": "c",
+   "expect_error": false,
+   "review": "payment",
+   "ref": "payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120b",
+    "vendor_id": "vendor",
+    "date": "2026-10-14",
+    "amount": "20.00",
+    "method": "CHECK",
+    "reference": "Synthetic check",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "20.00"
+     }
+    ]
+   }
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "expect_error": false,
+   "review": "sale",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120c",
+    "customer_id": "buyer",
+    "date": "2026-10-03",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ],
+    "method": "CASH",
+    "reference": "Till 1",
+    "destination": "UNDEPOSITED",
+    "bank_id": null
+   }
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "expect_error": false,
+   "review": "sale",
+   "ref": "sale",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120c",
+    "customer_id": "buyer",
+    "date": "2026-10-03",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Synthetic report line",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ],
+    "method": "CASH",
+    "reference": "Till 1",
+    "destination": "UNDEPOSITED",
+    "bank_id": null
+   }
+  },
+  {
+   "op": "checks_save",
+   "company": "c",
+   "expect_error": false,
+   "ref": "check",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120d",
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-04",
+    "check_number": "",
+    "print_later": true,
+    "memo": "Synthetic check",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "4.25"
+     }
+    ]
+   }
+  },
+  {
+   "op": "checks_record",
+   "company": "c",
+   "expect_error": false,
+   "check": "check",
+   "expected_revision": 1
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "expect_error": false,
+   "ref": "adjustment",
+   "date": "2026-10-31",
+   "memo": "adjustment",
+   "adjusting": true,
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "7.00"
+    },
+    {
+     "account": "liability",
+     "credit": "7.00"
+    }
+   ]
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "expect_error": false,
+   "journal": "adjustment"
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "expect_error": false,
+   "ref": "draft-only",
+   "date": "2026-10-15",
+   "memo": "draft-only",
+   "adjusting": false,
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "999.00"
+    },
+    {
+     "account": "bank",
+     "credit": "999.00"
+    }
+   ]
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "expect_error": false,
+   "ref": "draft-invoice",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000007a120e",
+    "customer_id": "buyer",
+    "date": "2026-10-16",
+    "due_date": "2026-11-04",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Test tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Synthetic report line",
+      "quantity": "3",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   }
+  }
+ ],
+ "financial_reports": {
+  "profit_loss": [
+   [
+    "2026-10-01",
+    "2026-10-31"
+   ],
+   [
+    "2026-10-01",
+    "2026-10-10"
+   ],
+   [
+    "2026-10-12",
+    "2026-10-12"
+   ],
+   [
+    null,
+    "2026-10-31"
+   ]
+  ],
+  "balance_sheet": [
+   "2026-10-31",
+   "2027-01-01"
+  ],
+  "general_ledger": [
+   [
+    null,
+    "2099-12-31",
+    "",
+    null
+   ],
+   [
+    "2026-10-01",
+    "2026-10-31",
+    "",
+    null
+   ]
+  ],
+  "forms": []
+ }
+}

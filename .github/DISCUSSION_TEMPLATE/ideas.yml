@@ -1,0 +1,34 @@
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share an idea for FreedomBooks. Rough ideas are fine. Talking it through here first helps us shape a clear feature request later.
+
+        Some things are already planned: AI-assisted bank transaction matching, expense tracking for jobs, several computers on one company over the office network, users and roles, and importing from your old software. If your idea is about one of these, tell us how you would use it.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What would you like FreedomBooks to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters to you
+      description: The work you are doing, how you do it today, and what gets in the way.
+    validations:
+      required: true
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who would use this
+      options:
+        - A one-person business
+        - A small or medium business
+        - A bookkeeper or accountant working for clients
+        - Personal or household spending
+        - Other
+    validations:
+      required: false

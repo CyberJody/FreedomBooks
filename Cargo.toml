@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["crates/fb-money", "crates/fb-net", "crates/fb-ids", "crates/fb-db", "crates/fb-core", "crates/fb-harness", "crates/fb-node", "crates/fb-templates", "crates/fb-app", "crates/fb-screendiff", "crates/fb-plugin-api", "crates/fb-plugin-testkit", "crates/fb-plugins/openai", "crates/fb-plugins/simplefin", "crates/fb-plugins/smtp", "crates/fb-plugins/gmail", "crates/fb-plugins/m365"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+publish = false

@@ -1,0 +1,3217 @@
+{
+ "users": [
+  {
+   "username": "feeds",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-15",
+  "2099-12-31"
+ ],
+ "strict_outcomes": true,
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "co",
+   "name": "Synthetic feeds",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "vendor",
+   "ref": "vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "co",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "payables": "ap",
+    "banks": [
+     "bank",
+     "savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "other",
+   "name": "Other synthetic",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "other",
+   "model": "vendor",
+   "ref": "other.vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "other",
+   "model": "customer",
+   "ref": "other.buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "other",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "other.ar",
+    "undeposited": "other.uf",
+    "collected_tax": "other.tax",
+    "payables": "other.ap",
+    "banks": [
+     "other.bank",
+     "other.savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "conn",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-06T15:00:00Z",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "chk",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "fee",
+        "posted_on": "2026-10-01",
+        "transacted_on": null,
+        "amount": "-5.00",
+        "description": "MONTHLY SERVICE FEE",
+        "pending": false
+       },
+       {
+        "remote_id": "big",
+        "posted_on": "2026-10-01",
+        "transacted_on": null,
+        "amount": "-500.00",
+        "description": "Monthly service fee large",
+        "pending": false
+       },
+       {
+        "remote_id": "in",
+        "posted_on": "2026-10-02",
+        "transacted_on": null,
+        "amount": "5.00",
+        "description": "Service fee refund",
+        "pending": false
+       },
+       {
+        "remote_id": "none",
+        "posted_on": "2026-10-02",
+        "transacted_on": null,
+        "amount": "-1.00",
+        "description": "Nothing matches",
+        "pending": false
+       },
+       {
+        "remote_id": "uni",
+        "posted_on": "2026-10-03",
+        "transacted_on": null,
+        "amount": "-3.00",
+        "description": "STRASSE café",
+        "pending": false
+       },
+       {
+        "remote_id": "match",
+        "posted_on": "2026-10-04",
+        "transacted_on": null,
+        "amount": "-30.00",
+        "description": "Already entered",
+        "pending": false
+       },
+       {
+        "remote_id": "dep",
+        "posted_on": "2026-10-04",
+        "transacted_on": null,
+        "amount": "10.25",
+        "description": "Customer deposit",
+        "pending": false
+       }
+      ]
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "cc",
+      "name": "Card",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "ccfee",
+        "posted_on": "2026-10-01",
+        "transacted_on": null,
+        "amount": "-5.00",
+        "description": "service fee card",
+        "pending": false
+       }
+      ]
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "card",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_rule_accounts",
+   "company": "co",
+   "result": "rule-accounts",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "r1",
+   "values": {
+    "name": "Fees",
+    "match_text": "  service fee ",
+    "sign": "OUT",
+    "amount_max": "10",
+    "account_id": "fees",
+    "payee_name": "Bank"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "r2",
+   "values": {
+    "name": "Any fee",
+    "match_text": "FEE",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "r3",
+   "values": {
+    "name": "Refunds",
+    "match_text": "refund",
+    "sign": "IN",
+    "amount_min": "1.00",
+    "amount_max": "1.00",
+    "account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "r4",
+   "values": {
+    "name": "Unicode",
+    "match_text": "straße",
+    "account_id": "expense",
+    "active": "false"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad1",
+   "values": {
+    "name": "Blank",
+    "match_text": "   ",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter nonblank text up to 200 characters."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad2",
+   "values": {
+    "name": "",
+    "match_text": "x",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter nonblank text up to 120 characters."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad3",
+   "values": {
+    "name": "Sign",
+    "match_text": "x",
+    "sign": "BOTH",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose money in, money out, or either."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad4",
+   "values": {
+    "name": "Neg",
+    "match_text": "x",
+    "amount_min": "-1",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad5",
+   "values": {
+    "name": "Range",
+    "match_text": "x",
+    "amount_min": "5",
+    "amount_max": "4",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The minimum amount cannot exceed the maximum."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad6",
+   "values": {
+    "name": "Control",
+    "match_text": "x",
+    "account_id": "ar"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A rule cannot categorize to it."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad7",
+   "values": {
+    "name": "Inactive",
+    "match_text": "x",
+    "account_id": "old"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an active posting account."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad8",
+   "values": {
+    "name": "Other",
+    "match_text": "x",
+    "account_id": "other.fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an account from this company."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad9",
+   "values": {
+    "name": "Money",
+    "match_text": "x",
+    "amount_min": "abc",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "bad10",
+   "values": {
+    "name": "Long",
+    "match_text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter nonblank text up to 200 characters."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "rule": "missing",
+   "values": {
+    "name": "Missing",
+    "match_text": "x",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a rule of this company."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "other",
+   "rule": "r1",
+   "values": {
+    "name": "Cross",
+    "match_text": "x",
+    "account_id": "other.fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a rule of this company."
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/fee",
+   "result": "fee",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/big",
+   "result": "big",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/in",
+   "result": "in-miss",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/none",
+   "result": "none",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/uni",
+   "result": "unicode-active-text-false",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/cc/ccfee",
+   "result": "card-journal",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "other",
+   "tx": "conn/org1/chk/fee",
+   "result": "other-company",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a downloaded transaction of this company."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "rule": "r3",
+   "values": {
+    "name": "Refunds",
+    "match_text": "refund",
+    "sign": "IN",
+    "amount_min": "5.00",
+    "amount_max": "",
+    "account_id": "income",
+    "payee_name": "Back"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/in",
+   "result": "in-hit",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "co",
+   "rule": "r2",
+   "direction": "up",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "co",
+   "rule": "r2",
+   "direction": "up",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "co",
+   "rule": "r4",
+   "direction": "down",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "co",
+   "rule": "r4",
+   "direction": "sideways",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Move a rule up or down."
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "co",
+   "rule": "missing",
+   "direction": "up",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a rule of this company."
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "other",
+   "rule": "r1",
+   "direction": "up",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a rule of this company."
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/fee",
+   "result": "fee-after-move",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_rule_active",
+   "company": "co",
+   "rule": "r2",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_rule_active",
+   "company": "co",
+   "rule": "r2",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_rule_active",
+   "company": "co",
+   "rule": "r4",
+   "active": 0,
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_rule_active",
+   "company": "co",
+   "rule": "r4",
+   "active": "yes",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_rule_active",
+   "company": "co",
+   "rule": "missing",
+   "active": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a rule of this company."
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/fee",
+   "result": "fee-after-off",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_move_rule",
+   "company": "co",
+   "rule": "r1",
+   "direction": "down",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "co",
+   "ref": "entered",
+   "date": "2026-10-02",
+   "memo": "Entered by hand",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "30.00",
+     "credit": "0"
+    },
+    {
+     "account": "bank",
+     "debit": "0",
+     "credit": "30.00"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "co",
+   "journal": "entered",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "co",
+   "ref": "entered2",
+   "date": "2026-10-09",
+   "memo": "Entered later",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "30.00",
+     "credit": "0"
+    },
+    {
+     "account": "bank",
+     "debit": "0",
+     "credit": "30.00"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "co",
+   "journal": "entered2",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "co",
+   "ref": "entered3",
+   "date": "2026-10-10",
+   "memo": "Too late",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "30.00",
+     "credit": "0"
+    },
+    {
+     "account": "bank",
+     "debit": "0",
+     "credit": "30.00"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "co",
+   "journal": "entered3",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/match",
+   "result": "match",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000003101",
+    "customer_id": "buyer",
+    "date": "2026-09-20",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000003101",
+    "customer_id": "buyer",
+    "date": "2026-09-20",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale1",
+   "ref": "sale1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000003102",
+    "customer_id": "buyer",
+    "date": "2026-08-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale2",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000003102",
+    "customer_id": "buyer",
+    "date": "2026-08-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale2",
+   "ref": "sale2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/dep",
+   "result": "deposit",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill0",
+   "values": {
+    "name": "Fill 0",
+    "match_text": "zz0",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill1",
+   "values": {
+    "name": "Fill 1",
+    "match_text": "zz1",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill2",
+   "values": {
+    "name": "Fill 2",
+    "match_text": "zz2",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill3",
+   "values": {
+    "name": "Fill 3",
+    "match_text": "zz3",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill4",
+   "values": {
+    "name": "Fill 4",
+    "match_text": "zz4",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill5",
+   "values": {
+    "name": "Fill 5",
+    "match_text": "zz5",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill6",
+   "values": {
+    "name": "Fill 6",
+    "match_text": "zz6",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill7",
+   "values": {
+    "name": "Fill 7",
+    "match_text": "zz7",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill8",
+   "values": {
+    "name": "Fill 8",
+    "match_text": "zz8",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill9",
+   "values": {
+    "name": "Fill 9",
+    "match_text": "zz9",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill10",
+   "values": {
+    "name": "Fill 10",
+    "match_text": "zz10",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill11",
+   "values": {
+    "name": "Fill 11",
+    "match_text": "zz11",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill12",
+   "values": {
+    "name": "Fill 12",
+    "match_text": "zz12",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill13",
+   "values": {
+    "name": "Fill 13",
+    "match_text": "zz13",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill14",
+   "values": {
+    "name": "Fill 14",
+    "match_text": "zz14",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill15",
+   "values": {
+    "name": "Fill 15",
+    "match_text": "zz15",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill16",
+   "values": {
+    "name": "Fill 16",
+    "match_text": "zz16",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill17",
+   "values": {
+    "name": "Fill 17",
+    "match_text": "zz17",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill18",
+   "values": {
+    "name": "Fill 18",
+    "match_text": "zz18",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill19",
+   "values": {
+    "name": "Fill 19",
+    "match_text": "zz19",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill20",
+   "values": {
+    "name": "Fill 20",
+    "match_text": "zz20",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill21",
+   "values": {
+    "name": "Fill 21",
+    "match_text": "zz21",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill22",
+   "values": {
+    "name": "Fill 22",
+    "match_text": "zz22",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill23",
+   "values": {
+    "name": "Fill 23",
+    "match_text": "zz23",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill24",
+   "values": {
+    "name": "Fill 24",
+    "match_text": "zz24",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill25",
+   "values": {
+    "name": "Fill 25",
+    "match_text": "zz25",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill26",
+   "values": {
+    "name": "Fill 26",
+    "match_text": "zz26",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill27",
+   "values": {
+    "name": "Fill 27",
+    "match_text": "zz27",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill28",
+   "values": {
+    "name": "Fill 28",
+    "match_text": "zz28",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill29",
+   "values": {
+    "name": "Fill 29",
+    "match_text": "zz29",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill30",
+   "values": {
+    "name": "Fill 30",
+    "match_text": "zz30",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill31",
+   "values": {
+    "name": "Fill 31",
+    "match_text": "zz31",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill32",
+   "values": {
+    "name": "Fill 32",
+    "match_text": "zz32",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill33",
+   "values": {
+    "name": "Fill 33",
+    "match_text": "zz33",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill34",
+   "values": {
+    "name": "Fill 34",
+    "match_text": "zz34",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill35",
+   "values": {
+    "name": "Fill 35",
+    "match_text": "zz35",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill36",
+   "values": {
+    "name": "Fill 36",
+    "match_text": "zz36",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill37",
+   "values": {
+    "name": "Fill 37",
+    "match_text": "zz37",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill38",
+   "values": {
+    "name": "Fill 38",
+    "match_text": "zz38",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill39",
+   "values": {
+    "name": "Fill 39",
+    "match_text": "zz39",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill40",
+   "values": {
+    "name": "Fill 40",
+    "match_text": "zz40",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill41",
+   "values": {
+    "name": "Fill 41",
+    "match_text": "zz41",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill42",
+   "values": {
+    "name": "Fill 42",
+    "match_text": "zz42",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill43",
+   "values": {
+    "name": "Fill 43",
+    "match_text": "zz43",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill44",
+   "values": {
+    "name": "Fill 44",
+    "match_text": "zz44",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill45",
+   "values": {
+    "name": "Fill 45",
+    "match_text": "zz45",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill46",
+   "values": {
+    "name": "Fill 46",
+    "match_text": "zz46",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill47",
+   "values": {
+    "name": "Fill 47",
+    "match_text": "zz47",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill48",
+   "values": {
+    "name": "Fill 48",
+    "match_text": "zz48",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill49",
+   "values": {
+    "name": "Fill 49",
+    "match_text": "zz49",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill50",
+   "values": {
+    "name": "Fill 50",
+    "match_text": "zz50",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill51",
+   "values": {
+    "name": "Fill 51",
+    "match_text": "zz51",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill52",
+   "values": {
+    "name": "Fill 52",
+    "match_text": "zz52",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill53",
+   "values": {
+    "name": "Fill 53",
+    "match_text": "zz53",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill54",
+   "values": {
+    "name": "Fill 54",
+    "match_text": "zz54",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill55",
+   "values": {
+    "name": "Fill 55",
+    "match_text": "zz55",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill56",
+   "values": {
+    "name": "Fill 56",
+    "match_text": "zz56",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill57",
+   "values": {
+    "name": "Fill 57",
+    "match_text": "zz57",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill58",
+   "values": {
+    "name": "Fill 58",
+    "match_text": "zz58",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill59",
+   "values": {
+    "name": "Fill 59",
+    "match_text": "zz59",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill60",
+   "values": {
+    "name": "Fill 60",
+    "match_text": "zz60",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill61",
+   "values": {
+    "name": "Fill 61",
+    "match_text": "zz61",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill62",
+   "values": {
+    "name": "Fill 62",
+    "match_text": "zz62",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill63",
+   "values": {
+    "name": "Fill 63",
+    "match_text": "zz63",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill64",
+   "values": {
+    "name": "Fill 64",
+    "match_text": "zz64",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill65",
+   "values": {
+    "name": "Fill 65",
+    "match_text": "zz65",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill66",
+   "values": {
+    "name": "Fill 66",
+    "match_text": "zz66",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill67",
+   "values": {
+    "name": "Fill 67",
+    "match_text": "zz67",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill68",
+   "values": {
+    "name": "Fill 68",
+    "match_text": "zz68",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill69",
+   "values": {
+    "name": "Fill 69",
+    "match_text": "zz69",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill70",
+   "values": {
+    "name": "Fill 70",
+    "match_text": "zz70",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill71",
+   "values": {
+    "name": "Fill 71",
+    "match_text": "zz71",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill72",
+   "values": {
+    "name": "Fill 72",
+    "match_text": "zz72",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill73",
+   "values": {
+    "name": "Fill 73",
+    "match_text": "zz73",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill74",
+   "values": {
+    "name": "Fill 74",
+    "match_text": "zz74",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill75",
+   "values": {
+    "name": "Fill 75",
+    "match_text": "zz75",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill76",
+   "values": {
+    "name": "Fill 76",
+    "match_text": "zz76",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill77",
+   "values": {
+    "name": "Fill 77",
+    "match_text": "zz77",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill78",
+   "values": {
+    "name": "Fill 78",
+    "match_text": "zz78",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill79",
+   "values": {
+    "name": "Fill 79",
+    "match_text": "zz79",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill80",
+   "values": {
+    "name": "Fill 80",
+    "match_text": "zz80",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill81",
+   "values": {
+    "name": "Fill 81",
+    "match_text": "zz81",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill82",
+   "values": {
+    "name": "Fill 82",
+    "match_text": "zz82",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill83",
+   "values": {
+    "name": "Fill 83",
+    "match_text": "zz83",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill84",
+   "values": {
+    "name": "Fill 84",
+    "match_text": "zz84",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill85",
+   "values": {
+    "name": "Fill 85",
+    "match_text": "zz85",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill86",
+   "values": {
+    "name": "Fill 86",
+    "match_text": "zz86",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill87",
+   "values": {
+    "name": "Fill 87",
+    "match_text": "zz87",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill88",
+   "values": {
+    "name": "Fill 88",
+    "match_text": "zz88",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill89",
+   "values": {
+    "name": "Fill 89",
+    "match_text": "zz89",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill90",
+   "values": {
+    "name": "Fill 90",
+    "match_text": "zz90",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill91",
+   "values": {
+    "name": "Fill 91",
+    "match_text": "zz91",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill92",
+   "values": {
+    "name": "Fill 92",
+    "match_text": "zz92",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill93",
+   "values": {
+    "name": "Fill 93",
+    "match_text": "zz93",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill94",
+   "values": {
+    "name": "Fill 94",
+    "match_text": "zz94",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill95",
+   "values": {
+    "name": "Fill 95",
+    "match_text": "zz95",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill96",
+   "values": {
+    "name": "Fill 96",
+    "match_text": "zz96",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill97",
+   "values": {
+    "name": "Fill 97",
+    "match_text": "zz97",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill98",
+   "values": {
+    "name": "Fill 98",
+    "match_text": "zz98",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill99",
+   "values": {
+    "name": "Fill 99",
+    "match_text": "zz99",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill100",
+   "values": {
+    "name": "Fill 100",
+    "match_text": "zz100",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill101",
+   "values": {
+    "name": "Fill 101",
+    "match_text": "zz101",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill102",
+   "values": {
+    "name": "Fill 102",
+    "match_text": "zz102",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill103",
+   "values": {
+    "name": "Fill 103",
+    "match_text": "zz103",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill104",
+   "values": {
+    "name": "Fill 104",
+    "match_text": "zz104",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill105",
+   "values": {
+    "name": "Fill 105",
+    "match_text": "zz105",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill106",
+   "values": {
+    "name": "Fill 106",
+    "match_text": "zz106",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill107",
+   "values": {
+    "name": "Fill 107",
+    "match_text": "zz107",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill108",
+   "values": {
+    "name": "Fill 108",
+    "match_text": "zz108",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill109",
+   "values": {
+    "name": "Fill 109",
+    "match_text": "zz109",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill110",
+   "values": {
+    "name": "Fill 110",
+    "match_text": "zz110",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill111",
+   "values": {
+    "name": "Fill 111",
+    "match_text": "zz111",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill112",
+   "values": {
+    "name": "Fill 112",
+    "match_text": "zz112",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill113",
+   "values": {
+    "name": "Fill 113",
+    "match_text": "zz113",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill114",
+   "values": {
+    "name": "Fill 114",
+    "match_text": "zz114",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill115",
+   "values": {
+    "name": "Fill 115",
+    "match_text": "zz115",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill116",
+   "values": {
+    "name": "Fill 116",
+    "match_text": "zz116",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill117",
+   "values": {
+    "name": "Fill 117",
+    "match_text": "zz117",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill118",
+   "values": {
+    "name": "Fill 118",
+    "match_text": "zz118",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill119",
+   "values": {
+    "name": "Fill 119",
+    "match_text": "zz119",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill120",
+   "values": {
+    "name": "Fill 120",
+    "match_text": "zz120",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill121",
+   "values": {
+    "name": "Fill 121",
+    "match_text": "zz121",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill122",
+   "values": {
+    "name": "Fill 122",
+    "match_text": "zz122",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill123",
+   "values": {
+    "name": "Fill 123",
+    "match_text": "zz123",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill124",
+   "values": {
+    "name": "Fill 124",
+    "match_text": "zz124",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill125",
+   "values": {
+    "name": "Fill 125",
+    "match_text": "zz125",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill126",
+   "values": {
+    "name": "Fill 126",
+    "match_text": "zz126",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill127",
+   "values": {
+    "name": "Fill 127",
+    "match_text": "zz127",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill128",
+   "values": {
+    "name": "Fill 128",
+    "match_text": "zz128",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill129",
+   "values": {
+    "name": "Fill 129",
+    "match_text": "zz129",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill130",
+   "values": {
+    "name": "Fill 130",
+    "match_text": "zz130",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill131",
+   "values": {
+    "name": "Fill 131",
+    "match_text": "zz131",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill132",
+   "values": {
+    "name": "Fill 132",
+    "match_text": "zz132",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill133",
+   "values": {
+    "name": "Fill 133",
+    "match_text": "zz133",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill134",
+   "values": {
+    "name": "Fill 134",
+    "match_text": "zz134",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill135",
+   "values": {
+    "name": "Fill 135",
+    "match_text": "zz135",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill136",
+   "values": {
+    "name": "Fill 136",
+    "match_text": "zz136",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill137",
+   "values": {
+    "name": "Fill 137",
+    "match_text": "zz137",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill138",
+   "values": {
+    "name": "Fill 138",
+    "match_text": "zz138",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill139",
+   "values": {
+    "name": "Fill 139",
+    "match_text": "zz139",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill140",
+   "values": {
+    "name": "Fill 140",
+    "match_text": "zz140",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill141",
+   "values": {
+    "name": "Fill 141",
+    "match_text": "zz141",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill142",
+   "values": {
+    "name": "Fill 142",
+    "match_text": "zz142",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill143",
+   "values": {
+    "name": "Fill 143",
+    "match_text": "zz143",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill144",
+   "values": {
+    "name": "Fill 144",
+    "match_text": "zz144",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill145",
+   "values": {
+    "name": "Fill 145",
+    "match_text": "zz145",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill146",
+   "values": {
+    "name": "Fill 146",
+    "match_text": "zz146",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill147",
+   "values": {
+    "name": "Fill 147",
+    "match_text": "zz147",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill148",
+   "values": {
+    "name": "Fill 148",
+    "match_text": "zz148",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill149",
+   "values": {
+    "name": "Fill 149",
+    "match_text": "zz149",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill150",
+   "values": {
+    "name": "Fill 150",
+    "match_text": "zz150",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill151",
+   "values": {
+    "name": "Fill 151",
+    "match_text": "zz151",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill152",
+   "values": {
+    "name": "Fill 152",
+    "match_text": "zz152",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill153",
+   "values": {
+    "name": "Fill 153",
+    "match_text": "zz153",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill154",
+   "values": {
+    "name": "Fill 154",
+    "match_text": "zz154",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill155",
+   "values": {
+    "name": "Fill 155",
+    "match_text": "zz155",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill156",
+   "values": {
+    "name": "Fill 156",
+    "match_text": "zz156",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill157",
+   "values": {
+    "name": "Fill 157",
+    "match_text": "zz157",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill158",
+   "values": {
+    "name": "Fill 158",
+    "match_text": "zz158",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill159",
+   "values": {
+    "name": "Fill 159",
+    "match_text": "zz159",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill160",
+   "values": {
+    "name": "Fill 160",
+    "match_text": "zz160",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill161",
+   "values": {
+    "name": "Fill 161",
+    "match_text": "zz161",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill162",
+   "values": {
+    "name": "Fill 162",
+    "match_text": "zz162",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill163",
+   "values": {
+    "name": "Fill 163",
+    "match_text": "zz163",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill164",
+   "values": {
+    "name": "Fill 164",
+    "match_text": "zz164",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill165",
+   "values": {
+    "name": "Fill 165",
+    "match_text": "zz165",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill166",
+   "values": {
+    "name": "Fill 166",
+    "match_text": "zz166",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill167",
+   "values": {
+    "name": "Fill 167",
+    "match_text": "zz167",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill168",
+   "values": {
+    "name": "Fill 168",
+    "match_text": "zz168",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill169",
+   "values": {
+    "name": "Fill 169",
+    "match_text": "zz169",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill170",
+   "values": {
+    "name": "Fill 170",
+    "match_text": "zz170",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill171",
+   "values": {
+    "name": "Fill 171",
+    "match_text": "zz171",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill172",
+   "values": {
+    "name": "Fill 172",
+    "match_text": "zz172",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill173",
+   "values": {
+    "name": "Fill 173",
+    "match_text": "zz173",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill174",
+   "values": {
+    "name": "Fill 174",
+    "match_text": "zz174",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill175",
+   "values": {
+    "name": "Fill 175",
+    "match_text": "zz175",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill176",
+   "values": {
+    "name": "Fill 176",
+    "match_text": "zz176",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill177",
+   "values": {
+    "name": "Fill 177",
+    "match_text": "zz177",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill178",
+   "values": {
+    "name": "Fill 178",
+    "match_text": "zz178",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill179",
+   "values": {
+    "name": "Fill 179",
+    "match_text": "zz179",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill180",
+   "values": {
+    "name": "Fill 180",
+    "match_text": "zz180",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill181",
+   "values": {
+    "name": "Fill 181",
+    "match_text": "zz181",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill182",
+   "values": {
+    "name": "Fill 182",
+    "match_text": "zz182",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill183",
+   "values": {
+    "name": "Fill 183",
+    "match_text": "zz183",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill184",
+   "values": {
+    "name": "Fill 184",
+    "match_text": "zz184",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill185",
+   "values": {
+    "name": "Fill 185",
+    "match_text": "zz185",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill186",
+   "values": {
+    "name": "Fill 186",
+    "match_text": "zz186",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill187",
+   "values": {
+    "name": "Fill 187",
+    "match_text": "zz187",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill188",
+   "values": {
+    "name": "Fill 188",
+    "match_text": "zz188",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill189",
+   "values": {
+    "name": "Fill 189",
+    "match_text": "zz189",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill190",
+   "values": {
+    "name": "Fill 190",
+    "match_text": "zz190",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill191",
+   "values": {
+    "name": "Fill 191",
+    "match_text": "zz191",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill192",
+   "values": {
+    "name": "Fill 192",
+    "match_text": "zz192",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill193",
+   "values": {
+    "name": "Fill 193",
+    "match_text": "zz193",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill194",
+   "values": {
+    "name": "Fill 194",
+    "match_text": "zz194",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "fill195",
+   "values": {
+    "name": "Fill 195",
+    "match_text": "zz195",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "ref": "over",
+   "values": {
+    "name": "Over",
+    "match_text": "over",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A company has at most 200 rules."
+  },
+  {
+   "op": "bankfeeds_save_rule",
+   "company": "co",
+   "rule": "fill5",
+   "values": {
+    "name": "Edited at the cap",
+    "match_text": "zz5",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  }
+ ]
+}

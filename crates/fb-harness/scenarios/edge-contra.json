@@ -1,0 +1,463 @@
+{
+ "name": "edge-contra",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "clerk"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c1",
+   "name": "Synthetic c1",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bank",
+   "company": "c1",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.ar",
+   "company": "c1",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.accdep",
+   "company": "c1",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.card",
+   "company": "c1",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equity",
+   "company": "c1",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.sales",
+   "company": "c1",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "cap",
+   "company": "c1",
+   "date": "2026-01-01",
+   "memo": "Capital",
+   "lines": [
+    {
+     "account": "c1.bank",
+     "debit": "5000"
+    },
+    {
+     "account": "c1.equity",
+     "credit": "5000"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "cap",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "eq",
+   "company": "c1",
+   "date": "2026-01-02",
+   "memo": "Buy equipment",
+   "lines": [
+    {
+     "account": "c1.equip",
+     "debit": "3000"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "3000"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "eq",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "dep",
+   "company": "c1",
+   "date": "2026-01-31",
+   "memo": "Depreciation",
+   "lines": [
+    {
+     "account": "c1.dep",
+     "debit": "50"
+    },
+    {
+     "account": "c1.accdep",
+     "credit": "50"
+    }
+   ],
+   "adjusting": true,
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "dep",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "draw",
+   "company": "c1",
+   "date": "2026-01-15",
+   "memo": "Owner draw",
+   "lines": [
+    {
+     "account": "c1.draw",
+     "debit": "300"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "300"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "draw",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "odd",
+   "company": "c1",
+   "date": "2026-01-20",
+   "memo": "Odd contra",
+   "lines": [
+    {
+     "account": "c1.accdep",
+     "debit": "10"
+    },
+    {
+     "account": "c1.exp",
+     "credit": "10"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "odd",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bankcontra",
+   "company": "c1",
+   "code": "1001",
+   "name": "Contra bank",
+   "detail_type": "BANK",
+   "is_contra": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A bank account cannot be a contra account."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.arcontra",
+   "company": "c1",
+   "code": "1101",
+   "name": "Contra AR",
+   "detail_type": "RECEIVABLE",
+   "is_contra": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A accounts receivable account cannot be a contra account."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cardcontra",
+   "company": "c1",
+   "code": "2101",
+   "name": "Contra card",
+   "detail_type": "CREDIT_CARD",
+   "is_contra": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A credit card account cannot be a contra account."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.disc",
+   "company": "c1",
+   "code": "4900",
+   "name": "Sales discounts",
+   "detail_type": "INCOME",
+   "is_contra": true,
+   "description": "Contra income",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "disc",
+   "company": "c1",
+   "date": "2026-01-25",
+   "memo": "Discount",
+   "lines": [
+    {
+     "account": "c1.disc",
+     "debit": "12.34"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "12.34"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "disc",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "account": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "OTHER_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "account": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "LONG_TERM_LIABILITY",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An account used in journals or source document snapshots cannot change its type to another kind; choose another asset type."
+  },
+  {
+   "op": "save_account",
+   "account": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner draw (renamed)",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "account": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "kind": "INCOME",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An account used in journals or source document snapshots cannot change its type to another kind; choose another expense type."
+  },
+  {
+   "op": "save_account",
+   "account": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials (unused)",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.spare",
+   "company": "c1",
+   "code": "1999",
+   "name": "Spare",
+   "detail_type": "OTHER_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "account": "c1.spare",
+   "company": "c1",
+   "code": "2999",
+   "name": "Spare",
+   "detail_type": "LONG_TERM_LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.kindonly",
+   "company": "c1",
+   "code": "2500",
+   "name": "Payroll liabilities",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.mismatch",
+   "company": "c1",
+   "code": "2501",
+   "name": "Mismatch",
+   "detail_type": "BANK",
+   "kind": "INCOME",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The account type does not belong to that kind."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.notype",
+   "company": "c1",
+   "code": "2502",
+   "name": "No type",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an account type."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.badtype",
+   "company": "c1",
+   "code": "2503",
+   "name": "Bad type",
+   "detail_type": "NOT_A_TYPE",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an account type from the list."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dup",
+   "company": "c1",
+   "code": "1000",
+   "name": "Duplicate code",
+   "detail_type": "BANK",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Account with this Company and Code already exists."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.blank",
+   "company": "c1",
+   "code": "  ",
+   "name": "Blank code",
+   "detail_type": "BANK",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This field cannot be blank."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.long",
+   "company": "c1",
+   "code": "1700",
+   "name": "Long description",
+   "detail_type": "OTHER_ASSET",
+   "description": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Ensure this value has at most 200 characters (it has 201)."
+  }
+ ],
+ "as_of": [
+  "2026-01-15",
+  "2026-01-31"
+ ]
+}

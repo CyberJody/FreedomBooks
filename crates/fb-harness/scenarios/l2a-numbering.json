@@ -1,0 +1,373 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "EST",
+   "request_key": "00000000-0000-0000-0000-000000000000",
+   "ref": "id-EST",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "EST",
+   "request_key": "00000000-0000-0000-0000-000000000000",
+   "ref": "id-EST",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "INV",
+   "request_key": "00000000-0000-0000-0000-000000000001",
+   "ref": "id-INV",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "INV",
+   "request_key": "00000000-0000-0000-0000-000000000001",
+   "ref": "id-INV",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "RCP",
+   "request_key": "00000000-0000-0000-0000-000000000002",
+   "ref": "id-RCP",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "RCP",
+   "request_key": "00000000-0000-0000-0000-000000000002",
+   "ref": "id-RCP",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "BILL",
+   "request_key": "00000000-0000-0000-0000-000000000003",
+   "ref": "id-BILL",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "BILL",
+   "request_key": "00000000-0000-0000-0000-000000000003",
+   "ref": "id-BILL",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "BPAY",
+   "request_key": "00000000-0000-0000-0000-000000000004",
+   "ref": "id-BPAY",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "BPAY",
+   "request_key": "00000000-0000-0000-0000-000000000004",
+   "ref": "id-BPAY",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "DEP",
+   "request_key": "00000000-0000-0000-0000-000000000005",
+   "ref": "id-DEP",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "DEP",
+   "request_key": "00000000-0000-0000-0000-000000000005",
+   "ref": "id-DEP",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CHK",
+   "request_key": "00000000-0000-0000-0000-000000000006",
+   "ref": "id-CHK",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CHK",
+   "request_key": "00000000-0000-0000-0000-000000000006",
+   "ref": "id-CHK",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "SR",
+   "request_key": "00000000-0000-0000-0000-000000000007",
+   "ref": "id-SR",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "SR",
+   "request_key": "00000000-0000-0000-0000-000000000007",
+   "ref": "id-SR",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "TRF",
+   "request_key": "00000000-0000-0000-0000-000000000008",
+   "ref": "id-TRF",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "TRF",
+   "request_key": "00000000-0000-0000-0000-000000000008",
+   "ref": "id-TRF",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CM",
+   "request_key": "00000000-0000-0000-0000-000000000009",
+   "ref": "id-CM",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CM",
+   "request_key": "00000000-0000-0000-0000-000000000009",
+   "ref": "id-CM",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "RFD",
+   "request_key": "00000000-0000-0000-0000-000000000010",
+   "ref": "id-RFD",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "RFD",
+   "request_key": "00000000-0000-0000-0000-000000000010",
+   "ref": "id-RFD",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CDP",
+   "request_key": "00000000-0000-0000-0000-000000000011",
+   "ref": "id-CDP",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CDP",
+   "request_key": "00000000-0000-0000-0000-000000000011",
+   "ref": "id-CDP",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CDA",
+   "request_key": "00000000-0000-0000-0000-000000000012",
+   "ref": "id-CDA",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CDA",
+   "request_key": "00000000-0000-0000-0000-000000000012",
+   "ref": "id-CDA",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CDR",
+   "request_key": "00000000-0000-0000-0000-000000000013",
+   "ref": "id-CDR",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "CDR",
+   "request_key": "00000000-0000-0000-0000-000000000013",
+   "ref": "id-CDR",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "INV",
+   "request_key": "00000000-0000-0000-0000-000000000000",
+   "ref": "wrongkind",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This request key belongs to a different document type."
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "BAD",
+   "request_key": "bad",
+   "ref": "bad",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Unsupported document type."
+  },
+  {
+   "op": "edit_company",
+   "company": "c",
+   "name": "Renamed",
+   "currency": "EUR",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Currency cannot change after journals or commercial document identities have been created."
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "values": {
+    "receivables": "asset",
+    "payables": "ap",
+    "collected_tax": "taxacct",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "values": {},
+   "expected_revision": 0,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This record changed since you opened it. Reload and review before saving."
+  },
+  {
+   "op": "l2_snapshot",
+   "company": "c",
+   "source": "id-INV",
+   "values": {
+    "receivables": "asset"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_snapshot",
+   "company": "c",
+   "source": "id-INV",
+   "values": {
+    "receivables": "asset"
+   },
+   "expect_error": false
+  }
+ ]
+}

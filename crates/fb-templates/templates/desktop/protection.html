@@ -1,0 +1,24 @@
+{% extends 'ledger/base.html' %}{% block content %}
+<h1>Book protection</h1>
+{% if errors %}<section class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</section>{% endif %}
+{% if builtin %}
+<p>These books use FreedomBooks’ built-in key.</p><p class="notice">Anyone who gets a copy of this file can open it.</p>
+<p>Backups open on any FreedomBooks install. File › Lock and idle lock do not apply because there is no private password to ask for.</p>
+{% elif legacy %}<p>Choose a password to finish setting up recovery and portable backups for these books.</p>
+{% else %}<p>These books are protected with your own password.</p>
+<form class="narrow" method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="ask">
+<p><label><input type="checkbox" name="ask_password"{% if ask_password %} checked{% endif %}> Ask for a password when opening these books</label></p>
+<p>{% if os_store %}When off, this computer opens the books using its system keyring. File › Lock and idle lock are off too.{% else %}This computer has no system keyring. Keep asking for your password when opening these books.{% endif %}</p>
+<p><label for="id_current_password">Current password</label><input type="password" id="id_current_password" name="current_password" autocomplete="current-password" required></p><button>Save setting</button></form>
+<p><a href="/settings/recovery-key/">Show my recovery key</a></p>
+{% endif %}
+{% if builtin or legacy %}<section class="narrow"><h2>{% if legacy %}Set up recovery{% else %}Add my own password{% endif %}</h2>
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="{% if legacy %}adopt{% else %}add{% endif %}">
+<p><label for="id_new_password">New password</label><input type="password" name="new_password" id="id_new_password" autocomplete="new-password" required></p>
+<p><label for="id_repeat_password">Repeat the password</label><input type="password" name="repeat_password" id="id_repeat_password" autocomplete="new-password" required></p>
+<p>Use at least 8 characters. A verified backup is taken before protection changes.</p>{% if builtin %}{% if older_backups %}<p class="notice" id="older-backups">{{ older_backups }}</p>{% endif %}{% endif %}<button>{% if legacy %}Set up recovery{% else %}Add my own password{% endif %}</button></form></section>
+{% else %}<section class="narrow"><h2>Remove my own password</h2><form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="remove">
+<p><label for="id_remove_password">Current password</label><input type="password" id="id_remove_password" name="current_password" autocomplete="current-password" required></p>
+<p><label><input type="checkbox" name="understand" required> Anyone who gets a copy of this file can open it.</label></p>
+<p>A verified backup is taken first. Backups made since recovery keys were added keep the password or recovery key they were made with.</p>{% if older_backups %}<p class="notice" id="older-backups">{{ older_backups }}</p>{% endif %}<button>Remove my own password</button></form></section>{% endif %}
+{% endblock %}

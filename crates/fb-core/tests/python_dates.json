@@ -1,0 +1,654 @@
+{
+ "model": [
+  [
+   "2026-10-31",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "20261031",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "2026-1-5",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-W44-5",
+   {
+    "ok": "2026-10-30"
+   }
+  ],
+  [
+   "2026W445",
+   {
+    "ok": "2026-10-30"
+   }
+  ],
+  [
+   "2026-W44",
+   {
+    "ok": "2026-10-26"
+   }
+  ],
+  [
+   "2026W44",
+   {
+    "ok": "2026-10-26"
+   }
+  ],
+  [
+   "2020-W53-7",
+   {
+    "ok": "2021-01-03"
+   }
+  ],
+  [
+   "2021-W53-1",
+   {
+    "error": "“2021-W53-1” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026-W00-1",
+   {
+    "error": "“2026-W00-1” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026-W44-0",
+   {
+    "error": "“2026-W44-0” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026-W44-8",
+   {
+    "error": "“2026-W44-8” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "0000-W01-1",
+   {
+    "error": "“0000-W01-1” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "9999-W52-7",
+   {
+    "error": "“9999-W52-7” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "0001-W01-1",
+   {
+    "ok": "0001-01-01"
+   }
+  ],
+  [
+   "２０２６-１-５",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "٢٠٢٦-١-٥",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "２０２６-01-05",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-1-5\n",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-02-30",
+   {
+    "error": "“2026-02-30” value has the correct format (YYYY-MM-DD) but it is an invalid date."
+   }
+  ],
+  [
+   "bad",
+   {
+    "error": "“bad” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "",
+   {
+    "error": "“” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   " 10/31/26 ",
+   {
+    "error": "“ 10/31/26 ” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "10/31/2026",
+   {
+    "error": "“10/31/2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "1/5/69",
+   {
+    "error": "“1/5/69” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "1/5/68",
+   {
+    "error": "“1/5/68” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "  Oct   31 2026 ",
+   {
+    "error": "“  Oct   31 2026 ” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct 31, 2026",
+   {
+    "error": "“Oct 31, 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "31 Oct 2026",
+   {
+    "error": "“31 Oct 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "31 Oct, 2026",
+   {
+    "error": "“31 Oct, 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "October 31 2026",
+   {
+    "error": "“October 31 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "October 31, 2026",
+   {
+    "error": "“October 31, 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "31 October 2026",
+   {
+    "error": "“31 October 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "31 October, 2026",
+   {
+    "error": "“31 October, 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "oCt 31 2026",
+   {
+    "error": "“oCt 31 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct 32 2026",
+   {
+    "error": "“Oct 32 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct 31 26",
+   {
+    "error": "“Oct 31 26” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct, 31 2026",
+   {
+    "error": "“Oct, 31 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct 31,2026",
+   {
+    "error": "“Oct 31,2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026-1- 5",
+   {
+    "error": "“2026-1- 5” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "２０２６-1-5",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-1-５",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "1/５/26",
+   {
+    "error": "“1/５/26” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "1/5/２６",
+   {
+    "error": "“1/5/２６” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct ５ 2026",
+   {
+    "error": "“Oct ５ 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct 0５ 2026",
+   {
+    "error": "“Oct 0５ 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct ５ ２０２６",
+   {
+    "error": "“Oct ５ ２０２６” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026-１-5",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "1/３１/26",
+   {
+    "error": "“1/３１/26” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct ３１ 2026",
+   {
+    "error": "“Oct ３１ 2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "\u001c10/31/26\u001c",
+   {
+    "error": "“\u001c10/31/26\u001c” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "Oct\u001c31\u001c2026",
+   {
+    "error": "“Oct\u001c31\u001c2026” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026-W445",
+   {
+    "error": "“2026-W445” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ],
+  [
+   "2026W44-5",
+   {
+    "error": "“2026W44-5” value has an invalid date format. It must be in YYYY-MM-DD format."
+   }
+  ]
+ ],
+ "form": [
+  [
+   "2026-10-31",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "20261031",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-1-5",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-W44-5",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026W445",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-W44",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026W44",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2020-W53-7",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2021-W53-1",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-W00-1",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-W44-0",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-W44-8",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "0000-W01-1",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "9999-W52-7",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "0001-W01-1",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "２０２６-１-５",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "٢٠٢٦-١-٥",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "２０２６-01-05",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-1-5\n",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-02-30",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "bad",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "",
+   {
+    "error": "This field is required."
+   }
+  ],
+  [
+   " 10/31/26 ",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "10/31/2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "1/5/69",
+   {
+    "ok": "1969-01-05"
+   }
+  ],
+  [
+   "1/5/68",
+   {
+    "ok": "2068-01-05"
+   }
+  ],
+  [
+   "  Oct   31 2026 ",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "Oct 31, 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "31 Oct 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "31 Oct, 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "October 31 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "October 31, 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "31 October 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "31 October, 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "oCt 31 2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "Oct 32 2026",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "Oct 31 26",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "Oct, 31 2026",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "Oct 31,2026",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-1- 5",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "２０２６-1-5",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "2026-1-５",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "1/５/26",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "1/5/２６",
+   {
+    "ok": "2026-01-05"
+   }
+  ],
+  [
+   "Oct ５ 2026",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "Oct 0５ 2026",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "Oct ５ ２０２６",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026-１-5",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "1/３１/26",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "Oct ３１ 2026",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "\u001c10/31/26\u001c",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "Oct\u001c31\u001c2026",
+   {
+    "ok": "2026-10-31"
+   }
+  ],
+  [
+   "2026-W445",
+   {
+    "error": "Enter a valid date."
+   }
+  ],
+  [
+   "2026W44-5",
+   {
+    "error": "Enter a valid date."
+   }
+  ]
+ ]
+}

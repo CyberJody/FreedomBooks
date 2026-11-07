@@ -1,0 +1,231 @@
+{
+  "users": [
+    {
+      "username": "test",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic attachment book",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "cash",
+      "code": "100",
+      "name": "Cash",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "equity",
+      "code": "300",
+      "name": "Equity",
+      "kind": "EQUITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "co",
+      "ref": "j",
+      "date": "2026-01-01",
+      "memo": "Test",
+      "lines": [
+        {
+          "account": "cash",
+          "debit": "1.00",
+          "credit": "0"
+        },
+        {
+          "account": "equity",
+          "debit": "0",
+          "credit": "1.00"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "a",
+      "name": "scan",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba1",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "a",
+      "name": "scan",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba1",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "a",
+      "name": "different.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba1",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "This form was already used for another file. Reload the page and attach the file again."
+    },
+    {
+      "op": "post_journal",
+      "company": "co",
+      "journal": "j",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "png",
+      "name": "image.png",
+      "hex": "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c49444154789c6338b1a50200043c01f5201698a50000000049454e44ae426082",
+      "request_key": "00000000-0000-0000-0000-0000000dbba2",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "jpeg",
+      "name": "photo.jpg",
+      "hex": "ffd8ffe000104a46494600010100000100010000ffdb0043000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40ffc0000b080001000101011100ffda0008010100003f001234ff0056ffd078ffd9",
+      "request_key": "00000000-0000-0000-0000-0000000dbba3",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "webp",
+      "name": "image.webp",
+      "hex": "5249464612000000574542505650384c050000002f0000000000",
+      "request_key": "00000000-0000-0000-0000-0000000dbba4",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "a",
+      "reason": "wrong file",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "a",
+      "reason": "retry",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "a",
+      "name": "scan",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba1",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "This form was already used for another file. Reload the page and attach the file again."
+    },
+    {
+      "op": "attachment_download",
+      "company": "co",
+      "attachment": "a",
+      "ref": "removed-hash",
+      "expect_error": false
+    },
+    {
+      "op": "reverse_journal",
+      "company": "co",
+      "journal": "j",
+      "ref": "reversal",
+      "date": "2026-01-02",
+      "reason": "wrong",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "aftervoid",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba5",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "reversal",
+      "ref": "badreverse",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba6",
+      "expect_error": true,
+      "expect_kind": "PermissionDenied",
+      "expect_message": "Attachments go on manual journal entries only."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "outsider",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba7",
+      "actor": "outsider",
+      "expect_error": true,
+      "expect_kind": "PermissionDenied",
+      "expect_message": "Company access denied."
+    },
+    {
+      "op": "create_company",
+      "ref": "other",
+      "name": "Other",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "other",
+      "journal": "j",
+      "ref": "cross",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba8",
+      "expect_error": true,
+      "expect_kind": "PermissionDenied",
+      "expect_message": "Attachments go on manual journal entries only."
+    },
+    {
+      "op": "attachment_adopt",
+      "company": "co",
+      "journal": "j",
+      "ref": "adopt",
+      "name": "adopt.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2561646f70740a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbba9",
+      "expect_error": false
+    }
+  ],
+  "capture_steps": true
+}

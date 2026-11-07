@@ -1,0 +1,97 @@
+name: Desktop installer release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux
+          - runner: windows-latest
+            platform: win32
+    runs-on: ${{ matrix.runner }}
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      CARGO_BUILD_JOBS: '4'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/packaging/.work/builder-cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            packaging/package-lock.json
+            electron/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Set isolated temporary directory
+        shell: bash
+        run: |
+          mkdir -p packaging/.work/tmp
+          echo "TMPDIR=$GITHUB_WORKSPACE/packaging/.work/tmp" >> "$GITHUB_ENV"
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+      - name: Install Linux build and headless test tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential perl pkg-config xvfb xauth xdotool dbus-x11 p7zip-full
+      - name: Install locked packaging tools
+        run: npm ci --prefix packaging
+      - name: Install locked host-side smoke driver
+        run: npm ci --prefix electron
+      - name: Build native module, harden, wrap and verify artifacts
+        run: python packaging/ci.py ${{ matrix.platform }}
+      - name: Signing placeholder (unsigned alpha; fail if configured)
+        env:
+          FB_WINDOWS_SIGNING_CERT_BASE64: ${{ matrix.platform == 'win32' && secrets.FB_WINDOWS_SIGNING_CERT_BASE64 || '' }}
+          FB_WINDOWS_SIGNING_PASSWORD: ${{ matrix.platform == 'win32' && secrets.FB_WINDOWS_SIGNING_PASSWORD || '' }}
+          FB_LINUX_GPG_PRIVATE_KEY: ${{ matrix.platform == 'linux' && secrets.FB_LINUX_GPG_PRIVATE_KEY || '' }}
+          FB_LINUX_GPG_PASSPHRASE: ${{ matrix.platform == 'linux' && secrets.FB_LINUX_GPG_PASSPHRASE || '' }}
+        run: python packaging/signing-placeholder.py ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.platform }}
+          path: |
+            packaging/dist/*.AppImage
+            packaging/dist/*.deb
+            packaging/dist/FreedomBooks-Setup-*.exe
+            packaging/dist/*.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-checks-${{ matrix.platform }}
+          path: |
+            packaging/.work/appimage-smoke
+            packaging/.work/deb-smoke
+            packaging/dist/npm-production-*.json
+          if-no-files-found: ignore
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.ref_name }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: installers
+      - name: Attach verified unsigned alpha installers
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$REPOSITORY" || gh release create "$RELEASE_TAG" --repo "$REPOSITORY" --title "FreedomBooks $RELEASE_TAG (unsigned alpha)" --prerelease --notes "Unsigned alpha installers. Verify the SHA-256 checksum and follow packaging/INSTALL-TESTING.md."
+          gh release upload "$RELEASE_TAG" installers/* --repo "$REPOSITORY" --clobber

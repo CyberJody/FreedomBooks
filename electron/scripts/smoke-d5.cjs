@@ -1,0 +1,35 @@
+'use strict';
+const assert = require('node:assert/strict');
+module.exports = async ({app, page,company,ids,shot,pass}) => {
+  const base=`fb://app/c/${company}`;
+  const go=p=>page.goto(base+p);
+  const save=async (label,re)=>Promise.all([page.waitForURL(re),page.click(`button:has-text("${label}")`)]);
+  // Add the dedicated liability through the real account/setup forms.
+  await go('/accounts/new/');await page.fill('#id_code','2300');await page.fill('#id_name','Customer deposits');await page.selectOption('#id_detail_type','OTHER_CURRENT_LIABILITY');await save('Save',/accounts\/$/);
+  const accounts=await app.evaluate(({app:a},c)=>JSON.parse(process.getBuiltinModule('module').createRequire(a.getAppPath()+'/package.json')('./native/fb-node.node').query(JSON.stringify({type:'Accounts',company_id:c}))),company);
+  const liability=accounts.find(a=>a.code==='2300').id;
+  await go('/accounting-setup/');await page.selectOption('#id_customer_deposits',liability);await save('Save accounting setup',/accounting-setup/);
+  await go('/credit-memos/new/');
+  await page.click('button:has-text("Review credit memo")');await page.waitForSelector('#id_customer_error');await shot(page,'d5-credit-invalid');
+  await page.selectOption('#id_customer',ids.customer);await page.fill('#id_date','2026-10-24');await page.selectOption('#id_tax_mode','NONE');
+  await page.fill('#id_lines-0-description','Returned synthetic service');await page.fill('#id_lines-0-quantity','2');await page.fill('#id_lines-0-rate','10.00');await page.selectOption('#id_lines-0-income_account',ids.income);
+  await page.fill('#id_lines-1-description','   ');await page.fill('#id_lines-1-quantity','  ');
+  await page.click('button:has-text("Review credit memo")');await page.waitForSelector('#review-total');assert.equal(await page.locator('#review-total').textContent(),'20.00');await shot(page,'d5-credit-review');
+  await save('Record credit memo — books only',/credit-memos\/[0-9a-f-]{36}\/$/);const cm=page.url();await shot(page,'d5-credit-detail');
+  await page.click('a:has-text("Apply to invoices")');await page.waitForSelector('#credit-apply');
+  const amount=page.locator('input[name^="amount_"]').first();assert.ok(await amount.count());await amount.fill('5.00');await page.fill('#id_date','2026-10-25');await page.click('button:has-text("Review credit application")');await page.waitForSelector('#review-amount');assert.equal(await page.locator('#review-amount').textContent(),'5.00');
+  await save('Apply credit — books only',/credit-memos\/[0-9a-f-]{36}\/$/);assert.equal(await page.locator('#available').textContent(),'15.00');
+  await page.click('a:has-text("Unapply")');await page.waitForSelector('#id_reason');await page.fill('#id_date','2026-10-26');await page.fill('#id_reason','Synthetic correction');await save('Unapply credit',/credit-memos\/[0-9a-f-]{36}\/$/);assert.equal(await page.locator('#available').textContent(),'20.00');
+  await page.click('a:has-text("Give a refund")');await page.waitForSelector('#refund-entry');await page.fill('#id_amount','2.00');await page.fill('#id_date','2026-10-26');await page.selectOption('#id_bank',ids.bank);await page.selectOption('#id_method','CASH');await page.click('button:has-text("Review refund")');await page.waitForSelector('#review-total');await save('Record refund — books only',/refunds\/[0-9a-f-]{36}\/$/);
+  await page.click('a:has-text("Void refund")');await page.waitForSelector('#id_reason');await page.fill('#id_date','2026-10-27');await page.fill('#id_reason','Correct synthetic refund');await save('Void refund',/refunds\/[0-9a-f-]{36}\/$/);
+  await page.goto(cm+'void/');await page.fill('#id_date','2026-10-27');await page.fill('#id_reason','Correct credit');await save('Void credit memo',/credit-memos\/[0-9a-f-]{36}\/$/);assert.equal(await page.locator('#available').textContent(),'0.00');
+  pass('D5 credit review/record, allocation, unapply, refund, refund void and credit void use real forms');
+  await go('/customer-deposits/new/');await page.selectOption('#id_customer',ids.customer);await page.fill('#id_date','2026-10-24');await page.fill('#id_amount','30.00');await page.fill('#id_order_reference','D5 order');await page.click('button:has-text("Review deposit")');await page.waitForSelector('#review-total');assert.equal(await page.locator('#review-total').textContent(),'30.00');await shot(page,'d5-deposit-review');
+  await save('Record deposit — books only',/customer-deposits\/[0-9a-f-]{36}\/$/);const dp=page.url();assert.equal(await page.locator('#remaining').textContent(),'30.00');
+  await page.click('a:has-text("Apply to an invoice")');await page.waitForSelector('#deposit-apply');await page.selectOption('#id_invoice',{index:1});await page.fill('#id_date','2026-10-25');await page.fill('#id_amount','10.00');await page.click('button:has-text("Review application")');await page.waitForSelector('#review-total');await save('Apply deposit — books only',/customer-deposits\/[0-9a-f-]{36}\/$/);assert.equal(await page.locator('#remaining').textContent(),'20.00');
+  await page.click('a:has-text("Unapply")');await page.waitForSelector('#id_reason');await page.fill('#id_date','2026-10-26');await page.fill('#id_reason','Release deposit');await save('Unapply deposit',/customer-deposits\/[0-9a-f-]{36}\/$/);assert.equal(await page.locator('#remaining').textContent(),'30.00');
+  await page.click('a:has-text("Refund deposit")');await page.waitForSelector('#refund-entry');await page.fill('#id_date','2026-10-26');await page.fill('#id_amount','2.00');await page.selectOption('#id_bank',ids.bank);await page.selectOption('#id_method','CASH');await page.click('button:has-text("Review refund")');await page.waitForSelector('#review-total');await save('Record refund — books only',/deposit-refunds\/[0-9a-f-]{36}\/$/);
+  await page.click('a:has-text("Void refund")');await page.waitForSelector('#id_reason');await page.fill('#id_date','2026-10-27');await page.fill('#id_reason','Correct deposit refund');await save('Void refund',/deposit-refunds\/[0-9a-f-]{36}\/$/);
+  await page.goto(dp+'void/');await page.fill('#id_date','2026-10-27');await page.fill('#id_reason','Correct deposit');await save('Void deposit',/customer-deposits\/[0-9a-f-]{36}\/$/);assert.equal(await page.locator('#remaining').textContent(),'0.00');await shot(page,'d5-deposit-voided');
+  pass('D5 customer deposit review/record, apply, unapply, refund, refund void and deposit void use real forms');
+};

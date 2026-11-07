@@ -1,0 +1,998 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "capture_steps": true,
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b00",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 0",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea60",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b00",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b01",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 1",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea61",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b01",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b02",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 2",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea62",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b02",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b03",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 3",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea63",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b03",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b04",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 4",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea64",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b04",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b05",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 5",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea65",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b05",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b06",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 6",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea66",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b06",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b07",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 7",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea67",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b07",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b08",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 8",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea68",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b08",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b09",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 9",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea69",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b09",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b10",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 10",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea6a",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b10",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b11",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 11",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea6b",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b11",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b12",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 12",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea6c",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b12",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b13",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 13",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea6d",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b13",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b14",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 14",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea6e",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b14",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b15",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 15",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea6f",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b15",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b16",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 16",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea70",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b16",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b17",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 17",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea71",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b17",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b18",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 18",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea72",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b18",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b19",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 19",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea73",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b19",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b20",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 20",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea74",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b20",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b21",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 21",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea75",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b21",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b22",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 22",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea76",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b22",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b23",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 23",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea77",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b23",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b24",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 24",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea78",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b24",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b25",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 25",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea79",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b25",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b26",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 26",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea7a",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b26",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b27",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 27",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea7b",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b27",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b28",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 28",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea7c",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b28",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b29",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 29",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea7d",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b29",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b30",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Synthetic cap 30",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-00000000ea7e",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b30",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "reminder_build",
+      "company": "co",
+      "today": "2026-12-01",
+      "ref": "capped",
+      "expect_error": false
+    },
+    {
+      "op": "reminder_count",
+      "company": "co",
+      "today": "2026-12-01",
+      "ref": "count",
+      "expect_error": false
+    }
+  ]
+}

@@ -1,0 +1,1280 @@
+{
+ "name": "sample-company",
+ "source": "ledger.sample_company.seed_sample_company(as_of='2026-10-29') on fbv2_l1_sample",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "sample",
+   "name": "Birch Hollow Landscaping & Garden Supply",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1000",
+   "company": "sample",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "is_contra": false,
+   "description": "Main operating account",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1010",
+   "company": "sample",
+   "code": "1010",
+   "name": "Savings",
+   "detail_type": "BANK",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1050",
+   "company": "sample",
+   "code": "1050",
+   "name": "Undeposited funds",
+   "detail_type": "OTHER_CURRENT_ASSET",
+   "is_contra": false,
+   "description": "Payments received, not yet deposited",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1100",
+   "company": "sample",
+   "code": "1100",
+   "name": "Accounts receivable",
+   "detail_type": "RECEIVABLE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1200",
+   "company": "sample",
+   "code": "1200",
+   "name": "Prepaid insurance",
+   "detail_type": "OTHER_CURRENT_ASSET",
+   "is_contra": false,
+   "description": "Annual policy paid ahead",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1500",
+   "company": "sample",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": false,
+   "description": "Mowers, trailer and hand tools",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a1590",
+   "company": "sample",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "description": "Depreciation taken on equipment",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a2000",
+   "company": "sample",
+   "code": "2000",
+   "name": "Accounts payable",
+   "detail_type": "PAYABLE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a2100",
+   "company": "sample",
+   "code": "2100",
+   "name": "Sales tax payable",
+   "detail_type": "OTHER_CURRENT_LIABILITY",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a3000",
+   "company": "sample",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a3100",
+   "company": "sample",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "description": "Money the owner takes out of the business",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a4000",
+   "company": "sample",
+   "code": "4000",
+   "name": "Landscape services",
+   "detail_type": "INCOME",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a4100",
+   "company": "sample",
+   "code": "4100",
+   "name": "Garden supply sales",
+   "detail_type": "INCOME",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a4200",
+   "company": "sample",
+   "code": "4200",
+   "name": "Design fees",
+   "detail_type": "INCOME",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5000",
+   "company": "sample",
+   "code": "5000",
+   "name": "Materials and plants",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "is_contra": false,
+   "description": "Mulch, soil and plants resold or installed",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5100",
+   "company": "sample",
+   "code": "5100",
+   "name": "Fuel",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5200",
+   "company": "sample",
+   "code": "5200",
+   "name": "Equipment rental",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5300",
+   "company": "sample",
+   "code": "5300",
+   "name": "Insurance",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5400",
+   "company": "sample",
+   "code": "5400",
+   "name": "Shop and office",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5500",
+   "company": "sample",
+   "code": "5500",
+   "name": "Subcontractors",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5600",
+   "company": "sample",
+   "code": "5600",
+   "name": "Vehicle repairs",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5700",
+   "company": "sample",
+   "code": "5700",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5800",
+   "company": "sample",
+   "code": "5800",
+   "name": "Advertising",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "a5900",
+   "company": "sample",
+   "code": "5900",
+   "name": "Utilities",
+   "detail_type": "EXPENSE",
+   "is_contra": false,
+   "description": "",
+   "active": true,
+   "postable": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j1",
+   "company": "sample",
+   "date": "2026-08-01",
+   "memo": "Opening balances — owner's cash, equipment less depreciation to date, and prepaid insurance.",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "18500.00"
+    },
+    {
+     "account": "a1010",
+     "debit": "4200.00"
+    },
+    {
+     "account": "a1500",
+     "debit": "12600.00"
+    },
+    {
+     "account": "a1200",
+     "debit": "1800.00"
+    },
+    {
+     "account": "a1590",
+     "credit": "2520.00"
+    },
+    {
+     "account": "a3000",
+     "credit": "34580.00"
+    }
+   ],
+   "entry_number": "1",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j2",
+   "company": "sample",
+   "date": "2026-08-30",
+   "memo": "INV-000001: Weekly mowing quote",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "170.00"
+    },
+    {
+     "account": "a4000",
+     "credit": "170.00"
+    }
+   ],
+   "entry_number": "DOC-2",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j2",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j3",
+   "company": "sample",
+   "date": "2026-10-01",
+   "memo": "RCP-000001: Millbrook payment",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "170.00"
+    },
+    {
+     "account": "a1100",
+     "credit": "170.00"
+    }
+   ],
+   "entry_number": "DOC-3",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j3",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j4",
+   "company": "sample",
+   "date": "2026-09-14",
+   "memo": "INV-000002: Fall cleanup quote",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "520.00"
+    },
+    {
+     "account": "a4000",
+     "credit": "520.00"
+    }
+   ],
+   "entry_number": "DOC-4",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j4",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j5",
+   "company": "sample",
+   "date": "2026-08-20",
+   "memo": "INV-000003: Weekly mowing, four visits",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "340.00"
+    },
+    {
+     "account": "a4000",
+     "credit": "340.00"
+    }
+   ],
+   "entry_number": "DOC-5",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j5",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j6",
+   "company": "sample",
+   "date": "2026-09-04",
+   "memo": "RCP-000002: Maple payment",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "340.00"
+    },
+    {
+     "account": "a1100",
+     "credit": "340.00"
+    }
+   ],
+   "entry_number": "DOC-6",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j6",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j7",
+   "company": "sample",
+   "date": "2026-09-09",
+   "memo": "INV-000004: Entry beds and mulch",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "308.00"
+    },
+    {
+     "account": "a2100",
+     "credit": "8.00"
+    },
+    {
+     "account": "a4000",
+     "credit": "200.00"
+    },
+    {
+     "account": "a4100",
+     "credit": "100.00"
+    }
+   ],
+   "entry_number": "DOC-7",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j7",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j8",
+   "company": "sample",
+   "date": "2026-10-14",
+   "memo": "RCP-000003: Cedar partial payment",
+   "lines": [
+    {
+     "account": "a1050",
+     "debit": "150.00"
+    },
+    {
+     "account": "a1100",
+     "credit": "150.00"
+    }
+   ],
+   "entry_number": "DOC-8",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j8",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j9",
+   "company": "sample",
+   "date": "2026-10-19",
+   "memo": "INV-000005: Design consult, not yet due",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "285.00"
+    },
+    {
+     "account": "a4200",
+     "credit": "285.00"
+    }
+   ],
+   "entry_number": "DOC-9",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j9",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j10",
+   "company": "sample",
+   "date": "2026-09-19",
+   "memo": "INV-000006: Spring cleanup, overdue",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "450.00"
+    },
+    {
+     "account": "a4000",
+     "credit": "450.00"
+    }
+   ],
+   "entry_number": "DOC-10",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j10",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j11",
+   "company": "sample",
+   "date": "2026-09-29",
+   "memo": "INV-000007: Planting visit later cancelled",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "180.00"
+    },
+    {
+     "account": "a4000",
+     "credit": "180.00"
+    }
+   ],
+   "entry_number": "DOC-11",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j11",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j12",
+   "company": "sample",
+   "journal": "j11",
+   "date": "2026-10-24",
+   "reason": "Customer cancelled before the crew went out.",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j13",
+   "company": "sample",
+   "date": "2026-10-04",
+   "memo": "INV-000008: Front garden planting",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "257.76"
+    },
+    {
+     "account": "a2100",
+     "credit": "5.76"
+    },
+    {
+     "account": "a4000",
+     "credit": "180.00"
+    },
+    {
+     "account": "a4100",
+     "credit": "72.00"
+    }
+   ],
+   "entry_number": "DOC-13",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j13",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j14",
+   "company": "sample",
+   "date": "2026-10-21",
+   "memo": "RCP-000004: Quinn partial payment",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "100.00"
+    },
+    {
+     "account": "a1100",
+     "credit": "100.00"
+    }
+   ],
+   "entry_number": "DOC-14",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j14",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j15",
+   "company": "sample",
+   "date": "2026-10-11",
+   "memo": "SR-000001: Counter mulch sale",
+   "lines": [
+    {
+     "account": "a1050",
+     "debit": "81.00"
+    },
+    {
+     "account": "a2100",
+     "credit": "6.00"
+    },
+    {
+     "account": "a4100",
+     "credit": "75.00"
+    }
+   ],
+   "entry_number": "DOC-15",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j15",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j16",
+   "company": "sample",
+   "date": "2026-10-21",
+   "memo": "SR-000002: Counter flower flats",
+   "lines": [
+    {
+     "account": "a1050",
+     "debit": "38.88"
+    },
+    {
+     "account": "a2100",
+     "credit": "2.88"
+    },
+    {
+     "account": "a4100",
+     "credit": "36.00"
+    }
+   ],
+   "entry_number": "DOC-16",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j16",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j17",
+   "company": "sample",
+   "date": "2026-10-29",
+   "memo": "SR-000003: Cash fertilizer sale",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "51.84"
+    },
+    {
+     "account": "a2100",
+     "credit": "3.84"
+    },
+    {
+     "account": "a4100",
+     "credit": "48.00"
+    }
+   ],
+   "entry_number": "DOC-17",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j17",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j18",
+   "company": "sample",
+   "date": "2026-10-17",
+   "memo": "DEP-000001: Deposit of Cedar check and till 1",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "231.00"
+    },
+    {
+     "account": "a1050",
+     "credit": "231.00"
+    }
+   ],
+   "entry_number": "DOC-18",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j18",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j19",
+   "company": "sample",
+   "date": "2026-10-26",
+   "memo": "DEP-000002: Deposit of till 2",
+   "lines": [
+    {
+     "account": "a1000",
+     "debit": "38.88"
+    },
+    {
+     "account": "a1050",
+     "credit": "38.88"
+    }
+   ],
+   "entry_number": "DOC-19",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j19",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j20",
+   "company": "sample",
+   "date": "2026-10-23",
+   "memo": "CM-000001: Returned one flat of annuals",
+   "lines": [
+    {
+     "account": "a2100",
+     "debit": "2.00"
+    },
+    {
+     "account": "a4100",
+     "debit": "25.00"
+    },
+    {
+     "account": "a1100",
+     "credit": "27.00"
+    }
+   ],
+   "entry_number": "DOC-20",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j20",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j21",
+   "company": "sample",
+   "date": "2026-10-17",
+   "memo": "CM-000002: Design visit credited back",
+   "lines": [
+    {
+     "account": "a4200",
+     "debit": "95.00"
+    },
+    {
+     "account": "a1100",
+     "credit": "95.00"
+    }
+   ],
+   "entry_number": "DOC-21",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j21",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j22",
+   "company": "sample",
+   "date": "2026-10-20",
+   "memo": "RFD-000001: refund of CM-000002 to Hearth & Beam Builders · Cash refund of the design credit",
+   "lines": [
+    {
+     "account": "a1100",
+     "debit": "95.00"
+    },
+    {
+     "account": "a1000",
+     "credit": "95.00"
+    }
+   ],
+   "entry_number": "DOC-22",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j22",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j23",
+   "company": "sample",
+   "date": "2026-08-25",
+   "memo": "BILL-000001: Mulch delivery",
+   "lines": [
+    {
+     "account": "a2000",
+     "credit": "420.00"
+    },
+    {
+     "account": "a5000",
+     "debit": "420.00"
+    }
+   ],
+   "entry_number": "DOC-23",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j23",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j24",
+   "company": "sample",
+   "date": "2026-09-19",
+   "memo": "BPAY-000001: stone payment",
+   "lines": [
+    {
+     "account": "a1000",
+     "credit": "420.00"
+    },
+    {
+     "account": "a2000",
+     "debit": "420.00"
+    }
+   ],
+   "entry_number": "DOC-24",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j24",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j25",
+   "company": "sample",
+   "date": "2026-09-19",
+   "memo": "BILL-000002: Shrub and tree order",
+   "lines": [
+    {
+     "account": "a2000",
+     "credit": "680.00"
+    },
+    {
+     "account": "a5000",
+     "debit": "680.00"
+    }
+   ],
+   "entry_number": "DOC-25",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j25",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j26",
+   "company": "sample",
+   "date": "2026-10-27",
+   "memo": "BPAY-000002: plants partial payment",
+   "lines": [
+    {
+     "account": "a1000",
+     "credit": "200.00"
+    },
+    {
+     "account": "a2000",
+     "debit": "200.00"
+    }
+   ],
+   "entry_number": "DOC-26",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j26",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j27",
+   "company": "sample",
+   "date": "2026-10-21",
+   "memo": "BILL-000003: Irrigation parts, not yet due",
+   "lines": [
+    {
+     "account": "a2000",
+     "credit": "310.00"
+    },
+    {
+     "account": "a5200",
+     "debit": "310.00"
+    }
+   ],
+   "entry_number": "DOC-27",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j27",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j28",
+   "company": "sample",
+   "date": "2026-09-14",
+   "memo": "BILL-000004: Topsoil, overdue",
+   "lines": [
+    {
+     "account": "a2000",
+     "credit": "275.50"
+    },
+    {
+     "account": "a5000",
+     "debit": "275.50"
+    }
+   ],
+   "entry_number": "DOC-28",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j28",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j29",
+   "company": "sample",
+   "date": "2026-10-14",
+   "memo": "BILL-000005: Shop hardware, due today",
+   "lines": [
+    {
+     "account": "a2000",
+     "credit": "96.40"
+    },
+    {
+     "account": "a5400",
+     "debit": "96.40"
+    }
+   ],
+   "entry_number": "DOC-29",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j29",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j30",
+   "company": "sample",
+   "date": "2026-10-26",
+   "memo": "BILL-000006: Propane fill, due in two days",
+   "lines": [
+    {
+     "account": "a2000",
+     "credit": "188.00"
+    },
+    {
+     "account": "a5100",
+     "debit": "188.00"
+    }
+   ],
+   "entry_number": "DOC-30",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j30",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j31",
+   "company": "sample",
+   "date": "2026-09-09",
+   "memo": "CHK-000001: Northwind Propane · Fuel for the trucks",
+   "lines": [
+    {
+     "account": "a1000",
+     "credit": "86.20"
+    },
+    {
+     "account": "a5100",
+     "debit": "86.20"
+    }
+   ],
+   "entry_number": "DOC-31",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j31",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j32",
+   "company": "sample",
+   "date": "2026-10-07",
+   "memo": "CHK-000002: Sparrow Hardware · Shop supplies",
+   "lines": [
+    {
+     "account": "a1000",
+     "credit": "44.15"
+    },
+    {
+     "account": "a5400",
+     "debit": "44.15"
+    }
+   ],
+   "entry_number": "DOC-32",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j32",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j33",
+   "company": "sample",
+   "date": "2026-10-23",
+   "memo": "CHK-000003: Birch Hollow transfer station · Yard-waste dump fees",
+   "lines": [
+    {
+     "account": "a1000",
+     "credit": "35.00"
+    },
+    {
+     "account": "a5400",
+     "debit": "35.00"
+    }
+   ],
+   "entry_number": "DOC-33",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j33",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j34",
+   "company": "sample",
+   "date": "2026-10-04",
+   "memo": "TRF-000001: Move surplus checking into savings",
+   "lines": [
+    {
+     "account": "a1000",
+     "credit": "1500.00"
+    },
+    {
+     "account": "a1010",
+     "debit": "1500.00"
+    }
+   ],
+   "entry_number": "DOC-34",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j34",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j35",
+   "company": "sample",
+   "date": "2026-10-15",
+   "memo": "Owner's draw for the month.",
+   "lines": [
+    {
+     "account": "a3100",
+     "debit": "1200.00"
+    },
+    {
+     "account": "a1000",
+     "credit": "1200.00"
+    }
+   ],
+   "entry_number": "2",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j35",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j36",
+   "company": "sample",
+   "date": "2026-10-29",
+   "memo": "Adjusting entry — one month of prepaid insurance used and one month of equipment depreciation.",
+   "lines": [
+    {
+     "account": "a5300",
+     "debit": "150.00"
+    },
+    {
+     "account": "a1200",
+     "credit": "150.00"
+    },
+    {
+     "account": "a5700",
+     "debit": "210.00"
+    },
+    {
+     "account": "a1590",
+     "credit": "210.00"
+    }
+   ],
+   "entry_number": "3",
+   "adjusting": true,
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "sample",
+   "journal": "j36",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-06-30",
+  "2026-09-30",
+  "2026-10-29",
+  "2026-12-31"
+ ]
+}

@@ -1,0 +1,24 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }} · Reconcile · {{ company.currency }}</p><h1>Undo last reconciliation</h1><p>{{ account.label }}</p></div>
+<p class="register-actions"><a href="{{ url('reconcile:history', company.pk, account.pk) }}">History</a></p></div>
+{% if errors %}<ul class="errorlist" role="alert">{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+{% if last %}
+<dl class="rec-totals compact" aria-label="Reconciliation to undo">
+<div><dt>Statement date</dt><dd>{{ last.statement_date|date('Y-m-d') }}</dd></div>
+<div><dt>Beginning balance</dt><dd class="amount">{{ last.beginning_balance }}</dd></div>
+<div><dt>Ending balance</dt><dd class="amount">{{ last.ending_balance }}</dd></div>
+<div><dt>Reconciled lines</dt><dd>{{ last.cleared_count }}</dd></div>
+</dl>
+<ul class="undo-effects">
+<li>The {{ last.cleared_count }} reconciled line{{ last.cleared_count|pluralize }} go back to cleared (✓), so you can change them, then reconcile this statement again.</li>
+<li>The beginning balance of the next reconciliation goes back to {{ last.beginning_balance }}.</li>
+{% if last.service_journal_id or last.interest_journal_id %}<li><strong>Charges are not reversed.</strong> {% if last.service_journal_id %}The {{ words.service|lower }} of {{ last.service_charge }} (<a href="{{ url('journal', company.pk, last.service_journal_id) }}">journal entry</a>){% endif %}{% if last.service_journal_id and last.interest_journal_id %} and the {% endif %}{% if last.interest_journal_id %}interest earned of {{ last.interest }} (<a href="{{ url('journal', company.pk, last.interest_journal_id) }}">journal entry</a>){% endif %} stay posted. To remove one, mark it not cleared in the register and reverse it.</li>{% endif %}
+<li>Posted entries are not changed. The undo is recorded in the audit history with your reason.</li>
+</ul>
+<form method="post" class="reconcile-begin">{{ csrf_token|safe }}
+<input type="hidden" name="reconciliation" value="{{ data.reconciliation }}"><input type="hidden" name="revision" value="{{ data.revision }}"><input type="hidden" name="undo_key" value="{{ data.undo_key }}">
+<div class="field-row"><label for="id_reason">Reason</label><textarea id="id_reason" name="reason" maxlength="500" rows="3" required>{{ data.reason }}</textarea></div>
+<div class="button-bar"><button type="submit">Undo last reconciliation</button> <a href="{{ url('reconcile:history', company.pk, account.pk) }}">Cancel</a></div>
+</form>
+{% else %}<p>This account has no completed reconciliation to undo.</p>{% endif %}
+{% endblock %}

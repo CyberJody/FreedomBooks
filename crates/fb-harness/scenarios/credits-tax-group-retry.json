@@ -1,0 +1,338 @@
+{
+ "users": [
+  {
+   "username": "credits",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic credits",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank2",
+   "code": "101",
+   "name": "bank2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "200",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer2",
+   "values": {
+    "display_name": "Other buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "payables": "ap",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "tax1",
+   "values": {
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3",
+    "new_agency_name": "Agency 1",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "tax2",
+   "values": {
+    "name": "Rate 2",
+    "description": "Rate 2",
+    "rate": "4",
+    "new_agency_name": "Agency 2",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "group",
+   "values": {
+    "name": "Combined",
+    "description": "Combined",
+    "member_ids": [
+     "tax1",
+     "tax2"
+    ],
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092806",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "ITEM",
+    "tax_rate": null,
+    "tax_label": "",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "112.50",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ],
+    "tax_item_id": "group"
+   },
+   "review": "cm70",
+   "expect_error": false
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092806",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "ITEM",
+    "tax_rate": null,
+    "tax_label": "",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "112.50",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ],
+    "tax_item_id": "group"
+   },
+   "review": "cm70",
+   "ref": "cm70",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "tax1",
+   "values": {
+    "item_id": "tax1",
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "5",
+    "agency_id": "agency-for:tax1",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "ref": "cm70",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092806",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "ITEM",
+    "tax_rate": null,
+    "tax_label": "",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "112.50",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ],
+    "tax_item_id": "group"
+   },
+   "review": "cm70",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-10-01",
+  "2026-10-08",
+  "2026-10-11",
+  "2026-10-20",
+  "2026-12-31"
+ ]
+}

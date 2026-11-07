@@ -1,0 +1,924 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    },
+    {
+      "username": "member",
+      "is_staff": false
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "add_member",
+      "company": "co",
+      "user": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-0",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-1",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-2",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "CAD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The receipt is in CAD, but this company keeps its books in USD, so nothing was filled in. Enter the bill by hand in USD."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-3",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": []
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-4",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "",
+        "tax": "1",
+        "total": "7",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-5",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "",
+            "quantity": "",
+            "unit_price": "",
+            "amount": "6"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-6",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "1",
+        "tax": "0",
+        "total": "1",
+        "lines": [
+          {
+            "description": "Rounded",
+            "quantity": "1.005",
+            "unit_price": "1",
+            "amount": "1.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-7",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "7",
+        "tax": "0",
+        "total": "7",
+        "lines": [
+          {
+            "description": "Mismatch",
+            "quantity": "3",
+            "unit_price": "2",
+            "amount": "7"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-8",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "1989-12-31",
+        "due_date": "2030-01-01",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-9",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23T12:00:00",
+        "due_date": "2026-10-22",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-10",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "",
+        "tax": "0",
+        "total": "5",
+        "lines": [
+          {
+            "description": "Summed",
+            "quantity": "2.5",
+            "unit_price": "2",
+            "amount": ""
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-11",
+      "raw": {
+        "vendor_name": "  CAFÉ​ Supply\t LLC  ",
+        "vendor_address": [
+          "  a  ",
+          "",
+          "b",
+          "c",
+          "d",
+          "e"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-12",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "NaN",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply's total is out of range, so nothing was filled in."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-13",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "-1",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This document shows a negative amount (a refund or credit). Enter it by hand."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-14",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "99999999999999.991",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply's total is out of range, so nothing was filled in."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-15",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": 6,
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply had no usable total."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-16",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": {}
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply had no usable lines."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-17",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Bad",
+            "quantity": "1",
+            "unit_price": "bad",
+            "amount": "6"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply's line 1 unit price (\"bad\") is not a number, so nothing was filled in."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-18",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Fallback",
+            "quantity": "-1",
+            "unit_price": "",
+            "amount": "6"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-19",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "20261023",
+        "due_date": "2026-W44-1",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-20",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "$6.00 USD",
+        "tax": "(0)",
+        "total": " USD $6.00 ",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-21",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "UſD 6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-22",
+      "raw": {
+        "vendor_name": "AࢗB͏C D",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-23",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "1e-1000",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-24",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-25",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "-1e1000",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This document shows a negative amount (a refund or credit). Enter it by hand."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-26",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "",
+        "tax": "0",
+        "total": "1",
+        "lines": [
+          {
+            "description": "Large computed",
+            "quantity": "2",
+            "unit_price": "99999999999999",
+            "amount": ""
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-27",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "",
+        "tax": "0",
+        "total": "1",
+        "lines": [
+          {
+            "description": "Large aggregate",
+            "quantity": "1",
+            "unit_price": "99999999999999",
+            "amount": "99999999999999"
+          },
+          {
+            "description": "Large aggregate",
+            "quantity": "1",
+            "unit_price": "99999999999999",
+            "amount": "99999999999999"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "parse-28",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "-0",
+        "tax": "-0",
+        "total": "-0",
+        "lines": [
+          {
+            "description": "Signed zero",
+            "quantity": "1",
+            "unit_price": "-0",
+            "amount": "-0"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "bad-json",
+      "raw": "not JSON",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply was not valid JSON, so nothing was filled in. Try again."
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "bad-shape",
+      "raw": [],
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The AI reply did not have the expected fields, so nothing was filled in."
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

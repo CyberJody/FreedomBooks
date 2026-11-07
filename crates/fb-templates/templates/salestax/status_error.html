@@ -1,0 +1,1 @@
+{% extends 'salestax/base.html' %}{% block salestax_content %}<h1>Status not changed</h1><ul class="errorlist">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul><p><a href="{{ url('salestax:list', company.pk) }}">Back to tax rates &amp; groups</a></p>{% endblock %}

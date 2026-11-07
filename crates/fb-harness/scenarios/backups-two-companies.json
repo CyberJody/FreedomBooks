@@ -1,0 +1,206 @@
+{
+  "users": [
+    {
+      "username": "owner",
+      "is_staff": true
+    }
+  ],
+  "as_of": [
+    "2026-12-31"
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "expect_error": false,
+      "ref": "a",
+      "name": "Synthetic a"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "a",
+      "ref": "a_cash",
+      "code": "1000",
+      "name": "cash",
+      "kind": "ASSET"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "a",
+      "ref": "a_capital",
+      "code": "3000",
+      "name": "capital",
+      "kind": "EQUITY"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "a",
+      "ref": "a_tie",
+      "code": "1,000",
+      "name": "tie",
+      "kind": "ASSET"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "a",
+      "ref": "a_inactive",
+      "code": "9000",
+      "name": "inactive",
+      "kind": "EXPENSE"
+    },
+    {
+      "op": "save_draft",
+      "expect_error": false,
+      "company": "a",
+      "ref": "a_j",
+      "date": "2026-10-01",
+      "memo": "Credit balance asset",
+      "lines": [
+        {
+          "account": "a_cash",
+          "debit": "0",
+          "credit": "23.45"
+        },
+        {
+          "account": "a_capital",
+          "debit": "23.45",
+          "credit": "0"
+        }
+      ]
+    },
+    {
+      "op": "post_journal",
+      "expect_error": false,
+      "company": "a",
+      "journal": "a_j"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "a",
+      "account": "a_inactive",
+      "code": "9000",
+      "name": "inactive",
+      "active": false,
+      "kind": "EXPENSE"
+    },
+    {
+      "op": "create_company",
+      "expect_error": false,
+      "ref": "b",
+      "name": "Synthetic b"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "b",
+      "ref": "b_cash",
+      "code": "1000",
+      "name": "cash",
+      "kind": "ASSET"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "b",
+      "ref": "b_capital",
+      "code": "3000",
+      "name": "capital",
+      "kind": "EQUITY"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "b",
+      "ref": "b_tie",
+      "code": "1,000",
+      "name": "tie",
+      "kind": "ASSET"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "b",
+      "ref": "b_inactive",
+      "code": "9000",
+      "name": "inactive",
+      "kind": "EXPENSE"
+    },
+    {
+      "op": "save_draft",
+      "expect_error": false,
+      "company": "b",
+      "ref": "b_j",
+      "date": "2026-10-01",
+      "memo": "Credit balance asset",
+      "lines": [
+        {
+          "account": "b_cash",
+          "debit": "0",
+          "credit": "23.45"
+        },
+        {
+          "account": "b_capital",
+          "debit": "23.45",
+          "credit": "0"
+        }
+      ]
+    },
+    {
+      "op": "post_journal",
+      "expect_error": false,
+      "company": "b",
+      "journal": "b_j"
+    },
+    {
+      "op": "save_account",
+      "expect_error": false,
+      "company": "b",
+      "account": "b_inactive",
+      "code": "9000",
+      "name": "inactive",
+      "active": false,
+      "kind": "EXPENSE"
+    },
+    {
+      "op": "save_draft",
+      "expect_error": true,
+      "company": "a",
+      "ref": "cross",
+      "date": "2026-10-02",
+      "memo": "Cross-company line refused",
+      "lines": [
+        {
+          "account": "a_cash",
+          "debit": "10",
+          "credit": "0"
+        },
+        {
+          "account": "b_capital",
+          "debit": "0",
+          "credit": "10"
+        }
+      ],
+      "expect_kind": "ValidationError",
+      "expect_message": "Choose an active posting account in this company."
+    },
+    {
+      "op": "backups_snapshot",
+      "expect_error": false,
+      "ref": "both"
+    },
+    {
+      "op": "backups_verify",
+      "expect_error": false,
+      "backup": "both"
+    },
+    {
+      "op": "backups_restore",
+      "expect_error": false,
+      "backup": "both"
+    }
+  ]
+}

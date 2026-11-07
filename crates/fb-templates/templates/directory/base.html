@@ -1,0 +1,7 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('directory/lists.css') }}">{% endblock %}
+{% block content %}<div class="master-data">
+<p class="eyebrow">{{ company.name }} · {{ company.currency }} · Master data</p>
+{% block directory_content %}{% endblock %}
+<p class="scope-note">No balances or transactions are changed by editing these lists. Contact and catalog changes have no accounting posting effect.{% if is_item %} Service and non-stock items only; no stock quantities or inventory valuation.{% endif %}</p>
+</div>{% endblock %}

@@ -1,0 +1,221 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "INV",
+   "request_key": "00000000-0000-0000-0000-000000000001",
+   "ref": "invoice",
+   "expect_error": false
+  },
+  {
+   "op": "l2_identity",
+   "company": "c",
+   "kind": "EST",
+   "request_key": "00000000-0000-0000-0000-000000000002",
+   "ref": "estimate",
+   "expect_error": false
+  },
+  {
+   "op": "l2_post_source",
+   "company": "c",
+   "source": "invoice",
+   "ref": "j",
+   "date": "2026-10-30",
+   "memo": "Source posting",
+   "lines": [
+    {
+     "account": "asset",
+     "debit": "12"
+    },
+    {
+     "account": "income",
+     "credit": "12"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "l2_post_source",
+   "company": "c",
+   "source": "invoice",
+   "ref": "j",
+   "date": "2026-10-30",
+   "memo": "Source posting",
+   "lines": [
+    {
+     "account": "asset",
+     "debit": "12"
+    },
+    {
+     "account": "income",
+     "credit": "12"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "l2_post_source",
+   "company": "c",
+   "source": "estimate",
+   "ref": "bad",
+   "date": "2026-10-30",
+   "memo": "Source posting",
+   "lines": [
+    {
+     "account": "asset",
+     "debit": "12"
+    },
+    {
+     "account": "income",
+     "credit": "12"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Estimates do not post journals."
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "j",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Use the owning source document lifecycle, not generic journal actions."
+  },
+  {
+   "op": "reverse_journal",
+   "company": "c",
+   "journal": "j",
+   "date": "2026-10-30",
+   "reason": "bypass",
+   "ref": "badrev",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Use the owning source document lifecycle, not generic journal actions."
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "journal": "j",
+   "date": "2026-10-30",
+   "memo": "bypass",
+   "lines": [],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Use the owning source document lifecycle, not generic journal actions."
+  },
+  {
+   "op": "l2_reverse_source",
+   "company": "c",
+   "source": "invoice",
+   "ref": "reversal",
+   "date": "2026-10-30",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "l2_reverse_source",
+   "company": "c",
+   "source": "invoice",
+   "ref": "reversal",
+   "date": "2026-10-30",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "l2_post_source",
+   "company": "c",
+   "source": "invoice",
+   "ref": "j",
+   "date": "2026-10-30",
+   "memo": "Source posting",
+   "lines": [
+    {
+     "account": "asset",
+     "debit": "12"
+    },
+    {
+     "account": "income",
+     "credit": "12"
+    }
+   ],
+   "expect_error": false
+  }
+ ]
+}

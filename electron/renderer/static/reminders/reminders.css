@@ -1,0 +1,32 @@
+/* P2-3 Reminders page: hybrid v1 palette (tan / off-white / plum), compact desktop-accounting tables. */
+.reminders-intro{margin:4px 0 14px;color:var(--fb-muted,#675d6b)}
+.reminder-group{margin:0 0 16px;border:1px solid var(--fb-tan-line,#d9ccb2);border-radius:4px;background:var(--fb-panel,#fff)}
+.reminder-group>summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;padding:8px 12px;background:var(--fb-tan-soft,#f8f3e8);border-bottom:1px solid var(--fb-tan-line,#d9ccb2);cursor:pointer;list-style-position:inside}
+.reminder-group:not([open])>summary{border-bottom:0}
+.reminder-title{font-weight:750;font-size:15px;color:var(--fb-plum-deep,#35253e)}
+.reminder-count{color:var(--fb-muted,#675d6b)}
+.reminder-total{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+.reminder-note,.reminder-more,.reminder-none{margin:8px 12px;font-size:13px}
+.overdue-word{color:#8f2f3b}
+.reminder-scroll{overflow-x:auto;margin:0 12px}
+.reminder-table{width:100%;border-collapse:collapse;font-size:13px}
+.reminder-table th,.reminder-table td{padding:4px 8px;border-bottom:1px solid var(--fb-border,#d8d0c4);text-align:left;white-space:nowrap}
+.reminder-table td:nth-child(3){white-space:normal;overflow-wrap:break-word}
+.reminder-table thead th{background:var(--fb-tan,#eee4d0);font-weight:700;color:var(--fb-plum-deep,#35253e)}
+.reminder-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.reminder-table tfoot th,.reminder-table tfoot td{border-top:2px solid var(--fb-plum,#684276);border-bottom:0;font-weight:700}
+.reminder-table tfoot th{text-align:right;background:transparent}
+.reminder-table tr.is-overdue td:nth-child(4){color:#8f2f3b;font-weight:650}
+.reminder-table tr.is-today td:nth-child(4){color:var(--fb-plum,#684276);font-weight:650}
+.reminder-settings{margin:18px 0 6px;padding:10px 12px;border:1px dashed var(--fb-tan-line,#d9ccb2);background:var(--fb-tan-soft,#f8f3e8)}
+.reminder-settings h2{margin:0 0 6px;font-size:14px}
+.reminder-settings-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.reminder-settings-form .reminder-days{width:5em}
+.reminder-settings-form .errorlist{flex-basis:100%}
+@media (max-width:700px){
+ .reminder-total{margin-left:0;flex-basis:100%}
+ .reminder-scroll{margin:0 6px}
+ .reminder-table th,.reminder-table td{padding:4px 5px;white-space:normal}
+ .reminder-table .due-col{display:none}
+ .reminder-table td.num{white-space:nowrap}
+}

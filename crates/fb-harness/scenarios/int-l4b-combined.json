@@ -1,0 +1,1929 @@
+{
+ "users": [
+  {
+   "username": "integration",
+   "is_staff": true
+  },
+  {
+   "username": "member",
+   "is_staff": false
+  }
+ ],
+ "capture_steps": true,
+ "steps": [
+  {
+   "op": "create_company",
+   "company": "c",
+   "ref": "c",
+   "name": "Synthetic integrated layer 3",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "c",
+   "ref": "feed-connection",
+   "test_mask": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank2",
+   "code": "101",
+   "name": "bank2",
+   "kind": "ASSET",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "detail_type": "OTHER_CURRENT_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "200",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "detail_type": "PAYABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "liability",
+   "code": "230",
+   "name": "liability",
+   "kind": "LIABILITY",
+   "detail_type": "OTHER_CURRENT_LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "ref": "buyer",
+   "model": "customer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "ref": "vendor",
+   "model": "vendor",
+   "values": {
+    "display_name": "Supplier"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "payables": "ap",
+    "undeposited": "uf",
+    "customer_deposits": "liability",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "invoice",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d1",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "description": "Work",
+      "quantity": "1",
+      "rate": "1200.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "invoice",
+   "review": "invoice",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "invoice",
+   "review": "invoice",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "pp_review_deposit",
+   "company": "c",
+   "review": "deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d2",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "500.00",
+    "method": "CASH",
+    "destination": "BANK",
+    "bank_id": "bank"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "pp_record_deposit",
+   "company": "c",
+   "review": "deposit",
+   "ref": "deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d2",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "500.00",
+    "method": "CASH",
+    "destination": "BANK",
+    "bank_id": "bank"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "pp_review_application",
+   "company": "c",
+   "review": "application",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d3",
+    "date": "2026-10-03",
+    "invoice_id": "invoice",
+    "amount": "300.00"
+   },
+   "deposit": "deposit",
+   "expect_error": false
+  },
+  {
+   "op": "pp_apply",
+   "company": "c",
+   "review": "application",
+   "ref": "application",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d3",
+    "date": "2026-10-03",
+    "invoice_id": "invoice",
+    "amount": "300.00"
+   },
+   "deposit": "deposit",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "review": "payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d4",
+    "customer_id": "buyer",
+    "date": "2026-10-04",
+    "amount": "900.00",
+    "method": "CASH",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "invoice",
+      "amount": "900.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "review": "payment",
+   "ref": "payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d4",
+    "customer_id": "buyer",
+    "date": "2026-10-04",
+    "amount": "900.00",
+    "method": "CASH",
+    "destination": "BANK",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "invoice_id": "invoice",
+      "amount": "900.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_save",
+   "company": "c",
+   "ref": "bill",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d5",
+    "vendor_id": "vendor",
+    "date": "2026-10-05",
+    "due_date": "2026-11-05",
+    "reference": "Supplier bill",
+    "lines": [
+     {
+      "description": "Cost",
+      "quantity": "1",
+      "rate": "60.00",
+      "expense_account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_post",
+   "company": "c",
+   "bill": "bill",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "payables_review_payment",
+   "company": "c",
+   "review": "billpayment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d6",
+    "vendor_id": "vendor",
+    "date": "2026-10-06",
+    "amount": "50.00",
+    "method": "CHECK",
+    "reference": "1001",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "50.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_pay",
+   "company": "c",
+   "review": "billpayment",
+   "ref": "billpayment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d6",
+    "vendor_id": "vendor",
+    "date": "2026-10-06",
+    "amount": "50.00",
+    "method": "CHECK",
+    "reference": "1001",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "50.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "c",
+   "ref": "check",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d7",
+    "bank_id": "bank",
+    "payee_kind": "OTHER",
+    "payee_name": "Other supplier",
+    "date": "2026-10-07",
+    "check_number": "1002",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "description": "Written check",
+      "rate": "10.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_review",
+   "company": "c",
+   "check": "check",
+   "expected_revision": 1,
+   "review": "check",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "c",
+   "check": "check",
+   "expected_revision": 1,
+   "review": "check",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_review",
+   "company": "c",
+   "review": "transfer",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d8",
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-08",
+    "amount": "25.00"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "c",
+   "review": "transfer",
+   "ref": "transfer",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d8",
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-08",
+    "amount": "25.00"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "payables_review_payment",
+   "company": "c",
+   "review": "before-refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30df",
+    "vendor_id": "vendor",
+    "date": "2026-10-06",
+    "amount": "1.00",
+    "method": "CHECK",
+    "reference": "1003",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "pp_review_refund",
+   "company": "c",
+   "review": "refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d9",
+    "date": "2026-10-09",
+    "amount": "100.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1003"
+   },
+   "deposit": "deposit",
+   "expect_error": false
+  },
+  {
+   "op": "pp_record_refund",
+   "company": "c",
+   "review": "refund",
+   "ref": "refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30d9",
+    "date": "2026-10-09",
+    "amount": "100.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1003"
+   },
+   "deposit": "deposit",
+   "expect_error": false
+  },
+  {
+   "op": "payables_pay",
+   "company": "c",
+   "review": "before-refund",
+   "ref": "blocked-after-review",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30df",
+    "vendor_id": "vendor",
+    "date": "2026-10-06",
+    "amount": "1.00",
+    "method": "CHECK",
+    "reference": "1003",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1003 is already used by deposit refund CDR-000001 on this bank account. Choose another number or void that refund first."
+  },
+  {
+   "op": "pp_review_refund",
+   "company": "c",
+   "deposit": "deposit",
+   "review": "collision10",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30da",
+    "date": "2026-10-09",
+    "amount": "1.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1001"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1001 is already used by bill payment BPAY-000001 on this bank account. Choose another number or reverse that payment first."
+  },
+  {
+   "op": "pp_review_refund",
+   "company": "c",
+   "deposit": "deposit",
+   "review": "collision11",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30db",
+    "date": "2026-10-09",
+    "amount": "1.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1002"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1002 is already used by check CHK-000001 on this bank account. Choose another number or void that check first."
+  },
+  {
+   "op": "checks_save",
+   "company": "c",
+   "ref": "blockedcheck",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30dc",
+    "bank_id": "bank",
+    "payee_kind": "OTHER",
+    "payee_name": "Other supplier",
+    "date": "2026-10-07",
+    "check_number": "1003",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "description": "Written check",
+      "rate": "10.00"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1003 is already used by deposit refund CDR-000001 on this bank account. Choose another number or void that refund first."
+  },
+  {
+   "op": "payables_review_payment",
+   "company": "c",
+   "review": "blockedpayment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30dd",
+    "vendor_id": "vendor",
+    "date": "2026-10-06",
+    "amount": "50.00",
+    "method": "CHECK",
+    "reference": "1003",
+    "bank_id": "bank",
+    "allocations": [
+     {
+      "bill_id": "bill",
+      "amount": "50.00"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1003 is already used by deposit refund CDR-000001 on this bank account. Choose another number or void that refund first."
+  },
+  {
+   "op": "checks_next",
+   "company": "c",
+   "bank": "bank",
+   "ref": "historical-next",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "invoice",
+   "expected_revision": 2,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse every live receipt allocated to this invoice before voiding it."
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "payment",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "invoice",
+   "expected_revision": 2,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Unapply customer deposit CDP-000001 from this invoice before voiding it."
+  },
+  {
+   "op": "pp_unapply",
+   "company": "c",
+   "record": "application",
+   "expected_revision": 1,
+   "date": "2026-10-21",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "invoice",
+   "expected_revision": 2,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Void date cannot precede 2026-10-21, when a customer deposit was unapplied from this invoice."
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "invoice",
+   "expected_revision": 2,
+   "date": "2026-10-21",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "pp_void_refund",
+   "company": "c",
+   "record": "refund",
+   "expected_revision": 1,
+   "date": "2026-10-22",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "pp_void_deposit",
+   "company": "c",
+   "record": "deposit",
+   "expected_revision": 1,
+   "date": "2026-10-22",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "payables_reverse",
+   "company": "c",
+   "payment": "billpayment",
+   "expected_revision": 1,
+   "date": "2026-10-23",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "payables_void",
+   "company": "c",
+   "bill": "bill",
+   "expected_revision": 2,
+   "date": "2026-10-23",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "c",
+   "check": "check",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "c",
+   "transfer": "transfer",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "c",
+   "ref": "reuse-refund-number",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000e30de",
+    "bank_id": "bank",
+    "payee_kind": "OTHER",
+    "payee_name": "Other supplier",
+    "date": "2026-10-25",
+    "check_number": "1003",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "description": "Written check",
+      "rate": "10.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "c",
+   "bank": "bank",
+   "ref": "released-next",
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "credit-invoice",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0001",
+    "customer_id": "buyer",
+    "date": "2026-10-25",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "description": "Work",
+      "quantity": "1",
+      "rate": "100.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "credit-invoice",
+   "review": "credit-invoice",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "credit-invoice",
+   "review": "credit-invoice",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_memo",
+   "company": "c",
+   "review": "memo",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0002",
+    "customer_id": "buyer",
+    "date": "2026-10-25",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Return",
+      "quantity": "1",
+      "rate": "100.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "review": "memo",
+   "ref": "memo",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0002",
+    "customer_id": "buyer",
+    "date": "2026-10-25",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Return",
+      "quantity": "1",
+      "rate": "100.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_application",
+   "company": "c",
+   "review": "credit-application",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0003",
+    "date": "2026-10-26",
+    "allocations": [
+     {
+      "invoice_id": "credit-invoice",
+      "amount": "60.00"
+     }
+    ]
+   },
+   "record": "memo",
+   "expect_error": false
+  },
+  {
+   "op": "credits_apply",
+   "company": "c",
+   "review": "credit-application",
+   "ref": "credit-application",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0003",
+    "date": "2026-10-26",
+    "allocations": [
+     {
+      "invoice_id": "credit-invoice",
+      "amount": "60.00"
+     }
+    ]
+   },
+   "record": "memo",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "credit-invoice",
+   "expected_revision": 2,
+   "date": "2026-10-26",
+   "reason": "Blocked by credit",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Unapply credit memo CM-000001 from this invoice before voiding it."
+  },
+  {
+   "op": "credits_review_refund",
+   "company": "c",
+   "record": "memo",
+   "review": "blocked-credit-refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0005",
+    "date": "2026-10-27",
+    "amount": "40.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1003"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1003 is already used by check CHK-000002 on this bank account. Choose another number or void that check first."
+  },
+  {
+   "op": "credits_review_refund",
+   "company": "c",
+   "review": "credit-refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0004",
+    "date": "2026-10-27",
+    "amount": "40.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1004"
+   },
+   "record": "memo",
+   "expect_error": false
+  },
+  {
+   "op": "credits_refund",
+   "company": "c",
+   "review": "credit-refund",
+   "ref": "credit-refund",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0004",
+    "date": "2026-10-27",
+    "amount": "40.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "1004"
+   },
+   "record": "memo",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "c",
+   "ref": "blocked-credit-number",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0006",
+    "bank_id": "bank",
+    "payee_kind": "OTHER",
+    "payee_name": "Other supplier",
+    "date": "2026-10-07",
+    "check_number": "1004",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "description": "Written check",
+      "rate": "10.00"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1004 is already used by refund RFD-000001 on this bank account. Choose another number or void that refund first."
+  },
+  {
+   "op": "checks_next",
+   "company": "c",
+   "bank": "bank",
+   "ref": "credit-number-hint",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "review": "undeposited-sale",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0007",
+    "customer_id": "buyer",
+    "date": "2026-10-28",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Cash sale",
+      "quantity": "1",
+      "rate": "70.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "review": "undeposited-sale",
+   "ref": "undeposited-sale",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0007",
+    "customer_id": "buyer",
+    "date": "2026-10-28",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Cash sale",
+      "quantity": "1",
+      "rate": "70.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "review": "undeposited-payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0008",
+    "customer_id": "buyer",
+    "date": "2026-10-28",
+    "amount": "40.00",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "credit-invoice",
+      "amount": "40.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "review": "undeposited-payment",
+   "ref": "undeposited-payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0008",
+    "customer_id": "buyer",
+    "date": "2026-10-28",
+    "amount": "40.00",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "credit-invoice",
+      "amount": "40.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "pp_review_deposit",
+   "company": "c",
+   "review": "undeposited-customer-deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0009",
+    "customer_id": "buyer",
+    "date": "2026-10-28",
+    "amount": "30.00",
+    "method": "CHECK",
+    "reference": "Deposit reference",
+    "destination": "UNDEPOSITED"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "pp_record_deposit",
+   "company": "c",
+   "review": "undeposited-customer-deposit",
+   "ref": "undeposited-customer-deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f0009",
+    "customer_id": "buyer",
+    "date": "2026-10-28",
+    "amount": "30.00",
+    "method": "CHECK",
+    "reference": "Deposit reference",
+    "destination": "UNDEPOSITED"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "pp_review_application",
+   "company": "c",
+   "deposit": "undeposited-customer-deposit",
+   "review": "blocked-by-credit-settlement",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f000a",
+    "date": "2026-10-28",
+    "invoice_id": "credit-invoice",
+    "amount": "0.01"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The amount to apply (0.01) exceeds invoice INV-000002\u2019s open balance 0.00."
+  },
+  {
+   "op": "banking_review",
+   "company": "c",
+   "review": "bank-deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f000b",
+    "date": "2026-10-29",
+    "bank_id": "bank",
+    "receipt_ids": [
+     "undeposited-sale",
+     "undeposited-payment",
+     "undeposited-customer-deposit"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_deposit",
+   "company": "c",
+   "review": "bank-deposit",
+   "ref": "bank-deposit",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f000b",
+    "date": "2026-10-29",
+    "bank_id": "bank",
+    "receipt_ids": [
+     "undeposited-sale",
+     "undeposited-payment",
+     "undeposited-customer-deposit"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_sale",
+   "company": "c",
+   "record": "undeposited-sale",
+   "expected_revision": 1,
+   "date": "2026-10-30",
+   "reason": "Blocked by bank deposit",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse deposit DEP-000001 before reversing this receipt."
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "undeposited-payment",
+   "expected_revision": 1,
+   "date": "2026-10-30",
+   "reason": "Blocked by bank deposit",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse deposit DEP-000001 before reversing this receipt."
+  },
+  {
+   "op": "pp_void_deposit",
+   "company": "c",
+   "record": "undeposited-customer-deposit",
+   "expected_revision": 1,
+   "date": "2026-10-30",
+   "reason": "Blocked by bank deposit",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse deposit DEP-000001 before reversing this receipt."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "credit-refund:journal:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "bank-deposit:posted:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "account": "bank",
+   "ref": "reconciliation",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-0000000f000c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "99.00",
+    "service_charge": "2.00",
+    "service_account_id": "expense",
+    "interest": "1.00",
+    "interest_account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reconciliation",
+   "result": "zero-difference",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reconciliation",
+   "expected_revision": 1,
+   "completion_key": "00000000-0000-0000-0000-0000000f000d",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reconciliation",
+   "result": "completed",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_refund",
+   "company": "c",
+   "record": "credit-refund",
+   "expected_revision": 1,
+   "date": "2026-10-31",
+   "reason": "Blocked by reconciliation",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "RFD-000001 is reconciled in the 100 \u00b7 bank register (statement 2026-10-31). It cannot be voided unless that reconciliation is undone: Banking \u2192 Reconcile \u2192 Undo last reconciliation, then mark it not cleared and void it."
+  },
+  {
+   "op": "banking_reverse",
+   "company": "c",
+   "deposit": "bank-deposit",
+   "expected_revision": 1,
+   "date": "2026-10-31",
+   "reason": "Blocked by reconciliation",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "DEP-000001 is reconciled in the 100 \u00b7 bank register (statement 2026-10-31). It cannot be voided unless that reconciliation is undone: Banking \u2192 Reconcile \u2192 Undo last reconciliation, then mark it not cleared and void it."
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "result": "integrated-register",
+   "values": {},
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "result": "find-number-1004",
+   "values": {
+    "number": "1004"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "result": "find-number-1003",
+   "values": {
+    "number": "1003"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "result": "find-payee-Buyer",
+   "values": {
+    "payee": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "result": "find-payee-bank2",
+   "values": {
+    "payee": "bank2"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "result": "find-number-Deposit reference",
+   "values": {
+    "number": "Deposit reference"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reconciliation",
+   "expected_revision": 2,
+   "reason": "Synthetic correction",
+   "undo_key": "00000000-0000-0000-0000-0000000f000e",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "reconciliation",
+   "result": "undone",
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "credit-refund:journal:2",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "bank-deposit:posted:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_reverse",
+   "company": "c",
+   "deposit": "bank-deposit",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic release",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_sale",
+   "company": "c",
+   "record": "undeposited-sale",
+   "expected_revision": 1,
+   "date": "2026-10-31",
+   "reason": "Backdated release",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "SR-000001 was released from deposit DEP-000001 on 2026-11-01; the receipt reversal cannot be dated earlier."
+  },
+  {
+   "op": "sales_void_sale",
+   "company": "c",
+   "record": "undeposited-sale",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic release",
+   "expect_error": false
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "undeposited-payment",
+   "expected_revision": 1,
+   "date": "2026-10-31",
+   "reason": "Backdated release",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "RCP-000002 was released from deposit DEP-000001 on 2026-11-01; the receipt reversal cannot be dated earlier."
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "undeposited-payment",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic release",
+   "expect_error": false
+  },
+  {
+   "op": "pp_void_deposit",
+   "company": "c",
+   "record": "undeposited-customer-deposit",
+   "expected_revision": 1,
+   "date": "2026-10-31",
+   "reason": "Backdated release",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "CDP-000002 was released from deposit DEP-000001 on 2026-11-01; the receipt reversal cannot be dated earlier."
+  },
+  {
+   "op": "pp_void_deposit",
+   "company": "c",
+   "record": "undeposited-customer-deposit",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic release",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_refund",
+   "company": "c",
+   "record": "credit-refund",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "credits_unapply",
+   "company": "c",
+   "record": "credit-application",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "credit-invoice",
+   "expected_revision": 2,
+   "date": "2026-10-31",
+   "reason": "Backdated credit release",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Void date cannot precede 2026-11-01, when a credit memo was unapplied from this invoice."
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "credit-invoice",
+   "expected_revision": 2,
+   "date": "2026-11-01",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_memo",
+   "company": "c",
+   "record": "memo",
+   "expected_revision": 1,
+   "date": "2026-11-01",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "attachment_add",
+   "company": "c",
+   "ref": "bill-scan",
+   "name": "scan.pdf",
+   "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+   "request_key": "00000000-0000-0000-0000-0000000f0001",
+   "document": "bill:source",
+   "expect_error": false
+  },
+  {
+   "op": "attachment_add",
+   "company": "c",
+   "ref": "bill-scan",
+   "name": "scan.pdf",
+   "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+   "request_key": "00000000-0000-0000-0000-0000000f0001",
+   "document": "bill:source",
+   "expect_error": false
+  },
+  {
+   "op": "attachment_add",
+   "company": "c",
+   "ref": "bill-photo",
+   "name": "photo.png",
+   "hex": "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c49444154789c6338b1a50200043c01f5201698a50000000049454e44ae426082",
+   "request_key": "00000000-0000-0000-0000-0000000f0002",
+   "document": "bill:source",
+   "expect_error": false
+  },
+  {
+   "op": "attachment_remove",
+   "company": "c",
+   "attachment": "bill-photo",
+   "reason": "Wrong photo",
+   "expect_error": false
+  },
+  {
+   "op": "attachment_download",
+   "company": "c",
+   "attachment": "bill-scan",
+   "ref": "bill-scan-download",
+   "expect_error": false
+  },
+  {
+   "op": "reminder_build",
+   "company": "c",
+   "today": "2026-11-10",
+   "ref": "reminders",
+   "expect_error": false
+  },
+  {
+   "op": "reminder_count",
+   "company": "c",
+   "today": "2026-11-10",
+   "ref": "reminder-count",
+   "expect_error": false
+  },
+  {
+   "op": "add_member",
+   "company": "c",
+   "user": "member",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "record": "vendor",
+   "model": "vendor",
+   "values": {
+    "default_expense_account": "expense",
+    "default_terms": "30"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "assistant_connect",
+   "company": "c",
+   "state": {
+    "mode": "api_key",
+    "key_last4": "demo",
+    "account_email": "",
+    "registration": true,
+    "model_choices": [
+     {
+      "slug": "demo-model",
+      "display_name": "Demo"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "assistant_switch",
+   "company": "c",
+   "enabled": true,
+   "expect_error": false
+  },
+  {
+   "op": "assistant_parse",
+   "company": "c",
+   "ref": "ai-fields",
+   "raw": {
+    "vendor_name": "Supplier",
+    "vendor_address": [],
+    "document_number": "Receipt 77",
+    "document_date": "2026-10-25",
+    "due_date": "",
+    "currency": "USD",
+    "subtotal": "6",
+    "tax": "0",
+    "total": "6",
+    "lines": [
+     {
+      "description": "Widgets",
+      "quantity": "3",
+      "unit_price": "2.00",
+      "amount": "6.00"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "assistant_begin",
+   "company": "c",
+   "ref": "ai-reading",
+   "request_key": "00000000-0000-0000-0000-0000000f0003",
+   "actor": "member",
+   "file": {
+    "source_file_id": "00000000-0000-0000-0000-0000000f0004",
+    "original_name": "synthetic-receipt.png",
+    "content_type": "image/png",
+    "size": 100,
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "assistant_finish",
+   "company": "c",
+   "reading": "ai-reading",
+   "result": "ai-fields",
+   "actor": "member",
+   "expect_error": false
+  },
+  {
+   "op": "assistant_initial",
+   "company": "c",
+   "reading": "ai-reading",
+   "ref": "ai-initial",
+   "actor": "member",
+   "expect_error": false
+  },
+  {
+   "op": "assistant_queue",
+   "company": "c",
+   "ref": "ai-queue-before",
+   "actor": "member",
+   "expect_error": false
+  },
+  {
+   "op": "assistant_save",
+   "company": "c",
+   "reading": "ai-reading",
+   "ref": "ai-bill",
+   "actor": "member",
+   "values": {
+    "vendor_id": "vendor",
+    "date": "2026-10-25",
+    "due_date": "2026-11-24",
+    "reference": "Receipt 77",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000f0005",
+    "lines": [
+     {
+      "description": "Widgets",
+      "quantity": "3",
+      "rate": "2.00",
+      "expense_account_id": "expense",
+      "ai_line": 1
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "assistant_queue",
+   "company": "c",
+   "ref": "ai-queue-after",
+   "actor": "member",
+   "expect_error": false
+  },
+  {
+   "op": "payables_post",
+   "company": "c",
+   "bill": "ai-bill",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "attachment_add",
+   "company": "c",
+   "ref": "ai-receipt",
+   "name": "receipt.pdf",
+   "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+   "request_key": "00000000-0000-0000-0000-0000000f0006",
+   "document": "ai-bill:source",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "review": "feed-sale",
+   "values": {
+    "request_key": "00000000-0000-7000-8000-00000000b401",
+    "customer_id": "buyer",
+    "date": "2026-10-29",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Feed deposit cash sale",
+      "quantity": "1",
+      "rate": "12.34",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "review": "feed-sale",
+   "values": {
+    "request_key": "00000000-0000-7000-8000-00000000b401",
+    "customer_id": "buyer",
+    "date": "2026-10-29",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Feed deposit cash sale",
+      "quantity": "1",
+      "rate": "12.34",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false,
+   "ref": "feed-sale"
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "c",
+   "connection": "feed-connection",
+   "now": "2026-10-30T12:00:00Z",
+   "force": true,
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "integration",
+      "remote_id": "checking",
+      "name": "Integration Checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "transactions": [
+       {
+        "remote_id": "check-1",
+        "posted_on": "2026-10-29",
+        "amount": "-12.34",
+        "description": "Feed stationery check"
+       },
+       {
+        "remote_id": "deposit-1",
+        "posted_on": "2026-10-29",
+        "amount": "12.34",
+        "description": "Feed cash sale deposit"
+       }
+      ]
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "c",
+   "feed": "feed-connection/integration/checking",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "c",
+   "tx": "feed-connection/integration/checking/check-1",
+   "ref": "feed-check",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense",
+    "check_number": "FEED-INT-1",
+    "payee_name": "Synthetic stationery"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "c",
+   "tx": "feed-connection/integration/checking/deposit-1",
+   "ref": "feed-deposit",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": [
+     "feed-sale"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_items",
+   "company": "c",
+   "result": "feed-items",
+   "expect_error": false
+  },
+  {
+   "op": "backups_snapshot",
+   "ref": "snapshot-1",
+   "expect_error": false
+  },
+  {
+   "op": "backups_verify",
+   "backup": "snapshot-1",
+   "expect_error": false
+  },
+  {
+   "op": "backups_restore",
+   "backup": "snapshot-1",
+   "expect_error": false
+  },
+  {
+   "op": "backups_refuse_existing",
+   "backup": "snapshot-1",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Restore only goes into a NEW target."
+  },
+  {
+   "op": "backups_live_post",
+   "company": "c",
+   "account": "bank",
+   "draft": {
+    "op": "save_draft",
+    "company": "c",
+    "ref": "live-only",
+    "date": "2026-10-31",
+    "memo": "Live only after restore",
+    "lines": [
+     {
+      "account": "expense",
+      "debit": "4.56",
+      "credit": "0"
+     },
+     {
+      "account": "bank",
+      "debit": "0",
+      "credit": "4.56"
+     }
+    ]
+   },
+   "post": {
+    "op": "post_journal",
+    "company": "c",
+    "journal": "live-only"
+   },
+   "expected": {
+    "kind": "isolation",
+    "live_before": -100,
+    "live_after": -556,
+    "restored": -100
+   },
+   "expect_error": false
+  },
+  {
+   "op": "backups_snapshot",
+   "ref": "snapshot-2",
+   "expect_error": false
+  },
+  {
+   "op": "backups_verify",
+   "backup": "snapshot-2",
+   "expect_error": false
+  },
+  {
+   "op": "backups_restore",
+   "backup": "snapshot-2",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-10-01",
+  "2026-10-03",
+  "2026-10-09",
+  "2026-10-21",
+  "2026-10-24",
+  "2026-10-29",
+  "2026-10-31",
+  "2026-11-01",
+  "2026-11-30"
+ ],
+ "today": "2026-10-30",
+ "financial_reports": {
+  "profit_loss": [
+   [
+    null,
+    "2026-10-31"
+   ],
+   [
+    "2026-01-01",
+    "2026-10-31"
+   ],
+   [
+    "2026-10-01",
+    "2026-10-09"
+   ],
+   [
+    "2026-10-10",
+    "2026-10-21"
+   ],
+   [
+    "2026-10-22",
+    "2026-11-30"
+   ],
+   [
+    "2026-10-15",
+    "2026-10-15"
+   ],
+   [
+    "2025-01-01",
+    "2025-12-31"
+   ],
+   [
+    "2027-01-01",
+    "2027-12-31"
+   ]
+  ],
+  "balance_sheet": [
+   "1900-01-02",
+   "2025-12-31",
+   "2026-01-01",
+   "2026-10-09",
+   "2026-10-21",
+   "2026-10-31",
+   "2026-12-31",
+   "2027-01-01"
+  ],
+  "general_ledger": [
+   [
+    null,
+    "2099-12-31",
+    "",
+    null
+   ],
+   [
+    null,
+    "2026-12-31",
+    "",
+    null
+   ],
+   [
+    "2026-10-10",
+    "2026-10-21",
+    "",
+    null
+   ],
+   [
+    "2026-10-01",
+    "2026-10-31",
+    "pl",
+    null
+   ],
+   [
+    "2027-01-01",
+    "2027-01-31",
+    "le",
+    null
+   ],
+   [
+    "2026-10-01",
+    "2026-10-31",
+    "",
+    "income"
+   ],
+   [
+    "2026-10-01",
+    "2026-10-31",
+    "receivable",
+    "ar"
+   ]
+  ]
+ },
+ "strict_outcomes": true
+}

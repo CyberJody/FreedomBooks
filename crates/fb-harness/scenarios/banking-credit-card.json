@@ -1,0 +1,283 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "card",
+   "code": "220",
+   "name": "Synthetic card",
+   "kind": "LIABILITY",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "purchase",
+   "date": "2026-10-01",
+   "memo": "Card purchase",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "100"
+    },
+    {
+     "account": "card",
+     "credit": "100"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "purchase",
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "purchase:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "bad-interest",
+   "account": "card",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e21",
+    "statement_date": "2026-10-31",
+    "ending_balance": "100",
+    "interest": "1",
+    "interest_account_id": "income"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Interest earned is for bank accounts. Record card credits as payments."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "card-statement",
+   "account": "card",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e22",
+    "statement_date": "2026-10-31",
+    "ending_balance": "105",
+    "service_charge": "5",
+    "service_account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "result": "card-screen",
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "result": "auto-screen-19",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "expected_revision": 1,
+   "completion_key": "00000000-0000-0000-0000-000000004e23",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "result": "auto-report-19",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "result": "card-done",
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "card",
+   "values": {},
+   "result": "card-register",
+   "expect_error": false
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "expected_revision": 2,
+   "reason": "Card correction",
+   "undo_key": "00000000-0000-0000-0000-000000004e24",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "result": "auto-report-22",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "card",
+   "reconciliation": "card-statement",
+   "result": "card-undone",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

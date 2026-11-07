@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>{{ doc.number }} · {{ doc.title|title }} · {{ doc.company.name }}</title>
+<link rel="stylesheet" href="{{ static('sales/print.css') }}">
+<style>@page { @bottom-center { content: "{% if stamp %}{{ stamp|css_string }} · {% endif %}{{ doc.number|css_string }} · revision {{ doc.revision_number }} of {{ doc.revision_total }} · printed {{ doc.printed_at|date('Y-m-d H:i') }} UTC · not a bill, offer or receipt\A Page " counter(page) " of " counter(pages); white-space: pre; text-align: center; font: 8pt system-ui, sans-serif; color: #444; } }</style></head>
+<body class="print-body{% if doc.mark %} marked{% endif %}">
+<div class="print-toolbar" role="toolbar" aria-label="Print actions">{% with audience='customer' %}{% include 'ledger/includes/print_toolbar_note.html' %}{% endwith %}
+<span class="print-toolbar-actions"><button type="button" id="print-now">Print / Save as PDF</button> <a href="{% if doc.kind == 'estimate' %}{{ url('sales:detail', company.pk, root.pk) }}{% else %}{{ url('invoices:detail', company.pk, root.pk) }}{% endif %}">Back to {{ doc.kind }}</a></span></div>
+
+<article class="sheet" lang="en">
+{% if fb_print_synthetic %}<div class="watermark" aria-hidden="true">TEST ONLY</div>{% endif %}
+{% if doc.mark %}<div class="status-stamp" aria-hidden="true">{{ doc.mark }}</div>{% endif %}
+<header class="doc-head">
+<div class="company-block">{% if doc.company_logo_url %}<img class="business-logo" src="{{ doc.company_logo_url }}" alt="Company logo">{% endif %}<h1 class="company-name">{{ doc.company.name }}</h1>{% for key in ['street1','street2','city','region','postal_code','country','phone','email','website'] %}{% if doc.business[key] %}<p class="business-contact">{{ doc.business[key] }}</p>{% endif %}{% endfor %}{% if doc.business.tax_id %}<p class="business-contact">Tax ID: {{ doc.business.tax_id }}</p>{% endif %}<p class="company-meta">Currency {{ doc.currency }}</p></div>
+<div class="title-block"><p class="doc-title">{{ doc.title }}{% if doc.mark %} <span class="doc-mark">{{ doc.mark }}</span>{% endif %}</p>
+<table class="meta-box"><thead><tr><th>Date</th><th>{{ doc.number_label }}</th></tr></thead><tbody><tr><td>{{ doc.date|date('Y-m-d') }}</td><td>{{ doc.number }}</td></tr></tbody></table>
+<p class="revision-line">Revision {{ doc.revision_number }} of {{ doc.revision_total }}{% if doc.superseded %} · <strong>Earlier version</strong>{% endif %} · Status: {{ doc.state_label }}<br>Printed {{ doc.printed_at|date('Y-m-d H:i') }} UTC{% if stamp %} · {{ stamp }}{% endif %}</p></div>
+</header>
+
+<section class="party-row">
+<div class="party-box"><p class="box-label">{% if doc.kind == 'estimate' %}Name / Address{% else %}Bill to{% endif %}</p>
+<p class="party-name">{{ doc.party.display_name }}</p>{% if doc.party.business_name %}<p>{{ doc.party.business_name }}</p>{% endif %}{% if doc.party.contact_name %}<p>{{ doc.party.contact_name }}</p>{% endif %}{% if doc.party.billing_address %}<p class="party-address">{{ doc.party.billing_address|linebreaksbr }}</p>{% endif %}{% if doc.party.email or doc.party.phone %}<p class="party-contact">{{ doc.party.email }}{% if doc.party.email and doc.party.phone %} · {% endif %}{{ doc.party.phone }}</p>{% endif %}</div>
+<table class="terms-box"><thead><tr>{% if doc.terms %}<th>Terms</th>{% endif %}<th>{{ doc.second_date_label }}</th></tr></thead><tbody><tr>{% if doc.terms %}<td>{{ doc.terms }}</td>{% endif %}<td>{% if doc.second_date %}{{ doc.second_date|date('Y-m-d') }}{% else %}Not specified{% endif %}</td></tr></tbody></table>
+</section>
+
+<table class="lines">
+<thead><tr><th class="col-item">Item</th><th class="col-desc">Description</th><th class="col-num">Quantity</th><th class="col-num">Rate</th><th class="col-tax">Tax</th><th class="col-num">Amount</th></tr></thead>
+<tbody>{% for line in doc.lines %}<tr><td class="col-item">{{ line.item_snapshot.code|default('') }}</td><td class="col-desc">{{ line.description|linebreaksbr }}</td><td class="col-num">{{ line.quantity|print_qty }}</td><td class="col-num">{{ line.rate|money }}</td><td class="col-tax">{% if line.taxable %}T{% endif %}</td><td class="col-num">{{ line.amount|money }}</td></tr>{% endfor %}</tbody>
+</table>
+
+<section class="foot-row">
+<div class="message-box">{% if doc.business.payment_instructions %}<div class="payment-instructions"><p class="box-label">Payment instructions</p><p>{{ doc.business.payment_instructions|linebreaksbr }}</p></div>{% endif %}<p class="box-label">Memo</p><p class="memo">{{ doc.memo|linebreaksbr }}</p>{% if doc.posting_note %}<p class="posting-note">{{ doc.posting_note }}</p>{% endif %}<p class="legend">T = taxable line. Line amounts round half-up to cents; tax applies to the sum of taxable lines.</p></div>
+<table class="totals"><tbody>
+<tr><th>Subtotal</th><td id="print-subtotal">{{ current.subtotal|money }}</td></tr>
+<tr><th>{% if current.tax_mode == 'NONE' %}Tax (none){% else %}{{ current.tax_label }} ({{ current.tax_rate|print_qty }}%){% endif %}</th><td id="print-tax">{{ current.tax|money }}</td></tr>
+<tr class="grand"><th>Total {{ doc.currency }}</th><td id="print-total">{{ current.total|money }}</td></tr>
+{% if doc.balance %}<tr><th>Payments and credits</th><td id="print-paid">{{ doc.balance.paid|money }}</td></tr>
+<tr class="grand due"><th>Balance due<br><small>as of {{ doc.balance.as_of|date('Y-m-d') }} UTC</small></th><td id="print-balance">{{ doc.balance.due|money }}</td></tr>{% elif doc.kind == 'invoice' %}<tr class="due"><th colspan="2">No amount due{% if doc.superseded %} shown for an earlier version{% endif %}</th></tr>{% endif %}
+</tbody></table>
+</section>
+</article>
+<p class="screen-note">Letter size, portrait. "Page X of Y"{% if stamp %} and the {{ stamp }} footer{% endif %} print in the bottom margin of every page.</p>
+<script src="{{ static('sales/print.js') }}" defer></script>
+</body></html>

@@ -1,0 +1,47 @@
+{
+  "users": [
+    {
+      "username": "designation",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic unused designation",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "Unused designated bank",
+      "kind": "ASSET",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "account": "bank",
+      "code": "100",
+      "name": "Reclassified unused account",
+      "kind": "EXPENSE",
+      "detail_type": "EXPENSE",
+      "expect_error": false
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "vendor",
+   "ref": "agency",
+   "values": {
+    "display_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "county",
+   "values": {
+    "name": "County",
+    "description": "County tax",
+    "rate": "3",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "state",
+   "values": {
+    "name": "State",
+    "description": "State tax",
+    "rate": "4",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "group",
+   "values": {
+    "name": "County-State",
+    "description": "Combined tax",
+    "member_ids": [
+     "county",
+     "state"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": "group",
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [
+    {
+     "quantity": "1",
+     "rate": "112.50",
+     "taxable": true
+    }
+   ],
+   "result": "tax-112.50",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [
+    {
+     "quantity": "1",
+     "rate": "1.08",
+     "taxable": true
+    }
+   ],
+   "result": "tax-1.08",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [
+    {
+     "quantity": "1",
+     "rate": "18.50",
+     "taxable": true
+    }
+   ],
+   "result": "tax-18.50",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [
+    {
+     "quantity": "1",
+     "rate": "0",
+     "taxable": true
+    }
+   ],
+   "result": "tax-0",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [
+    {
+     "quantity": "1",
+     "rate": "0.01",
+     "taxable": true
+    }
+   ],
+   "result": "tax-0.01",
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [
+    {
+     "quantity": "1",
+     "rate": "999999999999.99",
+     "taxable": true
+    }
+   ],
+   "result": "tax-999999999999.99",
+   "expect_error": false
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "dup",
+   "values": {
+    "name": "Dup",
+    "description": "Dup",
+    "member_ids": [
+     "county",
+     "county"
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose each tax rate once."
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "nested",
+   "values": {
+    "name": "Nested",
+    "description": "Nested",
+    "member_ids": [
+     "county",
+     "group"
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose tax rates (not groups) from this company."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "over",
+   "values": {
+    "name": "Over",
+    "description": "Over",
+    "rate": "100.0001",
+    "agency_id": "agency"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a rate from 0 to 100 percent with at most 4 decimal places."
+  },
+  {
+   "op": "l2_tax_active",
+   "company": "c",
+   "record": "county",
+   "active": false,
+   "expected_revision": 1,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "\"County\" is part of the active tax group(s) County-State. Remove it from those groups or deactivate them first."
+  },
+  {
+   "op": "l2_tax_active",
+   "company": "c",
+   "record": "group",
+   "active": false,
+   "expected_revision": 1,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "\"County-State\" is the company default sales tax. Choose another default in Sales tax settings first."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "county",
+   "values": {
+    "item_id": "county",
+    "expected_revision": 1,
+    "name": "County",
+    "description": "County tax now",
+    "rate": "5",
+    "agency_id": "agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_totals",
+   "company": "c",
+   "resolve": true,
+   "values": {
+    "tax_mode": "ITEM",
+    "tax_item_id": "group"
+   },
+   "lines": [],
+   "result": "edited",
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 0
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This record changed since you opened it. Reload and review before saving."
+  }
+ ]
+}

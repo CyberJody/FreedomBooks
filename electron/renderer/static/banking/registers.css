@@ -1,0 +1,75 @@
+/* N17 bank / credit-card register (hybrid v1 palette and density; no vendor trade dress). */
+.register-heading{align-items:flex-start}
+.register-actions{font-size:13px;white-space:nowrap}
+.register-filters{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
+.register-filters label{display:flex;flex-direction:column;font-size:12px;gap:2px}
+.register-filters input[type=search]{width:12em}
+.register-totals{display:flex;flex-wrap:wrap;gap:0;margin:0 0 12px;padding:0;border:1px solid var(--fb-tan-line,#d9ccb2);border-radius:4px;background:var(--fb-tan-soft,#f8f3e8)}
+.register-totals div{flex:1 1 150px;padding:8px 12px;border-right:1px solid var(--fb-tan-line,#d9ccb2)}
+.register-totals div:last-child{border-right:0}
+.register-totals dt{font-size:11.5px;color:var(--fb-muted,#675d6b);font-weight:650}
+.register-totals dd{margin:2px 0 0;font-size:16px;font-weight:700;text-align:left}
+.register-totals .ending dd{color:var(--fb-plum-deep,#35253e)}
+.register-box{overflow:auto}
+table.bank-register{width:100%;border-collapse:collapse;font-size:13px;table-layout:auto}
+/* The shared .register rules (app.css) fix column widths for the plain ledger register; this one sizes to content. */
+table.register.bank-register th,table.register.bank-register td{width:auto;white-space:normal;overflow-wrap:normal}
+table.register.bank-register td.date,table.register.bank-register td.amount,table.register.bank-register th.amount,table.register.bank-register thead th{white-space:nowrap}
+table.register.bank-register td.party,table.register.bank-register td.memo,table.register.bank-register td.other{overflow-wrap:anywhere}
+table.bank-register th,table.bank-register td{padding:6px 8px;border-bottom:1px solid #ece6dc;vertical-align:top}
+table.bank-register thead th{position:sticky;top:0;background:var(--fb-tan,#eee4d0);color:#43364b;font-size:12px;white-space:nowrap}
+table.bank-register tbody tr:nth-child(even){background:#fcfaf6}
+table.bank-register td.date{white-space:nowrap}
+table.bank-register td.number{min-width:8.5em}
+table.bank-register small.type a,table.bank-register .ref{white-space:nowrap}
+table.bank-register .ref{display:block;font-variant-numeric:tabular-nums}
+table.bank-register small{display:block;font-size:11.5px;color:var(--fb-muted,#675d6b)}
+table.bank-register td.party,table.bank-register td.memo{overflow-wrap:anywhere;min-width:8em}
+table.bank-register td.memo{color:#4c4350}
+table.bank-register td.other{min-width:13em;overflow-wrap:anywhere}
+table.bank-register td.amount,table.bank-register th.amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.bank-register td.balance{font-weight:650}
+table.bank-register tfoot th{background:var(--fb-tan-soft,#f8f3e8);font-size:13px;color:#43364b}
+table.bank-register tfoot th.amount{font-weight:750}
+table.bank-register .mark-col{text-align:center;width:3.2em}
+table.bank-register .reversal-row td{color:#5d4e63}
+table.bank-register .void-note{color:#8a3b3b}
+table.bank-register tr.forward td{font-style:italic;color:var(--fb-muted,#675d6b)}
+.mark-form{margin:0}
+button.mark{width:26px;height:24px;padding:0;border:1px solid #b9ab92;border-radius:3px;background:#fff;color:var(--fb-plum,#684276);font:700 15px/22px system-ui,sans-serif;cursor:pointer}
+button.mark.on{background:var(--fb-lavender,#eee8f1);border-color:var(--fb-plum,#684276)}
+button.mark:hover{background:var(--fb-tan-soft,#f8f3e8);color:var(--fb-plum-dark,#4b2b57)}
+button.mark.on:hover{background:#e3d9ea}
+.mark.reconciled{display:inline-block;width:26px;height:24px;line-height:24px;border-radius:3px;background:var(--fb-plum,#684276);color:#fff;font-weight:700}
+small.feed{margin-top:2px;letter-spacing:.03em}
+.splits{list-style:none;margin:4px 0 0;padding:0}
+.splits li{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;padding:3px 0;border-top:1px dotted #d9ccb2}
+.splits li>span:first-child{flex:1 1 9em;min-width:0}
+.splits .amount{flex:0 0 auto;margin-left:auto;white-space:nowrap}
+.splits small{flex-basis:100%}
+details summary{cursor:pointer}
+.register-note{margin-top:8px}
+.registers-list td.amount,.registers-list th.amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Narrow screens: each register line becomes a small labelled card, money stays right-aligned. */
+@media(max-width:760px){
+ table.bank-register thead{display:none}
+ table.bank-register,table.bank-register tbody,table.bank-register tr,table.bank-register td{display:block;width:auto}
+ table.bank-register tr{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;padding:8px 6px;border-bottom:1px solid #ddd2bf}
+ table.bank-register td{border:0;padding:2px 0}
+ table.bank-register td[data-label]::before{content:attr(data-label);display:block;font-size:10.5px;color:var(--fb-muted,#675d6b);font-weight:650;text-transform:uppercase;letter-spacing:.04em}
+ table.bank-register td.amount{text-align:left}
+ table.bank-register td.mark-col{text-align:left;width:auto}
+ table.bank-register td.memo,table.bank-register td.other{grid-column:1 / -1}
+ table.bank-register tr.total,table.bank-register tr.forward{display:flex;justify-content:space-between}
+ table.bank-register tfoot tr{display:flex;justify-content:space-between}
+ .register-filters input[type=search]{width:100%}
+ .register-totals div{flex-basis:45%;border-right:0}
+ table.bank-register tfoot{display:block}
+ table.bank-register tfoot th{display:block;border:0;background:none}
+}
+/* Print sheet (landscape): compact rows, no buttons. */
+.register-paper .register-totals.print{display:flex}
+.print-register{font-size:9pt}
+.print-register th,.print-register td{padding:3px 5px;border-bottom:1px solid #ccc;vertical-align:top}
+.print-register .amount{text-align:right;white-space:nowrap}

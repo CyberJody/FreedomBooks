@@ -1,0 +1,4 @@
+<header class="report-head"><p class="report-company">{{ company.name }}</p><h2 class="report-title">Profit and loss</h2><p class="report-dates">{{ date_span(start, end) }}</p><p class="report-basis">{{ basis_label }} basis · {{ company.currency }}</p></header>
+{% if report.unconverted %}<p class="notice report-warning">{{ report.unconverted }} posted line{{ report.unconverted|pluralize }} on receivables or payables come from journals this version does not convert to cash; they are included as recorded.</p>{% endif %}
+{% with amount_heading='Amount' %}{% include 'ledger/reports/_rows.html' %}{% endwith %}
+<p class="report-foot">{% if basis == 'CASH' %}Cash basis: invoices, bills and credit memos count when they are paid, applied or refunded, in proportion to the amount settled. {% endif %}Posted transactions only; drafts are excluded and voids net to zero on their own dates. <span class="screen-only">Select an amount to see the lines behind it.</span></p>

@@ -1,0 +1,219 @@
+{
+  "ACTION_LABELS": {
+    "company.created": "Company created",
+    "ai.signin_started": "AI assistant: ChatGPT sign-in started",
+    "ai.connected": "AI assistant: ChatGPT account connected",
+    "ai.signin_failed": "AI assistant: ChatGPT sign-in failed",
+    "ai.key_connected": "AI assistant: API key saved",
+    "ai.key_failed": "AI assistant: API key refused",
+    "ai.model_set": "AI assistant: model chosen",
+    "ai.models_refreshed": "AI assistant: model list refreshed",
+    "ai.disconnected": "AI assistant: disconnected",
+    "ai.refresh_failed": "AI assistant: sign-in renewal failed",
+    "ai.call": "AI assistant: request sent",
+    "ai.call_failed": "AI assistant: request failed",
+    "ai.receipt_read": "AI assistant: receipt read (draft bill)",
+    "ai.receipt_failed": "AI assistant: receipt not read",
+    "ai.read_attachments_set": "AI assistant: read-attachments switch",
+    "bill.ai_lines_kept": "Bill line kept as entered",
+    "company.updated": "Company updated",
+    "company.reminders_updated": "Reminder settings changed",
+    "company.member_added": "Member added",
+    "account.saved": "Account saved",
+    "journal.drafted": "Journal saved",
+    "journal.posted": "Journal posted",
+    "journal.reversed": "Journal reversed",
+    "customer.created": "Customer created",
+    "customer.updated": "Customer updated",
+    "customer.archived": "Customer archived",
+    "customer.reactivated": "Customer reactivated",
+    "vendor.created": "Vendor created",
+    "vendor.updated": "Vendor updated",
+    "vendor.archived": "Vendor archived",
+    "vendor.reactivated": "Vendor reactivated",
+    "item.created": "Item created",
+    "item.updated": "Item updated",
+    "item.archived": "Item archived",
+    "item.reactivated": "Item reactivated",
+    "document.identified": "Document number assigned",
+    "document.accounts": "Document accounts recorded",
+    "accounting.setup": "Accounting setup saved",
+    "setup.filled": "Accounting setup filled from the chart",
+    "setup.checklist.dismissed": "Setup checklist finished",
+    "estimate.created": "Estimate created",
+    "estimate.revised": "Estimate revised",
+    "estimate.accepted": "Estimate accepted",
+    "estimate.declined": "Estimate declined",
+    "estimate.cancelled": "Estimate cancelled",
+    "estimate.reopened": "Estimate reopened",
+    "invoice.created": "Invoice created",
+    "invoice.revised": "Invoice revised",
+    "invoice.posted": "Invoice posted",
+    "invoice.voided": "Invoice voided",
+    "invoice.converted": "Invoice created from estimate",
+    "receipt.recorded": "Receipt recorded",
+    "receipt.reversed": "Receipt reversed",
+    "sales_receipt.recorded": "Sales receipt recorded",
+    "sales_receipt.voided": "Sales receipt voided",
+    "bill.created": "Bill created",
+    "bill.revised": "Bill revised",
+    "bill.posted": "Bill posted",
+    "bill.voided": "Bill voided",
+    "bill.journal_evidence": "Bill journal recorded",
+    "payment.recorded": "Bill payment recorded",
+    "payment.reversed": "Bill payment reversed",
+    "check.created": "Check created",
+    "check.revised": "Check revised",
+    "check.recorded": "Check recorded",
+    "check.numbered": "Check numbered",
+    "check.voided": "Check voided",
+    "check.journal_evidence": "Check journal recorded",
+    "deposit.recorded": "Deposit recorded",
+    "deposit.reversed": "Deposit reversed",
+    "transfer.recorded": "Transfer recorded",
+    "transfer.voided": "Transfer voided",
+    "bank_line.cleared": "Register line marked cleared",
+    "bank_line.uncleared": "Register line marked not cleared",
+    "bank_line.reconciled": "Register line reconciled",
+    "bank_line.unreconciled": "Register line unreconciled (undo)",
+    "reconciliation.started": "Reconciliation started",
+    "reconciliation.changed": "Reconciliation statement changed",
+    "reconciliation.completed": "Reconciliation completed",
+    "reconciliation.undone": "Reconciliation undone",
+    "credit_memo.recorded": "Credit memo recorded",
+    "credit_memo.voided": "Credit memo voided",
+    "credit_memo.applied": "Credit memo applied",
+    "credit_memo.unapplied": "Credit memo unapplied",
+    "credit_refund.recorded": "Refund recorded",
+    "credit_refund.voided": "Refund voided",
+    "attachment.added": "Attachment added",
+    "attachment.removed": "Attachment removed"
+  },
+  "DOCUMENT_TYPES": [
+    [
+      "invoice",
+      "Invoices",
+      "invoice:"
+    ],
+    [
+      "estimate",
+      "Estimates",
+      "estimate:"
+    ],
+    [
+      "receipt",
+      "Customer receipts",
+      "receipt:"
+    ],
+    [
+      "sales_receipt",
+      "Sales receipts",
+      "receipt:"
+    ],
+    [
+      "bill",
+      "Bills",
+      "bill:"
+    ],
+    [
+      "bill_payment",
+      "Bill payments",
+      "billpayment:"
+    ],
+    [
+      "check",
+      "Checks",
+      "check:"
+    ],
+    [
+      "deposit",
+      "Deposits",
+      "deposit:"
+    ],
+    [
+      "transfer",
+      "Transfers",
+      "transfer:"
+    ],
+    [
+      "credit_memo",
+      "Credit memos",
+      "creditmemo:"
+    ],
+    [
+      "refund",
+      "Refunds",
+      "creditrefund:"
+    ],
+    [
+      "journal",
+      "Journals",
+      "journal:"
+    ],
+    [
+      "reconciliation",
+      "Reconciliations",
+      "reconciliation:"
+    ],
+    [
+      "account",
+      "Accounts",
+      "account:"
+    ],
+    [
+      "customer",
+      "Customers",
+      "customer:"
+    ],
+    [
+      "vendor",
+      "Vendors",
+      "vendor:"
+    ],
+    [
+      "item",
+      "Items",
+      "item:"
+    ],
+    [
+      "company",
+      "Company",
+      "company:"
+    ],
+    [
+      "setup",
+      "Accounting setup",
+      "accountingsetup:"
+    ],
+    [
+      "document",
+      "Document numbers",
+      "documentidentity:"
+    ]
+  ],
+  "TYPE_NOUN": {
+    "invoice": "Invoice",
+    "estimate": "Estimate",
+    "receipt": "Receipt",
+    "bill": "Bill",
+    "billpayment": "Bill payment",
+    "check": "Check",
+    "deposit": "Deposit",
+    "transfer": "Transfer",
+    "creditmemo": "Credit memo",
+    "creditrefund": "Refund",
+    "journal": "Journal",
+    "account": "Account",
+    "customer": "Customer",
+    "vendor": "Vendor",
+    "item": "Item",
+    "company": "Company",
+    "accountingsetup": "Accounting setup",
+    "documentidentity": "Document",
+    "reconciliation": "Reconciliation"
+  },
+  "NAMED_TARGETS": {
+    "ai:openai": "AI assistant (OpenAI)",
+    "bill:new": "New bill (from a receipt)"
+  }
+}

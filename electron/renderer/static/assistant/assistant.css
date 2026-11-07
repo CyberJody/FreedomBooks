@@ -1,0 +1,56 @@
+/* AI assistant settings page (P0-3): reuses the hybrid v1 shell; only its status grid, the two connect cards, the
+   one-time plan notice and the plain-text "Continue with ChatGPT" button are styled here. No vendor logo or asset:
+   the approved branding kit can replace the button later (research S12/S13). */
+body.shell .ai-status dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;margin:0 0 14px;padding:12px 14px;background:var(--fb-panel);border:1px solid var(--fb-tan-line);border-radius:4px}
+body.shell .ai-status dt{font-size:11px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:#6b5a4a}
+body.shell .ai-status dd{margin:2px 0 0;overflow-wrap:anywhere}
+body.shell .ai-status form{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0}
+body.shell .ai-status .ai-inline-form{margin-left:10px}
+body.shell .ai-badge{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--fb-lavender);border:1px solid #c9b8d0;color:var(--fb-plum-deep);font-size:12.5px;font-weight:650}
+body.shell .ai-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 16px}
+body.shell .ai-actions form,body.shell .ai-actions p{margin:0}
+body.shell button.danger{background:linear-gradient(#c98466,#bd7657);border-color:#9a5a40}
+body.shell button.danger:hover{background:#9a5a40}
+body.shell .ai-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 16px}
+body.shell .ai-card{padding:14px 16px;background:var(--fb-panel);border:1px solid var(--fb-tan-line);border-radius:4px}
+body.shell .ai-card h2{margin:0 0 6px}
+body.shell .ai-card p{margin:0 0 10px}
+body.shell .ai-card .muted{font-size:12.5px}
+body.shell .ai-card .field{margin:0 0 6px}
+body.shell .ai-card .field label{display:block;margin:0 0 4px;font-weight:650}
+body.shell .ai-card .field input{display:block;width:100%;max-width:420px;box-sizing:border-box}
+body.shell .ai-card .actions{margin:8px 0 10px}
+body.shell .siwc-button{display:inline-block;margin:4px 0 12px;padding:9px 18px;font-size:14px;font-weight:650;color:#fff;background:#000;border:1px solid #000;border-radius:6px;box-shadow:none}
+body.shell .siwc-button:hover{background:#222}
+body.shell .siwc-button[disabled]{opacity:.55;cursor:not-allowed}
+body.shell .ai-tunnel{margin:4px 0 12px;padding:10px 12px;background:var(--fb-tan-soft);border:1px solid var(--fb-tan-line);border-left:3px solid var(--fb-plum);border-radius:4px}
+body.shell .ai-tunnel pre{margin:6px 0;padding:8px 10px;background:#fff;border:1px solid var(--fb-tan-line);border-radius:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+body.shell .ai-notice{margin:0 0 14px;padding:12px 14px;background:var(--fb-lavender);border:1px solid #c9b8d0;border-left:4px solid var(--fb-plum);border-radius:4px}
+body.shell .ai-notice h2{margin:0 0 4px}
+body.shell .ai-notice p{margin:0 0 8px}
+body.shell .ai-notice form{display:flex;align-items:center;gap:12px;margin:0}
+body.shell details.ai-help{padding:12px 14px;border:1px solid var(--fb-tan-line);border-radius:4px;background:var(--fb-panel)}
+body.shell .ai-help p{margin:8px 0 0}
+@media (max-width:900px){body.shell .ai-cards,body.shell .ai-status dl{grid-template-columns:1fr}}
+/* P0-3b Read with AI: the bill pages' receipt section, the "Start a bill from a receipt" box and the "read by AI - check it" marks on a prefilled form (tan/plum palette only). */
+body.shell .ai-receipt{margin:0 0 16px;padding:12px 14px;background:var(--fb-panel);border:1px solid var(--fb-tan-line);border-left:3px solid var(--fb-plum);border-radius:4px}
+body.shell .ai-receipt h2{margin:0 0 8px}
+body.shell .ai-receipt p{margin:0 0 8px}
+body.shell .ai-receipt ul{margin:0 0 8px;padding-left:18px}
+body.shell .ai-receipt-files{list-style:none;padding:0}
+body.shell .ai-receipt-files li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 0;border-top:1px solid var(--fb-tan-line)}
+body.shell .ai-receipt-files li:first-child{border-top:0}
+body.shell .ai-receipt-name{font-weight:650;overflow-wrap:anywhere}
+body.shell .ai-receipt form.ai-inline-form,body.shell .ai-receipt form.ai-upload-form{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 6px}
+body.shell .ai-upload-file{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px;font-weight:650}
+body.shell .ai-upload-file input{font-weight:400;max-width:100%}
+body.shell .ai-receipt-totals{font-variant-numeric:tabular-nums}
+body.shell .ai-receipt-notes li{margin:0 0 4px}
+body.shell .ai-receipt-notes li.ai-note-warning{font-weight:650;color:#8a2f3c}
+body.shell .ai-mismatch-badge{display:inline-block;padding:0 7px;border-radius:9px;background:#f6e3e0;border:1px solid #d9a79e;color:#8a2f3c;font-size:11.5px;font-weight:650;letter-spacing:.02em;vertical-align:middle;font-variant-numeric:tabular-nums}
+body.shell fieldset.estimate-line.ai-mismatch{border-color:#d9a79e}
+body.shell .ai-read-badge{display:inline-block;padding:0 7px;border-radius:9px;background:var(--fb-lavender);border:1px solid #c9b8d0;color:var(--fb-plum-deep);font-size:11.5px;font-weight:650;letter-spacing:.02em;white-space:nowrap;vertical-align:middle}
+body.shell .estimate-header .ai-read input,body.shell .estimate-header .ai-read select,body.shell .estimate-line.ai-read input:not([type=checkbox]),body.shell .estimate-line.ai-read select,body.shell .estimate-line.ai-read textarea{background:var(--fb-lavender);border-color:#c9b8d0}
+body.shell fieldset.estimate-line.ai-read{border-color:#c9b8d0;background:#faf7fb}
+body.shell .ai-switch{margin:14px 0 16px}
+body.shell .ai-switch form{margin:0}

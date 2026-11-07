@@ -1,0 +1,936 @@
+// Independent L2a review reproductions retained as regression tests.
+// Replacement, displaced-row, delete/reinsert and rowid attacks for EVERY L2a table.
+mod common;
+use common::*;
+use fb_db::rusqlite::{Connection, types::Value};
+use std::collections::{BTreeMap, BTreeSet};
+
+// Fixture ids: canonical UUIDv7-shaped literals so 0130 (fb_valid) accepts them and every attack reaches the
+// L2a guard it was written for. The tail names the entity (old placeholder in the comment); groups sort before
+// rates exactly as 'g*' sorted before 'r*', so the generated attacks still pick the same first/second rows.
+const C1: &str = "00000000-0000-7000-8000-000000010001"; // customer c1
+const C2: &str = "00000000-0000-7000-8000-000000010002"; // customer c2
+const V1: &str = "00000000-0000-7000-8000-000000020001"; // vendor v1
+const V2: &str = "00000000-0000-7000-8000-000000020002"; // vendor v2
+const I1: &str = "00000000-0000-7000-8000-000000030001"; // item i1
+const I2: &str = "00000000-0000-7000-8000-000000030002"; // item i2
+const G1: &str = "00000000-0000-7000-8000-000000040001"; // tax group g1
+const G2: &str = "00000000-0000-7000-8000-000000040002"; // tax group g2
+const R1: &str = "00000000-0000-7000-8000-000000050001"; // tax rate r1
+const R2: &str = "00000000-0000-7000-8000-000000050002"; // tax rate r2
+const R3: &str = "00000000-0000-7000-8000-000000050003"; // tax rate r3
+const M1: &str = "00000000-0000-7000-8000-000000060001"; // group member m1
+const M2: &str = "00000000-0000-7000-8000-000000060002"; // group member m2
+const M3: &str = "00000000-0000-7000-8000-000000060003"; // group member m3
+const T1: &str = "00000000-0000-7000-8000-000000070001"; // sales tax settings t1
+const T2: &str = "00000000-0000-7000-8000-000000070002"; // sales tax settings t2
+const Q1: &str = "00000000-0000-7000-8000-000000080001"; // document sequence q1
+const Q2: &str = "00000000-0000-7000-8000-000000080002"; // document sequence q2
+const S1: &str = "00000000-0000-7000-8000-000000090001"; // document identity s1
+const S2: &str = "00000000-0000-7000-8000-000000090002"; // document identity s2
+const S3: &str = "00000000-0000-7000-8000-000000090003"; // document identity s3
+const A1: &str = "00000000-0000-7000-8000-0000000a0001"; // document account a1
+const A2: &str = "00000000-0000-7000-8000-0000000a0002"; // document account a2
+const U1: &str = "00000000-0000-7000-8000-0000000b0001"; // accounting setup u1
+const U2: &str = "00000000-0000-7000-8000-0000000b0002"; // accounting setup u2
+const B1: &str = "00000000-0000-7000-8000-0000000c0001"; // designated bank b1
+const B2: &str = "00000000-0000-7000-8000-0000000c0002"; // designated bank b2
+const KEY1: &str = "00000000-0000-7000-8000-0000000d0001"; // request key key1
+const KEY2: &str = "00000000-0000-7000-8000-0000000d0002"; // request key key2
+const KEY3: &str = "00000000-0000-7000-8000-0000000d0003"; // request key key3
+const FRESH_HIDDEN: &str = "00000000-0000-7000-8000-0000000e0001"; // attacker's rowid-alias row id 'fresh-hidden'
+const FRESH: &str = "00000000-0000-7000-8000-0000000e0002"; // attacker's displacing row id 'fresh'
+const FRESH_KEY: &str = "00000000-0000-7000-8000-0000000e0003"; // attacker's request key 'fresh-key'
+const BAD: &str = "00000000-0000-7000-8000-0000000e0004"; // attacker's new row id 'bad'
+const MISSING: &str = "00000000-0000-7000-8000-0000000e0005"; // well-formed id of no row ('missing')
+const REVIEW_NEW_ID: &str = "00000000-0000-7000-8000-0000000e0006"; // attacker's rekey target 'review-new-id'
+const REVIEW_VENDOR: &str = "00000000-0000-7000-8000-0000000e0007"; // raw vendor 'review-vendor'
+const EDIT_VENDOR: &str = "00000000-0000-7000-8000-0000000e0008"; // raw vendor 'edit'
+const RAW_VENDOR: &str = "00000000-0000-7000-8000-0000000e0009"; // raw vendor 'raw'
+const NOW: &str = "2026-01-01T00:00:00Z"; // created_at 'now'
+
+const TABLES: &[(&str, &[&[&str]])] = &[
+    ("directory_customer", &[]),
+    ("directory_vendor", &[]),
+    ("directory_item", &[&["company_id", "code"]]),
+    ("salestax_taxitem", &[&["company_id", "name"]]),
+    (
+        "salestax_taxgroupmember",
+        &[&["group_id", "member_id"], &["group_id", "position"]],
+    ),
+    ("salestax_salestaxsettings", &[&["company_id"]]),
+    ("documents_documentsequence", &[&["company_id", "kind"]]),
+    (
+        "documents_documentidentity",
+        &[
+            &["company_id", "number"],
+            &["company_id", "kind", "ordinal"],
+            &["company_id", "request_key"],
+        ],
+    ),
+    ("documents_documentaccount", &[&["source_id", "role"]]),
+    ("documents_accountingsetup", &[&["company_id"]]),
+    ("documents_designatedbank", &[&["setup_id", "account_id"]]),
+];
+
+fn fixture() -> Fx {
+    let mut f = Fx::new("l2-replace");
+    let c = f.company("C");
+    let d = f.company("D");
+    let a = f.account(c, "100", "A", "ASSET");
+    let b = f.account(c, "101", "B", "ASSET");
+    f.book.connection().execute_batch(&format!("
+        INSERT INTO directory_customer(id,company_id,display_name) VALUES('{C1}','{c}','C1'),('{C2}','{c}','C2');
+        INSERT INTO directory_vendor(id,company_id,display_name) VALUES('{V1}','{c}','V1'),('{V2}','{c}','V2');
+        INSERT INTO directory_item(id,company_id,code,kind,sale_rate) VALUES('{I1}','{c}','I1','SERVICE',1),('{I2}','{c}','I2','SERVICE',1);
+        INSERT INTO salestax_taxitem(id,company_id,kind,name,description,rate,agency_id) VALUES('{R1}','{c}','RATE','R1','R1',1,'{V1}'),('{R2}','{c}','RATE','R2','R2',2,'{V2}'),('{R3}','{c}','RATE','R3','R3',3,'{V1}');
+        INSERT INTO salestax_taxitem(id,company_id,kind,name,description) VALUES('{G1}','{c}','GROUP','G1','G1'),('{G2}','{c}','GROUP','G2','G2');
+        INSERT INTO salestax_taxgroupmember VALUES('{M1}','{G1}','{R1}',1),('{M2}','{G1}','{R2}',2);
+        INSERT INTO salestax_salestaxsettings(id,company_id) VALUES('{T1}','{c}'),('{T2}','{d}');
+        INSERT INTO documents_documentsequence(id,company_id,kind,last_number) VALUES('{Q1}','{c}','INV',2),('{Q2}','{c}','BILL',0);
+        INSERT INTO documents_documentidentity VALUES('{S1}','{c}','INV',1,'INV-000001','{KEY1}','USD','{NOW}'),('{S2}','{c}','INV',2,'INV-000002','{KEY2}','USD','{NOW}');
+        INSERT INTO documents_documentaccount VALUES('{A1}','{S1}','asset','{a}','100','A','ASSET'),('{A2}','{S2}','asset','{b}','101','B','ASSET');
+        INSERT INTO documents_accountingsetup(id,company_id) VALUES('{U1}','{c}'),('{U2}','{d}');
+        INSERT INTO documents_designatedbank VALUES('{B1}','{U1}','{a}'),('{B2}','{U1}','{b}');
+    ")).unwrap();
+    f
+}
+
+fn dump(conn: &Connection) -> BTreeMap<String, Vec<Vec<Value>>> {
+    let tables=conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT GLOB 'sqlite_*' ORDER BY name").unwrap()
+        .query_map([],|r|r.get::<_,String>(0)).unwrap().collect::<Result<Vec<_>,_>>().unwrap();
+    tables
+        .into_iter()
+        .map(|table| {
+            let mut stmt = conn
+                .prepare(&format!("SELECT * FROM {table} ORDER BY 1"))
+                .unwrap();
+            let n = stmt.column_count();
+            let rows = stmt
+                .query_map([], |r| {
+                    (0..n).map(|i| r.get(i)).collect::<Result<Vec<Value>, _>>()
+                })
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            (table, rows)
+        })
+        .collect()
+}
+
+/// `sql` must be refused with the complete book unchanged, and never by 0130's shared `fb_valid` value guard
+/// (that would mask the guard under test). Returns the refusing guard/constraint name so callers pin it.
+fn refused_unchanged(conn: &Connection, sql: &str) -> String {
+    let before = dump(conn);
+    conn.execute_batch("SAVEPOINT attempt").unwrap();
+    let error = conn.execute_batch(sql).expect_err(&format!("accepted {sql}"));
+    let guard = fb_db::constraint_of(&error).unwrap_or_else(|| format!("other: {error}"));
+    assert!(
+        !guard.starts_with("fb_valid") && !error.to_string().contains("fb_valid"),
+        "0130 fb_valid masked the intended guard: {error} in {sql}"
+    );
+    assert_eq!(dump(conn), before, "partially changed after refusal: {sql}");
+    conn.execute_batch("ROLLBACK TO attempt; RELEASE attempt")
+        .unwrap();
+    guard
+}
+
+/// The guard of a refused service-level raw write (`FbError::Integrity`), never 0130's `fb_valid`.
+fn refusing_guard(error: &fb_core::FbError) -> String {
+    let guard = error.constraint().map(str::to_string).unwrap_or_else(|| format!("other: {error}"));
+    assert!(
+        !guard.starts_with("fb_valid") && !error.message().contains("fb_valid"),
+        "0130 fb_valid masked the intended guard: {error}"
+    );
+    guard
+}
+
+fn set(names: &[&str]) -> BTreeSet<String> {
+    names.iter().map(|n| n.to_string()).collect()
+}
+
+#[test]
+fn every_primary_and_alternate_key_resists_insert_and_update_replace() {
+    let f = fixture();
+    let conn = f.book.connection();
+    let mut attacks = 0;
+    let mut hit: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+    for recursive in ["ON", "OFF"] {
+        conn.execute_batch(&format!("PRAGMA recursive_triggers={recursive}"))
+            .unwrap();
+        for (table, keys) in TABLES {
+            let guards = hit.entry(*table).or_default();
+            let mut refuse = |sql: &str| {
+                guards.insert(refused_unchanged(conn, sql));
+            };
+            let columns = conn
+                .prepare(&format!("PRAGMA table_info({table})"))
+                .unwrap()
+                .query_map([], |r| r.get::<_, String>(1))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            let ids = conn
+                .prepare(&format!("SELECT id FROM {table} ORDER BY id LIMIT 2"))
+                .unwrap()
+                .query_map([], |r| r.get::<_, String>(0))
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            let (a, b) = (&ids[0], &ids[1]);
+            let definition: String = conn.query_row("SELECT sql FROM sqlite_master WHERE name=?1", [table], |r| r.get(0)).unwrap();
+            assert!(definition.contains("WITHOUT ROWID"), "{table}");
+            let view = format!("attack_{table}");
+            let all_set = columns.iter().map(|c| format!("{c}=NEW.{c}")).collect::<Vec<_>>().join(",");
+            conn.execute_batch(&format!("CREATE TEMP VIEW {view} AS SELECT * FROM {table}; CREATE TEMP TRIGGER {view}_update INSTEAD OF UPDATE ON {view} BEGIN UPDATE {table} SET {all_set} WHERE id=OLD.id; END;")).unwrap();
+            // Explicit rowid aliases cannot bypass UPDATE triggers on protected UUID tables.
+            for alias in ["rowid", "_rowid_", "oid"] {
+                refuse(&format!("UPDATE OR REPLACE {table} SET {alias}=2 WHERE id='{a}'"),
+                );
+                attacks += 1;
+                let values = columns.iter().map(|c| if c == "id" { format!("'{FRESH_HIDDEN}'") } else { c.clone() }).collect::<Vec<_>>().join(",");
+                refuse(&format!("INSERT OR REPLACE INTO {table}({alias},{}) SELECT 1,{values} FROM {table} WHERE id='{a}'", columns.join(",")));
+                attacks += 1;
+            }
+            refuse(&format!("INSERT OR REPLACE INTO {table} SELECT * FROM {table} WHERE id='{a}'"),
+            );
+            attacks += 1;
+            refuse(&format!("UPDATE OR REPLACE {table} SET id='{a}' WHERE id='{b}'"),
+            );
+            attacks += 1;
+            for target in [table.to_string(), view.clone()] {
+                for policy in ["UPDATE", "UPDATE OR REPLACE"] {
+                    refuse(&format!("{policy} {target} SET id='{a}' WHERE id='{b}'"));
+                    attacks += 1;
+                }
+            }
+            refuse(&format!("INSERT INTO {table} SELECT * FROM {table} WHERE id='{a}' ON CONFLICT(id) DO UPDATE SET id=excluded.id"));
+            attacks += 1;
+            for (index, key) in keys.iter().enumerate() {
+                let values = columns
+                    .iter()
+                    .map(|col| {
+                        if col == "id" {
+                            format!("'{FRESH}'")
+                        } else if *table == "salestax_taxgroupmember"
+                            && index == 0
+                            && col == "position"
+                        {
+                            "3".to_string()
+                        } else if *table == "salestax_taxgroupmember"
+                            && index == 1
+                            && col == "member_id"
+                        {
+                            format!("'{R3}'")
+                        } else if *table == "documents_documentidentity"
+                            && index == 2
+                            && col == "number"
+                        {
+                            "'INV-000003'".to_string()
+                        } else if *table == "documents_documentidentity"
+                            && index == 2
+                            && col == "ordinal"
+                        {
+                            "3".to_string()
+                        } else if *table == "documents_documentidentity"
+                            && index != 2
+                            && col == "request_key"
+                        {
+                            format!("'{FRESH_KEY}'")
+                        } else {
+                            col.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
+                refuse(&format!(
+                        "INSERT OR REPLACE INTO {table} SELECT {values} FROM {table} WHERE id='{a}'"
+                    ),
+                );
+                attacks += 1;
+                // Incoming row is distinct; UPDATE must inspect the displaced row's keys.
+                let set = key
+                    .iter()
+                    .map(|col| format!("{col}=(SELECT {col} FROM {table} WHERE id='{a}')"))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                refuse(&format!("UPDATE OR REPLACE {table} SET {set} WHERE id='{b}'"),
+                );
+                attacks += 1;
+                for target in [table.to_string(), view.clone()] {
+                    for policy in ["UPDATE", "UPDATE OR REPLACE"] {
+                        refuse(&format!("{policy} {target} SET {set} WHERE id='{b}'"));
+                        attacks += 1;
+                    }
+                }
+                let incoming = key.iter().map(|c| format!("{c}=excluded.{c}")).collect::<Vec<_>>().join(",");
+                refuse(&format!("INSERT INTO {table} SELECT {values} FROM {table} WHERE id='{a}' ON CONFLICT DO UPDATE SET {incoming}"));
+                attacks += 1;
+            }
+            conn.execute_batch(&format!("DROP VIEW {view}")).unwrap();
+        }
+    }
+    conn.execute_batch("PRAGMA recursive_triggers=ON").unwrap();
+    // WITHOUT ROWID tables have no rowid alias at all: those attacks fail at SQL compile time.
+    let rowid = |table: &str| -> BTreeSet<String> {
+        ["rowid", "_rowid_", "oid"]
+            .iter()
+            .flat_map(|alias| {
+                [
+                    format!("other: no such column: {alias}"),
+                    format!("other: table {table} has no column named {alias}"),
+                ]
+            })
+            .collect()
+    };
+    let identity: &[&str] = &["identity_immutable", "l2_key_collision", "primary_key_immutable"];
+    let guards: [(&str, &[&str]); 11] = [
+        ("directory_customer", &["l2_key_collision", "sales_reference_protected"]),
+        ("directory_vendor", &["l2_key_collision", "primary_key_immutable"]),
+        ("directory_item", &["l2_key_collision", "sales_reference_protected"]),
+        ("salestax_taxitem", &["l2_key_collision", "primary_key_immutable"]),
+        ("salestax_taxgroupmember", identity),
+        ("salestax_salestaxsettings", identity),
+        ("documents_documentsequence", identity),
+        ("documents_documentidentity", &["l2_key_collision", "primary_key_immutable"]),
+        ("documents_documentaccount", identity),
+        ("documents_accountingsetup", identity),
+        ("documents_designatedbank", identity),
+    ];
+    let expected: BTreeMap<&str, BTreeSet<String>> = guards
+        .iter()
+        .map(|(table, names)| (*table, set(names).union(&rowid(table)).cloned().collect()))
+        .collect();
+    assert_eq!(hit, expected, "refusing guards per table changed (none may be fb_valid)");
+    assert!(f.book.check().unwrap().is_empty());
+    println!("{attacks} replacement/rowid attacks refused with complete book unchanged");
+}
+
+#[test]
+fn delete_reinsert_cannot_rewrite_protected_rows_and_mutable_links_stay_editable() {
+    let f = fixture();
+    let conn = f.book.connection();
+    let mut hit: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+    for recursive in ["ON", "OFF"] {
+        conn.execute_batch(&format!("PRAGMA recursive_triggers={recursive}"))
+            .unwrap();
+        for (table, _) in TABLES {
+            let mutable = ["salestax_taxgroupmember", "documents_designatedbank"].contains(table);
+            let sql = format!(
+                "CREATE TEMP TABLE held AS SELECT * FROM {table}; DELETE FROM {table}; INSERT INTO {table} SELECT * FROM held; DROP TABLE held;"
+            );
+            if mutable {
+                let before = dump(conn);
+                conn.execute_batch(&sql).unwrap();
+                assert_eq!(dump(conn), before);
+            } else {
+                // TEMP DDL is also rolled back, while main-table content is checked immediately.
+                hit.entry(*table).or_default().insert(refused_unchanged(conn, &sql));
+            }
+        }
+        // Immediate protection extends to parents referenced only by L2a.
+        for table in ["ledger_account", "ledger_company"] {
+            hit.entry(table).or_default().insert(refused_unchanged(conn, &format!("DELETE FROM {table}")));
+        }
+    }
+    let expected: BTreeMap<&str, BTreeSet<String>> = [
+        ("directory_customer", "l2_no_delete"),
+        ("directory_vendor", "l2_no_delete"),
+        ("directory_item", "l2_no_delete"),
+        ("salestax_taxitem", "salestax_item_no_delete"),
+        ("salestax_salestaxsettings", "salestax_settings_no_delete"),
+        ("documents_documentsequence", "document_sequence_delete"),
+        ("documents_documentidentity", "document_identity_immutable"),
+        ("documents_documentaccount", "document_account_immutable"),
+        ("documents_accountingsetup", "l2_no_delete"),
+        ("ledger_account", "l2_account_reference"),
+        ("ledger_company", "l2_company_reference"),
+    ]
+    .into_iter()
+    .map(|(table, guard)| (table, set(&[guard])))
+    .collect();
+    assert_eq!(hit, expected, "refusing guards per table changed (none may be fb_valid)");
+    conn.execute_batch("PRAGMA recursive_triggers=ON").unwrap();
+    assert!(f.book.check().unwrap().is_empty());
+}
+
+#[test]
+fn missing_and_ineligible_parents_fail_before_deferred_commit() {
+    let mut f = fixture();
+    let c = f.company("Other");
+    let conn = f.book.connection();
+    let hit: Vec<String> = [
+        format!("INSERT INTO directory_customer(id,company_id,display_name) VALUES('{BAD}','{MISSING}','bad')"),
+        format!("INSERT INTO directory_vendor(id,company_id,display_name,default_expense_account_id) VALUES('{BAD}','{MISSING}','bad','{MISSING}')"),
+        format!("INSERT INTO directory_item(id,company_id,code,kind,sale_rate,income_account_id) VALUES('{BAD}','{c}','bad','SERVICE',1,'{MISSING}')"),
+        format!("INSERT INTO salestax_taxitem(id,company_id,kind,name,description,rate,agency_id) VALUES('{BAD}','{c}','RATE','bad','bad',1,'{V1}')"),
+        format!("INSERT INTO salestax_taxgroupmember VALUES('{BAD}','{MISSING}','{R1}',1)"),
+        format!("INSERT INTO salestax_salestaxsettings(id,company_id) VALUES('{BAD}','{MISSING}')"),
+        format!("INSERT INTO documents_documentsequence(id,company_id,kind) VALUES('{BAD}','{MISSING}','INV')"),
+        format!("INSERT INTO documents_documentidentity VALUES('{BAD}','{MISSING}','INV',1,'INV-000001','{FRESH_KEY}','USD','{NOW}')"),
+        format!("INSERT INTO documents_documentaccount VALUES('{BAD}','{MISSING}','role','{MISSING}','100','A','ASSET')"),
+        format!("INSERT INTO documents_accountingsetup(id,company_id) VALUES('{BAD}','{MISSING}')"),
+        format!("INSERT INTO documents_designatedbank VALUES('{BAD}','{MISSING}','{MISSING}')"),
+    ]
+    .iter()
+    .map(|sql| refused_unchanged(conn, sql))
+    .collect();
+    let expected = [
+        "l2_parent",
+        "l2_account_parent",
+        "l2_account_parent",
+        "l2_tax_agency",
+        "salestax_member_scope",
+        "l2_parent",
+        "l2_parent",
+        "l2_parent",
+        "document_account_snapshot",
+        "l2_parent",
+        "l2_bank_account",
+    ];
+    assert_eq!(hit, expected, "refusing guard per statement changed (none may be fb_valid)");
+}
+
+#[test]
+fn all_new_guard_definitions_are_hashed_not_just_named() {
+    let f = fixture();
+    let conn = f.book.connection();
+    let objects = conn
+        .prepare(
+            "SELECT name,tbl_name FROM sqlite_master WHERE type='trigger' AND name GLOB 'fb_l2_*'",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert!(objects.len() > 60);
+    for (name, table) in objects {
+        conn.execute_batch("SAVEPOINT tamper").unwrap();
+        conn.execute_batch(&format!("DROP TRIGGER {name}; CREATE TRIGGER {name} BEFORE INSERT ON {table} BEGIN SELECT 1; END;")).unwrap();
+        assert!(
+            f.book.check().unwrap().iter().any(|p| p.contains(&name)),
+            "{name}"
+        );
+        conn.execute_batch("ROLLBACK TO tamper; RELEASE tamper")
+            .unwrap();
+    }
+    for (table, _) in TABLES {
+        let ddl: String = conn
+            .query_row(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?1",
+                [table],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(ddl.contains("WITHOUT ROWID"), "{table}");
+    }
+    assert!(f.book.check().unwrap().is_empty());
+}
+
+#[test]
+fn parent_eligibility_and_reactivation_are_enforced_in_raw_sql() {
+    let f=fixture();let conn=f.book.connection();
+    let (company,asset):(String,String)=conn.query_row("SELECT company_id,id FROM ledger_account WHERE code='100'",[],|r|Ok((r.get(0)?,r.get(1)?))).unwrap();
+    let mut hit: Vec<String> = Vec::new();
+    for recursive in ["ON","OFF"] {
+        conn.execute_batch(&format!("PRAGMA recursive_triggers={recursive}")).unwrap();
+        for sql in [
+            format!("INSERT INTO directory_item(id,company_id,code,kind,sale_rate,income_account_id) VALUES('{BAD}','{company}','bad','SERVICE',1,'{asset}')"),
+            format!("UPDATE directory_item SET expense_account_id='{asset}' WHERE id='{I1}'"),
+            format!("UPDATE documents_accountingsetup SET payables_id='{asset}' WHERE id='{U1}'"),
+            format!("UPDATE salestax_taxitem SET active=0 WHERE id='{R1}'"),
+        ] {hit.push(refused_unchanged(conn,&sql));}
+        // Retained inactive vendor links are allowed, new ones are refused.
+        conn.execute_batch(&format!("SAVEPOINT eligibility; UPDATE directory_vendor SET active=0 WHERE id='{V2}'; UPDATE salestax_taxitem SET active=0 WHERE id='{R3}'")).unwrap();
+        for sql in [
+            format!("INSERT INTO salestax_taxitem(id,company_id,kind,name,description,rate,agency_id) VALUES('{BAD}','{company}','RATE','bad','bad',1,'{V2}')"),
+            format!("UPDATE salestax_taxitem SET agency_id='{V2}' WHERE id='{R1}'"),
+            format!("UPDATE salestax_salestaxsettings SET default_item_id='{R3}' WHERE id='{T1}'"),
+            format!("INSERT INTO salestax_taxgroupmember VALUES('{BAD}','{G1}','{R3}',3)"),
+        ] {hit.push(refused_unchanged(conn,&sql));}
+        conn.execute_batch(&format!("UPDATE salestax_taxitem SET description='retained agency' WHERE id='{R2}'")).unwrap();
+        conn.execute_batch(&format!("UPDATE salestax_taxitem SET active=0 WHERE id='{G2}'; INSERT INTO salestax_taxgroupmember VALUES('{M3}','{G2}','{R3}',1)")).unwrap();
+        hit.push(refused_unchanged(conn,&format!("UPDATE salestax_taxitem SET active=1 WHERE id='{G2}'")));
+        conn.execute_batch(&format!("UPDATE salestax_salestaxsettings SET default_item_id='{G1}' WHERE id='{T1}'")).unwrap();
+        hit.push(refused_unchanged(conn,&format!("UPDATE salestax_taxitem SET active=0 WHERE id='{G1}'")));
+        conn.execute_batch("ROLLBACK TO eligibility; RELEASE eligibility").unwrap();
+    }
+    // Per statement, in order, for recursive_triggers ON then OFF.
+    let once = [
+        "l2_account_parent",
+        "l2_account_parent",
+        "l2_setup_account",
+        "l2_tax_member",
+        "l2_tax_agency",
+        "l2_tax_agency",
+        "l2_tax_default",
+        "l2_tax_member",
+        "l2_tax_member",
+        "l2_tax_default",
+    ];
+    let expected: Vec<&str> = once.iter().chain(once.iter()).copied().collect();
+    assert_eq!(hit, expected, "refusing guard per statement changed (none may be fb_valid)");
+    conn.execute_batch("PRAGMA recursive_triggers=ON").unwrap();assert!(f.book.check().unwrap().is_empty());
+}
+
+#[test]
+fn every_l2a_write_entry_rolls_back_after_a_late_audit_failure() {
+    use fb_core::{
+        AccountId, CompanyId, directory as d, directory::Model, documents as doc, salestax as tax,
+    };
+    use serde_json::json;
+    for action in [
+        "customer",
+        "vendor",
+        "item",
+        "directory_edit",
+        "directory_active",
+        "rate",
+        "rate_edit",
+        "group",
+        "group_edit",
+        "tax_active",
+        "settings",
+        "bulk",
+        "setup",
+        "identify",
+        "snapshot",
+        "post_source",
+        "reverse_source",
+    ] {
+        let mut f = fixture();
+        let c = CompanyId::parse(
+            &f.book
+                .connection()
+                .query_row(
+                    &format!("SELECT company_id FROM directory_customer WHERE id='{C1}'"),
+                    [],
+                    |r| r.get::<_, String>(0),
+                )
+                .unwrap(),
+        )
+        .unwrap();
+        let a = AccountId::parse(
+            &f.book
+                .connection()
+                .query_row(
+                    "SELECT id FROM ledger_account WHERE company_id=?1 AND code='100'",
+                    [c.to_db()],
+                    |r| r.get::<_, String>(0),
+                )
+                .unwrap(),
+        )
+        .unwrap();
+        let b = AccountId::parse(
+            &f.book
+                .connection()
+                .query_row(
+                    "SELECT id FROM ledger_account WHERE company_id=?1 AND code='101'",
+                    [c.to_db()],
+                    |r| r.get::<_, String>(0),
+                )
+                .unwrap(),
+        )
+        .unwrap();
+        let lines = || {
+            vec![
+                fb_core::services::line(a).debit("1").build(),
+                fb_core::services::line(b).credit("1").build(),
+            ]
+        };
+        if action == "reverse_source" {
+            f.book
+                .write(|tx| doc::post_source(tx, f.user, c, S1, "2026-10-30", "Source", lines()))
+                .unwrap();
+        }
+        if action == "snapshot" {
+            f.book.connection().execute_batch(&format!("INSERT INTO documents_documentidentity VALUES('{S3}','{c}','INV',3,'INV-000003','{KEY3}','USD','{NOW}')")).unwrap();
+        }
+        if action == "bulk" {
+            f.book.connection().execute_batch("UPDATE salestax_salestaxsettings SET charge_tax=1; UPDATE directory_customer SET tax_status='EXEMPT'; UPDATE directory_item SET kind='NONSTOCK',taxable=0;").unwrap();
+        }
+        let preview = tax::bulk_preview(f.book.connection(), c).unwrap();
+        f.book.connection().execute_batch("CREATE TRIGGER fail_late BEFORE INSERT ON ledger_auditevent BEGIN SELECT RAISE(ABORT,'injected late audit failure'); END").unwrap();
+        let before = dump(f.book.connection());
+        let result:fb_core::FbResult<()>=match action {
+            "customer"|"vendor"|"item" => {
+                let model=match action {"customer"=>Model::Customer,"vendor"=>Model::Vendor,_=>Model::Item};
+                let v=if action=="item" {json!({"code":"New","kind":"SERVICE","sale_rate":"1"})} else {json!({"display_name":"New"})};
+                d::save_record(&mut f.book,f.user,c,model,&v,None).map(|_|())
+            }
+            "directory_edit"=>d::save_record(&mut f.book,f.user,c,Model::Customer,&json!({"notes":"edited"}),Some(C1)).map(|_|()),
+            "directory_active"=>d::set_active(&mut f.book,f.user,c,Model::Customer,C1,false).map(|_|()),
+            "rate"=>tax::save_rate(&mut f.book,f.user,c,&json!({"name":"New","description":"New","rate":"3","new_agency_name":"New agency"})).map(|_|()),
+            "rate_edit"=>tax::save_rate(&mut f.book,f.user,c,&json!({"item_id":R1,"expected_revision":1,"name":"R1","description":"Changed","rate":"3","agency_id":V1})).map(|_|()),
+            "group"=>tax::save_group(&mut f.book,f.user,c,&json!({"name":"New","description":"New","member_ids":[R1,R2]})).map(|_|()),
+            "group_edit"=>tax::save_group(&mut f.book,f.user,c,&json!({"item_id":G1,"expected_revision":1,"name":"G1","description":"Changed","member_ids":[R2,R3]})).map(|_|()),
+            "tax_active"=>tax::set_item_active(&mut f.book,f.user,c,G2,false,Some(1)).map(|_|()),
+            "settings"=>tax::save_settings(&mut f.book,f.user,c,&json!({"charge_tax":true,"default_item_id":R1,"owed_basis":"CASH","filing_frequency":"MONTHLY","expected_revision":0})).map(|_|()),
+            "bulk"=>tax::finish_bulk_step(&mut f.book,f.user,c,true,true,preview["digest"].as_str().unwrap()).map(|_|()),
+            "setup"=>doc::save_setup(&mut f.book,f.user,c,&json!({"receivables":a.to_db(),"banks":[b.to_db()]}),Some(0)).map(|_|()),
+            "identify"=>f.book.write(|tx|doc::create_identity(tx,f.user,c,"INV","00000000-0000-0000-0000-000000000001")).map(|_|()),
+            "snapshot"=>f.book.write(|tx|doc::snapshot_source_accounts(tx,f.user,c,S3,&json!({"asset":a.to_db()}))).map(|_|()),
+            "post_source"=>f.book.write(|tx|doc::post_source(tx,f.user,c,S1,"2026-10-30","Source",lines())).map(|_|()),
+            "reverse_source"=>f.book.write(|tx|doc::reverse_source(tx,f.user,c,S1,"2026-10-31","Correction")).map(|_|()),
+            _=>unreachable!()
+        };
+        let error = result.unwrap_err();
+        assert!(
+            error.message().contains("injected late audit failure"),
+            "{action}: {error}"
+        );
+        assert_eq!(
+            dump(f.book.connection()),
+            before,
+            "{action} leaked partial work"
+        );
+    }
+}
+
+
+#[test]
+fn review_rekey_and_key_reuse_all_eleven_tables() {
+    let f = fixture();
+    let conn = f.book.connection();
+    let mut count = 0;
+    let mut hit: BTreeMap<&str, BTreeSet<String>> = BTreeMap::new();
+    for recursive in ["ON", "OFF"] {
+        conn.execute_batch(&format!("PRAGMA recursive_triggers={recursive}")).unwrap();
+        for (table, _) in TABLES {
+            let id: String = conn.query_row(&format!("SELECT id FROM {table} ORDER BY id LIMIT 1"), [], |r| r.get(0)).unwrap();
+            for policy in ["UPDATE", "UPDATE OR REPLACE"] {
+                hit.entry(*table).or_default().insert(refused_unchanged(conn, &format!("CREATE TEMP TABLE review_held AS SELECT * FROM {table} WHERE id='{id}'; {policy} {table} SET id='{REVIEW_NEW_ID}' WHERE id='{id}'; INSERT INTO {table} SELECT * FROM review_held; DROP TABLE review_held;")));
+                count += 1;
+            }
+        }
+        for table in ["ledger_account", "ledger_company"] {
+            let id: String = conn.query_row(&format!("SELECT id FROM {table} ORDER BY id LIMIT 1"), [], |r| r.get(0)).unwrap();
+            hit.entry(table).or_default().insert(refused_unchanged(conn, &format!("UPDATE {table} SET id='{REVIEW_NEW_ID}' WHERE id='{id}'")));
+            count += 1;
+        }
+    }
+    let expected: BTreeMap<&str, BTreeSet<String>> = [
+        ("directory_customer", "sales_reference_protected"),
+        ("directory_vendor", "primary_key_immutable"),
+        ("directory_item", "sales_reference_protected"),
+        ("salestax_taxitem", "primary_key_immutable"),
+        ("salestax_taxgroupmember", "primary_key_immutable"),
+        ("salestax_salestaxsettings", "primary_key_immutable"),
+        ("documents_documentsequence", "primary_key_immutable"),
+        ("documents_documentidentity", "primary_key_immutable"),
+        ("documents_documentaccount", "primary_key_immutable"),
+        ("documents_accountingsetup", "primary_key_immutable"),
+        ("documents_designatedbank", "primary_key_immutable"),
+        ("ledger_account", "sales_reference_protected"),
+        ("ledger_company", "primary_key_immutable"),
+    ]
+    .into_iter()
+    .map(|(table, guard)| (table, set(&[guard])))
+    .collect();
+    assert_eq!(hit, expected, "refusing guards per table changed (none may be fb_valid)");
+    conn.execute_batch("PRAGMA recursive_triggers=ON").unwrap();
+    assert!(f.book.check().unwrap().is_empty());
+    println!("review: {count} fresh-key changes rejected with complete contents unchanged");
+}
+
+#[test]
+fn review_caught_directory_error_must_rollback_primitive() {
+    use fb_core::{directory as d, directory::Model};
+    use serde_json::json;
+    let mut f = Fx::new("review-nested");
+    let c = f.company("Review");
+    f.book.connection().execute_batch("CREATE TRIGGER review_fail_audit BEFORE INSERT ON ledger_auditevent WHEN NEW.action='customer.created' BEGIN SELECT RAISE(ABORT,'review injected audit failure'); END;").unwrap();
+    f.book.write(|tx| -> fb_core::FbResult<()> {
+        let failure = d::save_record_tx(tx, f.user, c, Model::Customer, &json!({"display_name":"Must roll back"}), None);
+        assert!(failure.unwrap_err().message().contains("review injected audit failure"));
+        Ok(())
+    }).unwrap();
+    f.book.connection().execute_batch("DROP TRIGGER review_fail_audit").unwrap();
+    assert!(f.book.check().unwrap().is_empty());
+    assert_eq!(f.count("SELECT count(*) FROM directory_customer"), 0, "caught primitive error committed unaudited customer");
+}
+
+#[test]
+fn review_malformed_setup_must_not_clear_saved_roles_or_banks() {
+    use fb_core::documents;
+    use serde_json::json;
+    let mut accepted = Vec::new();
+    for malformed in [json!({"receivables":false,"banks":[]}), json!({"receivables":42,"banks":[]}), json!({"banks":"not-an-array"})] {
+        let mut f = Fx::new("review-setup");
+        let c = f.company("Review");
+        let ar = f.account(c, "110", "AR", "ASSET");
+        let bank = f.account(c, "100", "Cash", "ASSET");
+        documents::save_setup(&mut f.book, f.user, c, &json!({"receivables":ar.to_db(),"banks":[bank.to_db()]}), Some(0)).unwrap();
+        let before = documents::setup_snapshot(f.book.connection(), c).unwrap();
+        let result = documents::save_setup(&mut f.book, f.user, c, &malformed, Some(1));
+        let after = documents::setup_snapshot(f.book.connection(), c).unwrap();
+        if result.is_ok() || after != before {
+            accepted.push(format!("input={malformed}, before={before}, after={after}"));
+        }
+    }
+    assert!(accepted.is_empty(), "malformed setup mutated saved state: {accepted:?}");
+}
+
+#[test]
+fn review_malformed_edit_id_must_not_create_tax_rate() {
+    use fb_core::salestax;
+    use serde_json::json;
+    let mut f = Fx::new("review-rate-id");
+    let c = f.company("Review");
+    let result = salestax::save_rate(&mut f.book, f.user, c, &json!({"item_id":false,"name":"Unexpected new rate","description":"Tax","rate":"3","new_agency_name":"Agency"}));
+    assert!(result.is_err(), "malformed edit id created new tax rate: {result:?}");
+}
+
+#[test]
+fn review_revision_max_must_return_error_without_panic() {
+    use fb_core::documents;
+    use serde_json::json;
+    let mut f = Fx::new("review-revision");
+    let c = f.company("Review");
+    documents::save_setup(&mut f.book, f.user, c, &json!({}), Some(0)).unwrap();
+    f.book.connection().execute("UPDATE documents_accountingsetup SET revision=?1", [i64::MAX]).unwrap();
+    assert!(f.book.check().unwrap().is_empty());
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| documents::save_setup(&mut f.book, f.user, c, &json!({}), Some(i64::MAX))));
+    assert!(outcome.is_ok(), "schema-valid max revision panics during increment");
+    assert!(outcome.unwrap().is_err());
+}
+
+#[test]
+fn review_public_decimal_must_not_panic_on_scale() {
+    let outcome = std::panic::catch_unwind(|| fb_core::calculations::decimal(&serde_json::json!("0"), 29, rust_decimal::Decimal::MAX, false));
+    assert!(outcome.is_ok(), "public decimal accepts arbitrary scale then panics");
+}
+
+#[test]
+fn review_vendor_default_requires_eligible_detail_type_in_raw_sql() {
+    use fb_core::{directory, directory::Model, services, services::AccountInput};
+    use serde_json::json;
+    let mut f = Fx::new("review-vendor-detail");
+    let c = f.company("Review");
+    let ar = services::save_account(&mut f.book, f.user, c, AccountInput::new("110", "Unconfigured AR").detail("RECEIVABLE")).unwrap();
+    assert!(directory::save_record(&mut f.book, f.user, c, Model::Vendor, &json!({"display_name":"Vendor","default_expense_account":ar.id.to_db()}), None).is_err());
+    let result = f.book.write(|tx| -> fb_core::FbResult<()> {
+        tx.execute("INSERT INTO directory_vendor(id,company_id,display_name,default_expense_account_id) VALUES(?3,?1,'Vendor',?2)", [&c.to_db(), &ar.id.to_db(), REVIEW_VENDOR])?;
+        Ok(())
+    });
+    println!("raw vendor default result={result:?}, book check={:?}", f.book.check());
+    let error = result.expect_err("raw SQL accepted receivables account that the service rejects as a new vendor default");
+    assert_eq!(refusing_guard(&error), "l2_account_parent");
+}
+
+#[test]
+fn review_tax_public_value_helpers_do_not_panic() {
+    use fb_core::salestax;
+    use serde_json::json;
+    let mut f = Fx::new("review-tax-values");
+    let c = f.company("Review");
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| salestax::group_rate(f.book.connection(), c, &json!({"member_ids":[false]}))));
+    assert!(result.is_ok(), "public group_rate unwraps unvalidated JSON member id");
+}
+
+#[test]
+fn review_unused_default_account_kind_change_matches_python() {
+    use fb_core::{directory, directory::Model, services, services::AccountInput};
+    use serde_json::json;
+    let mut f = Fx::new("review-account-kind");
+    let c = f.company("Review");
+    let expense = f.account(c, "600", "Unused expense", "EXPENSE");
+    directory::save_record(&mut f.book, f.user, c, Model::Vendor, &json!({"display_name":"Vendor", "default_expense_account":expense.to_db()}), None).unwrap();
+    let input = AccountInput::new("600", "Reclassified").kind("INCOME").edit(expense);
+    let result = services::save_account(&mut f.book, f.user, c, input);
+    assert!(result.is_ok(), "Python permits this unused default-only account type change, Rust returns {result:?}");
+}
+
+#[test]
+fn review_1200_independent_python_tax_vectors() {
+    use serde_json::{Value as Json, json};
+    let vectors: Vec<Json> = serde_json::from_str(include_str!("data/review-tax-vectors.json")).unwrap();
+    for (i, v) in vectors.iter().enumerate() {
+        let actual = fb_core::calculations::totals(v["lines"].as_array().unwrap(), "GROUP", None, &json!(""), Some(&v["snapshot"]), v["for_posting"].as_bool().unwrap());
+        if let Some(errors) = v["expected"].get("error") {
+            assert_eq!(actual.unwrap_err().message(), errors.as_array().unwrap().iter().map(|e|e.as_str().unwrap()).collect::<Vec<_>>().join("; "), "vector {i}");
+        } else {
+            assert_eq!(actual.unwrap(), v["expected"], "vector {i}");
+        }
+    }
+    assert_eq!(vectors.len(), 1200);
+    println!("review: 1200 independent tax vectors matched, including 112.50 at 3% + 4% = 7.88");
+}
+
+#[test]
+fn malformed_setup_matrix_and_omitted_defaults_are_distinct() {
+    use fb_core::{documents as d, services, services::AccountInput};
+    use serde_json::json;
+    let mut f = Fx::new("setup-shapes");
+    let c = f.company("Shapes");
+    let ar = f.account(c, "110", "AR", "ASSET");
+    let bank = f.account(c, "100", "Bank", "ASSET");
+    let deposits = services::save_account(&mut f.book, f.user, c, AccountInput::new("200", "Deposits").detail("OTHER_CURRENT_LIABILITY")).unwrap();
+    d::save_setup(&mut f.book, f.user, c, &json!({"receivables":ar.to_db(),"customer_deposits":deposits.id.to_db(),"banks":[bank.to_db()]}),Some(0)).unwrap();
+    for field in d::ROLES.iter().copied().chain(["banks"]) {
+        for value in [json!(false),json!(1),json!({}),json!([false]),json!("invalid")] {
+            let input = json!({field:value});
+            let before = dump(f.book.connection());
+            let error = d::save_setup(&mut f.book,f.user,c,&input,Some(1)).unwrap_err();
+            assert_eq!(error.kind(),"ValidationError","{input}");
+            assert_eq!(dump(f.book.connection()),before,"{input}");
+        }
+    }
+    let before = dump(f.book.connection());
+    assert!(d::save_setup(&mut f.book,f.user,c,&json!({"banks":null}),Some(1)).is_err());
+    assert_eq!(dump(f.book.connection()),before);
+    let after = d::save_setup(&mut f.book,f.user,c,&json!({}),Some(1)).unwrap();
+    assert_eq!(after["receivables"],json!(null));
+    assert_eq!(after["banks"],json!([]));
+    assert_eq!(after["customer_deposits"],json!(deposits.id.to_db()));
+    let after = d::save_setup(&mut f.book,f.user,c,&json!({"customer_deposits":null}),Some(2)).unwrap();
+    assert_eq!(after["customer_deposits"],json!(null));
+}
+
+#[test]
+fn tax_edit_id_shapes_never_turn_an_edit_into_creation() {
+    use fb_core::{CompanyId,salestax as t};
+    use serde_json::json;
+    let mut f = fixture();
+    let c = CompanyId::parse(&f.book.connection().query_row(&format!("SELECT company_id FROM directory_vendor WHERE id='{V1}'"),[],|r|r.get::<_,String>(0)).unwrap()).unwrap();
+    for group in [false,true] {
+        for value in [json!(false),json!(0),json!({}),json!([]),json!(""),json!("missing")] {
+            let input = json!({"item_id":value,"name":"New","description":"New","rate":"1","new_agency_name":"Must roll back","member_ids":[R1,R2]});
+            let before = dump(f.book.connection());
+            let error = if group {t::save_group(&mut f.book,f.user,c,&input)} else {t::save_rate(&mut f.book,f.user,c,&input)}.unwrap_err();
+            assert_eq!(error.kind(),"ValidationError");
+            assert_eq!(dump(f.book.connection()),before);
+        }
+        for explicit_null in [false,true] {
+            let mut input = json!({"name":format!("New {group} {explicit_null}"),"description":"New","rate":"1","new_agency_name":"Agency","member_ids":[R1,R2]});
+            if explicit_null {input["item_id"]=json!(null);}
+            assert!(if group {t::save_group(&mut f.book,f.user,c,&input)} else {t::save_rate(&mut f.book,f.user,c,&input)}.is_ok());
+        }
+    }
+}
+
+#[test]
+fn all_composable_l2a_primitives_rollback_caught_audit_errors() {
+    use fb_core::{directory as d,directory::Model,documents as doc,services};
+    use serde_json::json;
+    for action in ["customer","vendor","item","customer_edit","vendor_edit","item_edit","identify","snapshot","post","reverse"] {
+        let mut f=Fx::new("caught-audit");
+        let c=f.company("Atomic");
+        let a=f.account(c,"100","Cash","ASSET");
+        let b=f.account(c,"300","Capital","EQUITY");
+        let model=match action {"vendor"|"vendor_edit"=>Model::Vendor,"item"|"item_edit"=>Model::Item,_=>Model::Customer};
+        let fields=if model==Model::Item {json!({"code":"Item","kind":"SERVICE","sale_rate":"1"})} else {json!({"display_name":"Name"})};
+        let old=d::save_record(&mut f.book,f.user,c,model,&fields,None).unwrap();
+        let source=f.book.write(|tx|doc::create_identity(tx,f.user,c,"INV","00000000-0000-0000-0000-000000000001")).unwrap();
+        let id=source["id"].as_str().unwrap();
+        let lines=||vec![services::line(a).debit("1").build(),services::line(b).credit("1").build()];
+        if action=="reverse" {f.book.write(|tx|doc::post_source(tx,f.user,c,id,"2026-10-30","Source",lines())).unwrap();}
+        f.book.connection().execute_batch("CREATE TRIGGER injected BEFORE INSERT ON ledger_auditevent BEGIN SELECT RAISE(ABORT,'injected audit'); END").unwrap();
+        let before=dump(f.book.connection());
+        f.book.write(|tx| -> fb_core::FbResult<()> {
+            let result=match action {
+                "identify"=>doc::create_identity(tx,f.user,c,"INV","00000000-0000-0000-0000-000000000002").map(|_|()),
+                "snapshot"=>doc::snapshot_source_accounts(tx,f.user,c,id,&json!({"cash":a.to_db()})).map(|_|()),
+                "post"=>doc::post_source(tx,f.user,c,id,"2026-10-30","Source",lines()).map(|_|()),
+                "reverse"=>doc::reverse_source(tx,f.user,c,id,"2026-10-31","Correction").map(|_|()),
+                _=>{
+                    let edit=action.ends_with("_edit");
+                    let fields=if edit {if model==Model::Item {json!({"description":"Changed"})} else {json!({"notes":"Changed"})}} else if model==Model::Item {json!({"code":"New","kind":"SERVICE","sale_rate":"1"})} else {json!({"display_name":"New"})};
+                    d::save_record_tx(tx,f.user,c,model,&fields,if edit {old["id"].as_str()}else{None}).map(|_|())
+                }
+            };
+            assert!(result.unwrap_err().message().contains("injected audit"),"{action}");
+            assert_eq!(tx.query_row("SELECT count(*) FROM ledger_company",[],|r|r.get::<_,i64>(0))?,1);
+            Ok(())
+        }).unwrap();
+        assert_eq!(dump(f.book.connection()),before,"{action}");
+    }
+}
+
+#[test]
+fn every_l2a_revision_mutation_at_max_is_a_controlled_unchanged_error() {
+    use fb_core::{CompanyId,documents as d,salestax as t};
+    use serde_json::json;
+    for action in ["setup","rate","group","active","settings","bulk"] {
+        let mut f=fixture();
+        let c=CompanyId::parse(&f.book.connection().query_row(&format!("SELECT company_id FROM directory_vendor WHERE id='{V1}'"),[],|r|r.get::<_,String>(0)).unwrap()).unwrap();
+        f.book.connection().execute_batch("UPDATE salestax_salestaxsettings SET charge_tax=1; UPDATE directory_customer SET tax_status='EXEMPT'; UPDATE directory_item SET kind='NONSTOCK',taxable=0").unwrap();
+        let table=match action {"setup"=>"documents_accountingsetup","rate"|"group"|"active"=>"salestax_taxitem",_=>"salestax_salestaxsettings"};
+        f.book.connection().execute(&format!("UPDATE {table} SET revision=?1"),[i64::MAX]).unwrap();
+        let preview=t::bulk_preview(f.book.connection(),c).unwrap();
+        let before=dump(f.book.connection());
+        let result=match action {
+            "setup"=>d::save_setup(&mut f.book,f.user,c,&json!({}),Some(i64::MAX)).map(|_|()),
+            "rate"=>t::save_rate(&mut f.book,f.user,c,&json!({"item_id":R1,"name":"R1","description":"Changed","rate":"3","new_agency_name":"Rollback agency","expected_revision":i64::MAX})).map(|_|()),
+            "group"=>t::save_group(&mut f.book,f.user,c,&json!({"item_id":G1,"name":"G1","description":"Changed","member_ids":[R2,R3],"expected_revision":i64::MAX})).map(|_|()),
+            "active"=>t::set_item_active(&mut f.book,f.user,c,G2,false,Some(i64::MAX)).map(|_|()),
+            "settings"=>t::save_settings(&mut f.book,f.user,c,&json!({"charge_tax":true,"default_item_id":null,"owed_basis":"CASH","filing_frequency":"MONTHLY","expected_revision":i64::MAX})).map(|_|()),
+            _=>t::finish_bulk_step(&mut f.book,f.user,c,true,true,preview["digest"].as_str().unwrap()).map(|_|()),
+        };
+        let error=result.unwrap_err();assert_eq!(error.kind(),"ValidationError","{action}");assert!(error.message().contains("revision is exhausted"));
+        assert_eq!(dump(f.book.connection()),before,"{action}");
+        assert!(f.book.check().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn sql_vendor_eligibility_matches_service_for_all_detail_types() {
+    use fb_core::{directory as d,directory::Model,model::DetailType,services,services::AccountInput};
+    use serde_json::json;
+    let mut hit = BTreeSet::new();
+    for detail in DetailType::ALL {
+        let mut f=Fx::new("detail-matrix");let c=f.company("Eligibility");
+        let a=services::save_account(&mut f.book,f.user,c,AccountInput::new("100","Account").detail(detail.as_str())).unwrap();
+        let expected=d::purchase_line_allowed(&a);
+        let service=d::save_record(&mut f.book,f.user,c,Model::Vendor,&json!({"display_name":"Service","default_expense_account":a.id.to_db()}),None);
+        assert_eq!(service.is_ok(),expected,"{detail:?}");
+        for edit in [false,true] {
+            if edit {f.book.write(|tx| -> fb_core::FbResult<()> {tx.execute("INSERT INTO directory_vendor(id,company_id,display_name) VALUES(?2,?1,'Edit')",[c.to_db(),EDIT_VENDOR.to_string()])?;Ok(())}).unwrap();}
+            let before=dump(f.book.connection());
+            let result=f.book.write(|tx| -> fb_core::FbResult<()> {
+                if edit {tx.execute("UPDATE directory_vendor SET default_expense_account_id=?2 WHERE id=?3 AND company_id=?1",[c.to_db(),a.id.to_db(),EDIT_VENDOR.to_string()])?;} else {tx.execute("INSERT INTO directory_vendor(id,company_id,display_name,default_expense_account_id) VALUES(?3,?1,'Raw',?2)",[c.to_db(),a.id.to_db(),RAW_VENDOR.to_string()])?;}
+                Ok(())
+            });
+            assert_eq!(result.is_ok(),expected,"{detail:?}, edit={edit}");
+            if let Err(error) = &result {hit.insert(refusing_guard(error));}
+            if !expected {assert_eq!(dump(f.book.connection()),before);}
+        }
+        if expected {
+            services::save_account(&mut f.book,f.user,c,AccountInput::new("100","Stale").kind("INCOME").edit(a.id)).unwrap();
+            // SQL permits retained stale hints; Python's save form still asks
+            // the user to replace/clear them, which the service must preserve.
+            let vendor=service.unwrap();
+            let retained=d::save_record(&mut f.book,f.user,c,Model::Vendor,&json!({"notes":"Retain stale default"}),vendor["id"].as_str());
+            assert!(retained.is_err());
+            f.book.write(|tx| -> fb_core::FbResult<()> {
+                tx.execute("UPDATE directory_vendor SET notes='Retained hint' WHERE id=?1",[vendor["id"].as_str()])?;
+                Ok(())
+            }).unwrap();
+            assert!(f.book.check().unwrap().is_empty());
+        }
+    }
+    assert_eq!(hit, set(&["l2_account_parent"]), "every raw refusal must come from the vendor eligibility guard, never fb_valid");
+}
+
+use proptest::prelude::*;
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(48))]
+    #[test]
+    fn public_value_helpers_never_panic(text in ".{0,64}", scale in any::<u32>(), positive in any::<bool>(), selector in 0u8..6) {
+        use fb_core::{calculations as c,salestax as t};
+        use serde_json::json;
+        let mut f=Fx::new("helper-property");let co=f.company("Values");
+        let value=match selector {0=>json!(null),1=>json!(false),2=>json!(42),3=>json!([text]),4=>json!({"kind":"GROUP","member_ids":[false]}),_=>json!(text)};
+        let result=std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _=c::decimal(&value,scale,rust_decimal::Decimal::MAX,positive);
+            let _=c::decimal(&json!("0"),scale,rust_decimal::Decimal::MAX,positive);
+            let _=t::group_rate(f.book.connection(),co,&value);
+            let _=t::item_label(f.book.connection(),co,&value);
+            let _=t::tax_snapshot(f.book.connection(),co,&value);
+            let _=t::same_snapshot(f.book.connection(),co,&value,&value);
+            let _=t::item_snapshot(&value);
+        }));
+        prop_assert!(result.is_ok());
+    }
+}

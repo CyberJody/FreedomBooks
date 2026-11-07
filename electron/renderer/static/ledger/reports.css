@@ -1,0 +1,119 @@
+/* N19 financial reports: Profit and loss, Balance sheet, General ledger.
+   Screen: a white report sheet inside the hybrid shell (tan / off-white / plum palette, compact rows).
+   Print (with sales/print.css from N09): black on white Letter pages, repeated table headers, rows never split. */
+
+.report-controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end }
+.report-controls label { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; font-weight: 600; color: #4b3f50 }
+.report-controls .report-actions { margin-left: auto; display: flex; gap: 8px; align-items: center }
+.report-controls .report-actions .button { padding: 5px 12px; font-size: 13px }
+
+.report-sheet { background: #fff; border: 1px solid #d8d0c4; border-radius: 4px; padding: 20px 22px 14px; margin: 0 0 18px; overflow-wrap: anywhere }
+body.shell main .report-head, .report-head { display: block; text-align: center; margin: 0 auto 16px; padding: 0 }
+.report-head p, body.shell main .report-head h2 { margin: 0 }
+.report-company { font-weight: 700; font-size: 15px; color: #25222a }
+body.shell main .report-head h2.report-title, .report-title { font-size: 20px; font-weight: 700; margin: 2px 0 3px; color: #35253e; border: 0; padding: 0 }
+.report-dates { font-size: 14px; color: #3d2c46; font-weight: 600 }
+.report-basis { font-size: 12.5px; color: #5b5160; margin-top: 2px }
+.report-foot { font-size: 12px; color: #675d6b; margin: 12px auto 0; max-width: 720px }
+.report-check { margin: 12px auto 0; max-width: 720px }
+.report-warning { margin: 0 auto 10px; max-width: 720px }
+.report-wide .report-foot, .report-wide .report-warning { max-width: none }
+
+/* Profit and loss / Balance sheet: a narrow centred statement, classic single rule above subtotals and a
+   double rule under the final total. The shell's tan list-table chrome is switched off here. */
+body.shell main table.fin-report, table.fin-report { width: 100%; max-width: 720px; margin: 0 auto; border-collapse: collapse; border: 0; background: #fff; font-variant-numeric: tabular-nums }
+body.shell main table.fin-report th, body.shell main table.fin-report td, table.fin-report th, table.fin-report td { background: #fff; border: 0; padding: 3px 8px; font-size: 13.5px; color: #25222a; text-align: left }
+body.shell main table.fin-report tbody tr:nth-child(even) td, body.shell main table.fin-report tbody tr:hover td { background: #fff }
+body.shell main table.fin-report tbody tr.fin-account:hover td { background: #eee8f1 }
+body.shell main table.fin-report thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #675d6b; font-weight: 650; border-bottom: 1px solid #8f8494; padding-bottom: 4px }
+body.shell main table.fin-report .amount, table.fin-report .amount { text-align: right; white-space: nowrap; width: 9.5em }
+body.shell main table.fin-report .fin-heading th { font-weight: 700; color: #35253e; padding-top: 12px; font-size: 13.5px }
+body.shell main table.fin-report .fin-account td:first-child { padding-left: 26px }
+table.fin-report .fin-computed small { color: #675d6b; font-size: 11.5px; margin-left: 6px }
+body.shell main table.fin-report .fin-total th { font-weight: 650 }
+body.shell main table.fin-report .fin-total td.amount { border-top: 1px solid #6e6274; font-weight: 600 }
+body.shell main table.fin-report .fin-grand th { font-weight: 750; padding-top: 6px; color: #35253e }
+body.shell main table.fin-report .fin-grand td.amount { border-top: 1px solid #35253e; padding-top: 6px; font-weight: 700 }
+body.shell main table.fin-report .fin-final td.amount { border-bottom: 3px double #35253e }
+body.shell main table.fin-report .fin-spacer td { height: 12px; padding: 0 }
+.fin-report td.amount a, .gl-report td.gl-num a { color: inherit; text-decoration: none }
+.fin-report td.amount a:hover, .fin-report td.amount a:focus-visible, .gl-report td.gl-num a:hover { color: #684276; text-decoration: underline }
+.gl-report td.gl-num a { color: #684276 }
+.fin-report .negative, .gl-report .negative { color: #7b2f22 }
+
+/* General ledger */
+.gl-scroll { overflow-x: auto; max-width: 100% }
+body.shell main table.gl-report, table.gl-report { width: 100%; border-collapse: collapse; border: 0; table-layout: fixed; font-variant-numeric: tabular-nums; background: #fff }
+body.shell main table.gl-report th, body.shell main table.gl-report td, table.gl-report th, table.gl-report td { background: #fff; border: 0; padding: 2px 6px; font-size: 12.5px; color: #25222a; vertical-align: top; text-align: left }
+body.shell main table.gl-report tbody tr:nth-child(even) td { background: #fff }
+body.shell main table.gl-report tbody tr.gl-line:hover td { background: #eee8f1 }
+body.shell main table.gl-report thead th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: #675d6b; font-weight: 650; border-bottom: 1px solid #8f8494; padding-bottom: 4px }
+table.gl-report .gl-date { width: 6.8em; white-space: nowrap }
+table.gl-report .gl-type { width: 13em }
+table.gl-report .gl-num { width: 8.5em }
+table.gl-report .gl-party { width: 11em }
+body.shell main table.gl-report .amount, table.gl-report .amount { width: 7.8em; text-align: right; white-space: nowrap }
+body.shell main table.gl-report .fin-heading th { font-weight: 700; color: #35253e; padding-top: 12px; font-size: 13px; border-bottom: 1px solid #eee4d0 }
+table.gl-report .fin-heading small { color: #675d6b; font-weight: 500; margin-left: 6px }
+body.shell main table.gl-report .gl-opening td, body.shell main table.gl-report .gl-continued td { color: #4b3f50; font-style: italic }
+body.shell main table.gl-report .gl-cash td.gl-type { color: #4f6b55 }
+body.shell main table.gl-report .fin-total th { font-weight: 650; padding-left: 14px }
+body.shell main table.gl-report .fin-total td.amount { border-top: 1px solid #6e6274; font-weight: 600 }
+body.shell main table.gl-report tfoot th { font-weight: 750; color: #35253e; padding-top: 8px }
+body.shell main table.gl-report tfoot td.amount { border-top: 1px solid #35253e; border-bottom: 3px double #35253e; font-weight: 700; padding-top: 8px }
+
+.gl-swipe { display: none; font-size: 12px; color: #675d6b; margin: 0 0 6px }
+@media (max-width: 850px) {
+  .report-sheet { padding: 12px 10px }
+  .report-controls .report-actions { margin-left: 0 }
+  body.shell main table.fin-report { display: table }
+  table.fin-report .amount { width: auto }
+  table.fin-report .fin-account td:first-child { padding-left: 14px }
+  body.shell main table.gl-report { display: table; min-width: 760px }
+  .gl-swipe { display: block }
+}
+@media (max-width: 600px) {
+  body.shell main table.gl-report { min-width: 640px }
+  table.gl-report .gl-type, table.gl-report .gl-party { display: none }
+  table.gl-report .gl-num { width: 6.5em }
+  body.shell main table.gl-report td.gl-memo { overflow-wrap: break-word; word-break: normal }
+}
+
+/* Print sheet (N09 print.css supplies the page, toolbar, watermark and page counter). */
+.report-print .report-head { margin-bottom: 12px }
+.report-print table.fin-report th, .report-print table.fin-report td { font-size: 9.5pt; padding: 2px 6px }
+.report-print table.gl-report th, .report-print table.gl-report td { font-size: 8pt; padding: 1px 4px }
+.report-print .gl-scroll { overflow: visible }
+.report-print table.gl-report .gl-date { width: 5.8em }
+.report-print table.gl-report .gl-type { width: 8.5em }
+.report-print table.gl-report .gl-num { width: 6.8em }
+.report-print table.gl-report .gl-party { width: 7.5em }
+.report-print table.gl-report .amount { width: 6.4em }
+.report-printed { font-size: 8.5pt; color: #444; margin-top: 10px }
+@media print {
+  .report-print thead { display: table-header-group }
+  .report-print tr { break-inside: avoid; page-break-inside: avoid }
+  .report-print .fin-report a, .report-print .gl-report a { border-bottom: 0 }
+  .report-print .negative { color: #111 }
+}
+
+/* The same statement rules on the print sheet (no shell there). */
+.report-print table.fin-report thead th, .report-print table.gl-report thead th { font-size: 8pt; text-transform: uppercase; letter-spacing: .05em; color: #333; border-bottom: 1px solid #111 }
+.report-print table.fin-report .fin-heading th, .report-print table.gl-report .fin-heading th { font-weight: 700; padding-top: 8px }
+.report-print table.fin-report .fin-account td:first-child { padding-left: 20px }
+.report-print table.fin-report .amount, .report-print table.gl-report .amount { text-align: right; white-space: nowrap }
+.report-print table.fin-report .fin-total th, .report-print table.fin-report .fin-grand th, .report-print table.gl-report .fin-total th { text-align: left; font-weight: 700 }
+.report-print table.fin-report .fin-total td.amount, .report-print table.gl-report .fin-total td.amount { border-top: 1px solid #111 }
+.report-print table.fin-report .fin-grand td.amount { border-top: 1px solid #111; font-weight: 700 }
+.report-print table.fin-report .fin-final td.amount, .report-print table.gl-report tfoot td.amount { border-bottom: 3px double #111; font-weight: 700 }
+.report-print table.gl-report tfoot td.amount { border-top: 1px solid #111 }
+.report-print table.gl-report .gl-opening td, .report-print table.gl-report .gl-continued td { font-style: italic }
+.report-print .report-foot { margin-top: 14px; max-width: none }
+.report-print .screen-only, .report-print .gl-swipe, .report-print .report-check.notice { display: none }
+
+/* FX2: nested balance sheet / P&L levels (section > group > type > account). Indent only; same type and rules. */
+body.shell main table.fin-report tr.fin-d1 > :first-child, .report-print table.fin-report tr.fin-d1 > :first-child { padding-left: 26px }
+body.shell main table.fin-report tr.fin-d2 > :first-child, .report-print table.fin-report tr.fin-d2 > :first-child { padding-left: 42px }
+body.shell main table.fin-report tr.fin-d3 > :first-child, .report-print table.fin-report tr.fin-d3 > :first-child { padding-left: 58px }
+body.shell main table.fin-report .fin-heading.fin-d1 th, body.shell main table.fin-report .fin-heading.fin-d2 th { font-size: 13px; padding-top: 8px }
+body.shell main table.fin-report .fin-heading.fin-d2 th, body.shell main table.fin-report .fin-total.fin-d2 th { font-weight: 600 }

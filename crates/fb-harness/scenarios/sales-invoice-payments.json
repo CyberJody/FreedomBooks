@@ -1,0 +1,393 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "inv1",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000001",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "6.25",
+    "tax_label": "Combined tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Half cents",
+      "quantity": "1.0025",
+      "rate": "4.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 1,
+   "review": "review1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 1,
+   "review": "review1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 1,
+   "review": "review1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000014",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "1.00",
+    "method": "CHECK",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "inv1",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "pay1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000014",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "1.00",
+    "method": "CHECK",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "inv1",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "pay1",
+   "ref": "payment1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000014",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "1.00",
+    "method": "CHECK",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "inv1",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "pay1",
+   "ref": "payment1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 2,
+   "date": "2026-10-03",
+   "reason": "Correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse every live receipt allocated to this invoice before voiding it."
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000015",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "3.26",
+    "method": "CHECK",
+    "destination": "BANK",
+    "allocations": [
+     {
+      "invoice_id": "inv1",
+      "amount": "3.26"
+     }
+    ],
+    "bank_id": "bank"
+   },
+   "review": "pay2",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000015",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "3.26",
+    "method": "CHECK",
+    "destination": "BANK",
+    "allocations": [
+     {
+      "invoice_id": "inv1",
+      "amount": "3.26"
+     }
+    ],
+    "bank_id": "bank"
+   },
+   "review": "pay2",
+   "ref": "payment2",
+   "expect_error": false
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "payment1",
+   "expected_revision": 1,
+   "date": "2026-10-03",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "payment2",
+   "expected_revision": 1,
+   "date": "2026-10-03",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 2,
+   "date": "2026-10-03",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_void_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 2,
+   "date": "2026-10-03",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000014",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "1.00",
+    "method": "CHECK",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "inv1",
+      "amount": "1.00"
+     }
+    ]
+   },
+   "review": "pay1",
+   "ref": "payment1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "inv1",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000000001",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "MANUAL",
+    "tax_rate": "6.25",
+    "tax_label": "Combined tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Half cents",
+      "quantity": "1.0025",
+      "rate": "4.00",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "inv1",
+   "expected_revision": 3,
+   "review": "no",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only a draft invoice can be reviewed or posted. Voided invoices cannot be reposted."
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

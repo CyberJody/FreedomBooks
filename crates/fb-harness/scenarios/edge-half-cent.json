@@ -1,0 +1,690 @@
+{
+ "name": "edge-half-cent",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "clerk"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c1",
+   "name": "Synthetic c1",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bank",
+   "company": "c1",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.ar",
+   "company": "c1",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.accdep",
+   "company": "c1",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.card",
+   "company": "c1",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equity",
+   "company": "c1",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.sales",
+   "company": "c1",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h0",
+   "company": "c1",
+   "date": "2026-01-01",
+   "memo": "Half cent 0",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.005"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.005"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h0",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h1",
+   "company": "c1",
+   "date": "2026-01-02",
+   "memo": "Half cent 1",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "125.005"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "125.005"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h2",
+   "company": "c1",
+   "date": "2026-01-03",
+   "memo": "Half cent 2",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "2.675"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "2.675"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h2",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h3",
+   "company": "c1",
+   "date": "2026-01-04",
+   "memo": "Half cent 3",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1.995"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1.995"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h3",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h4",
+   "company": "c1",
+   "date": "2026-01-05",
+   "memo": "Half cent 4",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.015"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.015"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h4",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h5",
+   "company": "c1",
+   "date": "2026-01-06",
+   "memo": "Half cent 5",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.125"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.125"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h5",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h6",
+   "company": "c1",
+   "date": "2026-01-07",
+   "memo": "Half cent 6",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1_000.004"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1_000.004"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h6",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h7",
+   "company": "c1",
+   "date": "2026-01-08",
+   "memo": "Half cent 7",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "١٢.٥"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "١٢.٥"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h7",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h8",
+   "company": "c1",
+   "date": "2026-01-09",
+   "memo": "Half cent 8",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1e2"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1e2"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h8",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h9",
+   "company": "c1",
+   "date": "2026-01-10",
+   "memo": "Half cent 9",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "4.9e-3"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "4.9e-3"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Constraint “one_positive_side” is violated."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h10",
+   "company": "c1",
+   "date": "2026-01-11",
+   "memo": "Half cent 10",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": 7
+    },
+    {
+     "account": "c1.bank",
+     "credit": 7
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h10",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "h11",
+   "company": "c1",
+   "date": "2026-01-12",
+   "memo": "Half cent 11",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "99999999999999.994"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "99999999999999.994"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "h11",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad0",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 0",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.004"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Constraint “one_positive_side” is violated."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad1",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 1",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": 1.25
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad2",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 2",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "-0.01"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad3",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 3",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100000000000000"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad4",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 4",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "NaN"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad5",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 5",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": true
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad6",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 6",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": null
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad7",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 7",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1e-18446744073709551618"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad8",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 8",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "125e-18446744073709551619"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad9",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 9",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0e1000000000000000000"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "bad10",
+   "company": "c1",
+   "date": "2026-02-01",
+   "memo": "Bad amount 10",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0e-1999999999999999998"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "save_draft",
+   "ref": "r1",
+   "company": "c1",
+   "date": "2026-02-02",
+   "memo": "Rounds to balance",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "10.004"
+    },
+    {
+     "account": "c1.cogs",
+     "debit": "10.005"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "20.01"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "r1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "r2",
+   "company": "c1",
+   "date": "2026-02-03",
+   "memo": "Rounds out of balance",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.005"
+    },
+    {
+     "account": "c1.cogs",
+     "debit": "0.005"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.01"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "r2",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Posting needs at least two nonzero lines and equal debits and credits (debits 0.02, credits 0.01)."
+  }
+ ],
+ "as_of": [
+  "2026-01-06",
+  "2026-12-31"
+ ]
+}

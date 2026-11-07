@@ -1,0 +1,20 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('payables/bills/base.css') }}"><link rel="stylesheet" href="{{ static('payables/bills/bills.css') }}"><link rel="stylesheet" href="{{ static('checks/checks.css') }}"><script src="{{ static('checks/checks.js') }}" defer></script>{% endblock %}
+{% block content %}<h1>{% if check %}Revise {{ check.identity.number }}{% else %}Write check / expense{% endif %}</h1>
+<p class="notice">RECORD ONLY — nothing prints, no funds move, no bank is contacted. Draft checks do not post. Review and record explicitly: the bank is credited and each line's account is debited. A check is <strong>not</strong> a bill payment and never touches payables.</p>
+{% if no_banks %}<p class="errorlist" role="alert">No designated bank account yet. <a href="{{ url('documents:setup', company.pk) }}">Designate a bank in Accounting setup</a> before writing checks.</p>{% endif %}
+{% if current and current.state != 'DRAFT' %}<p class="errorlist">This check is {{ current.get_state_display }}. Only Draft checks can be edited. Correct a recorded check by voiding it (linked reversal) and writing a new one.</p>{% endif %}
+{% if guidance %}<p class="guidance" role="note">This vendor has {{ guidance.count }} open bill{{ guidance.count|pluralize }}. A check does not settle bills: to pay them, <a href="{{ url('payments:new', company.pk) }}?vendor={{ guidance.vendor_id }}">record a bill payment</a> instead.</p>{% endif %}
+{% if form.has_errors or formset.total_error_count %}<p class="errorlist" role="alert">Check not saved. Review the errors below; your entered values are retained.</p>{% endif %}<form method="post" novalidate id="check-entry">{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{{ form.f.request_key.widget|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.f.request_key.errors|safe }}{{ form.f.expected_revision.errors|safe }}
+<div class="estimate-header check-header">{% for field in form.visible_fields %}<div class="field-{{ field.name }}">{{ field.label_tag|safe }} {{ field.widget|safe }}{% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}{{ field.errors|safe }}</div>{% endfor %}</div>
+<p>Choosing a vendor copies name and address from the vendor list; an other payee is a name you type.</p>
+{{ formset.management_form|safe }}{{ formset.non_form_errors|safe }}
+<h2>Expenses</h2><p>Account lines: any active posting account other than the paying bank and the receivables / payables / undeposited-funds control accounts, with a positive amount and an optional memo.</p>
+<div id="expense-lines" class="tab-lines">{% for line in expense_lines %}<fieldset class="estimate-line check-line tab-expense"><legend>Expense line</legend>{% include 'checks/line_fields.html' %}</fieldset>{% endfor %}</div>
+<p><button type="button" id="add-expense-line" class="add-line">Add expense line</button></p>
+<h2>Items</h2><p>Service / non-stock item lines: quantity × cost, with the item's expense account as the editable default.</p>
+<div id="item-lines" class="tab-lines">{% for line in item_lines %}<fieldset class="estimate-line check-line tab-item"><legend>Item line</legend>{% include 'checks/line_fields.html' %}</fieldset>{% endfor %}</div>
+<p><button type="button" id="add-item-line" class="add-line">Add item line</button></p>
+<template id="empty-line"><fieldset class="estimate-line check-line"><legend>Additional line</legend>{% with line=formset.empty_form %}{% include 'checks/line_fields.html' %}{% endwith %}</fieldset></template>
+<div class="bill-actions"><button type="submit">Save check</button><a href="{{ url('checks:list', company.pk) }}">Check list</a></div></form>
+{{ catalog|json_script('item-catalog') }}{{ vendors|json_script('vendor-catalog') }}{{ next_numbers|json_script('next-numbers') }}{% endblock %}

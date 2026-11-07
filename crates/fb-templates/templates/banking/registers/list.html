@@ -1,0 +1,9 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}">{% endblock %}{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Registers</h1>
+<p>Bank and credit card accounts. Open one to see its activity and tick what has cleared.</p></div></div>
+<section><table class="registers-list"><thead><tr><th scope="col">Account</th><th scope="col">Type</th><th scope="col" class="amount">Cleared balance</th><th scope="col" class="amount">Balance</th></tr></thead><tbody>
+{% for account in page.object_list %}<tr><td><a href="{{ url('register', company.pk, account.pk) }}">{{ account.code }} · {{ account.name }}</a>{% if not account.active %} <span class="badge">Inactive</span>{% endif %}</td><td>{{ account.get_detail_type_display }}</td><td class="amount">{{ account.cleared_balance }}</td><td class="amount">{{ account.balance }}</td></tr>
+{% else %}<tr><td colspan="4">No bank or credit card accounts yet. <a href="{{ url('account_new', company.pk) }}">Add an account</a> with the type Bank or Credit card, or choose a bank in <a href="{{ url('documents:setup', company.pk) }}">Accounting setup</a>.</td></tr>{% endfor %}
+</tbody></table></section>{% include 'ledger/pager.html' %}
+<p class="muted">Balances include every posted entry. Credit card balances show what is owed.</p>
+{% endblock %}

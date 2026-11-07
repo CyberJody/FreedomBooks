@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=FreedomBooks
+GenericName=Accounting
+Comment=Keep your business books
+Exec=freedombooks %U
+Icon=app.freedombooks.FreedomBooks
+StartupWMClass=app.freedombooks.FreedomBooks
+Terminal=false
+Categories=Office;Finance;
+Keywords=accounting;bookkeeping;invoices;bills;ledger;business;
+StartupNotify=true

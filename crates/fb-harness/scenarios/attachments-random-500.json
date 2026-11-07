@@ -1,0 +1,4410 @@
+{
+  "users": [
+    {
+      "username": "test",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic attachment book",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "cash",
+      "code": "100",
+      "name": "Cash",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "equity",
+      "code": "300",
+      "name": "Equity",
+      "kind": "EQUITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "co",
+      "ref": "j",
+      "date": "2026-01-01",
+      "memo": "Test",
+      "lines": [
+        {
+          "account": "cash",
+          "debit": "1.00",
+          "credit": "0"
+        },
+        {
+          "account": "equity",
+          "debit": "0",
+          "credit": "1.00"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file1",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file2",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbca",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file3",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbcb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad6",
+      "name": "bad.exe",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbcc",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The file name ends in .exe but the file is a PDF document. Rename it to end in .pdf and attach it again."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad7",
+      "name": "bad.exe",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbcd",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The file name ends in .exe but the file is a PDF document. Rename it to end in .pdf and attach it again."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file4",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbce",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad9",
+      "name": "bad.exe",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbcf",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The file name ends in .exe but the file is a PDF document. Rename it to end in .pdf and attach it again."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file5",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2531300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd0",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file3",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbcb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad12",
+      "name": "bad.exe",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd1",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The file name ends in .exe but the file is a PDF document. Rename it to end in .pdf and attach it again."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file1",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file1",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "correct 15",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file6",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2531380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file7",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd3",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file8",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file6",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2531380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file9",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd5",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file10",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd6",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file11",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd7",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "correct 29",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file12",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2533310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file13",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2533330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "correct 35",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file3",
+      "reason": "correct 36",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "correct 37",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file14",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2533380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbda",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file15",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file16",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdc",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file17",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdd",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file15",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file17",
+      "reason": "correct 44",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file12",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2533310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "correct 46",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file18",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbde",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file19",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdf",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file20",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe0",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file21",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe1",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "correct 52",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file22",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file16",
+      "reason": "correct 54",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file19",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdf",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file23",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe3",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file24",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file16",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file25",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe5",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file11",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd7",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file26",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe6",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file27",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe7",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file28",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file15",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "correct 71",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file15",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbdb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file29",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file3",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "correct 77",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file30",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbea",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file29",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file7",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd3",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file24",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file29",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file11",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd7",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "correct 94",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file10",
+      "reason": "correct 96",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file31",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbeb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file32",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbec",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file3",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file17",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file23",
+      "reason": "correct 101",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file33",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253130320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbed",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file21",
+      "reason": "correct 103",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file26",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe6",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file18",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbde",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file34",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253130360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbee",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file11",
+      "reason": "correct 107",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file29",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file35",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253130390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbef",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file22",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file30",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbea",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file15",
+      "reason": "correct 112",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "correct 113",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file36",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253131340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf0",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file37",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253131350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf1",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file17",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file20",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe0",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file27",
+      "reason": "correct 126",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file38",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253132370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a25300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file10",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file8",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file30",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbea",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file37",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253131350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf1",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file37",
+      "reason": "correct 135",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file39",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253133360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf3",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file30",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2537380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbea",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file26",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe6",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file15",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file8",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file25",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe5",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file3",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file11",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file18",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbde",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file25",
+      "reason": "correct 146",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file24",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file40",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253134380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file17",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file3",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file12",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2533310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file18",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2534370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbde",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file12",
+      "reason": "correct 153",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file41",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253135340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf5",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file18",
+      "reason": "correct 155",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file42",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253135360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf6",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file42",
+      "reason": "correct 157",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file18",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file43",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253135390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf7",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file16",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file36",
+      "reason": "correct 164",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file26",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2536340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe6",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file24",
+      "reason": "correct 166",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file44",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253136370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file45",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253136380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file40",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253134380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file33",
+      "reason": "correct 170",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file46",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253137310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfa",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file34",
+      "reason": "correct 176",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file47",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253137370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file20",
+      "reason": "correct 178",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file38",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253132370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file41",
+      "reason": "correct 180",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file43",
+      "reason": "correct 181",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file31",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbeb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file48",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253138330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfc",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file49",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253138340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfd",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file46",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253137310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfa",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file24",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file32",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbec",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file50",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253138390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfe",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file22",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file37",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file23",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file36",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file48",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253138330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfc",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file35",
+      "reason": "correct 197",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file51",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253139380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbff",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file30",
+      "reason": "correct 199",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file35",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file52",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253230320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc00",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file39",
+      "reason": "correct 204",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file53",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253230350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc01",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file27",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file43",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file52",
+      "reason": "correct 209",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file25",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file44",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253136370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf8",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file32",
+      "reason": "correct 212",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file47",
+      "reason": "correct 213",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file38",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253132370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file54",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253231350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc02",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file50",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253138390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfe",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file18",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file27",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file55",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253231390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc03",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file54",
+      "reason": "correct 220",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file56",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253232310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc04",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file53",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253230350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc01",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file57",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253232330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc05",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file44",
+      "reason": "correct 226",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file49",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253138340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbfd",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file46",
+      "reason": "correct 228",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file58",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253232390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc06",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file59",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253233300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc07",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file21",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file42",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file58",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253232390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc06",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file38",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253132370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file8",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file40",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253134380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file8",
+      "reason": "correct 237",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file60",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253233380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc08",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file36",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file38",
+      "reason": "correct 240",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file61",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253234310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc09",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file59",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253233300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc07",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file42",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file50",
+      "reason": "correct 244",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file60",
+      "reason": "correct 245",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file40",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253134380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf4",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file62",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253234370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0a",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file63",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253234380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0b",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file10",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file18",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file56",
+      "reason": "correct 251",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file64",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253235320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0c",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file43",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file14",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file61",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253234310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc09",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file29",
+      "reason": "correct 257",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file65",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253235380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0d",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file36",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file9",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file16",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file8",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file21",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file22",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2535330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbe2",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file53",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253230350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc01",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file21",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file21",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file46",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file50",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file23",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file26",
+      "reason": "correct 273",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file66",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253237340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file18",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file58",
+      "reason": "correct 277",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file63",
+      "reason": "correct 278",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file58",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file67",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file68",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc10",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file50",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file12",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file40",
+      "reason": "correct 285",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file22",
+      "reason": "correct 286",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file32",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file69",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc11",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file65",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253235380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0d",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file66",
+      "reason": "correct 290",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file70",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253239310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc12",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file71",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253239320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc13",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file54",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file67",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file22",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file26",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file13",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file8",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file16",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file43",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file10",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file7",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd3",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file18",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file30",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file23",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file37",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file22",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file27",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file34",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file15",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file62",
+      "reason": "correct 312",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file72",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253331330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc14",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file68",
+      "reason": "correct 315",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file69",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc11",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file24",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file55",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253231390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc03",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file65",
+      "reason": "correct 319",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file64",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253235320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0c",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file73",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253332310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc15",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file73",
+      "reason": "correct 322",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file15",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file16",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file71",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253239320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc13",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file45",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253136380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file74",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253332370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc16",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file7",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2532300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbd3",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file75",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253332390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc17",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file53",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253230350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc01",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file1",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file59",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253233300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc07",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file0",
+      "reason": "correct 333",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file76",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253333340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc18",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file38",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file44",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file8",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file43",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file72",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253331330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc14",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file25",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file7",
+      "reason": "correct 341",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file77",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253334320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc19",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file31",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbeb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file26",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file31",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbeb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file2",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file29",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file40",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file66",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file35",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file35",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file65",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file54",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file48",
+      "reason": "correct 358",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file67",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc0f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file76",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253333340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc18",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file51",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253139380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbff",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file40",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file49",
+      "reason": "correct 363",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file19",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file51",
+      "reason": "correct 365",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file78",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253336360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1a",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file79",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253336370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1b",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file29",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file53",
+      "reason": "correct 369",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file80",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1c",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file61",
+      "reason": "correct 371",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file59",
+      "reason": "correct 372",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file81",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1d",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file69",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253238380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc11",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file82",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file32",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file83",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file15",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file53",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file31",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2539370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbeb",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file41",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file25",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file69",
+      "reason": "correct 383",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file53",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file84",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253338350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc20",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file33",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file7",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file60",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file71",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253239320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc13",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file77",
+      "reason": "correct 390",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file85",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253339310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc21",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file52",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file48",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file79",
+      "reason": "correct 394",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file86",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253339350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc22",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file69",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file4",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file45",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253136380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbf9",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file81",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1d",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file12",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file51",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file25",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file83",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file85",
+      "reason": "correct 404",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file53",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file87",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253430360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc23",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file72",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253331330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc14",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file39",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file62",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file11",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file68",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file74",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253332370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc16",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file71",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253239320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc13",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file23",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file3",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file76",
+      "reason": "correct 417",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file88",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253431380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc24",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file25",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file10",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file67",
+      "reason": "correct 421",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file89",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253432320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc25",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file31",
+      "reason": "correct 423",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file90",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253432340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc26",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file84",
+      "reason": "correct 425",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file91",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253432360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc27",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file90",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253432340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc26",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file47",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file65",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file53",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file31",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file64",
+      "reason": "correct 432",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file92",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253433330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc28",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file71",
+      "reason": "correct 434",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file93",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253433350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc29",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file11",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file88",
+      "reason": "correct 437",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file94",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253433380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2a",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file27",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file51",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file5",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file31",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file70",
+      "reason": "correct 443",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file95",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253434340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2b",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file65",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file91",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253432360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc27",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file89",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253432320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc25",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file41",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file11",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file90",
+      "reason": "correct 450",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file96",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253435310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2c",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file40",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file74",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253332370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc16",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file94",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253433380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2a",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file45",
+      "reason": "correct 455",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file80",
+      "reason": "correct 456",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file0",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file97",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253435380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2d",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file67",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file98",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253436300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file31",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file32",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file29",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file74",
+      "reason": "correct 464",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file99",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253436350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file61",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file99",
+      "reason": "correct 467",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file89",
+      "reason": "correct 468",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file98",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253436300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file82",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file100",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253437310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc30",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file101",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253437320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc31",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file28",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file101",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253437320a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc31",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file57",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253232330a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc05",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file75",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253332390a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc17",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file31",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file99",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file84",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file79",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file93",
+      "reason": "correct 481",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file76",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file82",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file62",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file96",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253435310a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2c",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file102",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253438360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc32",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file82",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337350a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file6",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file75",
+      "reason": "correct 489",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file83",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253337370a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc1f",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file70",
+      "reason": "repeat",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file98",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253436300a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc2e",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file72",
+      "reason": "correct 493",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file103",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253439340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc33",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file103",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253439340a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc33",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file104",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253439360a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc34",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file95",
+      "reason": "correct 497",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file105",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253439380a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbc35",
+      "uploads_per_window": 1000,
+      "expect_error": false
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file88",
+      "reason": "repeat",
+      "expect_error": false
+    }
+  ],
+  "capture_steps": true
+}

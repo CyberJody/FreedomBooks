@@ -1,0 +1,11 @@
+{# Profit & loss / Balance sheet rows (screen and print). Every amount links to its drill-down. #}
+<table class="fin-report">
+<thead><tr><th scope="col">Account</th><th scope="col" class="amount">{{ amount_heading }}</th></tr></thead>
+<tbody>{% for row in rows %}{% if row.kind == 'spacer' %}<tr class="fin-spacer" aria-hidden="true"><td colspan="2"></td></tr>
+{% elif row.kind == 'heading' %}<tr class="fin-heading fin-d{{ row.depth|default(0) }}"><th scope="rowgroup" colspan="2">{{ row.label }}</th></tr>
+{% elif row.kind == 'account' %}<tr class="fin-account fin-d{{ row.depth|default(1) }}{% if row.account.is_contra %} fin-contra{% endif %}"><td>{{ row.label }}</td><td class="amount{% if row.amount|neg %} negative{% endif %}"><a href="{{ row.url }}" title="Show the general ledger lines behind this amount">{{ row.amount|money }}</a></td></tr>
+{% elif row.kind == 'computed' %}<tr class="fin-account fin-computed fin-d{{ row.depth|default(1) }}"><td>{{ row.label }} <small>{{ row.note }}</small></td><td class="amount{% if row.amount|neg %} negative{% endif %}"><a href="{{ row.url }}" title="Open the profit and loss behind this amount">{{ row.amount|money }}</a></td></tr>
+{% elif row.kind == 'total' %}<tr class="fin-total fin-d{{ row.depth|default(0) }}{% if row.final %} fin-final{% endif %}"><th scope="row">{{ row.label }}</th><td class="amount{% if row.amount|neg %} negative{% endif %}"><a href="{{ row.url }}">{{ row.amount|money }}</a></td></tr>
+{% else %}<tr class="fin-grand{% if row.final %} fin-final{% endif %}"><th scope="row">{{ row.label }}</th><td class="amount{% if row.amount|neg %} negative{% endif %}"><a href="{{ row.url }}">{{ row.amount|money }}</a></td></tr>
+{% endif %}{% endfor %}</tbody>
+</table>

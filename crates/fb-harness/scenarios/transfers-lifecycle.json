@@ -1,0 +1,288 @@
+{
+  "users": [
+    {
+      "username": "check-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic checks",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank2",
+      "code": "101",
+      "name": "Savings",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Equipment",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "model": "vendor",
+      "ref": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "model": "item",
+      "ref": "item",
+      "values": {
+        "code": "Parts",
+        "description": "Parts",
+        "kind": "NONSTOCK",
+        "sale_rate": "2.00",
+        "purchase_cost": "1.00",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank",
+          "bank2"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "transfers_review",
+      "company": "co",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f2"
+      },
+      "review": "tr",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "t",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f2"
+      },
+      "review": "tr",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "t",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f2"
+      },
+      "review": "tr",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_void",
+      "company": "co",
+      "transfer": "t",
+      "expected_revision": 1,
+      "date": "2026-10-24",
+      "reason": "Corrected",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_void",
+      "company": "co",
+      "transfer": "t",
+      "expected_revision": 1,
+      "date": "2026-10-24",
+      "reason": "Corrected",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "t",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f2"
+      },
+      "review": "tr",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f3"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Transfer from and to two different bank accounts."
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "from_account_id": "expense",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f4"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "500 · Expense is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "0",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f5"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a transfer amount greater than zero."
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "-1",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f6"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-02-30",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f7"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "transfers_review",
+      "company": "co",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "13.45",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f8"
+      },
+      "review": "old",
+      "expect_error": false
+    },
+    {
+      "op": "transfers_record",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "from_account_id": "bank",
+        "to_account_id": "bank2",
+        "date": "2026-10-23",
+        "amount": "99.00",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000493f8"
+      },
+      "review": "old",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The transfer or its accounts changed. Open a fresh review before recording."
+    }
+  ]
+}

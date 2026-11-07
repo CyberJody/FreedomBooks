@@ -1,0 +1,110 @@
+/* Hybrid UI v1: classic desktop-accounting layout in the existing tan / off-white / plum palette.
+   Loaded after app.css on every shell page and before each screen's own stylesheet. Visual only:
+   operational notices remain visible when present; ordinary pages have no default banner.
+   Selectors are prefixed with body.shell so later screen stylesheets that restyle bare `nav` or
+   `.layout` (for example directory/lists.css at <=1100px) cannot undo the shell. */
+:root{--fb-canvas:#f4f2ef;--fb-panel:#fff;--fb-tan:#eee4d0;--fb-tan-mid:#e4d7bd;--fb-tan-line:#d9ccb2;--fb-tan-soft:#f8f3e8;--fb-plum:#684276;--fb-plum-dark:#4b2b57;--fb-plum-deep:#35253e;--fb-lavender:#eee8f1;--fb-text:#25222a;--fb-muted:#675d6b;--fb-border:#d8d0c4;--fb-focus:#684276}
+body.shell{font-size:14px;line-height:1.5;background:var(--fb-canvas)}
+body.shell :focus-visible{outline:3px solid var(--fb-focus);outline-offset:2px}
+.skip-link{position:absolute;left:12px;top:-60px;z-index:10;background:#fff;color:var(--fb-plum);padding:8px 14px;border:2px solid var(--fb-plum);border-radius:4px;font-weight:650}
+.skip-link:focus{top:6px}
+body.shell .preview{padding:5px 20px;font-size:11.5px;border-bottom:1px solid var(--fb-tan-line)}
+body.shell .preview-notice{letter-spacing:0;line-height:1.45;font-weight:700;text-transform:none;border-bottom:2px solid var(--fb-plum)}
+body.shell footer .report-problem{font-weight:650;white-space:nowrap}
+
+/* Title bar */
+body.shell .titlebar{display:flex;align-items:center;gap:18px;padding:9px 20px;background:linear-gradient(#5a3767,var(--fb-plum-dark));border-bottom:1px solid var(--fb-plum-deep);color:#fff}
+body.shell .titlebar .brand{color:#fff;font-size:19px;letter-spacing:-.02em}
+body.shell .titlebar .brand small{color:#e5d9ea;font-size:12px;margin-left:10px}
+body.shell .titlebar-company{font-size:14px;font-weight:650;color:#fff;overflow-wrap:anywhere;min-width:0}
+body.shell .titlebar-sep{margin-right:14px;color:#cdb9d6}
+body.shell .titlebar .operator{margin-left:auto;color:#eadff0;font-size:12px}
+body.shell .titlebar a:focus-visible{outline-color:#fff}
+
+/* Left icon bar (main navigation) */
+body.shell .layout{grid-template-columns:212px minmax(0,1fr);min-height:78vh}
+body.shell .appnav{padding:10px 8px 18px;background:linear-gradient(90deg,var(--fb-tan-soft),#f3ecdc);border-right:1px solid var(--fb-tan-line)}
+body.shell .appnav a{display:flex;align-items:center;gap:9px;padding:4px 8px;margin:1px 0;border:1px solid transparent;border-radius:4px;color:#3d2c46;font-size:13.5px;line-height:1.3;text-decoration:none}
+body.shell .appnav a:hover{background:#fff;border-color:var(--fb-tan-line);color:var(--fb-plum-dark)}
+body.shell .appnav a[aria-current=page]{background:var(--fb-lavender);border-color:#c9b8d0;box-shadow:inset 3px 0 0 var(--fb-plum);font-weight:700;color:var(--fb-plum-deep)}
+body.shell .appnav .nav-icon{width:22px;height:22px;flex:none}
+body.shell .appnav .nav-badge{margin-left:auto;min-width:20px;padding:0 6px;border-radius:10px;background:#8f2f3b;color:#fff;font-size:11.5px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}  /* P2-3 reminders count */
+body.shell .appnav a.has-badge{position:relative}  /* P2-3: the badge's screen-reader text stays inside the link (no page overflow on the narrow nav strip) */
+body.shell .appnav .nav-label{margin:8px 0 2px;padding:6px 8px 4px;font-size:12px;font-weight:750;color:var(--fb-plum-deep);border-top:1px solid var(--fb-tan-line);overflow-wrap:anywhere}
+body.shell .nav-group{margin-top:8px}
+body.shell .nav-group-label{margin:0 0 2px;padding:3px 8px;font-size:10.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:#6b5a4a;background:var(--fb-tan-mid);border-radius:3px}
+body.shell .appnav .aside-note{padding:18px 8px 0;font-size:11.5px;color:#7a6e70}
+
+/* Work area */
+body.shell main{padding:18px 26px 26px}
+body.shell main h1{font-size:23px;letter-spacing:-.02em;line-height:1.25;margin:0 0 10px;color:var(--fb-plum-deep)}
+body.shell main.has-page-icon h1:first-of-type::before{content:'';display:inline-block;width:32px;height:32px;margin:-6px 9px 0 -3px;vertical-align:middle;background:var(--page-icon) center/contain no-repeat}
+body.shell main h2{font-size:16px;color:var(--fb-plum-deep)}
+body.shell .eyebrow{font-size:10.5px;color:#7a6a58;margin-bottom:6px}
+body.shell .heading{margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--fb-tan-mid)}
+
+/* Buttons: compact desktop buttons, plum primary */
+/* :where() keeps these at the specificity of app.css's own `.button,button`, so a screen's outline-style buttons
+   (e.g. .add-line, #add-line) still win and keep their dark-on-white text. */
+:where(body.shell) button,:where(body.shell) .button{border-radius:4px;padding:6px 14px;font:650 13px/1.4 system-ui,-apple-system,sans-serif;background:linear-gradient(#77508a,var(--fb-plum));border-color:var(--fb-plum-dark);box-shadow:0 1px 0 rgb(0 0 0 / .08)}
+:where(body.shell) button:hover,:where(body.shell) .button:hover{background:var(--fb-plum-dark)}
+:where(body.shell) .secondary{background:linear-gradient(#fff,var(--fb-tan-soft));color:var(--fb-plum-dark);border-color:var(--fb-tan-line)}
+:where(body.shell) .secondary:hover{background:var(--fb-tan);color:var(--fb-plum-deep)}
+
+/* Lists and registers: tan column headers, ruled rows, light banding */
+body.shell main table{font-size:13.5px;background:var(--fb-panel)}
+body.shell main th{background:linear-gradient(#f6efe1,var(--fb-tan));color:#4a3b2c;font-size:12px;font-weight:700;border-bottom:1px solid var(--fb-tan-line);border-right:1px solid #e7dcc6}
+body.shell main th:last-child{border-right:0}
+body.shell main th,body.shell main td{padding:7px 10px}
+body.shell main td{border-bottom:1px solid #ece5d8}
+body.shell main table:not(.calendar-grid) tbody tr:nth-child(even) td{background:#fbf8f1}
+body.shell main table:not(.calendar-grid) tbody tr:hover td{background:var(--fb-lavender)}
+body.shell main tfoot th,body.shell main .total,body.shell main .total td{background:#f1e9d8;color:var(--fb-plum-deep)}
+body.shell main > table,body.shell main div > table:not(.transfer-face){border:1px solid var(--fb-border)}
+body.shell section{border-color:var(--fb-border);border-radius:4px}
+body.shell main table + p{margin-top:8px}
+body.shell .card{border-radius:6px;border-color:var(--fb-border)}
+
+/* Forms: compact fields, clear focus */
+body.shell input,body.shell select,body.shell textarea{border-color:#bfb4a6;border-radius:3px;padding:5px 7px;font-size:13.5px}
+body.shell input:focus,body.shell select:focus,body.shell textarea:focus{outline:2px solid var(--fb-focus);outline-offset:1px;border-color:var(--fb-plum)}
+body.shell .notice{background:var(--fb-tan-soft);border-left-color:var(--fb-plum)}
+body.shell .badge{border-radius:3px}
+body.shell .errorlist{border-radius:4px}
+
+/* Filter rows rendered with form.as_p: labels above their fields, one aligned row that wraps */
+body.shell form.estimate-filter,body.shell form.receipt-fields[method=get],body.shell form.payment-fields[method=get],body.shell form.deposit-fields[method=get]{display:flex;flex-wrap:wrap;gap:8px 14px;margin:12px 0 14px;padding:10px 12px;background:var(--fb-tan-soft);border:1px solid var(--fb-tan-line);border-radius:4px}
+body.shell form.estimate-filter p,body.shell form.receipt-fields[method=get] p,body.shell form.payment-fields[method=get] p,body.shell form.deposit-fields[method=get] p{margin:0;max-width:240px}
+body.shell form.estimate-filter label,body.shell form.receipt-fields[method=get] label,body.shell form.payment-fields[method=get] label,body.shell form.deposit-fields[method=get] label{display:block;font-size:12px;font-weight:650;color:#4a3b2c;margin-bottom:2px}
+body.shell form.estimate-filter input:not([type=checkbox]),body.shell form.estimate-filter select,body.shell .filters input,body.shell .filters select,body.shell form.receipt-fields[method=get] input:not([type=checkbox]),body.shell form.receipt-fields[method=get] select,body.shell form.payment-fields[method=get] input:not([type=checkbox]),body.shell form.payment-fields[method=get] select,body.shell form.deposit-fields[method=get] input:not([type=checkbox]),body.shell form.deposit-fields[method=get] select{height:31px;box-sizing:border-box}
+body.shell form.receipt-fields[method=get] input,body.shell form.receipt-fields[method=get] select,body.shell form.payment-fields[method=get] input,body.shell form.payment-fields[method=get] select,body.shell form.deposit-fields[method=get] input,body.shell form.deposit-fields[method=get] select{width:auto;max-width:100%}
+body.shell .filters{margin:12px 0 14px;padding:10px 12px;background:var(--fb-tan-soft);border:1px solid var(--fb-tan-line);border-radius:4px;flex-wrap:wrap}
+
+/* Companies list */
+body.shell .company-card{display:flex;gap:14px;align-items:flex-start;padding:16px}
+body.shell .company-card .card-icon{flex:none}
+body.shell .company-card h2{margin:0 0 6px;font-size:17px}
+body.shell .company-card p{margin:0;color:var(--fb-muted)}
+body.shell .company-card:hover{border-color:var(--fb-plum)}
+
+body.shell footer{padding:10px 20px;font-size:11.5px;background:var(--fb-tan-soft);border-top:1px solid var(--fb-tan-line)}
+
+/* Narrow screens: the icon bar becomes a wrapped strip of compact chips above the work area. */
+@media(max-width:850px){
+ body.shell .layout{grid-template-columns:minmax(0,1fr)}
+ body.shell .appnav{display:grid;grid-auto-flow:column;grid-template-rows:auto auto;grid-auto-columns:max-content;gap:4px;padding:8px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;-webkit-mask-image:linear-gradient(90deg,#000 88%,rgb(0 0 0 / .35));mask-image:linear-gradient(90deg,#000 88%,rgb(0 0 0 / .35));background:var(--fb-tan-soft);border-right:0;border-bottom:1px solid var(--fb-tan-line)}
+ body.shell .appnav a{min-height:34px;padding:4px 9px;gap:6px;margin:0;font-size:13px;background:#fff;border-color:var(--fb-tan-line)}
+ body.shell .appnav .nav-icon{width:20px;height:20px}
+ body.shell .nav-group{display:contents}
+ body.shell .nav-group-label,body.shell .appnav .nav-label,body.shell .appnav .aside-note{display:none}
+ body.shell main{padding:14px 12px 20px}
+ body.shell .titlebar{flex-wrap:wrap;gap:6px 12px;padding:8px 12px}
+ body.shell .titlebar .operator{margin-left:0;width:100%}
+ body.shell .titlebar-sep{display:none}
+ body.shell main h1{font-size:21px}
+ body.shell main.has-page-icon h1:first-of-type::before{width:28px;height:28px;margin-right:8px}
+ /* Registers scroll sideways inside their own box here (app.css); keep names and memos in whole words so the
+    columns stay readable instead of breaking every few letters. Long unbroken text still wraps. */
+ body.shell .register td{overflow-wrap:break-word}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}

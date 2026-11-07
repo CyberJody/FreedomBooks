@@ -1,0 +1,1 @@
+{# Desktop only: a v1 screen that a later wave ports (see DESKTOP-WAVES.md). #}{% extends 'ledger/base.html' %}{% block content %}<h1>{{ title }}</h1><section class="errorlist"><p>This screen is not in the desktop app yet.</p></section><p class="muted">{{ path }}</p>{% if company %}<p><a href="{{ url('company_home', company.pk) }}">Back to Home</a></p>{% endif %}{% endblock %}

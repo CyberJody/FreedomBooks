@@ -1,0 +1,14 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}"><link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
+<div class="heading register-heading"><div><p class="eyebrow">{{ company.name }} · Reconcile · {{ company.currency }}</p><h1>Reconciliations of {{ account.label }}</h1>
+<p>Completed statements, newest first. Only the most recent one can be undone.</p></div>
+<p class="register-actions"><a href="{{ url('reconcile:list', company.pk) }}">All accounts</a> · {% if current %}<a href="{{ url('reconcile:screen', company.pk, account.pk) }}">Continue statement {{ current.statement_date|date('Y-m-d') }}</a>{% else %}<a href="{{ url('reconcile:begin', company.pk, account.pk) }}">Begin next statement</a>{% endif %}</p></div>
+{% if request.GET.undone %}<p class="notice" role="status">The reconciliation was undone. Its lines are back to cleared (✓) and can be changed again.</p>{% endif %}
+<section><table class="registers-list reconcile-history"><thead><tr><th scope="col">Statement date</th><th scope="col" class="amount">Beginning</th><th scope="col" class="amount">Cleared {{ words.right_short }}</th><th scope="col" class="amount">Cleared {{ words.left_short }}</th><th scope="col" class="amount">Ending</th><th scope="col">Lines</th><th scope="col">Reconciled</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+{% for rec in page.object_list %}<tr><td data-label="Statement date"><a href="{{ url('reconcile:report', company.pk, rec.pk) }}">{{ rec.statement_date|date('Y-m-d') }}</a></td>
+<td data-label="Beginning" class="amount">{{ rec.beginning_balance }}</td><td data-label="Cleared {{ words.right_short }}" class="amount">{{ rec.cleared_debit }}</td><td data-label="Cleared {{ words.left_short }}" class="amount">{{ rec.cleared_credit }}</td><td data-label="Ending" class="amount">{{ rec.ending_balance }}</td>
+<td data-label="Lines">{{ rec.cleared_count }}</td><td data-label="Reconciled">{{ rec.completed_at|date('Y-m-d H:i') }} · {{ rec.completed_by.get_username }}</td>
+<td data-label="Status">{% if rec.status == 'UNDONE' %}<span class="badge">Undone {{ rec.undone_at|date('Y-m-d') }}</span><small class="reason">{{ rec.undo_reason }}</small>{% else %}Reconciled{% endif %}</td>
+<td class="actions-cell"><a href="{{ url('reconcile:report', company.pk, rec.pk) }}">Report</a>{% if last and rec.pk == last.pk %} · <a href="{{ url('reconcile:undo', company.pk, account.pk) }}">Undo last reconciliation</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="9">This account has not been reconciled yet.</td></tr>{% endfor %}
+</tbody></table></section>{% include 'ledger/pager.html' %}
+{% endblock %}

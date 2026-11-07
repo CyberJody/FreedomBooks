@@ -1,0 +1,646 @@
+{
+ "name": "edge-multi-company",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "clerk"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c1",
+   "name": "Synthetic c1",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bank",
+   "company": "c1",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.ar",
+   "company": "c1",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.accdep",
+   "company": "c1",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.card",
+   "company": "c1",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equity",
+   "company": "c1",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.sales",
+   "company": "c1",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "c2",
+   "name": "Synthetic c2",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.bank",
+   "company": "c2",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.ar",
+   "company": "c2",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.equip",
+   "company": "c2",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.accdep",
+   "company": "c2",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.card",
+   "company": "c2",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.equity",
+   "company": "c2",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.draw",
+   "company": "c2",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.sales",
+   "company": "c2",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.cogs",
+   "company": "c2",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.exp",
+   "company": "c2",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c2.dep",
+   "company": "c2",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "c3",
+   "name": "  Clerk's own company ",
+   "currency": "cad",
+   "actor": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "bad",
+   "name": "Bad currency",
+   "currency": "usdx",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Use a three-letter uppercase currency code.; Ensure this value has at most 3 characters (it has 4)."
+  },
+  {
+   "op": "create_company",
+   "ref": "bad2",
+   "name": "",
+   "currency": "12",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This field cannot be blank.; Use a three-letter uppercase currency code."
+  },
+  {
+   "op": "create_company",
+   "ref": "anon",
+   "name": "Anonymous",
+   "actor": "<anonymous>",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "An identified active operator is required."
+  },
+  {
+   "op": "save_account",
+   "ref": "c3.bank",
+   "company": "c3",
+   "code": "1000",
+   "name": "Bank",
+   "detail_type": "BANK",
+   "actor": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c3.inc",
+   "company": "c3",
+   "code": "4000",
+   "name": "Income",
+   "detail_type": "INCOME",
+   "actor": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "a1",
+   "company": "c1",
+   "date": "2026-06-01",
+   "memo": "c1 sale",
+   "lines": [
+    {
+     "account": "c1.bank",
+     "debit": "100"
+    },
+    {
+     "account": "c1.sales",
+     "credit": "100"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "a1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "b1",
+   "company": "c2",
+   "date": "2026-06-01",
+   "memo": "c2 sale",
+   "lines": [
+    {
+     "account": "c2.bank",
+     "debit": "250"
+    },
+    {
+     "account": "c2.sales",
+     "credit": "250"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c2",
+   "journal": "b1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "x1",
+   "company": "c1",
+   "date": "2026-06-02",
+   "memo": "Cross-company line",
+   "lines": [
+    {
+     "account": "c1.bank",
+     "debit": "1"
+    },
+    {
+     "account": "c2.sales",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an active posting account in this company."
+  },
+  {
+   "op": "save_draft",
+   "ref": "x2",
+   "company": "c1",
+   "date": "2026-06-02",
+   "memo": "Stranger",
+   "lines": [
+    {
+     "account": "c1.bank",
+     "debit": "1"
+    },
+    {
+     "account": "c1.sales",
+     "credit": "1"
+    }
+   ],
+   "actor": "stranger",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "Company access denied."
+  },
+  {
+   "op": "save_account",
+   "ref": "x3",
+   "company": "c1",
+   "code": "9999",
+   "name": "Stranger account",
+   "detail_type": "BANK",
+   "actor": "stranger",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "Company access denied."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "b1",
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Journal matching query does not exist.",
+   "intent": "Deliberately post the existing c2 journal through c1; assert company isolation."
+  },
+  {
+   "op": "edit_company",
+   "company": "c1",
+   "name": "Renamed c1",
+   "currency": "usd",
+   "expect_error": false
+  },
+  {
+   "op": "edit_company",
+   "company": "c1",
+   "name": "Renamed c1",
+   "currency": "EUR",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Currency cannot change after journals or commercial document identities have been created."
+  },
+  {
+   "op": "edit_company",
+   "company": "c3",
+   "name": "Clerk co",
+   "currency": "EUR",
+   "actor": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "edit_company",
+   "company": "c3",
+   "name": "Clerk co",
+   "currency": "EUR",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "Company access denied."
+  },
+  {
+   "op": "add_member",
+   "company": "c2",
+   "user": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "b2",
+   "company": "c2",
+   "date": "2026-06-03",
+   "memo": "Clerk posts in c2",
+   "lines": [
+    {
+     "account": "c2.exp",
+     "debit": "40"
+    },
+    {
+     "account": "c2.bank",
+     "credit": "40"
+    }
+   ],
+   "actor": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c2",
+   "journal": "b2",
+   "actor": "clerk",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "b2r",
+   "company": "c2",
+   "journal": "b2",
+   "date": "2026-06-04",
+   "reason": "Wrong company card",
+   "actor": "owner",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "account": "c1.exp",
+   "company": "c2",
+   "code": "6000",
+   "name": "Steal",
+   "detail_type": "EXPENSE",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Account belongs to another company."
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.inactive",
+   "company": "c1",
+   "code": "6900",
+   "name": "Inactive",
+   "detail_type": "EXPENSE",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dash",
+   "company": "c1",
+   "code": "100-1",
+   "name": "Petty cash",
+   "detail_type": "OTHER_CURRENT_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.lower",
+   "company": "c1",
+   "code": "a1",
+   "name": "Lowercase code",
+   "detail_type": "OTHER_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.upper",
+   "company": "c1",
+   "code": "A-2",
+   "name": "Uppercase code",
+   "detail_type": "OTHER_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.summary",
+   "company": "c1",
+   "code": "6999",
+   "name": "Summary",
+   "detail_type": "EXPENSE",
+   "postable": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "x4",
+   "company": "c1",
+   "date": "2026-06-05",
+   "memo": "Inactive line",
+   "lines": [
+    {
+     "account": "c1.inactive",
+     "debit": "1"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an active posting account in this company."
+  },
+  {
+   "op": "save_draft",
+   "ref": "x5",
+   "company": "c1",
+   "date": "2026-06-05",
+   "memo": "Summary line",
+   "lines": [
+    {
+     "account": "c1.summary",
+     "debit": "1"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an active posting account in this company."
+  },
+  {
+   "op": "save_draft",
+   "ref": "x6",
+   "company": "c1",
+   "date": "2026-06-05",
+   "memo": "Missing account",
+   "lines": [
+    {
+     "account": "no-such-account",
+     "debit": "1"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an active posting account in this company."
+  },
+  {
+   "op": "save_draft",
+   "ref": "late",
+   "company": "c1",
+   "date": "2026-06-06",
+   "memo": "Deactivated before posting",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "3"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "3"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "account": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "late",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every line must use an active posting account in this company."
+  },
+  {
+   "op": "save_account",
+   "account": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "active": true,
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "late",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-06-01",
+  "2026-12-31"
+ ]
+}

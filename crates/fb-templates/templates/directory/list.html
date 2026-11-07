@@ -1,0 +1,12 @@
+{% extends 'directory/base.html' %}
+
+{% block directory_content %}
+<div class="heading"><h1>{{ title }}</h1><a class="button" href="{{ url('directory:new', company.pk, kind) }}">New {{ singular }}</a></div>
+<form class="list-filter" method="get" novalidate>{{ filter_form.as_p|safe }}<button type="submit">Search</button><a href="{{ url('directory:list', company.pk, kind) }}">Reset</a></form>
+<section class="table-wrap"><table><thead><tr>{% if is_item %}<th>Code / name</th><th>Description</th><th>Type</th><th class="amount">Sale rate</th><th class="amount">Purchase cost</th><th>Taxable</th>{% else %}<th>Display name</th><th>Town</th><th>Business / contact</th><th>Email</th><th>Phone</th>{% endif %}<th>Status</th></tr></thead><tbody>
+{% for record in page.object_list %}<tr data-record-id="{{ record.pk }}"><td><a href="{{ url('directory:detail', company.pk, kind, record.pk) }}">{% if is_item %}{{ record.label }}{% else %}{{ record.party_label }}{% endif %}</a></td>
+{% if is_item %}<td>{{ record.description|truncatechars(100) }}</td><td>{{ record.get_kind_display }}</td><td class="amount">{{ record.sale_rate }}</td><td class="amount">{{ record.purchase_cost|default_if_none('—') }}</td><td class="taxable">{% if record.taxable %}Yes{% else %}No{% endif %}</td>{% else %}<td>{{ record.town|default('—') }}</td><td>{{ record.business_name }}{% if record.business_name and record.contact_name %}<br>{% endif %}{{ record.contact_name }}</td><td>{{ record.email|default('—') }}</td><td>{{ record.phone|default('—') }}</td>{% endif %}<td>{% if record.active %}Active{% else %}<span class="badge">Inactive</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="{% if is_item %}8{% else %}8{% endif %}">No matching records. Adjust the search or create a {{ singular }}.</td></tr>{% endfor %}
+</tbody></table></section>
+<div class="pagination" aria-label="Pagination"><span>{{ page.paginator.count }} record{{ page.paginator.count|pluralize }} · Page {{ page.number }} of {{ page.paginator.num_pages }} · 25 per page</span>{% if page.has_previous %}<a href="?{{ query_string }}&amp;page={{ page.previous_page_number }}">Previous</a>{% endif %}{% if page.has_next %}<a href="?{{ query_string }}&amp;page={{ page.next_page_number }}">Next</a>{% endif %}</div>
+{% endblock %}

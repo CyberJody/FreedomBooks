@@ -1,0 +1,25 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }} · Reconcile · {{ company.currency }}</p><h1>{% if current %}Change statement{% else %}Begin reconciliation{% endif %}</h1>
+<p>{{ account.label }} · {{ account.get_detail_type_display }}</p></div>
+<p class="register-actions"><a href="{{ url('reconcile:list', company.pk) }}">All accounts</a> · <a href="{{ url('reconcile:history', company.pk, account.pk) }}">History</a></p></div>
+{% if errors %}<ul class="errorlist" role="alert">{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+<form method="post" class="reconcile-begin" novalidate>{{ csrf_token|safe }}
+<input type="hidden" name="request_key" value="{{ data.request_key }}"><input type="hidden" name="revision" value="{{ data.revision }}">
+<fieldset class="statement-box"><legend>Statement</legend>
+<div class="field-row"><label for="id_statement_date">Statement date</label><input type="date" id="id_statement_date" name="statement_date" value="{{ data.statement_date }}" required></div>
+<div class="field-row"><span class="label">Beginning balance</span><output class="amount" id="beginning-balance">{{ beginning }}</output></div>
+<p class="hint">{% if last %}From the last reconciliation (statement {{ last.statement_date|date('Y-m-d') }}). It cannot be typed over.{% else %}0.00 because this account was never reconciled. Tick the opening balance entry if the statement includes it.{% endif %}</p>
+<div class="field-row"><label for="id_ending_balance">{{ words.ending }}</label><input type="text" id="id_ending_balance" name="ending_balance" value="{{ data.ending_balance }}" inputmode="decimal" maxlength="24" size="14" class="amount-input" required></div>
+</fieldset>
+<fieldset class="statement-box"><legend>Charges on the statement <span class="optional">(optional)</span></legend>
+{% if current.service_journal_id %}<p class="hint">A {{ words.service|lower }} of {{ current.service_charge }} is already recorded for this statement (<a href="{{ url('journal', company.pk, current.service_journal_id) }}">journal entry</a>).</p>{% else %}
+<div class="field-row"><label for="id_service_charge">{{ words.service }}</label><input type="text" id="id_service_charge" name="service_charge" value="{{ data.service_charge }}" inputmode="decimal" maxlength="24" size="10" class="amount-input"></div>
+<div class="field-row"><label for="id_service_account">{{ words.service }} account</label><select id="id_service_account" name="service_account"><option value="">Choose an expense account</option>{% for a in expenses %}<option value="{{ a.pk }}"{% if data.service_account == a.pk %} selected{% endif %}>{{ a.code }} · {{ a.name }}</option>{% endfor %}</select></div>{% endif %}
+{% if not words.card %}{% if current.interest_journal_id %}<p class="hint">Interest earned of {{ current.interest }} is already recorded for this statement (<a href="{{ url('journal', company.pk, current.interest_journal_id) }}">journal entry</a>).</p>{% else %}
+<div class="field-row"><label for="id_interest">Interest earned</label><input type="text" id="id_interest" name="interest" value="{{ data.interest }}" inputmode="decimal" maxlength="24" size="10" class="amount-input"></div>
+<div class="field-row"><label for="id_interest_account">Interest account</label><select id="id_interest_account" name="interest_account"><option value="">Choose an income account</option>{% for a in incomes %}<option value="{{ a.pk }}"{% if data.interest_account == a.pk %} selected{% endif %}>{{ a.code }} · {{ a.name }}</option>{% endfor %}</select></div>{% endif %}{% endif %}
+<p class="hint">Each amount is recorded as a journal entry dated on the statement date and ticked as cleared.</p>
+</fieldset>
+<div class="button-bar"><button type="submit">{% if current %}Save statement{% else %}Continue{% endif %}</button> <a href="{% if current %}{{ url('reconcile:screen', company.pk, account.pk) }}{% else %}{{ url('reconcile:list', company.pk) }}{% endif %}">Cancel</a></div>
+</form>
+{% endblock %}

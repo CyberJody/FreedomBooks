@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/CyberJody/FreedomBooks/discussions/categories/q-a
+    about: How do I do something? Is this normal? Ask in Discussions.
+  - name: Share an idea
+    url: https://github.com/CyberJody/FreedomBooks/discussions/categories/ideas
+    about: Not sure it is a feature request yet? Talk it through in Discussions first.
+  - name: Report a security problem
+    url: https://github.com/CyberJody/FreedomBooks/security/policy
+    about: Please do not open a public issue for security problems. Read the security policy and report privately.

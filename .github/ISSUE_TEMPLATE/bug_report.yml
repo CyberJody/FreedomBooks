@@ -1,0 +1,97 @@
+name: Bug report
+description: Something in FreedomBooks is wrong, broken or confusing.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. FreedomBooks is an early alpha, and reports like yours are how it gets better.
+
+        **Keep private data out of this report.** Everything here is public. Use a test company with made-up names and amounts. Never post real financial data, bank details, passwords, keys or your company file.
+
+        Found a security problem? Do not use this form. Report it privately: https://github.com/CyberJody/FreedomBooks/security/policy
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      description: The exact steps, one per line, starting from the Home screen.
+      placeholder: |
+        1. Home > Create invoice
+        2. Picked a customer
+        3. Added one line: 2 at $10.00
+        4. Clicked Save
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Copy any error message word for word.
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Does it happen every time?
+      options:
+        - Every time
+        - Sometimes
+        - Only once so far
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FreedomBooks version
+      description: The app does not show its version yet. Tell us the release you downloaded, or the commit you built from (git rev-parse --short HEAD).
+      placeholder: "0.1.0 alpha, or commit abc1234"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux (Flatpak)
+        - Linux (built from source)
+        - macOS (built from source)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating system version
+      placeholder: "Windows 11, Ubuntu 24.04, Fedora 43"
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag and drop images here. Check that they show no real private data.
+    validations:
+      required: false
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Anything that might help, such as what you did just before the problem.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues and this has not been reported.
+          required: true
+        - label: This report contains no real financial data, passwords or keys.
+          required: true

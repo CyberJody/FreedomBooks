@@ -1,0 +1,650 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    },
+    {
+      "username": "member",
+      "is_staff": false
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "add_member",
+      "company": "co",
+      "user": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_switch",
+      "company": "co",
+      "enabled": true,
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-0",
+      "request_key": "00000000-0000-0000-0000-0000000186a9",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186aa",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-1",
+      "request_key": "00000000-0000-0000-0000-0000000186ab",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186ac",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-2",
+      "request_key": "00000000-0000-0000-0000-0000000186ad",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186ae",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-3",
+      "request_key": "00000000-0000-0000-0000-0000000186af",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186b0",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-4",
+      "request_key": "00000000-0000-0000-0000-0000000186b1",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186b2",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-5",
+      "request_key": "00000000-0000-0000-0000-0000000186b3",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186b4",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-6",
+      "request_key": "00000000-0000-0000-0000-0000000186b5",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186b6",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-7",
+      "request_key": "00000000-0000-0000-0000-0000000186b7",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186b8",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-8",
+      "request_key": "00000000-0000-0000-0000-0000000186b9",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186ba",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-9",
+      "request_key": "00000000-0000-0000-0000-0000000186bb",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186bc",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-10",
+      "request_key": "00000000-0000-0000-0000-0000000186bd",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186be",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-11",
+      "request_key": "00000000-0000-0000-0000-0000000186bf",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186c0",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-12",
+      "request_key": "00000000-0000-0000-0000-0000000186c1",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186c2",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-13",
+      "request_key": "00000000-0000-0000-0000-0000000186c3",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186c4",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-14",
+      "request_key": "00000000-0000-0000-0000-0000000186c5",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186c6",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-15",
+      "request_key": "00000000-0000-0000-0000-0000000186c7",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186c8",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-16",
+      "request_key": "00000000-0000-0000-0000-0000000186c9",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186ca",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-17",
+      "request_key": "00000000-0000-0000-0000-0000000186cb",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186cc",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-18",
+      "request_key": "00000000-0000-0000-0000-0000000186cd",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186ce",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-19",
+      "request_key": "00000000-0000-0000-0000-0000000186cf",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186d0",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-20",
+      "request_key": "00000000-0000-0000-0000-0000000186d1",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186d2",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-21",
+      "request_key": "00000000-0000-0000-0000-0000000186d3",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186d4",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-22",
+      "request_key": "00000000-0000-0000-0000-0000000186d5",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186d6",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-23",
+      "request_key": "00000000-0000-0000-0000-0000000186d7",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186d8",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-24",
+      "request_key": "00000000-0000-0000-0000-0000000186d9",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186da",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-25",
+      "request_key": "00000000-0000-0000-0000-0000000186db",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186dc",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-26",
+      "request_key": "00000000-0000-0000-0000-0000000186dd",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186de",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-27",
+      "request_key": "00000000-0000-0000-0000-0000000186df",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186e0",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-28",
+      "request_key": "00000000-0000-0000-0000-0000000186e1",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186e2",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-29",
+      "request_key": "00000000-0000-0000-0000-0000000186e3",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186e4",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "rate-30",
+      "request_key": "00000000-0000-0000-0000-0000000186e5",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186e6",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "actor": "member",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Too many receipts were read in the last few minutes. Wait a few minutes and try again."
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "other-actor",
+      "request_key": "00000000-0000-0000-0000-0000000186e7",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186e8",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "now": 1000,
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

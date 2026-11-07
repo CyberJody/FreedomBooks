@@ -1,0 +1,5690 @@
+{
+  "backups": {
+    "path": "/c/{company}/backups/"
+  },
+  "d9-assistant-page-off": {
+    "path": "/c/{company}/ai/",
+    "host": "127.0.0.1:8000"
+  },
+  "d9-assistant-page-reading-on": {
+    "path": "/c/{company:D9 feed books}/ai/",
+    "host": "127.0.0.1:8000"
+  },
+  "d9-assistant-bill-read-available": {
+    "path": "/c/{company:D9 AI books}/bills/{bill:D9 AI books:BILL-000001}/"
+  },
+  "d9-assistant-new-bill-from-receipt": {
+    "path": "/c/{company:D9 AI books}/bills/new/"
+  },
+  "d9-backups-page": {
+    "path": "/c/{company:D9 feed books}/backups/"
+  },
+  "d9-backups-page-unknown-created": {
+    "path": "/c/{company:D9 feed books}/backups/?created=freedombooks-missing-20261101T120000Z.fbbackup"
+  },
+  "home": {
+    "path": "/c/{company}/home/"
+  },
+  "accounts": {
+    "path": "/c/{company}/accounts/"
+  },
+  "accounts-by-code": {
+    "path": "/c/{company}/accounts/?sort=code"
+  },
+  "register-ar": {
+    "path": "/c/{company}/accounts/{account:1100}/register/"
+  },
+  "register-income": {
+    "path": "/c/{company}/accounts/{account:4000}/register/"
+  },
+  "register-contra": {
+    "path": "/c/{company}/accounts/{account:1590}/register/"
+  },
+  "register-ar-dated": {
+    "path": "/c/{company}/accounts/{account:1100}/register/?start=2026-10-10&end=2026-10-31"
+  },
+  "invoices": {
+    "path": "/c/{company}/invoices/"
+  },
+  "invoice-new": {
+    "path": "/c/{company}/invoices/new/"
+  },
+  "companies": {
+    "path": "/"
+  },
+  "company-new": {
+    "path": "/companies/new/"
+  },
+  "company-edit": {
+    "path": "/c/{company}/edit/"
+  },
+  "journals": {
+    "path": "/c/{company}/"
+  },
+  "journals-filtered": {
+    "path": "/c/{company}/?q=October&origin=DOCUMENT&status=POSTED"
+  },
+  "journals-invalid-filter": {
+    "path": "/c/{company}/?start=bad&origin=wrong",
+    "status": 400
+  },
+  "account-new": {
+    "path": "/c/{company}/accounts/new/"
+  },
+  "account-edit-used": {
+    "path": "/c/{company}/accounts/{account:4000}/edit/"
+  },
+  "setup-start": {
+    "path": "/c/{company}/setup/start/"
+  },
+  "setup-fill": {
+    "path": "/c/{company}/setup/start/fill/",
+    "post": {
+      "action": "preview"
+    }
+  },
+  "setup": {
+    "path": "/c/{company}/accounting-setup/"
+  },
+  "journal-new": {
+    "path": "/c/{company}/journals/new/"
+  },
+  "journal-edit": {
+    "path": "/c/{company}/journals/{journal:J000003}/edit/"
+  },
+  "journal-draft": {
+    "path": "/c/{company}/journals/{journal:J000003}/"
+  },
+  "journal-posted": {
+    "path": "/c/{company}/journals/{journal:J000001}/"
+  },
+  "history": {
+    "path": "/c/{company}/history/"
+  },
+  "history-filtered": {
+    "path": "/c/{company}/history/?doc=journal"
+  },
+  "history-invalid": {
+    "path": "/c/{company}/history/?start=bad&action=wrong"
+  },
+  "trial-balance": {
+    "path": "/c/{company}/trial-balance/?as_of=2026-10-31"
+  },
+  "error": {
+    "path": "/c/{company}/trial-balance/?as_of=bad",
+    "status": 400
+  },
+  "report-problem": {
+    "path": "/help/report/"
+  },
+  "company-new-invalid": {
+    "path": "/companies/new/",
+    "post": {
+      "name": "",
+      "currency": "12"
+    },
+    "status": 400
+  },
+  "company-edit-invalid": {
+    "path": "/c/{company}/edit/",
+    "post": {
+      "name": "",
+      "currency": "123"
+    },
+    "status": 400
+  },
+  "account-new-invalid": {
+    "path": "/c/{company}/accounts/new/",
+    "post": {
+      "code": "",
+      "name": "",
+      "detail_type": "BANK",
+      "is_contra": "on"
+    },
+    "status": 400
+  },
+  "account-edit-invalid": {
+    "path": "/c/{company}/accounts/{account:4000}/edit/",
+    "post": {
+      "code": "4000",
+      "name": "Sales & services",
+      "detail_type": "BANK",
+      "active": "on",
+      "postable": "on"
+    },
+    "status": 400
+  },
+  "setup-invalid": {
+    "path": "/c/{company}/accounting-setup/",
+    "post": {
+      "expected_revision": "bad",
+      "receivables": "bad"
+    },
+    "status": 400
+  },
+  "setup-fill-invalid": {
+    "path": "/c/{company}/setup/start/fill/",
+    "post": {
+      "action": "apply",
+      "digest": "stale",
+      "expected_revision": "1"
+    },
+    "status": 400
+  },
+  "journal-new-invalid": {
+    "path": "/c/{company}/journals/new/",
+    "post": {
+      "request_key": "bad",
+      "expected_revision": "0",
+      "date": "bad",
+      "memo": "",
+      "entry_number": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-account": "{account:4000}",
+      "lines-0-debit": "bad",
+      "lines-0-credit": "0",
+      "lines-1-account": "",
+      "lines-1-debit": "1",
+      "lines-1-credit": "0"
+    },
+    "status": 400
+  },
+  "journal-edit-invalid": {
+    "path": "/c/{company}/journals/{journal:J000003}/edit/",
+    "post": {
+      "expected_revision": "1",
+      "date": "2026-10-31",
+      "memo": "Changed draft",
+      "entry_number": "JE-3",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "2",
+      "lines-0-account": "{account:4000}",
+      "lines-0-debit": "1",
+      "lines-0-credit": "1"
+    },
+    "status": 400
+  },
+  "journal-post-invalid": {
+    "path": "/c/{company}/journals/{journal:J000003}/post/",
+    "post": {},
+    "status": 400
+  },
+  "journal-reverse-invalid": {
+    "path": "/c/{company}/journals/{journal:J000003}/reverse/",
+    "post": {
+      "date": "bad",
+      "reason": ""
+    },
+    "status": 400
+  },
+  "invoice-new-invalid": {
+    "path": "/c/{company}/invoices/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-0000000000c1",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "bad",
+      "due_date": "",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Typed line",
+      "lines-0-quantity": "2",
+      "lines-0-rate": "5",
+      "lines-0-income_account": "{account:4000}"
+    },
+    "status": 400
+  },
+  "print-toolbar-note": {
+    "template": "ledger/includes/print_toolbar_note.html",
+    "context": {
+      "audience": "internal"
+    },
+    "path": "/help/report/"
+  },
+  "history-csv": {
+    "path": "/c/{company}/history/?doc=journal&format=csv",
+    "media": "csv"
+  },
+  "setup-business-invalid": {
+    "path": "/c/{company}/accounting-setup/",
+    "post": {
+      "expected_revision": "1",
+      "receivables": "{account:1100}",
+      "undeposited": "{account:1100}"
+    },
+    "status": 400
+  },
+  "journal-control-invalid": {
+    "path": "/c/{company}/journals/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-0000000000cc",
+      "expected_revision": "0",
+      "date": "2026-10-31",
+      "memo": "Test refusal",
+      "entry_number": "Unique number",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-account": "{account:1100}",
+      "lines-0-debit": "1",
+      "lines-0-credit": "0",
+      "lines-1-account": "{account:1590}",
+      "lines-1-debit": "0",
+      "lines-1-credit": "1"
+    },
+    "status": 400
+  },
+  "journal-stale-invalid": {
+    "path": "/c/{company}/journals/{journal:J000003}/edit/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-0000000000cc",
+      "expected_revision": "0",
+      "date": "2026-10-31",
+      "memo": "Test refusal",
+      "entry_number": "JE-3",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "2",
+      "lines-0-account": "{account:5000}",
+      "lines-0-debit": "1",
+      "lines-0-credit": "0",
+      "lines-1-account": "{account:1590}",
+      "lines-1-debit": "0",
+      "lines-1-credit": "1"
+    },
+    "status": 400
+  },
+  "register-invalid": {
+    "path": "/c/{company}/accounts/{account:1100}/register/?start=bad",
+    "status": 400
+  },
+  "journals-needs-setup": {
+    "path": "/c/{company:Other synthetic books}/",
+    "status": 302,
+    "media": "location"
+  },
+  "directory-customers": {
+    "path": "/c/{company}/lists/customers/"
+  },
+  "directory-customers-all": {
+    "path": "/c/{company}/lists/customers/?status=all&q="
+  },
+  "directory-customers-search": {
+    "path": "/c/{company}/lists/customers/?q=Pond&status=all"
+  },
+  "directory-customers-invalid-filter": {
+    "path": "/c/{company}/lists/customers/?status=wrong",
+    "status": 400
+  },
+  "directory-customers-new": {
+    "path": "/c/{company}/lists/customers/new/"
+  },
+  "directory-customers-new-invalid": {
+    "path": "/c/{company}/lists/customers/new/",
+    "post": {
+      "display_name": "",
+      "email": "bad",
+      "code": "",
+      "kind": "wrong",
+      "sale_rate": "bad",
+      "tax_status": ""
+    },
+    "status": 400
+  },
+  "directory-customers-detail": {
+    "path": "/c/{company}/lists/customers/{customer:Maple & Birch Café}/"
+  },
+  "directory-customers-edit": {
+    "path": "/c/{company}/lists/customers/{customer:Maple & Birch Café}/edit/"
+  },
+  "directory-customers-edit-invalid": {
+    "path": "/c/{company}/lists/customers/{customer:Maple & Birch Café}/edit/",
+    "post": {
+      "display_name": "",
+      "code": "",
+      "kind": "",
+      "sale_rate": "",
+      "tax_status": ""
+    },
+    "status": 400
+  },
+  "directory-customers-status-invalid": {
+    "path": "/c/{company}/lists/customers/{customer:Maple & Birch Café}/status/",
+    "post": {
+      "active": "wrong"
+    },
+    "status": 400
+  },
+  "directory-vendors": {
+    "path": "/c/{company}/lists/vendors/"
+  },
+  "directory-vendors-all": {
+    "path": "/c/{company}/lists/vendors/?status=all&q="
+  },
+  "directory-vendors-search": {
+    "path": "/c/{company}/lists/vendors/?q=Pond&status=all"
+  },
+  "directory-vendors-invalid-filter": {
+    "path": "/c/{company}/lists/vendors/?status=wrong",
+    "status": 400
+  },
+  "directory-vendors-new": {
+    "path": "/c/{company}/lists/vendors/new/"
+  },
+  "directory-vendors-new-invalid": {
+    "path": "/c/{company}/lists/vendors/new/",
+    "post": {
+      "display_name": "",
+      "email": "bad",
+      "code": "",
+      "kind": "wrong",
+      "sale_rate": "bad",
+      "tax_status": ""
+    },
+    "status": 400
+  },
+  "directory-vendors-detail": {
+    "path": "/c/{company}/lists/vendors/{vendor:Pond Supply}/"
+  },
+  "directory-vendors-edit": {
+    "path": "/c/{company}/lists/vendors/{vendor:Pond Supply}/edit/"
+  },
+  "directory-vendors-edit-invalid": {
+    "path": "/c/{company}/lists/vendors/{vendor:Pond Supply}/edit/",
+    "post": {
+      "display_name": "",
+      "code": "",
+      "kind": "",
+      "sale_rate": "",
+      "tax_status": ""
+    },
+    "status": 400
+  },
+  "directory-vendors-status-invalid": {
+    "path": "/c/{company}/lists/vendors/{vendor:Pond Supply}/status/",
+    "post": {
+      "active": "wrong"
+    },
+    "status": 400
+  },
+  "directory-items": {
+    "path": "/c/{company}/lists/items/"
+  },
+  "directory-items-all": {
+    "path": "/c/{company}/lists/items/?status=all&q="
+  },
+  "directory-items-search": {
+    "path": "/c/{company}/lists/items/?q=Pond&status=all"
+  },
+  "directory-items-invalid-filter": {
+    "path": "/c/{company}/lists/items/?status=wrong",
+    "status": 400
+  },
+  "directory-items-new": {
+    "path": "/c/{company}/lists/items/new/"
+  },
+  "directory-items-new-invalid": {
+    "path": "/c/{company}/lists/items/new/",
+    "post": {
+      "display_name": "",
+      "email": "bad",
+      "code": "",
+      "kind": "wrong",
+      "sale_rate": "bad",
+      "tax_status": ""
+    },
+    "status": 400
+  },
+  "directory-items-detail": {
+    "path": "/c/{company}/lists/items/{item:MOW}/"
+  },
+  "directory-items-edit": {
+    "path": "/c/{company}/lists/items/{item:MOW}/edit/"
+  },
+  "directory-items-edit-invalid": {
+    "path": "/c/{company}/lists/items/{item:MOW}/edit/",
+    "post": {
+      "display_name": "",
+      "code": "",
+      "kind": "",
+      "sale_rate": "",
+      "tax_status": ""
+    },
+    "status": 400
+  },
+  "directory-items-status-invalid": {
+    "path": "/c/{company}/lists/items/{item:MOW}/status/",
+    "post": {
+      "active": "wrong"
+    },
+    "status": 400
+  },
+  "directory-customer-duplicate": {
+    "path": "/c/{company}/lists/customers/{customer:Twin buyer:#3}/"
+  },
+  "directory-vendor-inactive": {
+    "path": "/c/{company}/lists/vendors/{vendor:Archived supplier}/edit/"
+  },
+  "tax-settings": {
+    "path": "/c/{company}/sales-tax/"
+  },
+  "tax-settings-invalid": {
+    "path": "/c/{company}/sales-tax/",
+    "post": {
+      "expected_revision": "bad",
+      "charge_tax": "wrong",
+      "default_item": "bad",
+      "owed_basis": "wrong",
+      "filing_frequency": "wrong"
+    },
+    "status": 400
+  },
+  "tax-settings-stale": {
+    "path": "/c/{company}/sales-tax/",
+    "post": {
+      "expected_revision": "0",
+      "charge_tax": "yes",
+      "default_item": "",
+      "owed_basis": "ACCRUAL",
+      "filing_frequency": "MONTHLY"
+    },
+    "status": 400
+  },
+  "tax-list": {
+    "path": "/c/{company}/sales-tax/rates/"
+  },
+  "tax-list-all": {
+    "path": "/c/{company}/sales-tax/rates/?status=all"
+  },
+  "tax-list-inactive": {
+    "path": "/c/{company}/sales-tax/rates/?status=inactive"
+  },
+  "tax-list-invalid": {
+    "path": "/c/{company}/sales-tax/rates/?status=wrong",
+    "status": 400
+  },
+  "tax-list-blank": {
+    "path": "/c/{company}/sales-tax/rates/?status="
+  },
+  "tax-rate-new": {
+    "path": "/c/{company}/sales-tax/rates/new/"
+  },
+  "tax-rate-new-invalid": {
+    "path": "/c/{company}/sales-tax/rates/new/",
+    "post": {
+      "name": "",
+      "description": "",
+      "rate": "",
+      "expected_revision": "bad",
+      "agency": "bad",
+      "members": "bad"
+    },
+    "status": 400
+  },
+  "tax-rate-edit": {
+    "path": "/c/{company}/sales-tax/rates/{taxitem:County}/edit/"
+  },
+  "tax-rate-edit-invalid": {
+    "path": "/c/{company}/sales-tax/rates/{taxitem:County}/edit/",
+    "post": {
+      "name": "",
+      "description": "",
+      "rate": "bad",
+      "members": "bad"
+    },
+    "status": 400
+  },
+  "tax-group-new": {
+    "path": "/c/{company}/sales-tax/groups/new/"
+  },
+  "tax-group-new-invalid": {
+    "path": "/c/{company}/sales-tax/groups/new/",
+    "post": {
+      "name": "",
+      "description": "",
+      "rate": "",
+      "expected_revision": "bad",
+      "agency": "bad",
+      "members": "bad"
+    },
+    "status": 400
+  },
+  "tax-group-edit": {
+    "path": "/c/{company}/sales-tax/groups/{taxitem:County and City}/edit/"
+  },
+  "tax-group-edit-invalid": {
+    "path": "/c/{company}/sales-tax/groups/{taxitem:County and City}/edit/",
+    "post": {
+      "name": "",
+      "description": "",
+      "rate": "bad",
+      "members": "bad"
+    },
+    "status": 400
+  },
+  "tax-rate-business-invalid": {
+    "path": "/c/{company}/sales-tax/rates/new/",
+    "post": {
+      "name": "Test rate",
+      "description": "Sales tax",
+      "rate": "bad"
+    },
+    "status": 400
+  },
+  "tax-group-business-invalid": {
+    "path": "/c/{company}/sales-tax/groups/new/",
+    "post": {
+      "name": "One rate",
+      "description": "Sales tax",
+      "members": "{taxitem:County}"
+    },
+    "status": 400
+  },
+  "tax-rate-status-invalid": {
+    "path": "/c/{company}/sales-tax/{taxitem:County}/status/",
+    "post": {},
+    "status": 400
+  },
+  "tax-rate-status-refused": {
+    "path": "/c/{company}/sales-tax/{taxitem:County}/status/",
+    "post": {
+      "expected_revision": "1",
+      "active": "0"
+    },
+    "status": 400
+  },
+  "tax-bulk": {
+    "path": "/c/{company}/sales-tax/turn-on/"
+  },
+  "tax-bulk-invalid": {
+    "path": "/c/{company}/sales-tax/turn-on/",
+    "post": {
+      "digest": "bad",
+      "decision": "bad"
+    },
+    "status": 400
+  },
+  "tax-bulk-stale": {
+    "path": "/c/{company}/sales-tax/turn-on/",
+    "post": {
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "decision": "apply",
+      "customers": "on",
+      "items": "on"
+    },
+    "status": 400
+  },
+  "reminders": {
+    "path": "/c/{company}/reminders/"
+  },
+  "reminders-invalid": {
+    "path": "/c/{company}/reminders/settings/",
+    "post": {
+      "days": "91",
+      "expected": "bad"
+    },
+    "status": 400
+  },
+  "reminders-conflict": {
+    "path": "/c/{company}/reminders/settings/",
+    "post": {
+      "days": "11",
+      "expected": "9"
+    },
+    "status": 409
+  },
+  "invoice-new-tax-off": {
+    "path": "/c/{company:Other synthetic books}/invoices/new/"
+  },
+  "tax-members-group": {
+    "path": "/help/report/",
+    "template": "salestax/members.html",
+    "context": {
+      "doc": {
+        "tax_mode": "GROUP",
+        "tax_snapshot": {
+          "name": "County and City",
+          "members": [
+            {
+              "name": "County",
+              "rate": "6.2500",
+              "tax": "1.25",
+              "agency_name": "County Revenue"
+            },
+            {
+              "name": "City",
+              "rate": "1.5000",
+              "tax": "0.30",
+              "agency_name": "County Revenue"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "tax-members-rate": {
+    "path": "/help/report/",
+    "template": "salestax/members.html",
+    "context": {
+      "doc": {
+        "tax_mode": "RATE",
+        "tax_snapshot": {
+          "name": "County and City",
+          "members": [
+            {
+              "name": "County",
+              "rate": "6.2500",
+              "tax": "1.25",
+              "agency_name": "County Revenue"
+            },
+            {
+              "name": "City",
+              "rate": "1.5000",
+              "tax": "0.30",
+              "agency_name": "County Revenue"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "directory-customer-activity": {
+    "path": "/c/{company:Activity synthetic books}/lists/customers/{customer:Activity synthetic books:Activity buyer}/"
+  },
+  "directory-vendor-activity": {
+    "path": "/c/{company:Activity synthetic books}/lists/vendors/{vendor:Activity synthetic books:Activity vendor}/"
+  },
+  "reminders-activity": {
+    "path": "/c/{company:Activity synthetic books}/reminders/"
+  },
+  "tax-settings-off": {
+    "path": "/c/{company:Other synthetic books}/sales-tax/"
+  },
+  "tax-list-off": {
+    "path": "/c/{company:Other synthetic books}/sales-tax/rates/"
+  },
+  "tax-bulk-unavailable": {
+    "path": "/c/{company:Other synthetic books}/sales-tax/turn-on/",
+    "status": 302,
+    "media": "location"
+  },
+  "directory-vendor-stale": {
+    "path": "/c/{company:Activity synthetic books}/lists/vendors/{vendor:Activity synthetic books:Stale vendor}/edit/"
+  },
+  "directory-vendor-stale-invalid": {
+    "path": "/c/{company:Activity synthetic books}/lists/vendors/{vendor:Activity synthetic books:Stale vendor}/edit/",
+    "post": {
+      "display_name": "Stale vendor",
+      "default_expense_account": "{account:Activity synthetic books:5999}"
+    },
+    "status": 400
+  },
+  "directory-item-stale": {
+    "path": "/c/{company:Activity synthetic books}/lists/items/{item:Activity synthetic books:STALE}/edit/"
+  },
+  "directory-item-stale-invalid": {
+    "path": "/c/{company:Activity synthetic books}/lists/items/{item:Activity synthetic books:STALE}/edit/",
+    "post": {
+      "code": "STALE",
+      "kind": "SERVICE",
+      "sale_rate": "5",
+      "expense_account": "{account:Activity synthetic books:5999}"
+    },
+    "status": 400
+  },
+  "directory-email-validation-order": {
+    "path": "/c/{company}/lists/customers/new/",
+    "post": {
+      "display_name": "Test",
+      "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "status": 400
+  },
+  "estimates": {
+    "path": "/c/{company}/estimates/"
+  },
+  "estimate-new": {
+    "path": "/c/{company}/estimates/new/"
+  },
+  "estimate-detail": {
+    "path": "/c/{company}/estimates/{estimate:EST-000001}/"
+  },
+  "estimate-edit": {
+    "path": "/c/{company}/estimates/{estimate:EST-000001}/edit/"
+  },
+  "estimate-accepted": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/"
+  },
+  "estimate-cancelled": {
+    "path": "/c/{company}/estimates/{estimate:EST-000003}/"
+  },
+  "estimate-revision": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/revisions/1/"
+  },
+  "estimate-convert": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/convert/2/"
+  },
+  "invoice-detail": {
+    "path": "/c/{company}/invoices/{invoice:INV-000001}/"
+  },
+  "invoice-draft": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/"
+  },
+  "invoice-edit": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/edit/"
+  },
+  "invoice-revision": {
+    "path": "/c/{company}/invoices/{invoice:INV-000001}/revisions/1/"
+  },
+  "invoice-review": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/review/?revision=1"
+  },
+  "invoice-review-invalid": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/review/",
+    "status": 400
+  },
+  "invoice-void": {
+    "path": "/c/{company}/invoices/{invoice:INV-000001}/void/"
+  },
+  "receipts": {
+    "path": "/c/{company}/receipts/"
+  },
+  "receipt-new": {
+    "path": "/c/{company}/receipts/new/"
+  },
+  "receipt-customer": {
+    "path": "/c/{company}/receipts/new/?customer={customer:Maple & Birch Café}"
+  },
+  "receipt-detail": {
+    "path": "/c/{company}/receipts/{receipt:RCP-000001}/"
+  },
+  "receipt-reverse": {
+    "path": "/c/{company}/receipts/{receipt:RCP-000001}/reverse/"
+  },
+  "sales-receipts": {
+    "path": "/c/{company}/sales-receipts/"
+  },
+  "sales-receipt-new": {
+    "path": "/c/{company}/sales-receipts/new/"
+  },
+  "sales-receipt-detail": {
+    "path": "/c/{company}/sales-receipts/{receipt:SR-000001}/"
+  },
+  "sales-receipt-void": {
+    "path": "/c/{company}/sales-receipts/{receipt:SR-000001}/void/"
+  },
+  "estimate-invalid": {
+    "path": "/c/{company}/estimates/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "date": "bad",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "Keep typed <value>",
+      "lines-0-quantity": "bad",
+      "lines-0-rate": "1",
+      "lines-0-tax_auto": "1",
+      "lines-1-tax_auto": "1"
+    }
+  },
+  "estimate-state-invalid": {
+    "path": "/c/{company}/estimates/{estimate:EST-000001}/state/",
+    "status": 400,
+    "post": {
+      "expected_revision": "1",
+      "state": "",
+      "reason": "Typed reason"
+    }
+  },
+  "estimate-convert-invalid": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/convert/2/",
+    "status": 400,
+    "post": {
+      "expected_revision": "2",
+      "date": "bad",
+      "due_date": "",
+      "terms": ""
+    }
+  },
+  "invoice-post-invalid": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/post/",
+    "status": 400,
+    "post": {
+      "expected_revision": "1",
+      "review_token": ""
+    }
+  },
+  "invoice-void-invalid": {
+    "path": "/c/{company}/invoices/{invoice:INV-000001}/void/",
+    "status": 400,
+    "post": {
+      "expected_revision": "1",
+      "date": "bad",
+      "reason": ""
+    }
+  },
+  "receipt-reverse-invalid": {
+    "path": "/c/{company}/receipts/{receipt:RCP-000001}/reverse/",
+    "status": 400,
+    "post": {
+      "expected_revision": "1",
+      "date": "bad",
+      "reason": ""
+    }
+  },
+  "sales-receipt-void-invalid": {
+    "path": "/c/{company}/sales-receipts/{receipt:SR-000001}/void/",
+    "status": 400,
+    "post": {
+      "expected_revision": "1",
+      "date": "bad",
+      "reason": ""
+    }
+  },
+  "receipt-invalid": {
+    "path": "/c/{company}/receipts/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "date": "bad",
+      "amount": "",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-MIN_NUM_FORMS": "1",
+      "allocations-MAX_NUM_FORMS": "50"
+    }
+  },
+  "sales-receipt-invalid": {
+    "path": "/c/{company}/sales-receipts/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "date": "bad",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "Keep typed <value>",
+      "lines-0-quantity": "bad",
+      "lines-0-rate": "1",
+      "lines-0-tax_auto": "1",
+      "lines-1-tax_auto": "1",
+      "method": "CASH",
+      "destination": "UNDEPOSITED"
+    }
+  },
+  "invoice-voided": {
+    "path": "/c/{company}/invoices/{invoice:INV-000003}/"
+  },
+  "invoice-converted": {
+    "path": "/c/{company}/invoices/{invoice:INV-000004}/"
+  },
+  "receipt-reversed": {
+    "path": "/c/{company}/receipts/{receipt:RCP-000002}/"
+  },
+  "sales-receipt-voided": {
+    "path": "/c/{company}/sales-receipts/{receipt:SR-000002}/"
+  },
+  "invoice-settlements": {
+    "path": "/c/{company:Activity synthetic books}/invoices/{invoice:Activity synthetic books:INV-000001}/"
+  },
+  "receipt-review-post": {
+    "path": "/c/{company}/receipts/new/",
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000080",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-25",
+      "amount": "10.00",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-invoice": "{invoice:INV-000001}",
+      "allocations-0-amount": "10.00",
+      "action": "review"
+    }
+  },
+  "sales-receipt-review-post": {
+    "path": "/c/{company}/sales-receipts/new/",
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000081",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-25",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "tax_mode": "T{taxitem:County and City}",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-item": "{item:MOW}",
+      "lines-0-description": "Synthetic sale",
+      "lines-0-quantity": "2.5",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-taxable": "on",
+      "lines-0-tax_auto": "1",
+      "lines-1-tax_auto": "1",
+      "action": "review"
+    }
+  },
+  "d6-bills": {
+    "path": "/c/{company:D6 synthetic books}/bills/"
+  },
+  "d6-bill-document": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/"
+  },
+  "d6-bill-detail-open": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000002}/"
+  },
+  "d6-bill-detail-paid": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000003}/"
+  },
+  "d6-bill-detail-void": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000008}/"
+  },
+  "d6-bill-form": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/"
+  },
+  "d6-bill-line-fields": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/edit/"
+  },
+  "d6-bill-review": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/review/?revision=2"
+  },
+  "d6-bill-revision": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/revisions/1/"
+  },
+  "d6-bill-void": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000002}/void/"
+  },
+  "d6-bill-vendor-activity": {
+    "path": "/c/{company:D6 synthetic books}/lists/vendors/{vendor:D6 synthetic books:Pine & River Supply}/"
+  },
+  "d6-bill-calendar": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=2026&month=10"
+  },
+  "d6-bill-calendar-paid": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=2026&month=10&paid=1"
+  },
+  "d6-bill-calendar-vendor": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=2026&month=10&vendor={vendor:D6 synthetic books:Pine & River Supply}"
+  },
+  "d6-bill-calendar-first": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=1900&month=1"
+  },
+  "d6-bill-calendar-last": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=2200&month=12"
+  },
+  "d6-bill-payments": {
+    "path": "/c/{company:D6 synthetic books}/payments/"
+  },
+  "d6-bill-payment-detail": {
+    "path": "/c/{company:D6 synthetic books}/payments/{billpayment:D6 synthetic books:BPAY-000001}/"
+  },
+  "d6-bill-payment-reversed": {
+    "path": "/c/{company:D6 synthetic books}/payments/{billpayment:D6 synthetic books:BPAY-000003}/"
+  },
+  "d6-bill-payment-form": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/?vendor={vendor:D6 synthetic books:Pine & River Supply}"
+  },
+  "d6-bill-payment-reverse": {
+    "path": "/c/{company:D6 synthetic books}/payments/{billpayment:D6 synthetic books:BPAY-000001}/reverse/"
+  },
+  "d6-transfers": {
+    "path": "/c/{company:D6 synthetic books}/transfers/"
+  },
+  "d6-transfer-detail": {
+    "path": "/c/{company:D6 synthetic books}/transfers/{transfer:D6 synthetic books:TRF-000001}/"
+  },
+  "d6-transfer-voided": {
+    "path": "/c/{company:D6 synthetic books}/transfers/{transfer:D6 synthetic books:TRF-000002}/"
+  },
+  "d6-transfer-form": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/"
+  },
+  "d6-transfer-void": {
+    "path": "/c/{company:D6 synthetic books}/transfers/{transfer:D6 synthetic books:TRF-000001}/void/"
+  },
+  "d6-bills-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/?state=bad&vendor=bad&start=bad",
+    "status": 400
+  },
+  "d6-bill-calendar-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=bad&month=13&vendor=bad",
+    "status": 400
+  },
+  "d6-bill-payments-invalid": {
+    "path": "/c/{company:D6 synthetic books}/payments/?state=bad&vendor=bad",
+    "status": 400
+  },
+  "d6-transfers-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/?account=bad&state=bad&start=bad",
+    "status": 400
+  },
+  "d6-transfer-dates-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/?start=2026-11-01&end=2026-10-01",
+    "status": 400
+  },
+  "d6-bill-form-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/",
+    "post": {
+      "reference": "typed reference",
+      "request_key": "bad",
+      "expected_revision": "bad",
+      "vendor": "",
+      "date": "bad",
+      "due_date": "",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Typed line",
+      "lines-0-quantity": "bad",
+      "lines-0-rate": "12.50"
+    },
+    "status": 400
+  },
+  "d6-bill-edit-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/edit/",
+    "post": {
+      "expected_revision": "2",
+      "date": "2026-10-01",
+      "due_date": "2026-10-15",
+      "vendor": "bad",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "1",
+      "lines-0-description": "Typed",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "bad"
+    },
+    "status": 400
+  },
+  "d6-bill-post-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/post/",
+    "post": {},
+    "status": 400
+  },
+  "d6-bill-void-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000002}/void/",
+    "post": {
+      "expected_revision": "bad",
+      "date": "bad",
+      "reason": ""
+    },
+    "status": 400
+  },
+  "d6-bill-payment-form-invalid": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/",
+    "post": {
+      "request_key": "bad",
+      "date": "bad",
+      "vendor": "",
+      "amount": "",
+      "method": "wrong",
+      "bank": "bad",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-bill": "bad",
+      "allocations-0-amount": "15.00"
+    },
+    "status": 400
+  },
+  "d6-bill-payment-reverse-invalid": {
+    "path": "/c/{company:D6 synthetic books}/payments/{billpayment:D6 synthetic books:BPAY-000001}/reverse/",
+    "post": {
+      "expected_revision": "bad",
+      "date": "bad",
+      "reason": ""
+    },
+    "status": 400
+  },
+  "d6-transfer-form-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "post": {
+      "request_key": "bad",
+      "date": "bad",
+      "amount": "",
+      "from_account": "bad",
+      "to_account": ""
+    },
+    "status": 400
+  },
+  "d6-transfer-same-bank-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000699",
+      "date": "2026-10-20",
+      "amount": "1.00",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1000}"
+    },
+    "status": 400
+  },
+  "d6-transfer-void-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/{transfer:D6 synthetic books:TRF-000001}/void/",
+    "post": {
+      "expected_revision": "bad",
+      "date": "bad",
+      "reason": ""
+    },
+    "status": 400
+  },
+  "d6-bill-date-business-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000691",
+      "expected_revision": "0",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-01",
+      "due_date": "2026-09-01",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Supplies",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2",
+      "lines-0-expense_account": "{account:D6 synthetic books:5000}"
+    }
+  },
+  "d6-bill-blank-invalid": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000692",
+      "expected_revision": "0",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0"
+    }
+  },
+  "d6-bill-review-missing-revision": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/review/",
+    "status": 400
+  },
+  "d6-bill-void-draft-refused": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000001}/void/",
+    "status": 400,
+    "post": {
+      "expected_revision": "2",
+      "date": "2026-10-31",
+      "reason": "Draft cannot void"
+    }
+  },
+  "d6-bill-void-payment-refused": {
+    "path": "/c/{company:D6 synthetic books}/bills/{bill:D6 synthetic books:BILL-000002}/void/",
+    "status": 400,
+    "post": {
+      "expected_revision": "2",
+      "date": "2026-10-31",
+      "reason": "Has live payment"
+    }
+  },
+  "d6-payment-reviewed": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/",
+    "status": 200,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000693",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-31",
+      "amount": "10",
+      "method": "CHECK",
+      "reference": "500",
+      "bank": "{account:D6 synthetic books:1000}",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-bill": "{bill:D6 synthetic books:BILL-000002}",
+      "allocations-0-amount": "10"
+    }
+  },
+  "d6-payment-unbalanced-invalid": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000693",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-31",
+      "amount": "20.00",
+      "method": "CHECK",
+      "reference": "500",
+      "bank": "{account:D6 synthetic books:1000}",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-bill": "{bill:D6 synthetic books:BILL-000002}",
+      "allocations-0-amount": "10.00"
+    }
+  },
+  "d6-payment-review-token-invalid": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000693",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-31",
+      "amount": "10.00",
+      "method": "CHECK",
+      "reference": "500",
+      "bank": "{account:D6 synthetic books:1000}",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-bill": "{bill:D6 synthetic books:BILL-000002}",
+      "allocations-0-amount": "10.00",
+      "action": "record",
+      "review_token": "bad"
+    }
+  },
+  "d6-payment-blank-invalid": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000693",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-31",
+      "amount": "10.00",
+      "method": "CHECK",
+      "reference": "500",
+      "bank": "{account:D6 synthetic books:1000}",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0"
+    }
+  },
+  "d6-transfer-reviewed": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "status": 200,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000694",
+      "date": "2026-10-31",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1010}",
+      "amount": "10",
+      "memo": "Reserve"
+    }
+  },
+  "d6-transfer-negative-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000694",
+      "date": "2026-10-31",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1010}",
+      "amount": "-1.00",
+      "memo": "Reserve"
+    }
+  },
+  "d6-transfer-review-token-invalid": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000694",
+      "date": "2026-10-31",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1010}",
+      "amount": "10.00",
+      "memo": "Reserve",
+      "action": "record",
+      "review_token": "bad"
+    }
+  },
+  "d6-bills-cleaned-tracker-links": {
+    "path": "/c/{company:D6 synthetic books}/bills/?q=+SUP+&start=10%2F01%2F2026&end=2026-10-31"
+  },
+  "invoice-invalid-terms": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "bogus",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1"
+    }
+  },
+  "invoice-invalid-origin": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1",
+      "lines-0-origin_position": "nonsense"
+    }
+  },
+  "invoice-invalid-management": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "nonsense",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1"
+    }
+  },
+  "invoice-invalid-customer-and-quantity": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "nonsense",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1"
+    }
+  },
+  "invoice-invalid-false-deletion": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "nonsense",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1",
+      "lines-0-DELETE": "false"
+    }
+  },
+  "invoice-invalid-noniso-date": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "10/01/2026",
+      "due_date": "10/31/2026",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1"
+    }
+  },
+  "d6-bills-padded-state": {
+    "path": "/c/{company:D6 synthetic books}/bills/?state=%20DRAFT%20",
+    "status": 400
+  },
+  "d6-payments-padded-state": {
+    "path": "/c/{company:D6 synthetic books}/payments/?state=%20LIVE%20",
+    "status": 400
+  },
+  "d6-transfers-padded-state": {
+    "path": "/c/{company:D6 synthetic books}/transfers/?state=%20LIVE%20",
+    "status": 400
+  },
+  "d6-calendar-space-integer": {
+    "path": "/c/{company:D6 synthetic books}/bills/calendar/?year=+&month=+",
+    "status": 400
+  },
+  "invoice-edit-invalid": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/edit/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-0000000000c1",
+      "expected_revision": "1",
+      "customer": "",
+      "date": "bad",
+      "due_date": "",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Typed line",
+      "lines-0-quantity": "2",
+      "lines-0-rate": "5",
+      "lines-0-income_account": "{account:4000}"
+    },
+    "status": 400
+  },
+  "invoice-invalid-tax-choice": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "bogus",
+      "terms": "",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1"
+    }
+  },
+  "estimate-state-choice-invalid": {
+    "path": "/c/{company}/estimates/{estimate:EST-000001}/state/",
+    "status": 400,
+    "post": {
+      "expected_revision": "1",
+      "state": " DRAFT ",
+      "reason": "Typed reason"
+    }
+  },
+  "estimate-convert-terms-invalid": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/convert/2/",
+    "status": 400,
+    "post": {
+      "expected_revision": "2",
+      "date": "bad",
+      "due_date": "",
+      "terms": "bogus"
+    }
+  },
+  "estimate-edit-invalid": {
+    "path": "/c/{company}/estimates/{estimate:EST-000001}/edit/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "1",
+      "date": "bad",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "Keep typed <value>",
+      "lines-0-quantity": "bad",
+      "lines-0-rate": "1",
+      "lines-0-tax_auto": "1",
+      "lines-1-tax_auto": "1"
+    }
+  },
+  "setup-fill-int-invalid": {
+    "path": "/c/{company}/setup/start/fill/",
+    "post": {
+      "action": "apply",
+      "digest": "{proposal_digest:current}",
+      "expected_revision": "0.0"
+    },
+    "status": 400
+  },
+  "invoice-invalid-header-blank-extra": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1",
+      "lines-1-description": " \t\n ",
+      "lines-1-tax_auto": "1",
+      "lines-1-refresh_item": "false"
+    }
+  },
+  "estimate-invalid-header-blank-extra": {
+    "path": "/c/{company}/estimates/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "2026-10-01",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-tax_auto": "1",
+      "lines-1-description": " \t\n ",
+      "lines-1-tax_auto": "1",
+      "lines-1-refresh_item": "false"
+    }
+  },
+  "sales-receipt-invalid-header-blank-extra": {
+    "path": "/c/{company}/sales-receipts/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "45.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1",
+      "lines-1-description": " \t\n ",
+      "lines-1-tax_auto": "1",
+      "lines-1-refresh_item": "false",
+      "method": "CASH",
+      "destination": "UNDEPOSITED"
+    }
+  },
+  "bill-invalid-header-blank-extra": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000691",
+      "expected_revision": "0",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "bad",
+      "due_date": "2026-09-01",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Supplies",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2",
+      "lines-0-expense_account": "{account:D6 synthetic books:5000}",
+      "lines-1-description": " \t\n "
+    }
+  },
+  "receipt-invalid-header-blank-extra": {
+    "path": "/c/{company}/receipts/new/",
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000080",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "bad",
+      "amount": "10.00",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-invoice": "{invoice:INV-000001}",
+      "allocations-0-amount": "10.00",
+      "action": "review",
+      "allocations-1-amount": " \t\n ",
+      "allocations-1-DELETE": "false"
+    },
+    "status": 400
+  },
+  "bill-invalid-management": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000691",
+      "expected_revision": "0",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "2026-10-01",
+      "due_date": "2026-09-01",
+      "lines-TOTAL_FORMS": "1",
+      "lines-INITIAL_FORMS": "nonsense",
+      "lines-0-description": "Supplies",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2",
+      "lines-0-expense_account": "{account:D6 synthetic books:5000}"
+    }
+  },
+  "receipt-invalid-management": {
+    "path": "/c/{company}/receipts/new/",
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000080",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "bad",
+      "amount": "10.00",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "nonsense",
+      "allocations-0-invoice": "{invoice:INV-000001}",
+      "allocations-0-amount": "10.00",
+      "action": "review",
+      "allocations-1-amount": " \t\n ",
+      "allocations-1-DELETE": "false"
+    },
+    "status": 400
+  },
+  "d7a-checks-list": {
+    "path": "/c/{company:D7a synthetic books}/checks/"
+  },
+  "d7a-checks-filter": {
+    "path": "/c/{company:D7a synthetic books}/checks/?state=DRAFT&vendor={vendor:D7a synthetic books:Willow & Stone Supply}"
+  },
+  "d7a-check-new": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/"
+  },
+  "d7a-check-edit": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/edit/"
+  },
+  "d7a-check-detail": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/"
+  },
+  "d7a-check-recorded": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000003}/"
+  },
+  "d7a-check-voided": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000004}/"
+  },
+  "d7a-check-revision": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/revisions/1/"
+  },
+  "d7a-check-number": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000003}/number/"
+  },
+  "d7a-check-review": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/review/?revision=2"
+  },
+  "d7a-check-void": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000003}/void/"
+  },
+  "d7a-vendor-activity": {
+    "path": "/c/{company:D7a synthetic books}/lists/vendors/{vendor:D7a synthetic books:Willow & Stone Supply}/"
+  },
+  "d7a-deposits-list": {
+    "path": "/c/{company:D7a synthetic books}/deposits/"
+  },
+  "d7a-deposits-filter": {
+    "path": "/c/{company:D7a synthetic books}/deposits/?state=LIVE"
+  },
+  "d7a-deposit-new": {
+    "path": "/c/{company:D7a synthetic books}/deposits/new/"
+  },
+  "d7a-deposit-detail": {
+    "path": "/c/{company:D7a synthetic books}/deposits/{deposit:D7a synthetic books:DEP-000002}/"
+  },
+  "d7a-deposit-reversed": {
+    "path": "/c/{company:D7a synthetic books}/deposits/{deposit:D7a synthetic books:DEP-000001}/"
+  },
+  "d7a-deposit-reverse": {
+    "path": "/c/{company:D7a synthetic books}/deposits/{deposit:D7a synthetic books:DEP-000002}/reverse/"
+  },
+  "d7a-checks-invalid-filter": {
+    "path": "/c/{company:D7a synthetic books}/checks/?state=%20DRAFT%20&print_later=bad&start=bad",
+    "status": 400
+  },
+  "d7a-deposits-invalid-filter": {
+    "path": "/c/{company:D7a synthetic books}/deposits/?state=%20LIVE%20",
+    "status": 400
+  },
+  "d7a-check-invalid-review": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/review/?revision=2.0",
+    "status": 400
+  },
+  "d7a-check-new-invalid": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "bad",
+      "payee_kind": "VENDOR",
+      "vendor": "",
+      "check_number": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "bad",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1"
+    },
+    "status": 400
+  },
+  "d7a-check-edit-invalid": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/edit/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "bad",
+      "payee_kind": "VENDOR",
+      "vendor": "",
+      "check_number": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "bad",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1"
+    },
+    "status": 400
+  },
+  "d7a-check-whitespace-extra": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "bad",
+      "payee_kind": "VENDOR",
+      "vendor": "{vendor:D7a synthetic books:Willow & Stone Supply}",
+      "check_number": "999",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1",
+      "lines-0-account": "{account:D7a synthetic books:5000}",
+      "lines-1-description": " \t\n "
+    },
+    "status": 400
+  },
+  "d7a-check-management-invalid": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "bad",
+      "payee_kind": "VENDOR",
+      "vendor": "{vendor:D7a synthetic books:Willow & Stone Supply}",
+      "check_number": "999",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "bad",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1",
+      "lines-0-account": "{account:D7a synthetic books:5000}",
+      "lines-1-description": " \t\n "
+    },
+    "status": 400
+  },
+  "d7a-check-padded-choice": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0.0",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "bad",
+      "payee_kind": " OTHER ",
+      "vendor": " bad ",
+      "check_number": "999",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1",
+      "lines-0-account": "{account:D7a synthetic books:5000}",
+      "lines-1-description": " \t\n "
+    },
+    "status": 400
+  },
+  "d7a-check-record-invalid": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000001}/record/",
+    "post": {
+      "expected_revision": "bad",
+      "review_token": ""
+    },
+    "status": 400
+  },
+  "d7a-check-number-invalid": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000003}/number/",
+    "post": {
+      "expected_revision": "0",
+      "check_number": ""
+    },
+    "status": 400
+  },
+  "d7a-check-void-invalid": {
+    "path": "/c/{company:D7a synthetic books}/checks/{check:D7a synthetic books:CHK-000003}/void/",
+    "post": {
+      "expected_revision": "1.0",
+      "date": "bad",
+      "reason": ""
+    },
+    "status": 400
+  },
+  "d7a-deposit-new-invalid": {
+    "path": "/c/{company:D7a synthetic books}/deposits/new/",
+    "post": {
+      "request_key": "bad",
+      "bank": "",
+      "date": "bad",
+      "reference": "typed <note>"
+    },
+    "status": 400
+  },
+  "d7a-deposit-reverse-invalid": {
+    "path": "/c/{company:D7a synthetic books}/deposits/{deposit:D7a synthetic books:DEP-000002}/reverse/",
+    "post": {
+      "expected_revision": "0",
+      "date": "bad",
+      "reason": ""
+    },
+    "status": 400
+  },
+  "d7a-deposit-review": {
+    "path": "/c/{company:D7a synthetic books}/deposits/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007065",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "2026-10-15",
+      "reference": "New slip",
+      "memo": "New deposit review",
+      "receipts": "{receipt:D7a synthetic books:RCP-000003}",
+      "action": "review"
+    }
+  },
+  "d7a-deposit-choice-invalid": {
+    "path": "/c/{company:D7a synthetic books}/deposits/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007065",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "2026-10-15",
+      "reference": "New slip",
+      "memo": "New deposit review",
+      "receipts": "not-a-receipt",
+      "action": "review"
+    },
+    "status": 400
+  },
+  "d7a-check-modelchoice-padding": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0",
+      "bank": " \t{account:D7a synthetic books:1000} \n",
+      "date": "bad",
+      "payee_kind": "VENDOR",
+      "vendor": " \t{vendor:D7a synthetic books:Willow & Stone Supply} \n",
+      "check_number": "999",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1",
+      "lines-0-account": " \t{account:D7a synthetic books:5000} \n",
+      "lines-1-description": " \t\n "
+    },
+    "status": 400
+  },
+  "d7a-deposit-modelchoice-padding": {
+    "path": "/c/{company:D7a synthetic books}/deposits/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007065",
+      "bank": " \t{account:D7a synthetic books:1000} \n",
+      "date": "bad",
+      "reference": "New slip",
+      "memo": "New deposit review",
+      "receipts": "{receipt:D7a synthetic books:RCP-000003}",
+      "action": "review"
+    },
+    "status": 400
+  },
+  "d7a-check-no-banks": {
+    "path": "/c/{company:Other synthetic books}/checks/new/"
+  },
+  "d7a-deposit-no-receipts": {
+    "path": "/c/{company:Other synthetic books}/deposits/new/"
+  },
+  "d5-credit-list": {
+    "path": "/c/{company}/credit-memos/"
+  },
+  "d5-credit-new": {
+    "path": "/c/{company}/credit-memos/new/"
+  },
+  "d5-credit-new-invalid": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {},
+    "status": 400
+  },
+  "d5-credit-detail": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/"
+  },
+  "d5-credit-apply": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/apply/"
+  },
+  "d5-credit-apply-invalid": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/apply/",
+    "post": {},
+    "status": 400
+  },
+  "d5-credit-void": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/void/"
+  },
+  "d5-credit-void-invalid": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/void/",
+    "post": {},
+    "status": 400
+  },
+  "d5-credit-unapply": {
+    "path": "/c/{company}/credit-applications/{creditapplication:CM-000001:2}/unapply/"
+  },
+  "d5-credit-unapply-invalid": {
+    "path": "/c/{company}/credit-applications/{creditapplication:CM-000001:2}/unapply/",
+    "post": {},
+    "status": 400
+  },
+  "d5-credit-refund": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/refund/"
+  },
+  "d5-credit-refund-invalid": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/refund/",
+    "post": {},
+    "status": 400
+  },
+  "d5-credit-refund-detail": {
+    "path": "/c/{company}/refunds/{creditrefund:RFD-000002}/"
+  },
+  "d5-credit-refund-void": {
+    "path": "/c/{company}/refunds/{creditrefund:RFD-000002}/void/"
+  },
+  "d5-credit-refund-void-invalid": {
+    "path": "/c/{company}/refunds/{creditrefund:RFD-000002}/void/",
+    "post": {},
+    "status": 400
+  },
+  "d5-credit-voided": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000003}/"
+  },
+  "d5-deposit-list": {
+    "path": "/c/{company}/customer-deposits/"
+  },
+  "d5-deposit-new": {
+    "path": "/c/{company}/customer-deposits/new/"
+  },
+  "d5-deposit-new-invalid": {
+    "path": "/c/{company}/customer-deposits/new/",
+    "post": {},
+    "status": 400
+  },
+  "d5-deposit-detail": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/"
+  },
+  "d5-deposit-apply": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/apply/"
+  },
+  "d5-deposit-apply-invalid": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/apply/",
+    "post": {},
+    "status": 400
+  },
+  "d5-deposit-void": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/void/"
+  },
+  "d5-deposit-void-invalid": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/void/",
+    "post": {},
+    "status": 400
+  },
+  "d5-deposit-unapply": {
+    "path": "/c/{company}/deposit-applications/{depositapplication:CDA-000002}/unapply/"
+  },
+  "d5-deposit-unapply-invalid": {
+    "path": "/c/{company}/deposit-applications/{depositapplication:CDA-000002}/unapply/",
+    "post": {},
+    "status": 400
+  },
+  "d5-deposit-refund": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/refund/"
+  },
+  "d5-deposit-refund-invalid": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/refund/",
+    "post": {},
+    "status": 400
+  },
+  "d5-deposit-refund-detail": {
+    "path": "/c/{company}/deposit-refunds/{depositrefund:CDR-000002}/"
+  },
+  "d5-deposit-refund-void": {
+    "path": "/c/{company}/deposit-refunds/{depositrefund:CDR-000002}/void/"
+  },
+  "d5-deposit-refund-void-invalid": {
+    "path": "/c/{company}/deposit-refunds/{depositrefund:CDR-000002}/void/",
+    "post": {},
+    "status": 400
+  },
+  "d5-deposit-voided": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000003}/"
+  },
+  "d5-invoice-deposit-apply": {
+    "path": "/c/{company}/invoices/{invoice:INV-000005}/apply-deposit/"
+  },
+  "d5-invoice-deposit-apply-invalid": {
+    "path": "/c/{company}/invoices/{invoice:INV-000005}/apply-deposit/",
+    "post": {},
+    "status": 400
+  },
+  "d5-invoice-fragments": {
+    "path": "/c/{company}/invoices/{invoice:INV-000005}/"
+  },
+  "d5-customer-fragments": {
+    "path": "/c/{company}/lists/customers/{customer:Maple & Birch Café}/"
+  },
+  "d5-credit-review-whitespace-extra": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000099",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-27",
+      "memo": "  D5 typed  ",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "D5 return",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-1-description": " \t ",
+      "lines-1-quantity": "  ",
+      "lines-1-rate": "\n",
+      "lines-1-origin_position": "ignored",
+      "lines-1-refresh_item": "true",
+      "lines-1-keep_archived": "true"
+    }
+  },
+  "d5-credit-padded-choice": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000099",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-27",
+      "memo": "  D5 typed  ",
+      "tax_mode": " NONE ",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "D5 return",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-1-description": " \t ",
+      "lines-1-quantity": "  ",
+      "lines-1-rate": "\n",
+      "lines-1-origin_position": "ignored",
+      "lines-1-refresh_item": "true",
+      "lines-1-keep_archived": "true"
+    },
+    "status": 400
+  },
+  "d5-credit-bad-management": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000099",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-27",
+      "memo": "  D5 typed  ",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "0.0",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "D5 return",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-1-description": " \t ",
+      "lines-1-quantity": "  ",
+      "lines-1-rate": "\n",
+      "lines-1-origin_position": "ignored",
+      "lines-1-refresh_item": "true",
+      "lines-1-keep_archived": "true"
+    },
+    "status": 400
+  },
+  "d5-credit-application-review": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/apply/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000098",
+      "date": "2026-10-27",
+      "amount_{invoice:INV-000005}": "1.00"
+    }
+  },
+  "d5-deposit-review": {
+    "path": "/c/{company}/customer-deposits/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000097",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-27",
+      "amount": "10.00",
+      "method": "CHECK",
+      "destination": "UNDEPOSITED",
+      "reference": "D5",
+      "memo": "  typed memo  "
+    }
+  },
+  "d5-credit-refund-review": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000001}/refund/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000096",
+      "date": "2026-10-27",
+      "amount": "1.00",
+      "bank": "{account:1000}",
+      "method": "CASH",
+      "memo": "Synthetic refund"
+    }
+  },
+  "d5-deposit-refund-review": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/refund/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000096",
+      "date": "2026-10-27",
+      "amount": "1.00",
+      "bank": "{account:1000}",
+      "method": "CASH",
+      "memo": "Synthetic refund"
+    }
+  },
+  "d5-deposit-application-review": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/apply/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000095",
+      "invoice": "{invoice:INV-000005}",
+      "date": "2026-10-27",
+      "amount": "1.00"
+    }
+  },
+  "d5-credit-fully-used": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000002}/"
+  },
+  "d5-credit-unused-void": {
+    "path": "/c/{company}/credit-memos/{creditmemo:CM-000002}/void/"
+  },
+  "d5-credit-refund-cash": {
+    "path": "/c/{company}/refunds/{creditrefund:RFD-000003}/"
+  },
+  "d5-credit-refund-unnumbered": {
+    "path": "/c/{company}/refunds/{creditrefund:RFD-000004}/"
+  },
+  "d5-deposit-fully-used": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000002}/"
+  },
+  "d5-deposit-unused-void": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000002}/void/"
+  },
+  "d5-deposit-refund-cash": {
+    "path": "/c/{company}/deposit-refunds/{depositrefund:CDR-000003}/"
+  },
+  "d5-deposit-refund-unnumbered": {
+    "path": "/c/{company}/deposit-refunds/{depositrefund:CDR-000004}/"
+  },
+  "d5-deposit-filter-order": {
+    "path": "/c/{company}/customer-deposits/?q=D5+order"
+  },
+  "d5-deposit-filter-memo": {
+    "path": "/c/{company}/customer-deposits/?q=Synthetic+customer+deposit"
+  },
+  "d5-credit-filter-invalid": {
+    "path": "/c/{company}/credit-memos/?state=+AVAILABLE+",
+    "status": 400
+  },
+  "d5-deposit-filter-invalid": {
+    "path": "/c/{company}/customer-deposits/?state=+AVAILABLE+",
+    "status": 400
+  },
+  "d5-deposit-with-estimate": {
+    "path": "/c/{company}/customer-deposits/new/?customer={customer:Maple & Birch Café}&estimate={estimate:EST-000001}"
+  },
+  "d5-deposit-padded-models": {
+    "path": "/c/{company}/customer-deposits/new/",
+    "post": {
+      "request_key": " d5000000-0000-4000-8000-000000000094 ",
+      "customer": " {customer:Maple & Birch Café} ",
+      "date": "2026-10-27",
+      "amount": "10.00",
+      "method": "CHECK",
+      "destination": "BANK",
+      "bank": " {account:1000} "
+    }
+  },
+  "d5-credit-padded-models": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000099",
+      "customer": " {customer:Maple & Birch Café} ",
+      "date": "2026-10-27",
+      "memo": "  D5 typed  ",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "D5 return",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-income_account": " {account:4000} ",
+      "lines-1-description": " \t ",
+      "lines-1-quantity": "  ",
+      "lines-1-rate": "\n",
+      "lines-1-origin_position": "ignored",
+      "lines-1-refresh_item": "true",
+      "lines-1-keep_archived": "true"
+    }
+  },
+  "d5-credit-deleted-invalid-row": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000099",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-27",
+      "memo": "  D5 typed  ",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "D5 return",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "2.00",
+      "lines-0-income_account": "{account:4000}",
+      "lines-1-description": "",
+      "lines-1-quantity": "bad",
+      "lines-1-rate": "\n",
+      "lines-1-origin_position": "ignored",
+      "lines-1-refresh_item": "true",
+      "lines-1-keep_archived": "true",
+      "lines-1-DELETE": "true",
+      "lines-1-income_account": "",
+      "lines-1-tax_auto": "99"
+    }
+  },
+  "d5-deposit-estimate-core-gap": {
+    "path": "/c/{company}/customer-deposits/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000093",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "2026-10-27",
+      "amount": "10.00",
+      "method": "CHECK",
+      "destination": "BANK",
+      "bank": "{account:1000}",
+      "estimate": "{estimate:EST-000001}"
+    }
+  },
+  "d8-pl-accrual": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&start=2026-10-01&end=2026-10-31&basis=ACCRUAL"
+  },
+  "d8-pl-accrual-csv": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&start=2026-10-01&end=2026-10-31&basis=ACCRUAL&output=csv",
+    "media": "csv"
+  },
+  "d8-bs-accrual": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-31&basis=ACCRUAL"
+  },
+  "d8-bs-accrual-csv": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-31&basis=ACCRUAL&output=csv",
+    "media": "csv"
+  },
+  "d8-gl-accrual": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=ACCRUAL"
+  },
+  "d8-bs-accrual-day-05": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-05&basis=ACCRUAL"
+  },
+  "d8-gl-accrual-through-05": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-05&basis=ACCRUAL"
+  },
+  "d8-bs-accrual-day-09": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-09&basis=ACCRUAL"
+  },
+  "d8-gl-accrual-through-09": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-09&basis=ACCRUAL"
+  },
+  "d8-bs-accrual-day-12": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-12&basis=ACCRUAL"
+  },
+  "d8-gl-accrual-through-12": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-12&basis=ACCRUAL"
+  },
+  "d8-bs-accrual-day-20": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-20&basis=ACCRUAL"
+  },
+  "d8-gl-accrual-through-20": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-20&basis=ACCRUAL"
+  },
+  "d8-gl-accrual-csv": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=ACCRUAL&output=csv",
+    "media": "csv"
+  },
+  "d8-pl-cash": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH"
+  },
+  "d8-pl-cash-csv": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH&output=csv",
+    "media": "csv"
+  },
+  "d8-bs-cash": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-31&basis=CASH"
+  },
+  "d8-bs-cash-csv": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-31&basis=CASH&output=csv",
+    "media": "csv"
+  },
+  "d8-gl-cash": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH"
+  },
+  "d8-bs-cash-day-05": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-05&basis=CASH"
+  },
+  "d8-gl-cash-through-05": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-05&basis=CASH"
+  },
+  "d8-bs-cash-day-09": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-09&basis=CASH"
+  },
+  "d8-gl-cash-through-09": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-09&basis=CASH"
+  },
+  "d8-bs-cash-day-12": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-12&basis=CASH"
+  },
+  "d8-gl-cash-through-12": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-12&basis=CASH"
+  },
+  "d8-bs-cash-day-20": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-20&basis=CASH"
+  },
+  "d8-gl-cash-through-20": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-20&basis=CASH"
+  },
+  "d8-gl-cash-csv": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH&output=csv",
+    "media": "csv"
+  },
+  "d8-pl-this-month": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_month"
+  },
+  "d8-gl-this-month": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_month"
+  },
+  "d8-pl-last-month": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=last_month"
+  },
+  "d8-gl-last-month": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=last_month"
+  },
+  "d8-pl-preset-stale-dates": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=last_month&start=2026-01-01&end=2026-01-31&basis=ACCRUAL"
+  },
+  "d8-gl-preset-stale-dates": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=last_month&start=2026-01-01&end=2026-01-31&basis=ACCRUAL"
+  },
+  "d8-pl-this-quarter": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_quarter"
+  },
+  "d8-gl-this-quarter": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_quarter"
+  },
+  "d8-pl-this-year": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_year"
+  },
+  "d8-gl-this-year": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_year"
+  },
+  "d8-pl-year-to-date": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=year_to_date"
+  },
+  "d8-gl-year-to-date": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=year_to_date"
+  },
+  "d8-pl-through": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?end=2026-10-31"
+  },
+  "d8-pl-day": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2026-10-12&end=2026-10-12"
+  },
+  "d8-pl-cross-year": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2025-12-01&end=2026-10-31"
+  },
+  "d8-pl-cross-month": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2026-09-01&end=2026-10-31"
+  },
+  "d8-pl-empty": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2099-01-01&end=2099-01-31"
+  },
+  "d8-pl-min": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?end=1900-01-02"
+  },
+  "d8-pl-max": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=9999-12-30&end=9999-12-30"
+  },
+  "d8-pl-default": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/"
+  },
+  "d8-pl-invalid-basis": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?basis=%20CASH%20",
+    "status": 400
+  },
+  "d8-pl-invalid-preset": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=%20custom%20",
+    "status": 400
+  },
+  "d8-pl-invalid-output": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?output=%20csv%20",
+    "status": 400
+  },
+  "d8-pl-invalid-all": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?basis=no&output=bad&preset=bad&start=bad&end=bad",
+    "status": 400
+  },
+  "d8-pl-invalid-missing-end": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom",
+    "status": 400
+  },
+  "d8-pl-invalid-reversed": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2026-10-31&end=2026-10-01",
+    "status": 400
+  },
+  "d8-pl-invalid-space-date": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=+",
+    "status": 400
+  },
+  "d8-pl-invalid-underflow": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?end=1900-01-01",
+    "status": 400
+  },
+  "d8-pl-invalid-overflow": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?end=9999-12-31",
+    "status": 400
+  },
+  "d8-pl-invalid-date-ignored-preset": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_month&end=bad",
+    "status": 400
+  },
+  "d8-pl-invalid-output-before-cross": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&output=bad",
+    "status": 400
+  },
+  "d8-pl-post-refused": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/",
+    "status": 405,
+    "post": {}
+  },
+  "d8-gl-through": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-31"
+  },
+  "d8-gl-day": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2026-10-12&end=2026-10-12"
+  },
+  "d8-gl-cross-year": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2025-12-01&end=2026-10-31"
+  },
+  "d8-gl-cross-month": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2026-09-01&end=2026-10-31"
+  },
+  "d8-gl-empty": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2099-01-01&end=2099-01-31"
+  },
+  "d8-gl-min": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=1900-01-02"
+  },
+  "d8-gl-max": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=9999-12-30&end=9999-12-30"
+  },
+  "d8-gl-default": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/"
+  },
+  "d8-gl-invalid-basis": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?basis=%20CASH%20",
+    "status": 400
+  },
+  "d8-gl-invalid-preset": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=%20custom%20",
+    "status": 400
+  },
+  "d8-gl-invalid-output": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?output=%20csv%20",
+    "status": 400
+  },
+  "d8-gl-invalid-all": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?basis=no&output=bad&preset=bad&start=bad&end=bad",
+    "status": 400
+  },
+  "d8-gl-invalid-missing-end": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom",
+    "status": 400
+  },
+  "d8-gl-invalid-reversed": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2026-10-31&end=2026-10-01",
+    "status": 400
+  },
+  "d8-gl-invalid-space-date": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=+",
+    "status": 400
+  },
+  "d8-gl-invalid-underflow": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=1900-01-01",
+    "status": 400
+  },
+  "d8-gl-invalid-overflow": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=9999-12-31",
+    "status": 400
+  },
+  "d8-gl-invalid-date-ignored-preset": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_month&end=bad",
+    "status": 400
+  },
+  "d8-gl-invalid-output-before-cross": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&output=bad",
+    "status": 400
+  },
+  "d8-gl-post-refused": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/",
+    "status": 405,
+    "post": {}
+  },
+  "d8-bs-default": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/"
+  },
+  "d8-bs-prior-year": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2025-12-31"
+  },
+  "d8-bs-next-year": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2027-01-01"
+  },
+  "d8-bs-invalid-all": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?basis=bad&output=bad&as_of=bad",
+    "status": 400
+  },
+  "d8-bs-invalid-padded-basis": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?basis=%20CASH%20",
+    "status": 400
+  },
+  "d8-bs-invalid-blank-date": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=+",
+    "status": 400
+  },
+  "d8-bs-invalid-bounds": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=1900-01-01",
+    "status": 400
+  },
+  "d8-bs-post-refused": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/",
+    "status": 405,
+    "post": {}
+  },
+  "d8-gl-group-all": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group="
+  },
+  "d8-gl-group-income": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=income"
+  },
+  "d8-gl-group-expense": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=expense"
+  },
+  "d8-gl-group-pl": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=pl"
+  },
+  "d8-gl-group-asset": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=asset"
+  },
+  "d8-gl-group-liability": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=liability"
+  },
+  "d8-gl-group-equity": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=equity"
+  },
+  "d8-gl-group-le": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=le"
+  },
+  "d8-gl-group-current-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=current_assets"
+  },
+  "d8-gl-group-bank": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=bank"
+  },
+  "d8-gl-group-receivable": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=receivable"
+  },
+  "d8-gl-group-other-current-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_current_assets"
+  },
+  "d8-gl-group-fixed-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=fixed_assets"
+  },
+  "d8-gl-group-other-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_assets"
+  },
+  "d8-gl-group-current-liabilities": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=current_liabilities"
+  },
+  "d8-gl-group-payable": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=payable"
+  },
+  "d8-gl-group-credit-cards": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=credit_cards"
+  },
+  "d8-gl-group-other-current-liabilities": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_current_liabilities"
+  },
+  "d8-gl-group-long-term-liabilities": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=long_term_liabilities"
+  },
+  "d8-gl-group-operating-income": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=operating_income"
+  },
+  "d8-gl-group-cogs": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=cogs"
+  },
+  "d8-gl-group-operating-expense": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=operating_expense"
+  },
+  "d8-gl-group-other-income": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_income"
+  },
+  "d8-gl-group-other-expense": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_expense"
+  },
+  "d8-gl-invalid-account": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?account=no",
+    "status": 400
+  },
+  "d8-gl-invalid-group": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?group=%20pl%20",
+    "status": 400
+  },
+  "d8-gl-invalid-account-before-cross": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?account=no&preset=custom",
+    "status": 400
+  },
+  "d8-gl-invalid-account-group": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?account=no&group=no&preset=custom&output=bad",
+    "status": 400
+  },
+  "d8-gl-invalid-account-length": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?account=1234567890123&group=bad&preset=custom&output=bad",
+    "status": 400
+  },
+  "d8-gl-invalid-account-null": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?account=%00&group=bad&preset=custom&output=bad",
+    "status": 400
+  },
+  "d8-gl-invalid-account-null-length": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?account=1234567890123%00&group=bad&preset=custom",
+    "status": 400
+  },
+  "d8-gl-page-first": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=1"
+  },
+  "d8-gl-page-second": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=2"
+  },
+  "d8-gl-page-zero": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=0"
+  },
+  "d8-gl-page-negative": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=-1"
+  },
+  "d8-gl-page-huge": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=999999999999999999999999999999999999999"
+  },
+  "d8-gl-page-decimal": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=2.0"
+  },
+  "d8-gl-page-unicode": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=%D9%A2"
+  },
+  "d8-gl-page-underscore": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=0_2"
+  },
+  "d8-gl-account-cash": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH&account={account:D8 report books:400}"
+  },
+  "dfix2-checks-deleted-invalid-row": {
+    "path": "/c/{company:D7a synthetic books}/checks/new/",
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000007064",
+      "expected_revision": "0",
+      "bank": "{account:D7a synthetic books:1000}",
+      "date": "bad",
+      "payee_kind": "VENDOR",
+      "vendor": "{vendor:D7a synthetic books:Willow & Stone Supply}",
+      "check_number": "999",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-tab": "EXPENSE",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "bad",
+      "lines-0-description": "Typed <value>",
+      "lines-1-tab": "ITEM",
+      "lines-1-quantity": "1",
+      "lines-0-account": "{account:D7a synthetic books:5000}",
+      "lines-1-description": " \t\n ",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    },
+    "status": 400
+  },
+  "dfix2-bills-deleted-invalid-row": {
+    "path": "/c/{company:D6 synthetic books}/bills/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000691",
+      "expected_revision": "0",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "bad",
+      "due_date": "2026-09-01",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Supplies",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "bad",
+      "lines-0-expense_account": "{account:D6 synthetic books:5000}",
+      "lines-1-description": " \t\n ",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    }
+  },
+  "dfix2-invoices-deleted-invalid-row": {
+    "path": "/c/{company}/invoices/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "bad",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "bad",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1",
+      "lines-1-description": " \t\n ",
+      "lines-1-tax_auto": "1",
+      "lines-1-refresh_item": "false",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    }
+  },
+  "dfix2-estimates-deleted-invalid-row": {
+    "path": "/c/{company}/estimates/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "bad",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "bad",
+      "lines-0-tax_auto": "1",
+      "lines-1-description": " \t\n ",
+      "lines-1-tax_auto": "1",
+      "lines-1-refresh_item": "false",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    }
+  },
+  "dfix2-credits-deleted-invalid-row": {
+    "path": "/c/{company}/credit-memos/new/",
+    "post": {
+      "request_key": "d5000000-0000-4000-8000-000000000099",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "bad",
+      "memo": "  D5 typed  ",
+      "tax_mode": "NONE",
+      "lines-TOTAL_FORMS": "3",
+      "lines-INITIAL_FORMS": "0",
+      "lines-MIN_NUM_FORMS": "1",
+      "lines-MAX_NUM_FORMS": "50",
+      "lines-0-description": "D5 return",
+      "lines-0-quantity": "1",
+      "lines-0-rate": "bad",
+      "lines-0-income_account": "{account:4000}",
+      "lines-1-description": " \t ",
+      "lines-1-quantity": "  ",
+      "lines-1-rate": "\n",
+      "lines-1-origin_position": "ignored",
+      "lines-1-refresh_item": "true",
+      "lines-1-keep_archived": "true",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    },
+    "status": 400
+  },
+  "dfix2-sales-receipts-deleted-invalid-row": {
+    "path": "/c/{company}/sales-receipts/new/",
+    "status": 400,
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000099",
+      "expected_revision": "0",
+      "customer": "",
+      "date": "bad",
+      "due_date": "2026-10-31",
+      "tax_mode": "NONE",
+      "terms": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-description": "Review line",
+      "lines-0-quantity": "4",
+      "lines-0-rate": "bad",
+      "lines-0-income_account": "{account:4000}",
+      "lines-0-tax_auto": "1",
+      "lines-1-description": " \t\n ",
+      "lines-1-tax_auto": "1",
+      "lines-1-refresh_item": "false",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    }
+  },
+  "dfix2-receipts-deleted-invalid-row": {
+    "path": "/c/{company}/receipts/new/",
+    "post": {
+      "request_key": "54d40000-0000-4000-8000-000000000080",
+      "customer": "{customer:Maple & Birch Café}",
+      "date": "bad",
+      "amount": "10.00",
+      "method": "CASH",
+      "destination": "UNDEPOSITED",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-invoice": "{invoice:INV-000001}",
+      "allocations-0-amount": "bad",
+      "action": "review",
+      "allocations-1-amount": " \t\n ",
+      "allocations-1-DELETE": "",
+      "allocations-0-DELETE": "on"
+    },
+    "status": 400
+  },
+  "dfix2-payments-deleted-invalid-row": {
+    "path": "/c/{company:D6 synthetic books}/payments/new/",
+    "status": 400,
+    "post": {
+      "request_key": "00000000-0000-0000-0000-000000000693",
+      "vendor": "{vendor:D6 synthetic books:Pine & River Supply}",
+      "date": "bad",
+      "amount": "10",
+      "method": "CHECK",
+      "reference": "500",
+      "bank": "{account:D6 synthetic books:1000}",
+      "allocations-TOTAL_FORMS": "3",
+      "allocations-INITIAL_FORMS": "0",
+      "allocations-0-bill": "{bill:D6 synthetic books:BILL-000002}",
+      "allocations-0-amount": "bad",
+      "allocations-0-DELETE": "on",
+      "allocations-1-DELETE": ""
+    }
+  },
+  "dfix2-journals-deleted-invalid-row": {
+    "path": "/c/{company}/journals/new/",
+    "post": {
+      "request_key": "bad",
+      "expected_revision": "0",
+      "date": "bad",
+      "memo": "",
+      "entry_number": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-account": "{account:4000}",
+      "lines-0-debit": "bad",
+      "lines-0-credit": "0",
+      "lines-1-account": "",
+      "lines-1-debit": "1",
+      "lines-1-credit": "0",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    },
+    "status": 400
+  },
+  "dfix2-deposits-deleted-invalid-row": {
+    "path": "/c/{company:D7a synthetic books}/deposits/new/",
+    "post": {
+      "request_key": "bad",
+      "bank": "",
+      "date": "bad",
+      "reference": "typed <note>",
+      "lines-0-rate": "bad",
+      "lines-0-DELETE": "on",
+      "lines-1-DELETE": ""
+    },
+    "status": 400
+  },
+  "d7b-registers": {
+    "path": "/c/{company}/registers/",
+    "status": 200
+  },
+  "d7b-register": {
+    "path": "/c/{company}/accounts/{account:1070}/register/",
+    "status": 200
+  },
+  "d7b-register-provenance": {
+    "path": "/c/{company}/accounts/{account:1000}/register/",
+    "status": 200
+  },
+  "d7b-register-card": {
+    "path": "/c/{company}/accounts/{account:2170}/register/",
+    "status": 200
+  },
+  "d7b-register-range": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?start=2026-10-01&end=2026-10-31",
+    "status": 200
+  },
+  "d7b-register-filters": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?state=U&payee=Autumn&amount=$100.00",
+    "status": 200
+  },
+  "d7b-register-month": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?preset=this_month",
+    "status": 200
+  },
+  "d7b-register-invalid": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?preset=bad&start=bad&end=1899-01-01&state=bad&amount=1.234&output=no",
+    "status": 400
+  },
+  "d7b-register-reverse-range": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?start=2026-10-31&end=2026-10-01",
+    "status": 400
+  },
+  "d7b-chooser": {
+    "path": "/c/{company}/reconcile/",
+    "status": 200
+  },
+  "d7b-chooser-left": {
+    "path": "/c/{company}/reconcile/?left={account:1070}",
+    "status": 200
+  },
+  "d7b-begin": {
+    "path": "/c/{company}/reconcile/{account:1000}/begin/",
+    "status": 200
+  },
+  "d7b-begin-change": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 200
+  },
+  "d7b-begin-card": {
+    "path": "/c/{company}/reconcile/{account:2170}/begin/",
+    "status": 200
+  },
+  "d7b-begin-invalid": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "bad",
+      "ending_balance": "",
+      "service_charge": "1111111111111111111111111",
+      "request_key": ""
+    }
+  },
+  "d7b-begin-invalid-amount": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "bad",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1"
+    }
+  },
+  "d7b-screen": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 200
+  },
+  "d7b-screen-saved": {
+    "path": "/c/{company}/reconcile/{account:1070}/?saved=1",
+    "status": 200
+  },
+  "d7b-screen-card": {
+    "path": "/c/{company}/reconcile/{account:2170}/",
+    "status": 200
+  },
+  "d7b-screen-invalid-action": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "no"
+    }
+  },
+  "d7b-screen-invalid-shown": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "bad"
+    }
+  },
+  "d7b-screen-difference": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "completion_key": "00000000-0000-0000-0000-000000d7b01f"
+    }
+  },
+  "d7b-history": {
+    "path": "/c/{company}/reconcile/{account:1070}/history/",
+    "status": 200
+  },
+  "d7b-report": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/",
+    "status": 200
+  },
+  "d7b-report-summary": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=summary&done=1",
+    "status": 200
+  },
+  "d7b-report-card": {
+    "path": "/c/{company}/reconciliations/{reconciliation:2170:2026-09-30}/",
+    "status": 200
+  },
+  "d7b-report-undone": {
+    "path": "/c/{company:D8 report books}/reconciliations/{reconciliation:D8 report books:100:2026-10-31}/",
+    "status": 200
+  },
+  "d7b-report-invalid": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=bad",
+    "status": 400
+  },
+  "d7b-undo": {
+    "path": "/c/{company}/reconcile/{account:1070}/undo/",
+    "status": 200
+  },
+  "d7b-undo-invalid": {
+    "path": "/c/{company}/reconcile/{account:1070}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1070:2026-09-30}",
+      "revision": "3",
+      "undo_key": "00000000-0000-0000-0000-000000d7b020",
+      "reason": ""
+    }
+  },
+  "d7b-cleared-invalid": {
+    "path": "/c/{company}/accounts/{account:1070}/register/cleared/",
+    "post": {
+      "line": "{line:first:1070}",
+      "state": "R",
+      "revision": "2"
+    },
+    "status": 400
+  },
+  "d7b-register-csv": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?output=csv",
+    "status": 200,
+    "media": "csv"
+  },
+  "d7b-register-card-csv": {
+    "path": "/c/{company}/accounts/{account:2170}/register/?output=csv",
+    "status": 200,
+    "media": "csv"
+  },
+  "d7b-register-filters-csv": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?state=U&payee=Autumn&amount=$100.00&output=csv",
+    "status": 200,
+    "media": "csv"
+  },
+  "d7b-report-csv": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?output=csv",
+    "status": 200,
+    "media": "csv"
+  },
+  "d7b-report-summary-csv": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=summary&done=1&output=csv",
+    "status": 200,
+    "media": "csv"
+  },
+  "d7b-report-undone-csv": {
+    "path": "/c/{company:D8 report books}/reconciliations/{reconciliation:D8 report books:100:2026-10-31}/?output=csv",
+    "status": 200,
+    "media": "csv"
+  },
+  "d7b-register-page-two": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?page=2",
+    "status": 200
+  },
+  "d7b-register-page-unicode": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?page=%D9%A2",
+    "status": 200
+  },
+  "d7b-register-page-huge": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?page=999999999999999999999999999999999999999999999999999999999999",
+    "status": 200
+  },
+  "d7b-register-page-control": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?page=%1C2",
+    "status": 200
+  },
+  "dfix3-undo-truncated-revision": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "0000000000002",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "Synthetic correction"
+    }
+  },
+  "d9-bankfeeds-list": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/"
+  },
+  "d9-bankfeeds-connect": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/connect/"
+  },
+  "d9-bankfeeds-connect-blank": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/connect/",
+    "post": {
+      "label": "",
+      "setup_token": ""
+    },
+    "status": 400
+  },
+  "d9-bankfeeds-connect-limits": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/connect/",
+    "post": {
+      "label": "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL",
+      "setup_token": "   "
+    },
+    "status": 400
+  },
+  "d9-bankfeeds-connect-token-long": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/connect/",
+    "post": {
+      "label": "  Padded  ",
+      "setup_token": "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+    },
+    "status": 400
+  },
+  "d9-bankfeeds-accounts": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/{bfconnection:Synthetic feed}/accounts/"
+  },
+  "d9-bankfeeds-accounts-forgotten": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/{bfconnection:Old feed}/accounts/"
+  },
+  "d9-bankfeeds-accounts-invalid": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/{bfconnection:Synthetic feed}/accounts/",
+    "status": 400,
+    "post": {
+      "map_{bfaccount:chk}": "not-an-account",
+      "map_{bfaccount:cc}": "{account:D9 feed books:2100}",
+      "map_{bfaccount:unm}": " "
+    }
+  },
+  "d9-bankfeeds-accounts-not-mappable": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/{bfconnection:Synthetic feed}/accounts/",
+    "status": 400,
+    "post": {
+      "map_{bfaccount:chk}": "{account:D9 feed books:6000}",
+      "map_{bfaccount:cc}": "{account:D9 feed books:2100}",
+      "map_{bfaccount:unm}": ""
+    }
+  },
+  "d9-bankfeeds-forget": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/{bfconnection:Synthetic feed}/forget/"
+  },
+  "d9-bankfeeds-rules": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/"
+  },
+  "d9-bankfeeds-rules-no-action": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/",
+    "post": {},
+    "status": 400
+  },
+  "d9-bankfeeds-rules-bad-rule": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/",
+    "post": {
+      "move_up": "abc"
+    },
+    "status": 400
+  },
+  "d9-bankfeeds-rule-new": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/new/"
+  },
+  "d9-bankfeeds-rule-new-from": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/new/?from=7"
+  },
+  "d9-bankfeeds-rule-edit": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/{bfrule:Office supplies}/edit/"
+  },
+  "d9-bankfeeds-rule-edit-inactive": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/{bfrule:Interest}/edit/"
+  },
+  "d9-bankfeeds-rule-blank": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/new/",
+    "post": {
+      "name": "",
+      "match_text": "  ",
+      "sign": "",
+      "amount_min": "",
+      "amount_max": "",
+      "account": "",
+      "payee_name": ""
+    },
+    "status": 400
+  },
+  "d9-bankfeeds-rule-invalid": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/new/",
+    "status": 400,
+    "post": {
+      "name": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+      "match_text": "x",
+      "sign": " IN",
+      "amount_min": "111111111111111111111111111111111",
+      "amount_max": "5",
+      "account": "999999",
+      "payee_name": "PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+      "active": "false"
+    }
+  },
+  "d9-bankfeeds-rule-min-over-max": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/new/",
+    "status": 400,
+    "post": {
+      "name": "Range",
+      "match_text": "range",
+      "sign": "OUT",
+      "amount_min": "10.00",
+      "amount_max": "5.00",
+      "account": "{account:D9 feed books:6000}",
+      "payee_name": "",
+      "active": "on"
+    }
+  },
+  "d9-bankfeeds-rule-control-account": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/rules/{bfrule:Office supplies}/edit/",
+    "status": 400,
+    "post": {
+      "name": "Office supplies",
+      "match_text": "office depot",
+      "sign": "OUT",
+      "amount_min": "",
+      "amount_max": "",
+      "account": "{account:D9 feed books:1100}",
+      "payee_name": "Office Depot",
+      "active": "on"
+    }
+  },
+  "d9-bankfeeds-review": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/"
+  },
+  "d9-bankfeeds-review-all": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/?status=ALL"
+  },
+  "d9-bankfeeds-review-ignored": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/?status=IGNORED"
+  },
+  "d9-bankfeeds-review-accepted": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/?status=ACCEPTED"
+  },
+  "d9-bankfeeds-review-search": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/?q=office+depot"
+  },
+  "d9-bankfeeds-review-bad-filter": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/?status=BOGUS&q=qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+    "status": 400
+  },
+  "d9-bankfeeds-review-empty-post": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/",
+    "post": {},
+    "status": 400
+  },
+  "d9-bankfeeds-review-accept-pending": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/",
+    "status": 400,
+    "post": {
+      "accept_one": "10",
+      "kind_10": "JOURNAL",
+      "account_10": "{account:D9 feed books:6100}",
+      "payee_10": "  Bank  ",
+      "number_10": "EFT-10"
+    }
+  },
+  "d9-bankfeeds-review-accept-unmapped": {
+    "path": "/c/{company:D9 feed books}/bank-feeds/review/",
+    "status": 400,
+    "post": {
+      "action": "accept",
+      "sel": "12",
+      "kind_12": "JOURNAL",
+      "account_12": "{account:D9 feed books:6100}"
+    }
+  },
+  "d9-attachments-bill-panel": {
+    "path": "/c/{company:D9 feed books}/bills/{bill:D9 feed books:BILL-000001}/"
+  },
+  "d9-attachments-journal-panel": {
+    "path": "/c/{company:D9 feed books}/journals/{journal:D9 feed books:J000328}/"
+  },
+  "print-estimate-detail": {
+    "path": "/c/{company}/estimates/{estimate:EST-000001}/print/"
+  },
+  "print-estimate-accepted": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/print/"
+  },
+  "print-estimate-cancelled": {
+    "path": "/c/{company}/estimates/{estimate:EST-000003}/print/"
+  },
+  "print-estimate-revision": {
+    "path": "/c/{company}/estimates/{estimate:EST-000002}/revisions/1/print/"
+  },
+  "print-invoice-detail": {
+    "path": "/c/{company}/invoices/{invoice:INV-000001}/print/"
+  },
+  "print-invoice-draft": {
+    "path": "/c/{company}/invoices/{invoice:INV-000002}/print/"
+  },
+  "print-invoice-revision": {
+    "path": "/c/{company}/invoices/{invoice:INV-000001}/revisions/1/print/"
+  },
+  "print-sales-receipt-detail": {
+    "path": "/c/{company}/sales-receipts/{receipt:SR-000001}/print/"
+  },
+  "print-invoice-voided": {
+    "path": "/c/{company}/invoices/{invoice:INV-000003}/print/"
+  },
+  "print-invoice-converted": {
+    "path": "/c/{company}/invoices/{invoice:INV-000004}/print/"
+  },
+  "print-sales-receipt-voided": {
+    "path": "/c/{company}/sales-receipts/{receipt:SR-000002}/print/"
+  },
+  "print-invoice-settlements": {
+    "path": "/c/{company:Activity synthetic books}/invoices/{invoice:Activity synthetic books:INV-000001}/print/"
+  },
+  "print-d5-deposit-detail": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000001}/print/"
+  },
+  "print-d5-deposit-voided": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000003}/print/"
+  },
+  "print-d5-invoice-fragments": {
+    "path": "/c/{company}/invoices/{invoice:INV-000005}/print/"
+  },
+  "print-d5-deposit-fully-used": {
+    "path": "/c/{company}/customer-deposits/{receipt:CDP-000002}/print/"
+  },
+  "print-d8-pl-accrual": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&start=2026-10-01&end=2026-10-31&basis=ACCRUAL&output=print"
+  },
+  "print-d8-bs-accrual": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-31&basis=ACCRUAL&output=print"
+  },
+  "print-d8-gl-accrual": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=ACCRUAL&output=print"
+  },
+  "print-d8-bs-accrual-day-05": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-05&basis=ACCRUAL&output=print"
+  },
+  "print-d8-gl-accrual-through-05": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-05&basis=ACCRUAL&output=print"
+  },
+  "print-d8-bs-accrual-day-09": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-09&basis=ACCRUAL&output=print"
+  },
+  "print-d8-gl-accrual-through-09": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-09&basis=ACCRUAL&output=print"
+  },
+  "print-d8-bs-accrual-day-12": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-12&basis=ACCRUAL&output=print"
+  },
+  "print-d8-gl-accrual-through-12": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-12&basis=ACCRUAL&output=print"
+  },
+  "print-d8-bs-accrual-day-20": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-20&basis=ACCRUAL&output=print"
+  },
+  "print-d8-gl-accrual-through-20": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-20&basis=ACCRUAL&output=print"
+  },
+  "print-d8-pl-cash": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH&output=print"
+  },
+  "print-d8-bs-cash": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-31&basis=CASH&output=print"
+  },
+  "print-d8-gl-cash": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH&output=print"
+  },
+  "print-d8-bs-cash-day-05": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-05&basis=CASH&output=print"
+  },
+  "print-d8-gl-cash-through-05": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-05&basis=CASH&output=print"
+  },
+  "print-d8-bs-cash-day-09": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-09&basis=CASH&output=print"
+  },
+  "print-d8-gl-cash-through-09": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-09&basis=CASH&output=print"
+  },
+  "print-d8-bs-cash-day-12": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-12&basis=CASH&output=print"
+  },
+  "print-d8-gl-cash-through-12": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-12&basis=CASH&output=print"
+  },
+  "print-d8-bs-cash-day-20": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2026-10-20&basis=CASH&output=print"
+  },
+  "print-d8-gl-cash-through-20": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-20&basis=CASH&output=print"
+  },
+  "print-d8-pl-this-month": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_month&output=print"
+  },
+  "print-d8-gl-this-month": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_month&output=print"
+  },
+  "print-d8-pl-last-month": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=last_month&output=print"
+  },
+  "print-d8-gl-last-month": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=last_month&output=print"
+  },
+  "print-d8-pl-this-quarter": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_quarter&output=print"
+  },
+  "print-d8-gl-this-quarter": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_quarter&output=print"
+  },
+  "print-d8-pl-this-year": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=this_year&output=print"
+  },
+  "print-d8-gl-this-year": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=this_year&output=print"
+  },
+  "print-d8-pl-year-to-date": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?preset=year_to_date&output=print"
+  },
+  "print-d8-gl-year-to-date": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=year_to_date&output=print"
+  },
+  "print-d8-pl-through": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?end=2026-10-31&output=print"
+  },
+  "print-d8-pl-day": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2026-10-12&end=2026-10-12&output=print"
+  },
+  "print-d8-pl-cross-year": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2025-12-01&end=2026-10-31&output=print"
+  },
+  "print-d8-pl-cross-month": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2026-09-01&end=2026-10-31&output=print"
+  },
+  "print-d8-pl-empty": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=2099-01-01&end=2099-01-31&output=print"
+  },
+  "print-d8-pl-min": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?end=1900-01-02&output=print"
+  },
+  "print-d8-pl-max": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?start=9999-12-30&end=9999-12-30&output=print"
+  },
+  "print-d8-pl-default": {
+    "path": "/c/{company:D8 report books}/reports/profit-and-loss/?output=print"
+  },
+  "print-d8-gl-through": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=2026-10-31&output=print"
+  },
+  "print-d8-gl-day": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2026-10-12&end=2026-10-12&output=print"
+  },
+  "print-d8-gl-cross-year": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2025-12-01&end=2026-10-31&output=print"
+  },
+  "print-d8-gl-cross-month": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2026-09-01&end=2026-10-31&output=print"
+  },
+  "print-d8-gl-empty": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=2099-01-01&end=2099-01-31&output=print"
+  },
+  "print-d8-gl-min": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?end=1900-01-02&output=print"
+  },
+  "print-d8-gl-max": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?start=9999-12-30&end=9999-12-30&output=print"
+  },
+  "print-d8-gl-default": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?output=print"
+  },
+  "print-d8-bs-default": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?output=print"
+  },
+  "print-d8-bs-prior-year": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2025-12-31&output=print"
+  },
+  "print-d8-bs-next-year": {
+    "path": "/c/{company:D8 report books}/reports/balance-sheet/?as_of=2027-01-01&output=print"
+  },
+  "print-d8-gl-group-all": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=&output=print"
+  },
+  "print-d8-gl-group-income": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=income&output=print"
+  },
+  "print-d8-gl-group-expense": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=expense&output=print"
+  },
+  "print-d8-gl-group-pl": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=pl&output=print"
+  },
+  "print-d8-gl-group-asset": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=asset&output=print"
+  },
+  "print-d8-gl-group-liability": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=liability&output=print"
+  },
+  "print-d8-gl-group-equity": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=equity&output=print"
+  },
+  "print-d8-gl-group-le": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=le&output=print"
+  },
+  "print-d8-gl-group-current-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=current_assets&output=print"
+  },
+  "print-d8-gl-group-bank": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=bank&output=print"
+  },
+  "print-d8-gl-group-receivable": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=receivable&output=print"
+  },
+  "print-d8-gl-group-other-current-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_current_assets&output=print"
+  },
+  "print-d8-gl-group-fixed-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=fixed_assets&output=print"
+  },
+  "print-d8-gl-group-other-assets": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_assets&output=print"
+  },
+  "print-d8-gl-group-current-liabilities": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=current_liabilities&output=print"
+  },
+  "print-d8-gl-group-payable": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=payable&output=print"
+  },
+  "print-d8-gl-group-credit-cards": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=credit_cards&output=print"
+  },
+  "print-d8-gl-group-other-current-liabilities": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_current_liabilities&output=print"
+  },
+  "print-d8-gl-group-long-term-liabilities": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=long_term_liabilities&output=print"
+  },
+  "print-d8-gl-group-operating-income": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=operating_income&output=print"
+  },
+  "print-d8-gl-group-cogs": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=cogs&output=print"
+  },
+  "print-d8-gl-group-operating-expense": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=operating_expense&output=print"
+  },
+  "print-d8-gl-group-other-income": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_income&output=print"
+  },
+  "print-d8-gl-group-other-expense": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&group=other_expense&output=print"
+  },
+  "print-d8-gl-page-first": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=1&output=print"
+  },
+  "print-d8-gl-page-second": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=2&output=print"
+  },
+  "print-d8-gl-page-zero": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=0&output=print"
+  },
+  "print-d8-gl-page-negative": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=-1&output=print"
+  },
+  "print-d8-gl-page-huge": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=999999999999999999999999999999999999999&output=print"
+  },
+  "print-d8-gl-page-decimal": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=2.0&output=print"
+  },
+  "print-d8-gl-page-unicode": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=%D9%A2&output=print"
+  },
+  "print-d8-gl-page-underscore": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&account={account:D8 report books:090}&page=0_2&output=print"
+  },
+  "print-d8-gl-account-cash": {
+    "path": "/c/{company:D8 report books}/reports/general-ledger/?preset=custom&start=2026-10-01&end=2026-10-31&basis=CASH&account={account:D8 report books:400}&output=print"
+  },
+  "print-d7b-register": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?output=print"
+  },
+  "print-d7b-register-provenance": {
+    "path": "/c/{company}/accounts/{account:1000}/register/?output=print"
+  },
+  "print-d7b-register-card": {
+    "path": "/c/{company}/accounts/{account:2170}/register/?output=print"
+  },
+  "print-d7b-register-range": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?start=2026-10-01&end=2026-10-31&output=print"
+  },
+  "print-d7b-register-filters": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?state=U&payee=Autumn&amount=$100.00&output=print"
+  },
+  "print-d7b-register-month": {
+    "path": "/c/{company}/accounts/{account:1070}/register/?preset=this_month&output=print"
+  },
+  "print-d7b-report": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?output=print"
+  },
+  "print-d7b-report-summary": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=summary&done=1&output=print"
+  },
+  "print-d7b-report-card": {
+    "path": "/c/{company}/reconciliations/{reconciliation:2170:2026-09-30}/?output=print"
+  },
+  "print-d7b-report-undone": {
+    "path": "/c/{company:D8 report books}/reconciliations/{reconciliation:D8 report books:100:2026-10-31}/?output=print"
+  },
+  "dfix3b-undo-review-0": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "Synthetic correction"
+    }
+  },
+  "dfix3b-undo-review-1": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "Synthetic correction"
+    }
+  },
+  "dfix3b-undo-review-2": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "-1",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "Synthetic correction"
+    }
+  },
+  "dfix3b-undo-review-3": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "1000000001",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "Synthetic correction"
+    }
+  },
+  "dfix3b-undo-review-4": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": ""
+    }
+  },
+  "dfix3b-undo-review-5": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "-1",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": ""
+    }
+  },
+  "dfix3b-undo-key-abc": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "abc",
+      "reason": ""
+    }
+  },
+  "dfix3b-undo-key-blank": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "",
+      "reason": ""
+    }
+  },
+  "dfix3b-undo-key--1": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "-1",
+      "reason": ""
+    }
+  },
+  "dfix3b-undo-key-1000000001": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "1000000001",
+      "reason": ""
+    }
+  },
+  "dfix3b-undo-reason-long": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "2",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  },
+  "dfix3b-undo-stale-before-lookup": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "0",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": "Synthetic correction"
+    }
+  },
+  "dfix3b-undo-reason-before-stale": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "0",
+      "undo_key": "00000000-0000-0000-0000-000000df3003",
+      "reason": ""
+    }
+  },
+  "dfix3b-begin-ending-balance-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "abc",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "-1",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.001",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-5": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "100000000000000.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-6": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "NaN",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-7": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "Infinity",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-8": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "1.2.3",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-9": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "-",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-10": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "$",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-11": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "1e400",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-12": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "12abc",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-ending-balance-13": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": " 1_000.001 ",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-service-charge-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "abc"
+    }
+  },
+  "dfix3b-begin-service-charge-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": ""
+    }
+  },
+  "dfix3b-begin-service-charge-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "-1"
+    }
+  },
+  "dfix3b-begin-service-charge-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "0"
+    }
+  },
+  "dfix3b-begin-service-charge-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "0.001"
+    }
+  },
+  "dfix3b-begin-service-charge-5": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "100000000000000.00"
+    }
+  },
+  "dfix3b-begin-service-charge-6": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "NaN"
+    }
+  },
+  "dfix3b-begin-service-charge-7": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "Infinity"
+    }
+  },
+  "dfix3b-begin-service-charge-8": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "1.2.3"
+    }
+  },
+  "dfix3b-begin-service-charge-9": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "-"
+    }
+  },
+  "dfix3b-begin-service-charge-10": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "$"
+    }
+  },
+  "dfix3b-begin-service-charge-11": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "1e400"
+    }
+  },
+  "dfix3b-begin-service-charge-12": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "12abc"
+    }
+  },
+  "dfix3b-begin-service-charge-13": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": " 1_000.001 "
+    }
+  },
+  "dfix3b-begin-interest-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "abc"
+    }
+  },
+  "dfix3b-begin-interest-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": ""
+    }
+  },
+  "dfix3b-begin-interest-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "-1"
+    }
+  },
+  "dfix3b-begin-interest-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "0"
+    }
+  },
+  "dfix3b-begin-interest-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "0.001"
+    }
+  },
+  "dfix3b-begin-interest-5": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "100000000000000.00"
+    }
+  },
+  "dfix3b-begin-interest-6": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "NaN"
+    }
+  },
+  "dfix3b-begin-interest-7": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "Infinity"
+    }
+  },
+  "dfix3b-begin-interest-8": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "1.2.3"
+    }
+  },
+  "dfix3b-begin-interest-9": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "-"
+    }
+  },
+  "dfix3b-begin-interest-10": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "$"
+    }
+  },
+  "dfix3b-begin-interest-11": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "1e400"
+    }
+  },
+  "dfix3b-begin-interest-12": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "12abc"
+    }
+  },
+  "dfix3b-begin-interest-13": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": " 1_000.001 "
+    }
+  },
+  "dfix3b-begin-statement-date-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "abc",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-statement-date-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-statement-date-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "1900-01-01",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-statement-date-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "9999-12-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-request-key-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "abc",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-request-key-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-request-key-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "-1",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-request-key-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "1000000001",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-request-key-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-revision-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc"
+    }
+  },
+  "dfix3b-begin-revision-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "-1"
+    }
+  },
+  "dfix3b-begin-revision-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1000000001"
+    }
+  },
+  "dfix3b-begin-revision-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "0.0"
+    }
+  },
+  "dfix3b-begin-revision-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "xxxxxxxxxxxxx"
+    }
+  },
+  "dfix3b-begin-service-account-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_account": "abc",
+      "service_charge": "1.00"
+    }
+  },
+  "dfix3b-begin-service-account-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_account": "",
+      "service_charge": "1.00"
+    }
+  },
+  "dfix3b-begin-service-account-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_account": "-1",
+      "service_charge": "1.00"
+    }
+  },
+  "dfix3b-begin-service-account-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_account": "1000000001",
+      "service_charge": "1.00"
+    }
+  },
+  "dfix3b-begin-service-account-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_account": "{account:4000}",
+      "service_charge": "1.00"
+    }
+  },
+  "dfix3b-begin-interest-account-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest_account": "abc",
+      "interest": "1.00"
+    }
+  },
+  "dfix3b-begin-interest-account-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest_account": "",
+      "interest": "1.00"
+    }
+  },
+  "dfix3b-begin-interest-account-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest_account": "-1",
+      "interest": "1.00"
+    }
+  },
+  "dfix3b-begin-interest-account-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest_account": "1000000001",
+      "interest": "1.00"
+    }
+  },
+  "dfix3b-begin-interest-account-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest_account": "{account:1070}",
+      "interest": "1.00"
+    }
+  },
+  "dfix3b-begin-length-ending-balance": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "xxxxxxxxxxxxxxxxxxxxxxxxx",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-length-service-charge": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_charge": "xxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  },
+  "dfix3b-begin-length-interest": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest": "xxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  },
+  "dfix3b-begin-length-service-account": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_account": "xxxxxxxxxxxxxxxxxxxxx"
+    }
+  },
+  "dfix3b-begin-length-interest-account": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest_account": "xxxxxxxxxxxxxxxxxxxxx"
+    }
+  },
+  "dfix3b-begin-form-before-service": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "",
+      "ending_balance": "abc",
+      "request_key": "abc",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-key-before-amount": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "abc",
+      "request_key": "abc",
+      "revision": "1"
+    }
+  },
+  "dfix3b-begin-ending-before-charge": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "abc",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_charge": "abc"
+    }
+  },
+  "dfix3b-begin-charge-before-interest": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_charge": "abc",
+      "interest": "abc"
+    }
+  },
+  "dfix3b-begin-interest-before-revision": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "interest": "abc"
+    }
+  },
+  "dfix3b-begin-revision-before-account": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "abc",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-charge-before-current": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-charge-before-card-interest": {
+    "path": "/c/{company}/reconcile/{account:2170}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_charge": "1",
+      "service_account": "",
+      "interest": "1"
+    }
+  },
+  "dfix3b-begin-card-interest": {
+    "path": "/c/{company}/reconcile/{account:2170}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "interest": "1"
+    }
+  },
+  "dfix3b-save-revision-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": ""
+    }
+  },
+  "dfix3b-save-revision-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "",
+      "shown": ""
+    }
+  },
+  "dfix3b-save-revision-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "-1",
+      "shown": ""
+    }
+  },
+  "dfix3b-save-revision-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1000000001",
+      "shown": ""
+    }
+  },
+  "dfix3b-save-revision-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0.0",
+      "shown": ""
+    }
+  },
+  "dfix3b-save-shown-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "abc"
+    }
+  },
+  "dfix3b-save-shown-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "-1"
+    }
+  },
+  "dfix3b-save-shown-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1000000001"
+    }
+  },
+  "dfix3b-save-shown-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:abc"
+    }
+  },
+  "dfix3b-save-shown-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:"
+    }
+  },
+  "dfix3b-save-shown-5": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:-1"
+    }
+  },
+  "dfix3b-save-shown-6": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:1000000001"
+    }
+  },
+  "dfix3b-save-shown-7": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:0000000000"
+    }
+  },
+  "dfix3b-save-tick-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "abc"
+    }
+  },
+  "dfix3b-save-tick-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": ""
+    }
+  },
+  "dfix3b-save-tick-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "-1"
+    }
+  },
+  "dfix3b-save-tick-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "1000000000000000001"
+    }
+  },
+  "dfix3b-save-membership": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "tick": "{line:first:1070}"
+    }
+  },
+  "dfix3b-reconcile-revision-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": ""
+    }
+  },
+  "dfix3b-reconcile-revision-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "",
+      "shown": ""
+    }
+  },
+  "dfix3b-reconcile-revision-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "-1",
+      "shown": ""
+    }
+  },
+  "dfix3b-reconcile-revision-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1000000001",
+      "shown": ""
+    }
+  },
+  "dfix3b-reconcile-revision-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0.0",
+      "shown": ""
+    }
+  },
+  "dfix3b-reconcile-shown-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "abc"
+    }
+  },
+  "dfix3b-reconcile-shown-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "-1"
+    }
+  },
+  "dfix3b-reconcile-shown-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1000000001"
+    }
+  },
+  "dfix3b-reconcile-shown-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:abc"
+    }
+  },
+  "dfix3b-reconcile-shown-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:"
+    }
+  },
+  "dfix3b-reconcile-shown-5": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:-1"
+    }
+  },
+  "dfix3b-reconcile-shown-6": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:1000000001"
+    }
+  },
+  "dfix3b-reconcile-shown-7": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "1:0000000000"
+    }
+  },
+  "dfix3b-reconcile-tick-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "abc"
+    }
+  },
+  "dfix3b-reconcile-tick-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": ""
+    }
+  },
+  "dfix3b-reconcile-tick-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "-1"
+    }
+  },
+  "dfix3b-reconcile-tick-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "1000000000000000001"
+    }
+  },
+  "dfix3b-reconcile-membership": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "tick": "{line:first:1070}"
+    }
+  },
+  "dfix3b-finish-key-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "completion_key": "abc"
+    }
+  },
+  "dfix3b-finish-key-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "completion_key": ""
+    }
+  },
+  "dfix3b-finish-key-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "completion_key": "-1"
+    }
+  },
+  "dfix3b-finish-key-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "",
+      "completion_key": "1000000001"
+    }
+  },
+  "dfix3b-finish-revision-before-key": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "completion_key": "abc"
+    }
+  },
+  "dfix3b-save-stale-noop": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0",
+      "shown": "",
+      "completion_key": "00000000-0000-0000-0000-000000df3b01"
+    }
+  },
+  "dfix3b-report-view-0": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=abc",
+    "status": 400
+  },
+  "dfix3b-report-view-1": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=-1",
+    "status": 400
+  },
+  "dfix3b-report-view-2": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view=1000000001",
+    "status": 400
+  },
+  "dfix3b-report-view-3": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?view= summary ",
+    "status": 400
+  },
+  "dfix3b-report-output-0": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?output=abc",
+    "status": 400
+  },
+  "dfix3b-report-output-1": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?output=-1",
+    "status": 400
+  },
+  "dfix3b-report-output-2": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?output=1000000001",
+    "status": 400
+  },
+  "dfix3b-report-output-3": {
+    "path": "/c/{company}/reconciliations/{reconciliation:1070:2026-09-30}/?output= csv ",
+    "status": 400
+  },
+  "dfix3b-begin-valid-revision-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "0",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "1000000000",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-4": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "+1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-5": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": " 1 ",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-6": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "１",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-begin-valid-revision-7": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "00000000-0000-0000-0000-000000d7b01e",
+      "revision": "0_1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3b-shown-cap-count": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "1",
+      "shown": "1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0,1:0"
+    }
+  },
+  "dfix3b-report-cap-detail-print": {
+    "path": "/c/{company:FIX3b report cap}/reconciliations/{reconciliation:FIX3b report cap:100:2026-10-31}/?view=detail&output=print",
+    "status": 400
+  },
+  "dfix3b-report-cap-detail-csv": {
+    "path": "/c/{company:FIX3b report cap}/reconciliations/{reconciliation:FIX3b report cap:100:2026-10-31}/?view=detail&output=csv",
+    "status": 400
+  },
+  "dfix3b-report-cap-summary-print": {
+    "path": "/c/{company:FIX3b report cap}/reconciliations/{reconciliation:FIX3b report cap:100:2026-10-31}/?view=summary&output=print",
+    "status": 400
+  },
+  "dfix3b-report-cap-summary-csv": {
+    "path": "/c/{company:FIX3b report cap}/reconciliations/{reconciliation:FIX3b report cap:100:2026-10-31}/?view=summary&output=csv",
+    "status": 400
+  },
+  "dfix3b-report-choice-before-cap": {
+    "path": "/c/{company:FIX3b report cap}/reconciliations/{reconciliation:FIX3b report cap:100:2026-10-31}/?view=bad&output=csv",
+    "status": 400
+  },
+  "dfix3b-closed-save-membership": {
+    "path": "/c/{company}/reconcile/{account:1071}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "2",
+      "shown": "",
+      "tick": "{line:first:1070}",
+      "completion_key": "00000000-0000-0000-0000-000000df3002"
+    }
+  },
+  "dfix3b-closed-reconcile-membership": {
+    "path": "/c/{company}/reconcile/{account:1071}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "2",
+      "shown": "",
+      "tick": "{line:first:1070}",
+      "completion_key": "00000000-0000-0000-0000-000000df3002"
+    }
+  },
+  "dfix3b-closed-membership-before-key": {
+    "path": "/c/{company}/reconcile/{account:1071}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "2",
+      "shown": "",
+      "tick": "{line:first:1070}",
+      "completion_key": "abc"
+    }
+  },
+  "dfix3b-closed-revision-before-membership": {
+    "path": "/c/{company}/reconcile/{account:1071}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "shown": "",
+      "tick": "{line:first:1070}",
+      "completion_key": "abc"
+    }
+  },
+  "dfix3b-screen-record-id-0": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "abc",
+      "revision": "abc",
+      "shown": "bad"
+    }
+  },
+  "dfix3b-screen-record-id-1": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "",
+      "revision": "abc",
+      "shown": "bad"
+    }
+  },
+  "dfix3b-screen-record-id-2": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "-1",
+      "revision": "abc",
+      "shown": "bad"
+    }
+  },
+  "dfix3b-screen-record-id-3": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "save",
+      "reconciliation": "1000000000000000001",
+      "revision": "abc",
+      "shown": "bad"
+    }
+  },
+  "dfix3c-key-undo-0x": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0x000000000000000000000000000df3",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-undo-plus": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "+0000000000000000000000000000df3",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-undo-underscore": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0000_000000000000000000000000df3",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-begin-0x": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "0x00000000000000000000000000d7b0",
+      "revision": "1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3c-key-finish-0x": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0",
+      "shown": "",
+      "completion_key": "0x000000000000000000000000000000"
+    }
+  },
+  "dfix3c-key-undo-0x-underscore": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0x_00000000000000000000000000df3",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-undo-spaces": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": " 000000000000000000000000000df3 ",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-finish-space": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0",
+      "shown": "",
+      "completion_key": " 0000000000000000000000000000000"
+    }
+  },
+  "dfix3c-key-begin-plus-0x": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "+0x0000000000000000000000000d7b0",
+      "revision": "1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3c-key-finish-arabic-digit": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0",
+      "shown": "",
+      "completion_key": "٠٠000000000000000000000000000000"
+    }
+  },
+  "dfix3c-key-undo-double-underscore": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0000__00000000000000000000000df3",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-undo-trailing-underscore": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0000000000000000000000000000df3_",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-undo-0x-alone": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0x",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-undo-0x-spaces": {
+    "path": "/c/{company}/reconcile/{account:1071}/undo/",
+    "status": 400,
+    "post": {
+      "reconciliation": "{reconciliation:1071:2026-10-31}",
+      "revision": "abc",
+      "undo_key": "0x                              ",
+      "reason": ""
+    }
+  },
+  "dfix3c-key-begin-0x-double-underscore": {
+    "path": "/c/{company}/reconcile/{account:1070}/begin/",
+    "status": 400,
+    "post": {
+      "statement_date": "2026-10-31",
+      "ending_balance": "0.00",
+      "request_key": "0x__000000000000000000000000d7b0",
+      "revision": "1",
+      "service_charge": "1",
+      "service_account": ""
+    }
+  },
+  "dfix3c-key-finish-plus-underscore": {
+    "path": "/c/{company}/reconcile/{account:1070}/",
+    "status": 400,
+    "post": {
+      "action": "reconcile",
+      "reconciliation": "{reconciliation:1070:2026-10-31}",
+      "revision": "0",
+      "shown": "",
+      "completion_key": "+_000000000000000000000000000000"
+    }
+  },
+  "dfix3c-key-transfer-padded": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "post": {
+      "request_key": " 00000000-0000-0000-0000-000000000699 ",
+      "date": "2026-10-20",
+      "amount": "1.00",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1000}"
+    },
+    "status": 400
+  },
+  "dfix3c-key-transfer-space-31": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "post": {
+      "request_key": " 0000000000000000000000000000699",
+      "date": "2026-10-20",
+      "amount": "1.00",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1000}"
+    },
+    "status": 400
+  },
+  "dfix3c-key-transfer-blank": {
+    "path": "/c/{company:D6 synthetic books}/transfers/new/",
+    "post": {
+      "request_key": "   ",
+      "date": "2026-10-20",
+      "amount": "1.00",
+      "from_account": "{account:D6 synthetic books:1000}",
+      "to_account": "{account:D6 synthetic books:1000}"
+    },
+    "status": 400
+  },
+  "dfix3c-key-journal-blank-spaces": {
+    "path": "/c/{company}/journals/new/",
+    "post": {
+      "request_key": "   ",
+      "expected_revision": "0",
+      "date": "bad",
+      "memo": "",
+      "entry_number": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-account": "{account:4000}",
+      "lines-0-debit": "bad",
+      "lines-0-credit": "0",
+      "lines-1-account": "",
+      "lines-1-debit": "1",
+      "lines-1-credit": "0"
+    },
+    "status": 400
+  },
+  "dfix3c-key-journal-blank-nbsp": {
+    "path": "/c/{company}/journals/new/",
+    "post": {
+      "request_key": " ",
+      "expected_revision": "0",
+      "date": "bad",
+      "memo": "",
+      "entry_number": "",
+      "lines-TOTAL_FORMS": "2",
+      "lines-INITIAL_FORMS": "0",
+      "lines-0-account": "{account:4000}",
+      "lines-0-debit": "bad",
+      "lines-0-credit": "0",
+      "lines-1-account": "",
+      "lines-1-debit": "1",
+      "lines-1-credit": "0"
+    },
+    "status": 400
+  },
+  "w0-standard-chart": {
+    "path": "/c/{company:W0 standard books}/accounts/"
+  },
+  "w0-standard-chart-page-fallback": {
+    "path": "/c/{company:W0 standard books}/accounts/?page=2"
+  },
+  "w0-standard-chart-by-code": {
+    "path": "/c/{company:W0 standard books}/accounts/?sort=code"
+  },
+  "w0-empty-chart": {
+    "path": "/c/{company:W0 empty books}/accounts/"
+  },
+  "w0-standard-home": {
+    "path": "/c/{company:W0 standard books}/home/"
+  },
+  "w0-empty-home": {
+    "path": "/c/{company:W0 empty books}/home/"
+  }
+}

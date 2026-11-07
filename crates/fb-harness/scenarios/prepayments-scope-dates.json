@@ -1,0 +1,245 @@
+{
+  "users": [
+    {
+      "username": "prepayments",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic prepayments",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability",
+      "code": "230",
+      "name": "liability",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability2",
+      "code": "231",
+      "name": "liability2",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "other",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "customer_deposits": "liability",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv2",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae62",
+        "customer_id": "other",
+        "date": "2026-10-02",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "description": "Synthetic work",
+            "quantity": "1",
+            "rate": "1200.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv2",
+      "expected_revision": 1,
+      "review": "inv2",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv2",
+      "expected_revision": 1,
+      "review": "inv2",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "dep110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaece",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "dep110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaece",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "dep110",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "dep110",
+      "review": "wrong111",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaecf",
+        "amount": "1.00",
+        "invoice_id": "inv2",
+        "date": "2026-10-03"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Apply a deposit only to this customer’s posted, unvoided invoices (INV-000001 is not one)."
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "dep110",
+      "review": "wrong112",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaed0",
+        "amount": "1.00",
+        "invoice_id": "inv2",
+        "date": "2026-09-30"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The application date cannot precede the deposit date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "actor": "outsider",
+      "review": "denied",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaed2",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": true,
+      "expect_kind": "PermissionDenied",
+      "expect_message": "Company access denied."
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "dep110",
+      "expected_revision": 0,
+      "date": "2026-10-02",
+      "reason": "stale",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This record changed since you opened it. Reload and review before saving."
+    }
+  ],
+  "as_of": [
+    "2026-10-01",
+    "2026-10-03",
+    "2026-10-31"
+  ]
+}

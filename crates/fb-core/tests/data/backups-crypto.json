@@ -1,0 +1,55 @@
+{
+  "header": {
+    "kdf": {
+      "name": "scrypt",
+      "n": 131072,
+      "r": 8,
+      "p": 1,
+      "salt": "AAECAwQFBgcICQoLDA0ODw=="
+    },
+    "cipher": {
+      "name": "AES-256-GCM-STREAM",
+      "chunk_size": 1048576,
+      "nonce_prefix": "AAECAwQFBg=="
+    }
+  },
+  "aad": "{\"cipher\": {\"chunk_size\": 1048576, \"name\": \"AES-256-GCM-STREAM\", \"nonce_prefix\": \"AAECAwQFBg==\"}, \"kdf\": {\"n\": 131072, \"name\": \"scrypt\", \"p\": 1, \"r\": 8, \"salt\": \"AAECAwQFBgcICQoLDA0ODw==\"}}\n",
+  "vectors": [
+    {
+      "bytes": 0,
+      "ciphertext_bytes": 16,
+      "sha256": "bb3f197f953972b2896df977254da7a6a43f27011030acbbd1ef4c8177aec5b3",
+      "ciphertext": "6hXRDZccVZpTn1HpNGY7tg=="
+    },
+    {
+      "bytes": 1,
+      "ciphertext_bytes": 17,
+      "sha256": "81d8b03d258a7612ef173010fabf4d6d6b8feb91ada8b18e84d67f5e6c65cbf0",
+      "ciphertext": "8vHqH4QnQZjqP7b+ztthYLk="
+    },
+    {
+      "bytes": 1048575,
+      "ciphertext_bytes": 1048591,
+      "sha256": "41e8bebe8348d14e1c5dc516adaa5f19f2e6498888f835be71686c701875bfd1",
+      "ciphertext": null
+    },
+    {
+      "bytes": 1048576,
+      "ciphertext_bytes": 1048592,
+      "sha256": "f33ccf666e8c09a2b66c60cae42deebad94e00576e07b8c5161ab59ab09b7f66",
+      "ciphertext": null
+    },
+    {
+      "bytes": 1048577,
+      "ciphertext_bytes": 1048609,
+      "sha256": "efdfaa999b3f256380436d9c09fbbfa6a84c8b6a08b26b04467638f4a95b072e",
+      "ciphertext": null
+    },
+    {
+      "bytes": 2097152,
+      "ciphertext_bytes": 2097184,
+      "sha256": "2b73273f17baa1f6fd2213c904ac98c84b3f3aaf8f14b92b55d9931c3e1a43ea",
+      "ciphertext": null
+    }
+  ]
+}

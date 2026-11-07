@@ -1,0 +1,24 @@
+[package]
+name = "fb-net"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+description = "The desktop's network process: runs the SimpleFIN and Sign in with ChatGPT plugins. Never opens the book."
+
+[[bin]]
+name = "fb-net"
+path = "src/main.rs"
+
+[features]
+# Tests and the smoke only: numeric-loopback fake providers (fb-plugin-api test-support policies and
+# the openai plugin's loopback endpoints). The production build has no loopback or fake path.
+fake-network = ["fb-plugin-api/test-support", "fb-plugin-openai/test-support"]
+
+[dependencies]
+fb-plugin-api = { path = "../fb-plugin-api", features = ["http-client"] }
+fb-plugin-simplefin = { path = "../fb-plugins/simplefin" }
+fb-plugin-openai = { path = "../fb-plugins/openai" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.18", features = ["v4"] }
+zeroize = "1.9"

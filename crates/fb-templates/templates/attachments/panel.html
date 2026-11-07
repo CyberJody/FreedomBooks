@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="{{ static('attachments/attachments.css') }}">
+<section class="attachments-panel" id="attachments" aria-labelledby="attachments-title">
+<h2 id="attachments-title">Attachments <span class="attachments-count">({{ files|length }})</span></h2>
+{% for note in notes %}<p class="attachments-note {% if note.level_tag == 'error' %}attachments-error{% else %}attachments-ok{% endif %}" role="{% if note.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ note.message }}</p>{% endfor %}
+{% if files %}<table class="attachments-table"><thead><tr><th>File</th><th>Type</th><th class="num">Size</th><th>Added</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+{% for file in files %}<tr><td class="attachments-name"><a href="{{ url('attachments:download', company.pk, file.pk) }}" download>{{ file.original_name }}</a></td><td>{{ file.type_label }}</td><td class="num">{{ file.size|filesize }}</td><td>{{ file.uploaded_by_name }} · {{ file.uploaded_at|date('Y-m-d H:i') }} UTC</td>
+<td class="attachments-actions"><a class="attachments-download" href="{{ url('attachments:download', company.pk, file.pk) }}" download>Download</a>
+<details class="attachments-remove"><summary>Remove</summary><form class="attachments-remove-form" method="post" action="{{ url('attachments:remove', company.pk, file.pk) }}">{{ file.remove_token|safe }}<label>Reason <input name="reason" maxlength="500" required></label> <button type="submit">Remove</button></form></details></td></tr>{% endfor %}
+</tbody></table>{% else %}<p class="attachments-empty">No files attached.</p>{% endif %}
+{% if full %}<p class="attachments-hint">This document has {{ max_count }} attachments, the most it can have. Remove one to attach another.</p>
+{% else %}<form class="attachments-add" method="post" enctype="multipart/form-data" action="{{ add_url }}">{{ csrf_token|safe }}<input type="hidden" name="request_key" value="{{ request_key }}">
+<label class="attachments-file">Attach a file <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" required></label> <button type="submit">Attach</button>
+<span class="attachments-hint">{{ allowed }}, up to {{ max_mb }} MB each, {{ max_count }} per document.</span></form>{% endif %}
+{% if removed %}<details class="attachments-removed"><summary>Removed ({{ removed|length }})</summary><ul>{% for file in removed %}<li>{{ file.original_name }} · removed by {{ file.deleted_by_name }} {{ file.deleted_at|date('Y-m-d H:i') }} UTC · {{ file.delete_reason }}</li>{% endfor %}</ul></details>{% endif %}
+</section>

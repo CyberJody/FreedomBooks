@@ -1,0 +1,196 @@
+{
+  "users": [
+    {
+      "username": "sales",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic sales",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar2",
+      "code": "111",
+      "name": "ar2",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "210",
+      "name": "tax",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income2",
+      "code": "410",
+      "name": "income2",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "500",
+      "name": "expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "work",
+      "values": {
+        "code": "WORK",
+        "description": "Synthetic work",
+        "kind": "SERVICE",
+        "sale_rate": "9.99",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "c",
+      "ref": "increase",
+      "date": "2026-10-01",
+      "memo": "Synthetic statement line",
+      "lines": [
+        {
+          "account": "bank",
+          "debit": "6200.27"
+        },
+        {
+          "account": "income",
+          "credit": "6200.27"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "post_journal",
+      "company": "c",
+      "journal": "increase",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "c",
+      "ref": "decrease",
+      "date": "2026-10-01",
+      "memo": "Synthetic statement line",
+      "lines": [
+        {
+          "account": "expense",
+          "debit": "266.85"
+        },
+        {
+          "account": "bank",
+          "credit": "266.85"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "post_journal",
+      "company": "c",
+      "journal": "decrease",
+      "expect_error": false
+    },
+    {
+      "op": "banking_register",
+      "company": "c",
+      "account": "bank",
+      "result": "payee_nul",
+      "values": {
+        "payee": "\u0000"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Invalid register filters."
+    }
+  ],
+  "as_of": [
+    "2026-09-30",
+    "2026-10-01",
+    "2026-10-02",
+    "2026-10-03"
+  ]
+}

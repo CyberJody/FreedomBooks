@@ -1,0 +1,17 @@
+/* Checks: tan/plum theme additions on top of the shared bill styles. */
+.notice {border:1px solid #74576f;background:#f6efe6;padding:10px 12px}
+.guidance {border-left:4px solid #74576f;background:#eadfe8;padding:8px 12px}
+.check-header .field-payee_kind ul {list-style:none;margin:0;padding:0}
+.check-header .field-payee_kind li {display:inline-block;margin-right:16px}
+.check-header .field-payee_kind input {width:auto}
+.check-line.tab-expense .field-item, .check-line.tab-expense .field-quantity, .check-line.tab-expense .field-refresh_item, .check-line.tab-expense .field-keep_archived {display:none}
+.check-line .field-DELETE input {width:auto}
+.add-line {background:#fff;color:#654760;border:1px solid #74576f}
+.check-face {border:1px solid #74576f;background:#fbf7f1;padding:16px;display:grid;grid-template-columns:1fr auto;gap:12px}
+.check-face .amount {font-size:1.3em;font-weight:bold;font-variant-numeric:tabular-nums;text-align:right}
+.check-face address {font-style:normal;white-space:pre-line}
+.check-face .number {text-align:right;font-weight:bold}
+.tab-summary {display:grid;grid-template-columns:repeat(3,auto);gap:16px;justify-content:start;font-variant-numeric:tabular-nums}
+.check-history td:not(:nth-child(4)) {white-space:nowrap}
+.check-history td:nth-child(4) {overflow-wrap:anywhere}
+@media(max-width:900px){.check-face{grid-template-columns:1fr}.check-face .amount,.check-face .number{text-align:left}}

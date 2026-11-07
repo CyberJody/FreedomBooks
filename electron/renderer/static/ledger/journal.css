@@ -1,0 +1,38 @@
+/* N16 general journal entries: tan/plum theme additions on top of app.css. */
+.journal-header {display:grid;grid-template-columns:repeat(3,minmax(0,auto)) minmax(0,1fr);gap:12px 20px;align-items:end}
+.journal-header > div {margin:0}
+.journal-header label {display:block;font-size:12px}
+.journal-header .field-adjusting label {display:flex;gap:6px;align-items:center;font-size:14px;padding-bottom:8px}
+.journal-header .field-memo input {width:100%}
+.journal-header .field-adjusting input {width:auto;margin:0}
+.journal-header .helptext {display:block;font-size:11px;color:#6d6070}
+.journal-lines th:nth-child(1) {width:30%}
+.journal-lines th:nth-child(2), .journal-lines th:nth-child(3) {width:12%}
+.journal-lines th:nth-child(6) {width:6%}
+.journal-lines tfoot td, .journal-lines tfoot th, .journal-lines-detail tfoot td, .journal-lines-detail tfoot th {font-weight:bold;font-variant-numeric:tabular-nums;border-top:2px solid #74576f}
+.journal-lines .amount, .journal-lines-detail .amount {text-align:right}
+.out-of-balance, .journal-lines .unbalanced {color:#8a2f3c}
+.adjusting {color:#654760;font-weight:bold}
+.adjusting-badge {background:#f6efe6;border-color:#74576f;color:#654760}
+.journal-list td.memo, .journal-lines-detail td.memo, .journal-summary .memo {overflow-wrap:anywhere}
+.journal-filters {flex-wrap:wrap}
+.journal-filters select, .journal-filters input {display:block}
+.journal-lines {width:100%;table-layout:fixed}
+.journal-lines select, .journal-lines input:not([type=checkbox]) {width:100%;max-width:100%;min-width:0}
+.journal-lines input[name$="-debit"], .journal-lines input[name$="-credit"] {text-align:right;font-variant-numeric:tabular-nums}
+.diff-caption {display:block;font-size:11px;font-weight:650;color:#4a3b2c}
+.journal-actions {display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:12px}
+#add-line {background:#fff;color:#654760;border:1px solid #74576f}
+#add-line:disabled {opacity:.55;cursor:not-allowed}
+#line-limit {margin-top:8px}
+@media(max-width:850px){
+ .journal-header {grid-template-columns:1fr}
+ .journal-lines, .journal-lines tbody, .journal-lines tr, .journal-lines td, .journal-lines tfoot {display:block;width:100%}
+ .journal-lines thead {display:none}
+ .journal-lines tr.journal-line {border:1px solid #dbd0e0;margin:0 0 10px;padding:6px}
+ .journal-lines td {padding:4px 0}
+ .journal-lines td::before {content:attr(data-label);display:block;font-size:11px;color:#6d6070}
+ .journal-lines tfoot tr {display:grid;grid-template-columns:auto 1fr 1fr 1fr}
+ .journal-lines tfoot td[colspan] {grid-column:1/-1}
+ .diff-caption {display:none}
+}

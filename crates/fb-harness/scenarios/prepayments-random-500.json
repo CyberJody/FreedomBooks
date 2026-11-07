@@ -1,0 +1,6559 @@
+{
+  "users": [
+    {
+      "username": "prepayments",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic prepayments",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability",
+      "code": "230",
+      "name": "liability",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability2",
+      "code": "231",
+      "name": "liability2",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "other",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "customer_deposits": "liability",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaf28",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "description": "Synthetic work",
+            "quantity": "1",
+            "rate": "99999.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv200",
+      "expected_revision": 1,
+      "review": "inv200",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv200",
+      "expected_revision": 1,
+      "review": "inv200",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1000",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab248",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "424.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1000",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab248",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "424.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1000",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1000",
+      "review": "randomrefund1000",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab24a",
+        "date": "2026-10-10",
+        "amount": "367.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1000"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1000",
+      "review": "randomrefund1000",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab24a",
+        "date": "2026-10-10",
+        "amount": "367.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1000"
+      },
+      "ref": "randomrefund1000",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1000",
+      "review": "randomapp1000",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab249",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "9.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1000",
+      "review": "randomapp1000",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab249",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "9.00"
+      },
+      "ref": "randomapp1000",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1000",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1000",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1000",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1000",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1010",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab252",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "amount": "596.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1010",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab252",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "amount": "596.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1010",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1010",
+      "review": "randomapp1010",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab253",
+        "date": "2026-10-09",
+        "invoice_id": "inv200",
+        "amount": "28.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1010",
+      "review": "randomapp1010",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab253",
+        "date": "2026-10-09",
+        "invoice_id": "inv200",
+        "amount": "28.00"
+      },
+      "ref": "randomapp1010",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1010",
+      "review": "randomrefund1010",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab254",
+        "date": "2026-10-09",
+        "amount": "230.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1010",
+      "review": "randomrefund1010",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab254",
+        "date": "2026-10-09",
+        "amount": "230.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1010",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1010",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1010",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1010",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1010",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1020",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab25c",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "269.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1020",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab25c",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "269.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1020",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1020",
+      "review": "randomrefund1020",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab25e",
+        "date": "2026-10-05",
+        "amount": "239.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1020"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1020",
+      "review": "randomrefund1020",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab25e",
+        "date": "2026-10-05",
+        "amount": "239.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1020"
+      },
+      "ref": "randomrefund1020",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1020",
+      "review": "randomapp1020",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab25d",
+        "date": "2026-10-05",
+        "invoice_id": "inv200",
+        "amount": "3.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1020",
+      "review": "randomapp1020",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab25d",
+        "date": "2026-10-05",
+        "invoice_id": "inv200",
+        "amount": "3.00"
+      },
+      "ref": "randomapp1020",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1020",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1020",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1020",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1020",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1030",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab266",
+        "customer_id": "buyer",
+        "date": "2026-10-20",
+        "amount": "676.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1030",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab266",
+        "customer_id": "buyer",
+        "date": "2026-10-20",
+        "amount": "676.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1030",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1030",
+      "review": "randomrefund1030",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab268",
+        "date": "2026-10-21",
+        "amount": "251.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1030",
+      "review": "randomrefund1030",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab268",
+        "date": "2026-10-21",
+        "amount": "251.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1030",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1030",
+      "review": "randomapp1030",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab267",
+        "date": "2026-10-21",
+        "invoice_id": "inv200",
+        "amount": "189.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1030",
+      "review": "randomapp1030",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab267",
+        "date": "2026-10-21",
+        "invoice_id": "inv200",
+        "amount": "189.00"
+      },
+      "ref": "randomapp1030",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1030",
+      "expected_revision": 1,
+      "date": "2026-10-22",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1030",
+      "expected_revision": 1,
+      "date": "2026-10-23",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1030",
+      "expected_revision": 1,
+      "date": "2026-10-23",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1030",
+      "expected_revision": 1,
+      "date": "2026-10-24",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1040",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab270",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "222.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1040",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab270",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "222.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1040",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1040",
+      "review": "randomrefund1040",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab272",
+        "date": "2026-10-07",
+        "amount": "50.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1040",
+      "review": "randomrefund1040",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab272",
+        "date": "2026-10-07",
+        "amount": "50.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1040",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1040",
+      "review": "randomapp1040",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab271",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "68.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1040",
+      "review": "randomapp1040",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab271",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "68.00"
+      },
+      "ref": "randomapp1040",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1040",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1040",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1040",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1040",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1050",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab27a",
+        "customer_id": "buyer",
+        "date": "2026-10-07",
+        "amount": "807.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1050",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab27a",
+        "customer_id": "buyer",
+        "date": "2026-10-07",
+        "amount": "807.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1050",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1050",
+      "review": "randomrefund1050",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab27c",
+        "date": "2026-10-08",
+        "amount": "401.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1050",
+      "review": "randomrefund1050",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab27c",
+        "date": "2026-10-08",
+        "amount": "401.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1050",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1050",
+      "review": "randomapp1050",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab27b",
+        "date": "2026-10-08",
+        "invoice_id": "inv200",
+        "amount": "394.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1050",
+      "review": "randomapp1050",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab27b",
+        "date": "2026-10-08",
+        "invoice_id": "inv200",
+        "amount": "394.00"
+      },
+      "ref": "randomapp1050",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1050",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1050",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1050",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1050",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1060",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab284",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "304.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1060",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab284",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "304.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1060",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1060",
+      "review": "randomapp1060",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab285",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "116.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1060",
+      "review": "randomapp1060",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab285",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "116.00"
+      },
+      "ref": "randomapp1060",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1060",
+      "review": "randomrefund1060",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab286",
+        "date": "2026-10-10",
+        "amount": "50.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1060",
+      "review": "randomrefund1060",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab286",
+        "date": "2026-10-10",
+        "amount": "50.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1060",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1060",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1060",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1060",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1060",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1070",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab28e",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "726.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1070",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab28e",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "726.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1070",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1070",
+      "review": "randomrefund1070",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab290",
+        "date": "2026-10-12",
+        "amount": "311.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1070",
+      "review": "randomrefund1070",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab290",
+        "date": "2026-10-12",
+        "amount": "311.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1070",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1070",
+      "review": "randomapp1070",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab28f",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "322.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1070",
+      "review": "randomapp1070",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab28f",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "322.00"
+      },
+      "ref": "randomapp1070",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1070",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1070",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1070",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1070",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1080",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab298",
+        "customer_id": "buyer",
+        "date": "2026-10-16",
+        "amount": "764.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1080",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab298",
+        "customer_id": "buyer",
+        "date": "2026-10-16",
+        "amount": "764.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1080",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1080",
+      "review": "randomrefund1080",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab29a",
+        "date": "2026-10-17",
+        "amount": "1.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1080",
+      "review": "randomrefund1080",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab29a",
+        "date": "2026-10-17",
+        "amount": "1.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1080",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1080",
+      "review": "randomapp1080",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab299",
+        "date": "2026-10-17",
+        "invoice_id": "inv200",
+        "amount": "85.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1080",
+      "review": "randomapp1080",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab299",
+        "date": "2026-10-17",
+        "invoice_id": "inv200",
+        "amount": "85.00"
+      },
+      "ref": "randomapp1080",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1080",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1080",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1080",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1080",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1090",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2a2",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "502.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1090",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2a2",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "502.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1090",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1090",
+      "review": "randomapp1090",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2a3",
+        "date": "2026-10-03",
+        "invoice_id": "inv200",
+        "amount": "216.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1090",
+      "review": "randomapp1090",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2a3",
+        "date": "2026-10-03",
+        "invoice_id": "inv200",
+        "amount": "216.00"
+      },
+      "ref": "randomapp1090",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1090",
+      "review": "randomrefund1090",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2a4",
+        "date": "2026-10-03",
+        "amount": "180.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1090",
+      "review": "randomrefund1090",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2a4",
+        "date": "2026-10-03",
+        "amount": "180.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1090",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1090",
+      "expected_revision": 1,
+      "date": "2026-10-04",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1090",
+      "expected_revision": 1,
+      "date": "2026-10-05",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1090",
+      "expected_revision": 1,
+      "date": "2026-10-05",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1090",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ac",
+        "customer_id": "buyer",
+        "date": "2026-10-14",
+        "amount": "292.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ac",
+        "customer_id": "buyer",
+        "date": "2026-10-14",
+        "amount": "292.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1100",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1100",
+      "review": "randomapp1100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ad",
+        "date": "2026-10-15",
+        "invoice_id": "inv200",
+        "amount": "66.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1100",
+      "review": "randomapp1100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ad",
+        "date": "2026-10-15",
+        "invoice_id": "inv200",
+        "amount": "66.00"
+      },
+      "ref": "randomapp1100",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1100",
+      "review": "randomrefund1100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ae",
+        "date": "2026-10-15",
+        "amount": "52.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1100",
+      "review": "randomrefund1100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ae",
+        "date": "2026-10-15",
+        "amount": "52.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1100",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1100",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1100",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1100",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1100",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2b6",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "322.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2b6",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "322.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1110",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1110",
+      "review": "randomrefund1110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2b8",
+        "date": "2026-10-12",
+        "amount": "71.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1110",
+      "review": "randomrefund1110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2b8",
+        "date": "2026-10-12",
+        "amount": "71.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1110",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1110",
+      "review": "randomapp1110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2b7",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "101.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1110",
+      "review": "randomapp1110",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2b7",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "101.00"
+      },
+      "ref": "randomapp1110",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1110",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1110",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1110",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1110",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1120",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2c0",
+        "customer_id": "buyer",
+        "date": "2026-10-10",
+        "amount": "638.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1120",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2c0",
+        "customer_id": "buyer",
+        "date": "2026-10-10",
+        "amount": "638.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1120",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1120",
+      "review": "randomapp1120",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2c1",
+        "date": "2026-10-11",
+        "invoice_id": "inv200",
+        "amount": "288.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1120",
+      "review": "randomapp1120",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2c1",
+        "date": "2026-10-11",
+        "invoice_id": "inv200",
+        "amount": "288.00"
+      },
+      "ref": "randomapp1120",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1120",
+      "review": "randomrefund1120",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2c2",
+        "date": "2026-10-11",
+        "amount": "196.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1120"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1120",
+      "review": "randomrefund1120",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2c2",
+        "date": "2026-10-11",
+        "amount": "196.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1120"
+      },
+      "ref": "randomrefund1120",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1120",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1120",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1120",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1120",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1130",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ca",
+        "customer_id": "buyer",
+        "date": "2026-10-13",
+        "amount": "172.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1130",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ca",
+        "customer_id": "buyer",
+        "date": "2026-10-13",
+        "amount": "172.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1130",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1130",
+      "review": "randomrefund1130",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2cc",
+        "date": "2026-10-14",
+        "amount": "98.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1130",
+      "review": "randomrefund1130",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2cc",
+        "date": "2026-10-14",
+        "amount": "98.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1130",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1130",
+      "review": "randomapp1130",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2cb",
+        "date": "2026-10-14",
+        "invoice_id": "inv200",
+        "amount": "35.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1130",
+      "review": "randomapp1130",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2cb",
+        "date": "2026-10-14",
+        "invoice_id": "inv200",
+        "amount": "35.00"
+      },
+      "ref": "randomapp1130",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1130",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1130",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1130",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1130",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1140",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2d4",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "122.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1140",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2d4",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "122.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1140",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1140",
+      "review": "randomapp1140",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2d5",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "29.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1140",
+      "review": "randomapp1140",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2d5",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "29.00"
+      },
+      "ref": "randomapp1140",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1140",
+      "review": "randomrefund1140",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2d6",
+        "date": "2026-10-07",
+        "amount": "75.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1140",
+      "review": "randomrefund1140",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2d6",
+        "date": "2026-10-07",
+        "amount": "75.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1140",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1140",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1140",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1140",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1140",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1150",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2de",
+        "customer_id": "buyer",
+        "date": "2026-10-18",
+        "amount": "476.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1150",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2de",
+        "customer_id": "buyer",
+        "date": "2026-10-18",
+        "amount": "476.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1150",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1150",
+      "review": "randomrefund1150",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2e0",
+        "date": "2026-10-19",
+        "amount": "225.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1150",
+      "review": "randomrefund1150",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2e0",
+        "date": "2026-10-19",
+        "amount": "225.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1150",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1150",
+      "review": "randomapp1150",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2df",
+        "date": "2026-10-19",
+        "invoice_id": "inv200",
+        "amount": "82.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1150",
+      "review": "randomapp1150",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2df",
+        "date": "2026-10-19",
+        "invoice_id": "inv200",
+        "amount": "82.00"
+      },
+      "ref": "randomapp1150",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1150",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1150",
+      "expected_revision": 1,
+      "date": "2026-10-21",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1150",
+      "expected_revision": 1,
+      "date": "2026-10-21",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1150",
+      "expected_revision": 1,
+      "date": "2026-10-22",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1160",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2e8",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "896.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1160",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2e8",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "896.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1160",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1160",
+      "review": "randomrefund1160",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ea",
+        "date": "2026-10-07",
+        "amount": "495.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1160",
+      "review": "randomrefund1160",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2ea",
+        "date": "2026-10-07",
+        "amount": "495.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1160",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1160",
+      "review": "randomapp1160",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2e9",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "382.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1160",
+      "review": "randomapp1160",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2e9",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "382.00"
+      },
+      "ref": "randomapp1160",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1160",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1160",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1160",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1160",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1170",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2f2",
+        "customer_id": "buyer",
+        "date": "2026-10-17",
+        "amount": "182.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1170",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2f2",
+        "customer_id": "buyer",
+        "date": "2026-10-17",
+        "amount": "182.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1170",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1170",
+      "review": "randomapp1170",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2f3",
+        "date": "2026-10-18",
+        "invoice_id": "inv200",
+        "amount": "51.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1170",
+      "review": "randomapp1170",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2f3",
+        "date": "2026-10-18",
+        "invoice_id": "inv200",
+        "amount": "51.00"
+      },
+      "ref": "randomapp1170",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1170",
+      "review": "randomrefund1170",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2f4",
+        "date": "2026-10-18",
+        "amount": "118.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1170",
+      "review": "randomrefund1170",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2f4",
+        "date": "2026-10-18",
+        "amount": "118.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1170",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1170",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1170",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1170",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1170",
+      "expected_revision": 1,
+      "date": "2026-10-21",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1180",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2fc",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "447.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1180",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2fc",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "447.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1180",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1180",
+      "review": "randomapp1180",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2fd",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "208.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1180",
+      "review": "randomapp1180",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2fd",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "208.00"
+      },
+      "ref": "randomapp1180",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1180",
+      "review": "randomrefund1180",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2fe",
+        "date": "2026-10-07",
+        "amount": "199.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1180"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1180",
+      "review": "randomrefund1180",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab2fe",
+        "date": "2026-10-07",
+        "amount": "199.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1180"
+      },
+      "ref": "randomrefund1180",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1180",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1180",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1180",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1180",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1190",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab306",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "807.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1190",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab306",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "807.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1190",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1190",
+      "review": "randomrefund1190",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab308",
+        "date": "2026-10-16",
+        "amount": "382.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1190",
+      "review": "randomrefund1190",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab308",
+        "date": "2026-10-16",
+        "amount": "382.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1190",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1190",
+      "review": "randomapp1190",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab307",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "300.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1190",
+      "review": "randomapp1190",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab307",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "300.00"
+      },
+      "ref": "randomapp1190",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1190",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1190",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1190",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1190",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab310",
+        "customer_id": "buyer",
+        "date": "2026-10-10",
+        "amount": "799.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab310",
+        "customer_id": "buyer",
+        "date": "2026-10-10",
+        "amount": "799.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1200",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1200",
+      "review": "randomrefund1200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab312",
+        "date": "2026-10-11",
+        "amount": "427.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1200",
+      "review": "randomrefund1200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab312",
+        "date": "2026-10-11",
+        "amount": "427.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1200",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1200",
+      "review": "randomapp1200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab311",
+        "date": "2026-10-11",
+        "invoice_id": "inv200",
+        "amount": "333.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1200",
+      "review": "randomapp1200",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab311",
+        "date": "2026-10-11",
+        "invoice_id": "inv200",
+        "amount": "333.00"
+      },
+      "ref": "randomapp1200",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1200",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1200",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1200",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1200",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1210",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab31a",
+        "customer_id": "buyer",
+        "date": "2026-10-13",
+        "amount": "384.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1210",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab31a",
+        "customer_id": "buyer",
+        "date": "2026-10-13",
+        "amount": "384.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1210",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1210",
+      "review": "randomrefund1210",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab31c",
+        "date": "2026-10-14",
+        "amount": "315.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1210"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1210",
+      "review": "randomrefund1210",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab31c",
+        "date": "2026-10-14",
+        "amount": "315.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1210"
+      },
+      "ref": "randomrefund1210",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1210",
+      "review": "randomapp1210",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab31b",
+        "date": "2026-10-14",
+        "invoice_id": "inv200",
+        "amount": "58.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1210",
+      "review": "randomapp1210",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab31b",
+        "date": "2026-10-14",
+        "invoice_id": "inv200",
+        "amount": "58.00"
+      },
+      "ref": "randomapp1210",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1210",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1210",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1210",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1210",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1220",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab324",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "893.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1220",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab324",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "893.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1220",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1220",
+      "review": "randomrefund1220",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab326",
+        "date": "2026-10-05",
+        "amount": "98.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1220",
+      "review": "randomrefund1220",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab326",
+        "date": "2026-10-05",
+        "amount": "98.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1220",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1220",
+      "review": "randomapp1220",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab325",
+        "date": "2026-10-05",
+        "invoice_id": "inv200",
+        "amount": "295.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1220",
+      "review": "randomapp1220",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab325",
+        "date": "2026-10-05",
+        "invoice_id": "inv200",
+        "amount": "295.00"
+      },
+      "ref": "randomapp1220",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1220",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1220",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1220",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1220",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1230",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab32e",
+        "customer_id": "buyer",
+        "date": "2026-10-17",
+        "amount": "662.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1230",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab32e",
+        "customer_id": "buyer",
+        "date": "2026-10-17",
+        "amount": "662.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1230",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1230",
+      "review": "randomapp1230",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab32f",
+        "date": "2026-10-18",
+        "invoice_id": "inv200",
+        "amount": "26.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1230",
+      "review": "randomapp1230",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab32f",
+        "date": "2026-10-18",
+        "invoice_id": "inv200",
+        "amount": "26.00"
+      },
+      "ref": "randomapp1230",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1230",
+      "review": "randomrefund1230",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab330",
+        "date": "2026-10-18",
+        "amount": "592.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1230"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1230",
+      "review": "randomrefund1230",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab330",
+        "date": "2026-10-18",
+        "amount": "592.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1230"
+      },
+      "ref": "randomrefund1230",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1230",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1230",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1230",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1230",
+      "expected_revision": 1,
+      "date": "2026-10-21",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1240",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab338",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "114.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1240",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab338",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "114.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1240",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1240",
+      "review": "randomapp1240",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab339",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "54.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1240",
+      "review": "randomapp1240",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab339",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "54.00"
+      },
+      "ref": "randomapp1240",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1240",
+      "review": "randomrefund1240",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab33a",
+        "date": "2026-10-12",
+        "amount": "29.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1240"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1240",
+      "review": "randomrefund1240",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab33a",
+        "date": "2026-10-12",
+        "amount": "29.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1240"
+      },
+      "ref": "randomrefund1240",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1240",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1240",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1240",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1240",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1250",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab342",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "748.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1250",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab342",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "748.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1250",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1250",
+      "review": "randomrefund1250",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab344",
+        "date": "2026-10-16",
+        "amount": "185.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1250",
+      "review": "randomrefund1250",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab344",
+        "date": "2026-10-16",
+        "amount": "185.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1250",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1250",
+      "review": "randomapp1250",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab343",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "191.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1250",
+      "review": "randomapp1250",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab343",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "191.00"
+      },
+      "ref": "randomapp1250",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1250",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1250",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1250",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1250",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1260",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab34c",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "307.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1260",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab34c",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "307.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1260",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1260",
+      "review": "randomrefund1260",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab34e",
+        "date": "2026-10-16",
+        "amount": "186.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1260"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1260",
+      "review": "randomrefund1260",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab34e",
+        "date": "2026-10-16",
+        "amount": "186.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1260"
+      },
+      "ref": "randomrefund1260",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1260",
+      "review": "randomapp1260",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab34d",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "50.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1260",
+      "review": "randomapp1260",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab34d",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "50.00"
+      },
+      "ref": "randomapp1260",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1260",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1260",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1260",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1260",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1270",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab356",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "188.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1270",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab356",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "188.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1270",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1270",
+      "review": "randomrefund1270",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab358",
+        "date": "2026-10-12",
+        "amount": "45.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1270"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1270",
+      "review": "randomrefund1270",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab358",
+        "date": "2026-10-12",
+        "amount": "45.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1270"
+      },
+      "ref": "randomrefund1270",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1270",
+      "review": "randomapp1270",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab357",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "93.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1270",
+      "review": "randomapp1270",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab357",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "93.00"
+      },
+      "ref": "randomapp1270",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1270",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1270",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1270",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1270",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1280",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab360",
+        "customer_id": "buyer",
+        "date": "2026-10-10",
+        "amount": "843.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1280",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab360",
+        "customer_id": "buyer",
+        "date": "2026-10-10",
+        "amount": "843.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1280",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1280",
+      "review": "randomapp1280",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab361",
+        "date": "2026-10-11",
+        "invoice_id": "inv200",
+        "amount": "420.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1280",
+      "review": "randomapp1280",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab361",
+        "date": "2026-10-11",
+        "invoice_id": "inv200",
+        "amount": "420.00"
+      },
+      "ref": "randomapp1280",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1280",
+      "review": "randomrefund1280",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab362",
+        "date": "2026-10-11",
+        "amount": "136.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1280",
+      "review": "randomrefund1280",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab362",
+        "date": "2026-10-11",
+        "amount": "136.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1280",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1280",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1280",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1280",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1280",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1290",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab36a",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "429.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1290",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab36a",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "429.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1290",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1290",
+      "review": "randomrefund1290",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab36c",
+        "date": "2026-10-10",
+        "amount": "147.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1290",
+      "review": "randomrefund1290",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab36c",
+        "date": "2026-10-10",
+        "amount": "147.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1290",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1290",
+      "review": "randomapp1290",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab36b",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "96.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1290",
+      "review": "randomapp1290",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab36b",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "96.00"
+      },
+      "ref": "randomapp1290",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1290",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1290",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1290",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1290",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1300",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab374",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "116.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1300",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab374",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "116.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1300",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1300",
+      "review": "randomapp1300",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab375",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "30.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1300",
+      "review": "randomapp1300",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab375",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "30.00"
+      },
+      "ref": "randomapp1300",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1300",
+      "review": "randomrefund1300",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab376",
+        "date": "2026-10-16",
+        "amount": "86.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1300",
+      "review": "randomrefund1300",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab376",
+        "date": "2026-10-16",
+        "amount": "86.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1300",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1300",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1300",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1300",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1300",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1310",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab37e",
+        "customer_id": "buyer",
+        "date": "2026-10-16",
+        "amount": "111.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1310",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab37e",
+        "customer_id": "buyer",
+        "date": "2026-10-16",
+        "amount": "111.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1310",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1310",
+      "review": "randomrefund1310",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab380",
+        "date": "2026-10-17",
+        "amount": "20.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1310",
+      "review": "randomrefund1310",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab380",
+        "date": "2026-10-17",
+        "amount": "20.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1310",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1310",
+      "review": "randomapp1310",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab37f",
+        "date": "2026-10-17",
+        "invoice_id": "inv200",
+        "amount": "47.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1310",
+      "review": "randomapp1310",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab37f",
+        "date": "2026-10-17",
+        "invoice_id": "inv200",
+        "amount": "47.00"
+      },
+      "ref": "randomapp1310",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1310",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1310",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1310",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1310",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1320",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab388",
+        "customer_id": "buyer",
+        "date": "2026-10-14",
+        "amount": "618.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1320",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab388",
+        "customer_id": "buyer",
+        "date": "2026-10-14",
+        "amount": "618.00",
+        "method": "CASH",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1320",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1320",
+      "review": "randomrefund1320",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab38a",
+        "date": "2026-10-15",
+        "amount": "268.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1320",
+      "review": "randomrefund1320",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab38a",
+        "date": "2026-10-15",
+        "amount": "268.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1320",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1320",
+      "review": "randomapp1320",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab389",
+        "date": "2026-10-15",
+        "invoice_id": "inv200",
+        "amount": "163.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1320",
+      "review": "randomapp1320",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab389",
+        "date": "2026-10-15",
+        "invoice_id": "inv200",
+        "amount": "163.00"
+      },
+      "ref": "randomapp1320",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1320",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1320",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1320",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1320",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1330",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab392",
+        "customer_id": "buyer",
+        "date": "2026-10-03",
+        "amount": "725.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1330",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab392",
+        "customer_id": "buyer",
+        "date": "2026-10-03",
+        "amount": "725.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1330",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1330",
+      "review": "randomapp1330",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab393",
+        "date": "2026-10-04",
+        "invoice_id": "inv200",
+        "amount": "130.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1330",
+      "review": "randomapp1330",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab393",
+        "date": "2026-10-04",
+        "invoice_id": "inv200",
+        "amount": "130.00"
+      },
+      "ref": "randomapp1330",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1330",
+      "review": "randomrefund1330",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab394",
+        "date": "2026-10-04",
+        "amount": "139.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1330"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1330",
+      "review": "randomrefund1330",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab394",
+        "date": "2026-10-04",
+        "amount": "139.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1330"
+      },
+      "ref": "randomrefund1330",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1330",
+      "expected_revision": 1,
+      "date": "2026-10-05",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1330",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1330",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1330",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1340",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab39c",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "119.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1340",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab39c",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "119.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1340",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1340",
+      "review": "randomrefund1340",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab39e",
+        "date": "2026-10-07",
+        "amount": "15.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1340"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1340",
+      "review": "randomrefund1340",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab39e",
+        "date": "2026-10-07",
+        "amount": "15.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1340"
+      },
+      "ref": "randomrefund1340",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1340",
+      "review": "randomapp1340",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab39d",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "41.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1340",
+      "review": "randomapp1340",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab39d",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "41.00"
+      },
+      "ref": "randomapp1340",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1340",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1340",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1340",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1340",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1350",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3a6",
+        "customer_id": "buyer",
+        "date": "2026-10-14",
+        "amount": "452.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1350",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3a6",
+        "customer_id": "buyer",
+        "date": "2026-10-14",
+        "amount": "452.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1350",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1350",
+      "review": "randomrefund1350",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3a8",
+        "date": "2026-10-15",
+        "amount": "3.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1350",
+      "review": "randomrefund1350",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3a8",
+        "date": "2026-10-15",
+        "amount": "3.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1350",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1350",
+      "review": "randomapp1350",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3a7",
+        "date": "2026-10-15",
+        "invoice_id": "inv200",
+        "amount": "224.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1350",
+      "review": "randomapp1350",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3a7",
+        "date": "2026-10-15",
+        "invoice_id": "inv200",
+        "amount": "224.00"
+      },
+      "ref": "randomapp1350",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1350",
+      "expected_revision": 1,
+      "date": "2026-10-16",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1350",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1350",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1350",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1360",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3b0",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "662.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1360",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3b0",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "662.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1360",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1360",
+      "review": "randomapp1360",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3b1",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "221.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1360",
+      "review": "randomapp1360",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3b1",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "221.00"
+      },
+      "ref": "randomapp1360",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1360",
+      "review": "randomrefund1360",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3b2",
+        "date": "2026-10-10",
+        "amount": "80.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1360",
+      "review": "randomrefund1360",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3b2",
+        "date": "2026-10-10",
+        "amount": "80.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1360",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1360",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1360",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1360",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1360",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1370",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ba",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "528.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1370",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ba",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "528.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1370",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1370",
+      "review": "randomrefund1370",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3bc",
+        "date": "2026-10-12",
+        "amount": "44.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1370",
+      "review": "randomrefund1370",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3bc",
+        "date": "2026-10-12",
+        "amount": "44.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1370",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1370",
+      "review": "randomapp1370",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3bb",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "196.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1370",
+      "review": "randomapp1370",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3bb",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "196.00"
+      },
+      "ref": "randomapp1370",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1370",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1370",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1370",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1370",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1380",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3c4",
+        "customer_id": "buyer",
+        "date": "2026-10-03",
+        "amount": "273.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1380",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3c4",
+        "customer_id": "buyer",
+        "date": "2026-10-03",
+        "amount": "273.00",
+        "method": "OTHER",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1380",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1380",
+      "review": "randomapp1380",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3c5",
+        "date": "2026-10-04",
+        "invoice_id": "inv200",
+        "amount": "101.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1380",
+      "review": "randomapp1380",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3c5",
+        "date": "2026-10-04",
+        "invoice_id": "inv200",
+        "amount": "101.00"
+      },
+      "ref": "randomapp1380",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1380",
+      "review": "randomrefund1380",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3c6",
+        "date": "2026-10-04",
+        "amount": "61.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1380"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1380",
+      "review": "randomrefund1380",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3c6",
+        "date": "2026-10-04",
+        "amount": "61.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1380"
+      },
+      "ref": "randomrefund1380",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1380",
+      "expected_revision": 1,
+      "date": "2026-10-05",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1380",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1380",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1380",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1390",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ce",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "249.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1390",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ce",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "249.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1390",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1390",
+      "review": "randomrefund1390",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3d0",
+        "date": "2026-10-07",
+        "amount": "1.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1390",
+      "review": "randomrefund1390",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3d0",
+        "date": "2026-10-07",
+        "amount": "1.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1390",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1390",
+      "review": "randomapp1390",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3cf",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "9.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1390",
+      "review": "randomapp1390",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3cf",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "9.00"
+      },
+      "ref": "randomapp1390",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1390",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1390",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1390",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1390",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1400",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3d8",
+        "customer_id": "buyer",
+        "date": "2026-10-07",
+        "amount": "383.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1400",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3d8",
+        "customer_id": "buyer",
+        "date": "2026-10-07",
+        "amount": "383.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1400",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1400",
+      "review": "randomapp1400",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3d9",
+        "date": "2026-10-08",
+        "invoice_id": "inv200",
+        "amount": "44.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1400",
+      "review": "randomapp1400",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3d9",
+        "date": "2026-10-08",
+        "invoice_id": "inv200",
+        "amount": "44.00"
+      },
+      "ref": "randomapp1400",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1400",
+      "review": "randomrefund1400",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3da",
+        "date": "2026-10-08",
+        "amount": "216.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1400",
+      "review": "randomrefund1400",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3da",
+        "date": "2026-10-08",
+        "amount": "216.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1400",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1400",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1400",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1400",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1400",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1410",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3e2",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "345.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1410",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3e2",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "345.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1410",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1410",
+      "review": "randomapp1410",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3e3",
+        "date": "2026-10-05",
+        "invoice_id": "inv200",
+        "amount": "150.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1410",
+      "review": "randomapp1410",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3e3",
+        "date": "2026-10-05",
+        "invoice_id": "inv200",
+        "amount": "150.00"
+      },
+      "ref": "randomapp1410",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1410",
+      "review": "randomrefund1410",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3e4",
+        "date": "2026-10-05",
+        "amount": "52.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1410",
+      "review": "randomrefund1410",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3e4",
+        "date": "2026-10-05",
+        "amount": "52.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1410",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1410",
+      "expected_revision": 1,
+      "date": "2026-10-06",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1410",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1410",
+      "expected_revision": 1,
+      "date": "2026-10-07",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1410",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1420",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ec",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "859.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1420",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ec",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "859.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1420",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1420",
+      "review": "randomrefund1420",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ee",
+        "date": "2026-10-16",
+        "amount": "591.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1420",
+      "review": "randomrefund1420",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ee",
+        "date": "2026-10-16",
+        "amount": "591.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1420",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1420",
+      "review": "randomapp1420",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ed",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "135.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1420",
+      "review": "randomapp1420",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3ed",
+        "date": "2026-10-16",
+        "invoice_id": "inv200",
+        "amount": "135.00"
+      },
+      "ref": "randomapp1420",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1420",
+      "expected_revision": 1,
+      "date": "2026-10-17",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1420",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1420",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1420",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1430",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3f6",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "amount": "540.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1430",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3f6",
+        "customer_id": "buyer",
+        "date": "2026-10-08",
+        "amount": "540.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1430",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1430",
+      "review": "randomrefund1430",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3f8",
+        "date": "2026-10-09",
+        "amount": "310.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1430"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1430",
+      "review": "randomrefund1430",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3f8",
+        "date": "2026-10-09",
+        "amount": "310.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1430"
+      },
+      "ref": "randomrefund1430",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1430",
+      "review": "randomapp1430",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3f7",
+        "date": "2026-10-09",
+        "invoice_id": "inv200",
+        "amount": "206.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1430",
+      "review": "randomapp1430",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab3f7",
+        "date": "2026-10-09",
+        "invoice_id": "inv200",
+        "amount": "206.00"
+      },
+      "ref": "randomapp1430",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1430",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1430",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1430",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1430",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1440",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab400",
+        "customer_id": "buyer",
+        "date": "2026-10-07",
+        "amount": "675.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1440",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab400",
+        "customer_id": "buyer",
+        "date": "2026-10-07",
+        "amount": "675.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1440",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1440",
+      "review": "randomrefund1440",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab402",
+        "date": "2026-10-08",
+        "amount": "209.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1440"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1440",
+      "review": "randomrefund1440",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab402",
+        "date": "2026-10-08",
+        "amount": "209.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "1440"
+      },
+      "ref": "randomrefund1440",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1440",
+      "review": "randomapp1440",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab401",
+        "date": "2026-10-08",
+        "invoice_id": "inv200",
+        "amount": "270.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1440",
+      "review": "randomapp1440",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab401",
+        "date": "2026-10-08",
+        "invoice_id": "inv200",
+        "amount": "270.00"
+      },
+      "ref": "randomapp1440",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1440",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1440",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1440",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1440",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1450",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab40a",
+        "customer_id": "buyer",
+        "date": "2026-10-17",
+        "amount": "443.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1450",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab40a",
+        "customer_id": "buyer",
+        "date": "2026-10-17",
+        "amount": "443.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1450",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1450",
+      "review": "randomrefund1450",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab40c",
+        "date": "2026-10-18",
+        "amount": "66.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1450",
+      "review": "randomrefund1450",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab40c",
+        "date": "2026-10-18",
+        "amount": "66.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1450",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1450",
+      "review": "randomapp1450",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab40b",
+        "date": "2026-10-18",
+        "invoice_id": "inv200",
+        "amount": "79.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1450",
+      "review": "randomapp1450",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab40b",
+        "date": "2026-10-18",
+        "invoice_id": "inv200",
+        "amount": "79.00"
+      },
+      "ref": "randomapp1450",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1450",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1450",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1450",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1450",
+      "expected_revision": 1,
+      "date": "2026-10-21",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1460",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab414",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "355.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1460",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab414",
+        "customer_id": "buyer",
+        "date": "2026-10-11",
+        "amount": "355.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1460",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1460",
+      "review": "randomapp1460",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab415",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "28.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1460",
+      "review": "randomapp1460",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab415",
+        "date": "2026-10-12",
+        "invoice_id": "inv200",
+        "amount": "28.00"
+      },
+      "ref": "randomapp1460",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1460",
+      "review": "randomrefund1460",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab416",
+        "date": "2026-10-12",
+        "amount": "301.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1460",
+      "review": "randomrefund1460",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab416",
+        "date": "2026-10-12",
+        "amount": "301.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1460",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1460",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1460",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1460",
+      "expected_revision": 1,
+      "date": "2026-10-14",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1460",
+      "expected_revision": 1,
+      "date": "2026-10-15",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1470",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab41e",
+        "customer_id": "buyer",
+        "date": "2026-10-16",
+        "amount": "370.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1470",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab41e",
+        "customer_id": "buyer",
+        "date": "2026-10-16",
+        "amount": "370.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1470",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1470",
+      "review": "randomrefund1470",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab420",
+        "date": "2026-10-17",
+        "amount": "1.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1470",
+      "review": "randomrefund1470",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab420",
+        "date": "2026-10-17",
+        "amount": "1.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1470",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1470",
+      "review": "randomapp1470",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab41f",
+        "date": "2026-10-17",
+        "invoice_id": "inv200",
+        "amount": "42.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1470",
+      "review": "randomapp1470",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab41f",
+        "date": "2026-10-17",
+        "invoice_id": "inv200",
+        "amount": "42.00"
+      },
+      "ref": "randomapp1470",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1470",
+      "expected_revision": 1,
+      "date": "2026-10-18",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1470",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1470",
+      "expected_revision": 1,
+      "date": "2026-10-19",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1470",
+      "expected_revision": 1,
+      "date": "2026-10-20",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1480",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab428",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "796.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1480",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab428",
+        "customer_id": "buyer",
+        "date": "2026-10-09",
+        "amount": "796.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "randomdep1480",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1480",
+      "review": "randomrefund1480",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab42a",
+        "date": "2026-10-10",
+        "amount": "373.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1480",
+      "review": "randomrefund1480",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab42a",
+        "date": "2026-10-10",
+        "amount": "373.00",
+        "bank_id": "bank",
+        "method": "CASH",
+        "check_number": ""
+      },
+      "ref": "randomrefund1480",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1480",
+      "review": "randomapp1480",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab429",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "394.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1480",
+      "review": "randomapp1480",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab429",
+        "date": "2026-10-10",
+        "invoice_id": "inv200",
+        "amount": "394.00"
+      },
+      "ref": "randomapp1480",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1480",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1480",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1480",
+      "expected_revision": 1,
+      "date": "2026-10-12",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1480",
+      "expected_revision": 1,
+      "date": "2026-10-13",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "randomdep1490",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab432",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "103.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "randomdep1490",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab432",
+        "customer_id": "buyer",
+        "date": "2026-10-06",
+        "amount": "103.00",
+        "method": "OTHER",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "randomdep1490",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "randomdep1490",
+      "review": "randomapp1490",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab433",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "49.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "randomdep1490",
+      "review": "randomapp1490",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab433",
+        "date": "2026-10-07",
+        "invoice_id": "inv200",
+        "amount": "49.00"
+      },
+      "ref": "randomapp1490",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "randomdep1490",
+      "review": "randomrefund1490",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab434",
+        "date": "2026-10-07",
+        "amount": "12.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "randomdep1490",
+      "review": "randomrefund1490",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000ab434",
+        "date": "2026-10-07",
+        "amount": "12.00",
+        "bank_id": "bank",
+        "method": "OTHER",
+        "check_number": ""
+      },
+      "ref": "randomrefund1490",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1490",
+      "expected_revision": 1,
+      "date": "2026-10-08",
+      "reason": "Blocked by live settlements",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "randomrefund1490",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "randomapp1490",
+      "expected_revision": 1,
+      "date": "2026-10-09",
+      "reason": "Random correction",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "randomdep1490",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Random correction",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-01",
+    "2026-10-03",
+    "2026-10-31"
+  ]
+}

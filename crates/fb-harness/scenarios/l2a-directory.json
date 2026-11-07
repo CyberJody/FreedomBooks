@@ -1,0 +1,348 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": " Buyer ",
+    "tax_status": "EXEMPT",
+    "exemption_number": " RESALE "
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "vendor",
+   "ref": "agency",
+   "values": {
+    "display_name": "Agency",
+    "default_terms": "30",
+    "default_expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "service",
+   "values": {
+    "code": "Service",
+    "kind": "SERVICE",
+    "sale_rate": "12.345",
+    "income_account": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "goods",
+   "values": {
+    "code": "Goods",
+    "kind": "NONSTOCK",
+    "sale_rate": "112.50",
+    "taxable": false
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "record": "service",
+   "values": {
+    "kind": "NONSTOCK"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_active",
+   "company": "c",
+   "model": "item",
+   "record": "service",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "duplicate",
+   "values": {
+    "code": " service ",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An item with this code / name already exists in this company (including archived items)."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "bad",
+   "values": {
+    "display_name": "Bad",
+    "tax_status": "NO"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Value 'NO' is not a valid choice."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "vendor",
+   "ref": "badterms",
+   "values": {
+    "display_name": "Bad",
+    "default_terms": 30
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose Due on receipt, Net 15, Net 30 or Net 60, or leave terms blank."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "blank",
+   "values": {
+    "display_name": " "
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This field cannot be blank."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "vendor",
+   "ref": "bademail",
+   "values": {
+    "display_name": "Bad",
+    "email": "not-an-email"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid email address."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badkind",
+   "values": {
+    "code": "x",
+    "kind": "INVENTORY",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Value 'INVENTORY' is not a valid choice."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badmoney",
+   "values": {
+    "code": "bad",
+    "kind": "SERVICE",
+    "sale_rate": "NaN"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badmoney",
+   "values": {
+    "code": "bad",
+    "kind": "SERVICE",
+    "sale_rate": "Infinity"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badmoney",
+   "values": {
+    "code": "bad",
+    "kind": "SERVICE",
+    "sale_rate": "-0.001"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badmoney",
+   "values": {
+    "code": "bad",
+    "kind": "SERVICE",
+    "sale_rate": "100000000000000"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badmoney",
+   "values": {
+    "code": "bad",
+    "kind": "SERVICE",
+    "sale_rate": true
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "badmoney",
+   "values": {
+    "code": "bad",
+    "kind": "SERVICE",
+    "sale_rate": 1.2
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid monetary amount."
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "MONTHLY",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_bulk",
+   "company": "c",
+   "customers": true,
+   "items": true,
+   "stale": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Customers or items changed since this preview. Review the updated list and confirm again."
+  },
+  {
+   "op": "l2_bulk",
+   "company": "c",
+   "customers": true,
+   "items": true,
+   "expect_error": false
+  },
+  {
+   "op": "l2_bulk",
+   "company": "c",
+   "customers": true,
+   "items": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The one-time sales tax update is not available. It is offered once, when sales tax is first turned on."
+  }
+ ]
+}

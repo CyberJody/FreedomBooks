@@ -1,0 +1,9 @@
+{% extends 'ledger/base.html' %}
+{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Accounting setup</h1><p>Default accounts for invoices, bills, receipts, and checks. Nothing on this page posts money.</p></div></div>
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+<p>{% if setup %}Saved revision {{ setup.revision }}{% else %}Unconfigured — choose only the defaults you need.{% endif %}</p>
+<p class="muted">No account is guessed by name. Each role must use a distinct account; designated banks cannot also be receivables or undeposited funds. Unavailable accounts stay listed until you replace or clear them. Amounts already posted keep the accounts they used.</p>
+<section><form class="narrow" method="post" novalidate>{{ csrf_token|safe }}{{ form.as_p|safe }}<button type="submit">Save accounting setup</button></form></section>
+<p><a href="{{ url('accounts', company.pk) }}">Manage chart of accounts</a> · <a href="{{ url('history', company.pk) }}">Review audit history</a></p>
+{% endblock %}

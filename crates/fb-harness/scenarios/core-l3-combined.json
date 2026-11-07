@@ -1,0 +1,361 @@
+{
+  "users": [
+    {
+      "username": "combined",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic combined sales and payables",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar2",
+      "code": "111",
+      "name": "ar2",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "210",
+      "name": "tax",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income2",
+      "code": "410",
+      "name": "income2",
+      "kind": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "500",
+      "name": "expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "work",
+      "values": {
+        "code": "WORK",
+        "description": "Synthetic work",
+        "kind": "SERVICE",
+        "sale_rate": "9.99",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank"
+        ],
+        "payables": "ap"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "invoice-review-1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "invoice-review-1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv2",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000002",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "Synthetic invoice",
+        "tax_mode": "NONE",
+        "tax_rate": "0",
+        "tax_label": "",
+        "lines": [
+          {
+            "item_id": "work",
+            "description": "Half cents",
+            "quantity": "1",
+            "rate": "20.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv2",
+      "expected_revision": 1,
+      "review": "invoice-review-2",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv2",
+      "expected_revision": 1,
+      "review": "invoice-review-2",
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "c",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-11-01",
+        "reference": "Paid",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186ad",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "12.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "c",
+      "bill": "b",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000015",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "25.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "10.00"
+          },
+          {
+            "invoice_id": "inv2",
+            "amount": "15.00"
+          }
+        ],
+        "bank_id": "bank"
+      },
+      "review": "receipt-review",
+      "ref": "receipt",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000015",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "amount": "25.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "10.00"
+          },
+          {
+            "invoice_id": "inv2",
+            "amount": "15.00"
+          }
+        ],
+        "bank_id": "bank"
+      },
+      "review": "receipt-review",
+      "ref": "receipt",
+      "expect_error": false
+    },
+    {
+      "op": "payables_review_payment",
+      "company": "c",
+      "review": "p1r",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-02",
+        "amount": "7.00",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-0000000186ae",
+        "allocations": [
+          {
+            "bill_id": "b",
+            "amount": "7.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "c",
+      "ref": "p1",
+      "review": "p1r",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-02",
+        "amount": "7.00",
+        "method": "CHECK",
+        "reference": "100",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-0000000186ae",
+        "allocations": [
+          {
+            "bill_id": "b",
+            "amount": "7.00"
+          }
+        ]
+      },
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-09-30",
+    "2026-10-01",
+    "2026-10-02"
+  ]
+}

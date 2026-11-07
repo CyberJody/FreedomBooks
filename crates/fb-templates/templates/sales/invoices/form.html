@@ -1,0 +1,14 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('sales/estimates.css') }}"><link rel="stylesheet" href="{{ static('sales/invoices.css') }}"><script src="{{ static('sales/invoices.js') }}" defer></script><script src="{{ static('sales/line_tax.js') }}" defer></script>{% endblock %}
+{% block content %}<h1>{% if invoice %}Revise {{ invoice.identity.number }}{% else %}New invoice{% endif %}</h1>
+<p>Save as draft first, then review and post when accounts are set up. Up to 50 lines.</p>
+{% if current and current.state != 'DRAFT' %}<p class="errorlist">This invoice is {{ current.get_state_display }}. Only Draft invoices can be edited. Correct an Open invoice by linked reversal; voiding is final.</p>{% endif %}
+<p>Customer and item names on saved documents stay as they were when you saved. Use Update on the form to pull current directory details. Replace archived customers or items before you post.</p>
+{% if form.has_errors or formset.total_error_count %}<p class="errorlist" role="alert">Invoice not saved. Review the errors below; your entered values are retained.</p>{% endif %}<form method="post" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{{ form.f.request_key.widget|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.f.request_key.errors|safe }}{{ form.f.expected_revision.errors|safe }}
+<div class="estimate-header">{% for field in form.visible_fields %}<div>{{ field.label_tag|safe }} {{ field.widget|safe }}{{ field.errors|safe }}</div>{% endfor %}</div><p class="customer-tax-note" id="customer-tax-note" hidden></p>
+<h2>Lines</h2><p>Choosing an item fills description, rate, and income account on that row. You can edit them. Picking a different item replaces those fields.</p>
+{{ formset.management_form|safe }}{{ formset.non_form_errors|safe }}
+<div id="invoice-lines">{% for line in formset.forms %}<fieldset class="estimate-line"><legend>Line {{ loop.index }}</legend>{% include 'sales/invoices/line_fields.html' %}</fieldset>{% endfor %}</div>
+<template id="empty-line"><fieldset class="estimate-line"><legend>Additional line</legend>{% with line=formset.empty_form %}{% include 'sales/invoices/line_fields.html' %}{% endwith %}</fieldset></template>
+<div class="invoice-actions"><button type="button" id="add-line">Add line</button><button type="submit">Save invoice</button>
+<a href="{{ url('invoices:list', company.pk) }}">Invoice list</a></div></form>{{ catalog|json_script('invoice-catalog') }}{{ customer_tax|json_script('customer-tax') }}{% endblock %}

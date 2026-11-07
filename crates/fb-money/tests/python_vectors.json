@@ -1,0 +1,881 @@
+{
+ "text": [
+  [
+   "0",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1",
+   {
+    "ok": "1.00"
+   }
+  ],
+  [
+   "1.005",
+   {
+    "ok": "1.01"
+   }
+  ],
+  [
+   "125.005",
+   {
+    "ok": "125.01"
+   }
+  ],
+  [
+   "2.675",
+   {
+    "ok": "2.68"
+   }
+  ],
+  [
+   "0.005",
+   {
+    "ok": "0.01"
+   }
+  ],
+  [
+   "0.004",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.0049999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.015",
+   {
+    "ok": "0.02"
+   }
+  ],
+  [
+   "-0",
+   {
+    "ok": "-0.00"
+   }
+  ],
+  [
+   "-0.00",
+   {
+    "ok": "-0.00"
+   }
+  ],
+  [
+   "-0.001",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-1",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "+5",
+   {
+    "ok": "5.00"
+   }
+  ],
+  [
+   " 7.5 ",
+   {
+    "ok": "7.50"
+   }
+  ],
+  [
+   "\t8\n",
+   {
+    "ok": "8.00"
+   }
+  ],
+  [
+   "1_000",
+   {
+    "ok": "1000.00"
+   }
+  ],
+  [
+   "1__0",
+   {
+    "ok": "10.00"
+   }
+  ],
+  [
+   "_1",
+   {
+    "ok": "1.00"
+   }
+  ],
+  [
+   "1_",
+   {
+    "ok": "1.00"
+   }
+  ],
+  [
+   "1e2",
+   {
+    "ok": "100.00"
+   }
+  ],
+  [
+   "1E-2",
+   {
+    "ok": "0.01"
+   }
+  ],
+  [
+   "1.2345e1",
+   {
+    "ok": "12.35"
+   }
+  ],
+  [
+   "5e-3",
+   {
+    "ok": "0.01"
+   }
+  ],
+  [
+   "4.9e-3",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1e-100",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1e100",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "99999999999999.99",
+   {
+    "ok": "99999999999999.99"
+   }
+  ],
+  [
+   "99999999999999.994",
+   {
+    "ok": "99999999999999.99"
+   }
+  ],
+  [
+   "99999999999999.995",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "100000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e14",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "9.9999999999999994e13",
+   {
+    "ok": "99999999999999.99"
+   }
+  ],
+  [
+   "NaN",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "nan",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "sNaN",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "Infinity",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-Infinity",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "inf",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "Inf",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   " ",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   ".",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1.",
+   {
+    "ok": "1.00"
+   }
+  ],
+  [
+   ".5",
+   {
+    "ok": "0.50"
+   }
+  ],
+  [
+   "+.5",
+   {
+    "ok": "0.50"
+   }
+  ],
+  [
+   "-.0",
+   {
+    "ok": "-0.00"
+   }
+  ],
+  [
+   "1..2",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "e1",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0x10",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1,000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "not money",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "١٢",
+   {
+    "ok": "12.00"
+   }
+  ],
+  [
+   "１２.５",
+   {
+    "ok": "12.50"
+   }
+  ],
+  [
+   " 12",
+   {
+    "ok": "12.00"
+   }
+  ],
+  [
+   "12 ",
+   {
+    "ok": "12.00"
+   }
+  ],
+  [
+   "\u000112",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "12\u001c",
+   {
+    "ok": "12.00"
+   }
+  ],
+  [
+   "0.125",
+   {
+    "ok": "0.13"
+   }
+  ],
+  [
+   "0.135",
+   {
+    "ok": "0.14"
+   }
+  ],
+  [
+   "1.995",
+   {
+    "ok": "2.00"
+   }
+  ],
+  [
+   "000123.4500",
+   {
+    "ok": "123.45"
+   }
+  ],
+  [
+   "1E+2",
+   {
+    "ok": "100.00"
+   }
+  ],
+  [
+   "12345678901234567890123456789",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0.0000000000000000000000000000001",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "3.14159265358979323846264338327950288",
+   {
+    "ok": "3.14"
+   }
+  ],
+  [
+   "1e-18446744073709551618",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e-18446744073709551619",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e-999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e-1000000000000000000",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e-9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e-18446744073709551618",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e-18446744073709551619",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-0e999999999999999999",
+   {
+    "ok": "-0.00"
+   }
+  ],
+  [
+   "-0e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-0e-999999999999999999",
+   {
+    "ok": "-0.00"
+   }
+  ],
+  [
+   "-0e-1000000000000000000",
+   {
+    "ok": "-0.00"
+   }
+  ],
+  [
+   "-0e9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-0e-9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-0e-18446744073709551618",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "-0e-18446744073709551619",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e-999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1e-1000000000000000000",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1e9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e-9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e-18446744073709551618",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e-18446744073709551619",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e-999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "125e-1000000000000000000",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "125e9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e-9999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e-18446744073709551618",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e-18446744073709551619",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e999999999999999998",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0e-1999999999999999996",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e-1999999999999999997",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0e-1999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0.0e999999999999999998",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.0e999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.0e1000000000000000000",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.0e-1999999999999999996",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.0e-1999999999999999997",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0.0e-1999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0.00e999999999999999998",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.00e999999999999999999",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.00e1000000000000000000",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "0.00e-1999999999999999996",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0.00e-1999999999999999997",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "0.00e-1999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1e-1999999999999999996",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1e-1999999999999999997",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1e-1999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "125e-1999999999999999996",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "125e-1999999999999999997",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "125e-1999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "00125.00e999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "00125.00e999999999999999999",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "00125.00e1000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "00125.00e-1999999999999999996",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "00125.00e-1999999999999999997",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "00125.00e-1999999999999999998",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ]
+ ],
+ "int": [
+  [
+   "0",
+   {
+    "ok": "0.00"
+   }
+  ],
+  [
+   "1",
+   {
+    "ok": "1.00"
+   }
+  ],
+  [
+   "5",
+   {
+    "ok": "5.00"
+   }
+  ],
+  [
+   "-1",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "99999999999999",
+   {
+    "ok": "99999999999999.00"
+   }
+  ],
+  [
+   "100000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ],
+  [
+   "1000000000000000000000000000000",
+   {
+    "error": "Enter a valid monetary amount."
+   }
+  ]
+ ],
+ "other": {
+  "float": {
+   "error": "Enter a valid monetary amount."
+  },
+  "bool": {
+   "error": "Enter a valid monetary amount."
+  },
+  "none": {
+   "error": "Enter a valid monetary amount."
+  }
+ }
+}

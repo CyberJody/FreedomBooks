@@ -1,0 +1,8057 @@
+{
+ "users": [
+  {
+   "username": "check-test",
+   "is_staff": true
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "co",
+   "name": "Synthetic checks",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank",
+   "code": "100",
+   "name": "Bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank2",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "asset",
+   "code": "150",
+   "name": "Equipment",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "vendor",
+   "ref": "vendor",
+   "values": {
+    "display_name": "Synthetic supplier",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "item",
+   "ref": "item",
+   "values": {
+    "code": "Parts",
+    "description": "Parts",
+    "kind": "NONSTOCK",
+    "sale_rate": "2.00",
+    "purchase_cost": "1.00",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "co",
+   "expected_revision": 0,
+   "values": {
+    "payables": "ap",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c1",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1001",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000493fe",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "634.83"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c1",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c2",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1002",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000493ff",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "255.99"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next3",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next4",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t5",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "488.95",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049400"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c1",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c3",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1003",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049401",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "617.56"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c3",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c2",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c4",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1004",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049402",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "782.73"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c3",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c5",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1005",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049403",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "988.68"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t5",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next14",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c4",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next16",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c6",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1006",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049404",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "970.23"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c4",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c7",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1007",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049405",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "134.26"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c2",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next21",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X22",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049406",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c7",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1007",
+    "memo": "Edit 23",
+    "request_key": "00000000-0000-0000-0000-000000049405",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "134.26"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c7",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X24",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049407",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next25",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X26",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049408",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next27",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next28",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X29",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049409",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next30",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c6",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c7",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1007",
+    "memo": "Edit 32",
+    "request_key": "00000000-0000-0000-0000-000000049405",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "134.26"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c7",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next33",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c7",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1007",
+    "memo": "Edit 34",
+    "request_key": "00000000-0000-0000-0000-000000049405",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "134.26"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c7",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c7",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X36",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004940a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c8",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1008",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004940b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "315.99"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c9",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1009",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004940c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "272.64"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c10",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1010",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004940d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "584.19"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next40",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c11",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1011",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004940e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "811.92"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c12",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1012",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004940f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "747.77"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next43",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c9",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t45",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "199.36",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049410"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c5",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1005",
+    "memo": "Edit 46",
+    "request_key": "00000000-0000-0000-0000-000000049403",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "988.68"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c5",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X47",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049411",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t48",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "603.09",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049412"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next49",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c10",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1010",
+    "memo": "Edit 50",
+    "request_key": "00000000-0000-0000-0000-00000004940d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "584.19"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c10",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c5",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1005",
+    "memo": "Edit 51",
+    "request_key": "00000000-0000-0000-0000-000000049403",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "988.68"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c5",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t48",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X53",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049413",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t45",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c10",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1010",
+    "memo": "Edit 55",
+    "request_key": "00000000-0000-0000-0000-00000004940d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "584.19"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c10",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X56",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049414",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c11",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1011",
+    "memo": "Edit 57",
+    "request_key": "00000000-0000-0000-0000-00000004940e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "811.92"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c11",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X58",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049415",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c5",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1005",
+    "memo": "Edit 59",
+    "request_key": "00000000-0000-0000-0000-000000049403",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "988.68"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c5",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t60",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "739.42",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049416"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X61",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049417",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c13",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1013",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049418",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "190.32"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t63",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "154.21",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049419"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c9",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c6",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c7",
+   "expected_revision": 5,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next67",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c14",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1014",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004941a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "555.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X69",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004941b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next70",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next71",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t72",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "566.28",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004941c"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next73",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c14",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1014",
+    "memo": "Edit 74",
+    "request_key": "00000000-0000-0000-0000-00000004941a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "555.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c14",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next75",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c8",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1008",
+    "memo": "Edit 76",
+    "request_key": "00000000-0000-0000-0000-00000004940b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "315.99"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c8",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X77",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004941d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next78",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next79",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X80",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004941e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c14",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1014",
+    "memo": "Edit 81",
+    "request_key": "00000000-0000-0000-0000-00000004941a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "555.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c14",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t82",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "986.71",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004941f"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c12",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1012",
+    "memo": "Edit 83",
+    "request_key": "00000000-0000-0000-0000-00000004940f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "747.77"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c12",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t84",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "979.55",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049420"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t84",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next86",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next87",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X88",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049421",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t89",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "324.55",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049422"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t90",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "92.25",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049423"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next91",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X92",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049424",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next93",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t94",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "262.52",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049425"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next95",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t96",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "957.80",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049426"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X97",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049427",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t63",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next99",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c15",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1015",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049428",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "559.34"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X101",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049429",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next102",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t103",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "381.16",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004942a"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t104",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "41.48",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004942b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next105",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c10",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c10",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next108",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next109",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t110",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "554.68",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004942c"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t111",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "196.98",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004942d"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c15",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next113",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c5",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1005",
+    "memo": "Edit 114",
+    "request_key": "00000000-0000-0000-0000-000000049403",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "988.68"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c5",
+    "expected_revision": 4
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c14",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1014",
+    "memo": "Edit 115",
+    "request_key": "00000000-0000-0000-0000-00000004941a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "555.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c14",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c13",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c16",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1016",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004942e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "854.16"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c15",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c13",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t60",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t90",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c16",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1016",
+    "memo": "Edit 122",
+    "request_key": "00000000-0000-0000-0000-00000004942e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "854.16"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c16",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t123",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "773.03",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004942f"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next124",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next125",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c14",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1014",
+    "memo": "Edit 126",
+    "request_key": "00000000-0000-0000-0000-00000004941a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "555.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c14",
+    "expected_revision": 4
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t94",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X128",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049430",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X129",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049431",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c16",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1016",
+    "memo": "Edit 130",
+    "request_key": "00000000-0000-0000-0000-00000004942e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "854.16"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c16",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t131",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "89.34",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049432"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t89",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X133",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049433",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c12",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X135",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049434",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next136",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c12",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c16",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1016",
+    "memo": "Edit 138",
+    "request_key": "00000000-0000-0000-0000-00000004942e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "854.16"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c16",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next139",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c17",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1017",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049435",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "784.35"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c11",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1011",
+    "memo": "Edit 141",
+    "request_key": "00000000-0000-0000-0000-00000004940e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "811.92"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c11",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t142",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "104.27",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049436"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c18",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1018",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049437",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "187.90"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X144",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049438",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next145",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c11",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c14",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1014",
+    "memo": "Edit 147",
+    "request_key": "00000000-0000-0000-0000-00000004941a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "555.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c14",
+    "expected_revision": 5
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t148",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "404.23",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049439"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X149",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004943a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c19",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1019",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004943b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "972.34"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c11",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c14",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c16",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t154",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "728.55",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004943c"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c20",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1020",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004943d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "512.05"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t142",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c21",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1021",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004943e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "855.31"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next158",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c21",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1021",
+    "memo": "Edit 159",
+    "request_key": "00000000-0000-0000-0000-00000004943e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "855.31"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c21",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c16",
+   "expected_revision": 5,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c17",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1017",
+    "memo": "Edit 161",
+    "request_key": "00000000-0000-0000-0000-000000049435",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "784.35"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c17",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c20",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t163",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "50.63",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004943f"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t110",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c21",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c22",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1022",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049440",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "657.73"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c23",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1023",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049441",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "883.19"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c23",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1023",
+    "memo": "Edit 168",
+    "request_key": "00000000-0000-0000-0000-000000049441",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "883.19"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c23",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X169",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049442",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c18",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c20",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c19",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t173",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "462.72",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049443"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X174",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049444",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t175",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "608.41",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049445"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c23",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1023",
+    "memo": "Edit 176",
+    "request_key": "00000000-0000-0000-0000-000000049441",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "883.19"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c23",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c14",
+   "expected_revision": 7,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next178",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next179",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t180",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "195.98",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049446"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t154",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c8",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1008",
+    "memo": "Edit 182",
+    "request_key": "00000000-0000-0000-0000-00000004940b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "315.99"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c8",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t111",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t184",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "502.72",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049447"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t185",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "267.41",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049448"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c17",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1017",
+    "memo": "Edit 186",
+    "request_key": "00000000-0000-0000-0000-000000049435",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "784.35"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c17",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t187",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "935.77",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049449"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t123",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t189",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "942.16",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004944a"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c18",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next191",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t189",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X193",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004944b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t180",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X195",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004944c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next196",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c23",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c17",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1017",
+    "memo": "Edit 198",
+    "request_key": "00000000-0000-0000-0000-000000049435",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "784.35"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c17",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c24",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1024",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004944d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "328.06"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t200",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "511.21",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004944e"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X201",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004944f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t163",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next203",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c24",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c5",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c17",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c21",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t208",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "276.17",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049450"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c8",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c25",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1025",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049451",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "808.91"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t148",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X212",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049452",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t213",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "3.58",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049453"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t72",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next215",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c24",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c5",
+   "expected_revision": 6,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c26",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1026",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049454",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "497.83"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X219",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049455",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t82",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X221",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049456",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X222",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049457",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next223",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c26",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c25",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1025",
+    "memo": "Edit 225",
+    "request_key": "00000000-0000-0000-0000-000000049451",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "808.91"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c25",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next226",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c25",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t228",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "371.81",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049458"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next229",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c22",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1022",
+    "memo": "Edit 230",
+    "request_key": "00000000-0000-0000-0000-000000049440",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "657.73"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c22",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c22",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next232",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next233",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next234",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t235",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "970.13",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049459"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c19",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next237",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X238",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004945a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next239",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next240",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next241",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c27",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1027",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004945b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "298.47"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c26",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c28",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1028",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004945c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "768.01"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c17",
+   "expected_revision": 5,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c8",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t228",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t248",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "148.32",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004945d"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t249",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "317.60",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004945e"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next250",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t251",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "669.91",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004945f"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t104",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t253",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "425.58",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049460"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t208",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t200",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c25",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c22",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c28",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1028",
+    "memo": "Edit 258",
+    "request_key": "00000000-0000-0000-0000-00000004945c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "768.01"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c28",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X259",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049461",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t248",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c27",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1027",
+    "memo": "Edit 261",
+    "request_key": "00000000-0000-0000-0000-00000004945b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "298.47"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c27",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X262",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049462",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next263",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t264",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "19.75",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049463"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t265",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "200.34",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049464"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next266",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next267",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c27",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c29",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1029",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049465",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "281.23"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t270",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "315.26",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049466"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c23",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c29",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1029",
+    "memo": "Edit 272",
+    "request_key": "00000000-0000-0000-0000-000000049465",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "281.23"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c29",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c27",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c29",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1029",
+    "memo": "Edit 274",
+    "request_key": "00000000-0000-0000-0000-000000049465",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "281.23"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c29",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next275",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t276",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "421.34",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049467"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next277",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t103",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next279",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c28",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1028",
+    "memo": "Edit 280",
+    "request_key": "00000000-0000-0000-0000-00000004945c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "768.01"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c28",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next281",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next282",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next283",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c30",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1030",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049468",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "994.61"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c28",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next286",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X287",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049469",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c31",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1031",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004946a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "934.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c31",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c28",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c31",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t292",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "483.74",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004946b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t264",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next294",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c29",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t296",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "312.54",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004946c"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t297",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "71.78",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004946d"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c30",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next299",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next300",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next301",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next302",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c32",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1032",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004946e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "397.67"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c33",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1033",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004946f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "718.02"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c29",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t292",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c33",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X308",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049470",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c34",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1034",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049471",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "983.34"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t173",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X311",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049472",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t296",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c30",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X314",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049473",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c32",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1032",
+    "memo": "Edit 315",
+    "request_key": "00000000-0000-0000-0000-00000004946e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "397.67"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c32",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c33",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t317",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "383.64",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049474"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t318",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "579.90",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049475"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t319",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "148.86",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049476"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t320",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "809.17",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049477"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c34",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1034",
+    "memo": "Edit 321",
+    "request_key": "00000000-0000-0000-0000-000000049471",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "983.34"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c34",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next322",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next323",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c34",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1034",
+    "memo": "Edit 324",
+    "request_key": "00000000-0000-0000-0000-000000049471",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "983.34"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c34",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t325",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "301.75",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049478"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c35",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1035",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049479",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "99.85"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t319",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c32",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1032",
+    "memo": "Edit 328",
+    "request_key": "00000000-0000-0000-0000-00000004946e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "397.67"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c32",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next329",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next330",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next331",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c35",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c35",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next334",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c36",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1036",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004947a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "994.22"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next336",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c37",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1037",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004947b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "491.87"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X338",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004947c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next339",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X340",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004947d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next341",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X342",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004947e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t251",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next344",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next345",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c36",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1036",
+    "memo": "Edit 346",
+    "request_key": "00000000-0000-0000-0000-00000004947a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "994.22"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c36",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next347",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X348",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004947f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c38",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1038",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049480",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "231.20"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c38",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1038",
+    "memo": "Edit 350",
+    "request_key": "00000000-0000-0000-0000-000000049480",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "231.20"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c38",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t187",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c38",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c32",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t270",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t249",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c39",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1039",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049481",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "954.47"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next357",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X358",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049482",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c40",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1040",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049483",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "464.81"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c40",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t184",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next362",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t276",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t235",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c38",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t366",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "732.95",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049484"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c34",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t368",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "755.87",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049485"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X369",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049486",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X370",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049487",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X371",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049488",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c39",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t373",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "318.42",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049489"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c41",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1041",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004948a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "79.39"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c32",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c41",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c36",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c37",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1037",
+    "memo": "Edit 378",
+    "request_key": "00000000-0000-0000-0000-00000004947b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "491.87"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c37",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t379",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "318.97",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004948b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c34",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t320",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c42",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1042",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004948c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "190.50"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c43",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1043",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004948d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "391.61"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c36",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c42",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1042",
+    "memo": "Edit 385",
+    "request_key": "00000000-0000-0000-0000-00000004948c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "190.50"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c42",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t368",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next387",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c42",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1042",
+    "memo": "Edit 388",
+    "request_key": "00000000-0000-0000-0000-00000004948c",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "190.50"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c42",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c37",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1037",
+    "memo": "Edit 389",
+    "request_key": "00000000-0000-0000-0000-00000004947b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "491.87"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c37",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c43",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1043",
+    "memo": "Edit 390",
+    "request_key": "00000000-0000-0000-0000-00000004948d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "391.61"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c43",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X391",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004948e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c44",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1044",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004948f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "798.80"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c45",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1045",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049490",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "56.38"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c44",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1044",
+    "memo": "Edit 394",
+    "request_key": "00000000-0000-0000-0000-00000004948f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "798.80"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c44",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X395",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049491",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t317",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X397",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049492",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c41",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c44",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t400",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "521.73",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049493"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c43",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c45",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1045",
+    "memo": "Edit 402",
+    "request_key": "00000000-0000-0000-0000-000000049490",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "56.38"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c45",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c40",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c37",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1037",
+    "memo": "Edit 404",
+    "request_key": "00000000-0000-0000-0000-00000004947b",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "491.87"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c37",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X405",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049494",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t185",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c46",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1046",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049495",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "646.21"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c45",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1045",
+    "memo": "Edit 408",
+    "request_key": "00000000-0000-0000-0000-000000049490",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "56.38"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c45",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c46",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1046",
+    "memo": "Edit 409",
+    "request_key": "00000000-0000-0000-0000-000000049495",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "646.21"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c46",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next410",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c42",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c39",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t131",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t414",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "140.40",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049496"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t415",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "315.70",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049497"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next416",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c46",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t325",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c45",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c47",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1047",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-000000049498",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "566.79"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t421",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "77.74",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-000000049499"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c37",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next423",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t400",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next425",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c47",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1047",
+    "memo": "Edit 426",
+    "request_key": "00000000-0000-0000-0000-000000049498",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "566.79"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c47",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c48",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1048",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004949a",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "146.27"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next428",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t429",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "958.14",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004949b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t430",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "315.55",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-00000004949c"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c48",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t415",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next433",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c42",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X435",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004949d",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X436",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004949e",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X437",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-00000004949f",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t429",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t297",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t440",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "217.85",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494a0"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c45",
+   "expected_revision": 4,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X442",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494a1",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c47",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1047",
+    "memo": "Edit 443",
+    "request_key": "00000000-0000-0000-0000-000000049498",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "566.79"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c47",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next444",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c47",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1047",
+    "memo": "Edit 445",
+    "request_key": "00000000-0000-0000-0000-000000049498",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "566.79"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c47",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t318",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t447",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "301.97",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494a2"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X448",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494a3",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t449",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "883.40",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494a4"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t265",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X451",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494a5",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t452",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "445.62",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494a6"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next453",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c37",
+   "expected_revision": 5,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c49",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1049",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494a7",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "982.17"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c50",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1050",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494a8",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "274.57"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X457",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494a9",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t430",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t175",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c44",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c49",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1049",
+    "memo": "Edit 461",
+    "request_key": "00000000-0000-0000-0000-0000000494a7",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "982.17"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "0.3333",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c49",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next462",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t463",
+   "values": {
+    "from_account_id": "bank2",
+    "to_account_id": "bank",
+    "date": "2026-10-23",
+    "amount": "382.91",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494aa"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank2",
+   "ref": "next464",
+   "expect_error": false
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next465",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t366",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c43",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c49",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c47",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1047",
+    "memo": "Edit 469",
+    "request_key": "00000000-0000-0000-0000-000000049498",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "566.79"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c47",
+    "expected_revision": 4
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t421",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c50",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t472",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "386.63",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494ab"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X473",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494ac",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X474",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494ad",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "0",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Every check line must be a positive amount."
+  },
+  {
+   "op": "checks_next",
+   "company": "co",
+   "bank": "bank",
+   "ref": "next475",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c46",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c47",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1047",
+    "memo": "Edit 477",
+    "request_key": "00000000-0000-0000-0000-000000049498",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "566.79"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c47",
+    "expected_revision": 5
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c47",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X479",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494ae",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t440",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c47",
+   "expected_revision": 7,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "transfers_record",
+   "company": "co",
+   "ref": "t482",
+   "values": {
+    "from_account_id": "bank",
+    "to_account_id": "bank2",
+    "date": "2026-10-23",
+    "amount": "811.90",
+    "memo": "",
+    "request_key": "00000000-0000-0000-0000-0000000494af"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c51",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1051",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b0",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "595.95"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c49",
+   "expected_revision": 3,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c52",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1052",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b1",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "263.66"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c51",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t472",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c52",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1052",
+    "memo": "Edit 488",
+    "request_key": "00000000-0000-0000-0000-0000000494b1",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "263.66"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c52",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t414",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c53",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1053",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b2",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "82.60"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "bad",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "X491",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b3",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "rate": "-1",
+      "account_id": "expense"
+     }
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+  },
+  {
+   "op": "transfers_void",
+   "company": "co",
+   "transfer": "t463",
+   "expected_revision": 1,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c52",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1052",
+    "memo": "Edit 493",
+    "request_key": "00000000-0000-0000-0000-0000000494b1",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "263.66"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ],
+    "check_id": "c52",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c54",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1054",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b4",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "87.81"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c55",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1055",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b5",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "expense",
+      "rate": "937.89"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "1.005",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c52",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "checks_record",
+   "company": "co",
+   "check": "c53",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "checks_save",
+   "company": "co",
+   "ref": "c56",
+   "values": {
+    "bank_id": "bank",
+    "payee_kind": "VENDOR",
+    "vendor_id": "vendor",
+    "date": "2026-10-23",
+    "check_number": "1056",
+    "memo": "Synthetic check",
+    "request_key": "00000000-0000-0000-0000-0000000494b6",
+    "lines": [
+     {
+      "tab": "EXPENSE",
+      "account_id": "asset",
+      "rate": "42.70"
+     },
+     {
+      "tab": "ITEM",
+      "item_id": "item",
+      "account_id": "expense",
+      "quantity": "2.5",
+      "rate": "1.50"
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "checks_void",
+   "company": "co",
+   "check": "c51",
+   "expected_revision": 2,
+   "date": "2026-10-24",
+   "reason": "Random correction",
+   "expect_error": false
+  }
+ ],
+ "financial_reports": {
+  "profit_loss": [
+   [
+    null,
+    "2099-12-31"
+   ],
+   [
+    "2026-01-01",
+    "2026-12-31"
+   ],
+   [
+    "2026-09-01",
+    "2026-09-30"
+   ],
+   [
+    "2026-10-01",
+    "2026-10-10"
+   ],
+   [
+    "2026-10-11",
+    "2026-10-20"
+   ],
+   [
+    "2026-10-21",
+    "2026-10-31"
+   ],
+   [
+    "2026-11-01",
+    "2026-12-31"
+   ],
+   [
+    "2025-01-01",
+    "2025-12-31"
+   ]
+  ],
+  "balance_sheet": [
+   "2025-12-31",
+   "2026-09-30",
+   "2026-10-10",
+   "2026-10-20",
+   "2026-10-31",
+   "2026-12-31",
+   "2027-01-01",
+   "2099-12-31"
+  ],
+  "general_ledger": [
+   [
+    null,
+    "2099-12-31",
+    "",
+    null
+   ],
+   [
+    "2026-10-01",
+    "2026-10-31",
+    "",
+    null
+   ],
+   [
+    "2026-10-11",
+    "2026-10-20",
+    "pl",
+    null
+   ],
+   [
+    "2027-01-01",
+    "2027-01-31",
+    "asset",
+    null
+   ]
+  ]
+ }
+}

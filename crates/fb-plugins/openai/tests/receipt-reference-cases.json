@@ -1,0 +1,4708 @@
+[
+  {
+    "name": "consistent",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "subtotal-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "subtotal--",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "-",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "subtotal--1",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "-1",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "subtotal-(1.00)",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "(1.00)",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "subtotal-NaN",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "NaN",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "subtotal-Infinity",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "Infinity",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "subtotal-1e100",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "1e100",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "subtotal-1e2",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "1e2",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 10000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "subtotal-$ 40.00",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "$ 40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "subtotal-1,000.01",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "1,000.01",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 100001,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "subtotal-0.005",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "0.005",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 0,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "subtotal-0.015",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "0.015",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 2,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "tax-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 0,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "tax--",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "-",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 0,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "tax--1",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "-1",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "tax-(1.00)",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "(1.00)",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "tax-NaN",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "NaN",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "tax-Infinity",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "Infinity",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "tax-1e100",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "1e100",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "tax-1e2",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "1e2",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 10000,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 10000,
+          "printed_amount_cents": 10000,
+          "product_cents": 10000,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "tax-$ 40.00",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "$ 40.00",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 4000,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "tax-1,000.01",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "1,000.01",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 100001,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 100001,
+          "printed_amount_cents": 100001,
+          "product_cents": 100001,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "tax-0.005",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "0.005",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 0,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "tax-0.015",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "0.015",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 2,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 2,
+          "printed_amount_cents": 2,
+          "product_cents": 2,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "total-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "total--",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "-",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "total--1",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "-1",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "total-(1.00)",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "(1.00)",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "total-NaN",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "NaN",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "total-Infinity",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "Infinity",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "total-1e100",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "1e100",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "total-1e2",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "1e2",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 10000,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "total-$ 40.00",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "$ 40.00",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4000,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "total-1,000.01",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "1,000.01",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 100001,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "total-0.005",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "0.005",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 0,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "total-0.015",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "0.015",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 2,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-0",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "0",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity--1",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "-1",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-2.50000",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2.50000",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 25000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 5000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-0.00001",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "0.00001",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-NaN",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "NaN",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-1.005",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "1.005",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10050,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 2010,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-quantity-1e2",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "1e2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 1000000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 200000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-unit_price-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-unit_price-0",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "0",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 0,
+          "printed_amount_cents": 4000,
+          "product_cents": 0,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-unit_price--1",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "-1",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "line-unit_price-2.50000",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "2.50000",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 250,
+          "printed_amount_cents": 4000,
+          "product_cents": 500,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-unit_price-0.00001",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "0.00001",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 0,
+          "printed_amount_cents": 4000,
+          "product_cents": 0,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-unit_price-NaN",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "NaN",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "line-unit_price-1.005",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "1.005",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 100,
+          "printed_amount_cents": 4000,
+          "product_cents": 200,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-unit_price-1e2",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "1e2",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 10000,
+          "printed_amount_cents": 4000,
+          "product_cents": 20000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "line-amount-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": ""
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "line-amount-0",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "0"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 0,
+          "product_cents": 4000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "line-amount--1",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "-1"
+        }
+      ]
+    },
+    "error": "negative"
+  },
+  {
+    "name": "line-amount-2.50000",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "2.50000"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 250,
+          "product_cents": 4000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "line-amount-0.00001",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "0.00001"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 0,
+          "product_cents": 4000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "line-amount-NaN",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "NaN"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "line-amount-1.005",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "1.005"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 100,
+          "product_cents": 4000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "line-amount-1e2",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "1e2"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 10000,
+          "product_cents": 4000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "currency-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "currency-EUR",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "EUR",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "currency"
+  },
+  {
+    "name": "currency-usd",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "usd",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "currency-USD extra",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD extra",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "date-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": null,
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "date-1989-12-31",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "1989-12-31",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": null,
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "date-1990-01-01",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "1990-01-01",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "1990-01-01",
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "date-2023-02-29",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-02-29",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": null,
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "date-2024-02-29",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2024-02-29",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2024-02-29",
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "date-2024-11-14",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2024-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2024-11-14",
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "date-2024-11-15",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2024-11-15",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": null,
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "date-2023-11-14T00:00:00",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14T00:00:00",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "due-",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "due-2023-11-13",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-11-13",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "due-2023-11-14",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-11-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-11-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "due-2024-11-14",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2024-11-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2024-11-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "due-2024-11-15",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2024-11-15",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": null,
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "no-lines",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": []
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Purchase from Demo Supply",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "no-lines-no-subtotal",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": []
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Purchase from Demo Supply",
+          "quantity": 10000,
+          "unit_price_cents": 4000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "too-many-lines",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        },
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "controls-nfc",
+    "input": {
+      "vendor_name": " Café\u0000‮ \t Supply\n",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Café Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "missing-vendor_name",
+    "input": {
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-vendor_address",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-document_number",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-document_date",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-due_date",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-currency",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-subtotal",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-tax",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-total",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "schema"
+  },
+  {
+    "name": "missing-lines",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20"
+    },
+    "error": "schema"
+  },
+  {
+    "name": "extra-field",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ],
+      "extra": "bad"
+    },
+    "error": "schema"
+  },
+  {
+    "name": "line-mismatch",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "39.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 3900,
+          "product_cents": 4000,
+          "mismatch": true,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 3
+  },
+  {
+    "name": "blank-description",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "\n\t",
+          "quantity": "2",
+          "unit_price": "20.00",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Line 1",
+          "quantity": 20000,
+          "unit_price_cents": 2000,
+          "printed_amount_cents": 4000,
+          "product_cents": 4000,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 1
+  },
+  {
+    "name": "line-half-even",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "0.025",
+          "unit_price": "0.20",
+          "amount": "0.00"
+        }
+      ]
+    },
+    "expected": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal_cents": 4000,
+      "tax_cents": 320,
+      "total_cents": 4320,
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": 250,
+          "unit_price_cents": 20,
+          "printed_amount_cents": 0,
+          "product_cents": 0,
+          "mismatch": false,
+          "tax": false
+        },
+        {
+          "description": "Sales tax (as printed on the receipt)",
+          "quantity": 10000,
+          "unit_price_cents": 320,
+          "printed_amount_cents": 320,
+          "product_cents": 320,
+          "mismatch": false,
+          "tax": true
+        }
+      ]
+    },
+    "note_count": 2
+  },
+  {
+    "name": "large-product",
+    "input": {
+      "vendor_name": "Demo Supply",
+      "vendor_address": [
+        "1 Example Way"
+      ],
+      "document_number": "SYN-1",
+      "document_date": "2023-11-14",
+      "due_date": "2023-12-14",
+      "currency": "USD",
+      "subtotal": "40.00",
+      "tax": "3.20",
+      "total": "43.20",
+      "lines": [
+        {
+          "description": "Synthetic supplies",
+          "quantity": "99999999999999.9999",
+          "unit_price": "99999999999999.99",
+          "amount": "40.00"
+        }
+      ]
+    },
+    "error": "InvalidOperation"
+  }
+]

@@ -1,0 +1,13 @@
+<section id="document-numbering" aria-labelledby="numbering-title">
+<h2 id="numbering-title">Document numbering</h2>
+<p>Choose the next number for new documents. Existing documents keep their numbers. Check numbers are shared by payments and refunds on the same bank account.</p>
+{% if numbering_message %}<p role="status">{{ numbering_message }}</p>{% endif %}
+<table><thead><tr><th scope="col">Document kind</th><th scope="col">Current next number</th><th scope="col">New next number</th></tr></thead><tbody>
+{% for row in numbering %}<tr><th scope="row"><label for="next-number-{{ loop.index }}">{{ row.label }}</label></th><td>{{ row.display }}</td><td><form method="post">
+{{ csrf_token|safe }}<input type="hidden" name="action" value="set_next_number"><input type="hidden" name="kind" value="{{ row.kind }}"><input type="hidden" name="bank_id" value="{{ row.scope }}"><input type="hidden" name="expected_next" value="{{ row.next }}"><input type="hidden" name="expected_revision" value="{{ row.revision }}">
+<input type="text" name="next_number" id="next-number-{{ loop.index }}" inputmode="numeric" pattern="[0-9]+" maxlength="{{ row.max_digits }}" size="14" required value="{{ row.entered|default(row.next) }}"{% if row.error %} aria-invalid="true" aria-describedby="number-error-{{ loop.index }}"{% endif %}> <button type="submit">Save number</button>
+{% if row.error %}<ul class="errorlist" id="number-error-{{ loop.index }}" role="alert"><li>{{ row.error }}</li></ul>{% endif %}
+</form></td></tr>{% endfor %}
+</tbody></table>
+{% if not numbering_has_bank %}<p>Designate a bank account in Accounting setup to choose its next check number.</p>{% endif %}
+</section>

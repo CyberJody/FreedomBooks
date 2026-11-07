@@ -1,0 +1,3 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/reports.css') }}">{% endblock %}{% block content %}<p class="eyebrow">{{ company.name }} · Reports · Posted activity only</p><h1>General ledger</h1>
+{% include 'ledger/reports/_controls.html' %}
+{% if not invalid %}<section class="report-sheet report-wide" aria-label="General ledger">{% include 'ledger/reports/general_ledger_body.html' %}</section>{% include 'ledger/pager.html' %}{% endif %}{% endblock %}

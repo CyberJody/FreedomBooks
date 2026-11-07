@@ -1,0 +1,13 @@
+[package]
+name = "fb-plugin-testkit"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fb-plugin-api = { path = "../fb-plugin-api", features = ["http-client", "test-support"] }
+serde_json = "1.0"
+url = "2.5"
+zeroize = "1.9"
+rcgen = "0.14"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

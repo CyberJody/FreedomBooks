@@ -1,0 +1,110 @@
+[
+ {
+  "input": "2026-10-30",
+  "output": "2026-10-30"
+ },
+ {
+  "input": "20261030",
+  "output": "2026-10-30"
+ },
+ {
+  "input": "2026-W44-5",
+  "output": "2026-10-30"
+ },
+ {
+  "input": "2026W445",
+  "output": "2026-10-30"
+ },
+ {
+  "input": "2026-W44",
+  "output": "2026-10-26"
+ },
+ {
+  "input": "2026W44",
+  "output": "2026-10-26"
+ },
+ {
+  "input": "2026-W445",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026W44-5",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026--W44-5",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-1-1",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-10-1",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-10-30\n",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": " 2026-10-30",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-02-30",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "0001-01-01",
+  "output": "0001-01-01"
+ },
+ {
+  "input": "9999-12-31",
+  "output": "9999-12-31"
+ },
+ {
+  "input": "0000-01-01",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-W00-1",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-W54-1",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-W44-0",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "2026-W44-8",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "２０２６-１０-３０",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": "",
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": null,
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": 1,
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": true,
+  "error": "Enter a valid calendar date."
+ },
+ {
+  "input": 1.2,
+  "error": "Enter a valid calendar date."
+ }
+]

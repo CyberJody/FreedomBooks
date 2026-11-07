@@ -1,0 +1,406 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    },
+    {
+      "username": "member",
+      "is_staff": false
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "add_member",
+      "company": "co",
+      "user": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_switch",
+      "company": "co",
+      "enabled": true,
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reply-0",
+      "request_key": "00000000-0000-0000-0000-0000000187fd",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000187fe",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_reply",
+      "company": "co",
+      "reading": "reply-0",
+      "raw": "not JSON",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reply-1",
+      "request_key": "00000000-0000-0000-0000-0000000187ff",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018800",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_reply",
+      "company": "co",
+      "reading": "reply-1",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "CAD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reply-2",
+      "request_key": "00000000-0000-0000-0000-000000018801",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018802",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_reply",
+      "company": "co",
+      "reading": "reply-2",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "-1",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reply-3",
+      "request_key": "00000000-0000-0000-0000-000000018803",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018804",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_reply",
+      "company": "co",
+      "reading": "reply-3",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "bad",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reply-4",
+      "request_key": "00000000-0000-0000-0000-000000018805",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018806",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_reply",
+      "company": "co",
+      "reading": "reply-4",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "6.00",
+        "tax": "0",
+        "total": "6.00",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "6.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "closed-failure-0",
+      "request_key": "00000000-0000-0000-0000-000000018807",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-000000018808",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "closed-failure-0",
+      "code": "not_available",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "closed-failure-1",
+      "request_key": "00000000-0000-0000-0000-000000018809",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001880a",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "closed-failure-1",
+      "code": "no_model",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "closed-failure-2",
+      "request_key": "00000000-0000-0000-0000-00000001880b",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001880c",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "closed-failure-2",
+      "code": "incomplete",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "closed-failure-3",
+      "request_key": "00000000-0000-0000-0000-00000001880d",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-00000001880e",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_fail",
+      "company": "co",
+      "reading": "closed-failure-3",
+      "code": "empty_reply",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

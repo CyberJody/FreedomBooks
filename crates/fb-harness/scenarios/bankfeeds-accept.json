@@ -1,0 +1,1450 @@
+{
+ "users": [
+  {
+   "username": "feeds",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-15",
+  "2099-12-31"
+ ],
+ "strict_outcomes": true,
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "co",
+   "name": "Synthetic feeds",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "vendor",
+   "ref": "vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "co",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "payables": "ap",
+    "banks": [
+     "bank",
+     "savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "other",
+   "name": "Other synthetic",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "other",
+   "model": "vendor",
+   "ref": "other.vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "other",
+   "model": "customer",
+   "ref": "other.buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "other",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "other.ar",
+    "undeposited": "other.uf",
+    "collected_tax": "other.tax",
+    "payables": "other.ap",
+    "banks": [
+     "other.bank",
+     "other.savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "conn",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "other",
+   "ref": "oconn",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004101",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004101",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "10.25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale1",
+   "ref": "sale1",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004102",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "4.75",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale2",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004102",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "4.75",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale2",
+   "ref": "sale2",
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004103",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "15.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale3",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "co",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004103",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic feed sale",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Service",
+      "quantity": "1",
+      "rate": "15.00",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ],
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "sale3",
+   "ref": "sale3",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-10T15:00:00Z",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "chk",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "c1",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-12.50",
+        "description": "Utility bill",
+        "pending": false
+       },
+       {
+        "remote_id": "c2",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-60.00",
+        "description": "CHECK 1042",
+        "pending": false
+       },
+       {
+        "remote_id": "c3",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-8.00",
+        "description": "Vendor paid",
+        "pending": false
+       },
+       {
+        "remote_id": "c4",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-9.00",
+        "description": "",
+        "pending": false
+       },
+       {
+        "remote_id": "d1",
+        "posted_on": "2026-10-06",
+        "transacted_on": null,
+        "amount": "15.00",
+        "description": "Deposit of two",
+        "pending": false
+       },
+       {
+        "remote_id": "d2",
+        "posted_on": "2026-10-06",
+        "transacted_on": null,
+        "amount": "15.00",
+        "description": "Wrong total",
+        "pending": false
+       },
+       {
+        "remote_id": "x1",
+        "posted_on": "2026-10-07",
+        "transacted_on": null,
+        "amount": "-100.00",
+        "description": "To savings",
+        "pending": false
+       },
+       {
+        "remote_id": "x2",
+        "posted_on": "2026-10-07",
+        "transacted_on": null,
+        "amount": "40.00",
+        "description": "From savings",
+        "pending": false
+       },
+       {
+        "remote_id": "j1",
+        "posted_on": "2026-10-08",
+        "transacted_on": null,
+        "amount": "-3.10",
+        "description": "Service charge",
+        "pending": false
+       },
+       {
+        "remote_id": "j2",
+        "posted_on": "2026-10-08",
+        "transacted_on": null,
+        "amount": "2.00",
+        "description": "Interest",
+        "pending": false
+       },
+       {
+        "remote_id": "m1",
+        "posted_on": "2026-10-09",
+        "transacted_on": null,
+        "amount": "-30.00",
+        "description": "Matched",
+        "pending": false
+       },
+       {
+        "remote_id": "m2",
+        "posted_on": "2026-10-09",
+        "transacted_on": null,
+        "amount": "-30.00",
+        "description": "Matched twice",
+        "pending": false
+       },
+       {
+        "remote_id": "pend",
+        "posted_on": null,
+        "transacted_on": null,
+        "amount": "-1.00",
+        "description": "Pending",
+        "pending": true
+       },
+       {
+        "remote_id": "nodate",
+        "posted_on": null,
+        "transacted_on": null,
+        "amount": "-1.00",
+        "description": "No date",
+        "pending": false
+       }
+      ]
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "cc",
+      "name": "Card",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "cc1",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-25.00",
+        "description": "Card purchase",
+        "pending": false
+       },
+       {
+        "remote_id": "cc2",
+        "posted_on": "2026-10-06",
+        "transacted_on": null,
+        "amount": "25.00",
+        "description": "Card payment",
+        "pending": false
+       }
+      ]
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "unm",
+      "name": "Unmapped",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "u1",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-1.00",
+        "description": "Unmapped",
+        "pending": false
+       }
+      ]
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "other",
+   "connection": "oconn",
+   "now": "2026-10-10T15:00:00Z",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "chk",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "o1",
+        "posted_on": "2026-10-05",
+        "transacted_on": null,
+        "amount": "-5.00",
+        "description": "Other",
+        "pending": false
+       }
+      ]
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "card",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "other",
+   "feed": "oconn/org1/chk",
+   "account": "other.bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "ref": "chk1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "ref": "chk1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c2",
+   "ref": "chk2",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense",
+    "payee_name": " Landlord "
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c3",
+   "ref": "chk3",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense",
+    "vendor_id": "vendor",
+    "check_number": "777"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c4",
+   "ref": "chk4",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense",
+    "check_number": "1042"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Check number 1042 is already used by a live check on this bank account. Choose another number or void the other check first."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c4",
+   "ref": "chk4",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/d1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Money coming in cannot be recorded as a check."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/cc/cc1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A check needs the feed mapped to a designated bank account (Accounting setup)."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": null
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a record from this company."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense",
+    "check_number": "xxxxxxxxxxxxxxxxxxxxx"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter text up to 20 characters."
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/d1",
+   "result": "d1",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/d2",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": [
+     "sale1"
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The selected receipts total 10.25, not the bank's 15.00."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/d2",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": []
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose the undeposited receipt(s) this deposit covers."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": [
+     "sale3"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/x1",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": [
+     "sale3"
+    ]
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Money going out cannot be recorded as a deposit."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/d1",
+   "ref": "dep1",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": [
+     "sale1",
+     "sale2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/d2",
+   "ref": "dep2",
+   "values": {
+    "kind": "DEPOSIT",
+    "receipt_ids": [
+     "sale3"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/x1",
+   "ref": "trf1",
+   "values": {
+    "kind": "TRANSFER",
+    "transfer_account_id": "savings"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/x2",
+   "ref": "trf2",
+   "values": {
+    "kind": "TRANSFER",
+    "transfer_account_id": "savings"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/cc/cc2",
+   "values": {
+    "kind": "TRANSFER",
+    "transfer_account_id": "card"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Transfer from and to two different bank accounts."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/cc/cc2",
+   "ref": "trf3",
+   "values": {
+    "kind": "TRANSFER",
+    "transfer_account_id": "bank"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "bank"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a category other than the feed account itself."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees",
+    "payee_name": "ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter text up to 120 characters."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "ref": "je1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees",
+    "payee_name": "Bank"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j2",
+   "ref": "je2",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/cc/cc1",
+   "ref": "je3",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "co",
+   "ref": "hand",
+   "date": "2026-10-08",
+   "memo": "By hand",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "30.00",
+     "credit": "0"
+    },
+    {
+     "account": "bank",
+     "debit": "0",
+     "credit": "30.00"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "co",
+   "journal": "hand",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/m1",
+   "result": "m1",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/m1",
+   "values": {
+    "kind": "MATCH",
+    "journal_line_id": "hand:1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/m1",
+   "values": {
+    "kind": "MATCH",
+    "journal_line_id": "hand:2"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "values": {
+    "kind": "MATCH",
+    "journal_line_id": "hand:2"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "result": "m2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/pend",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This transaction is still pending at the bank. Sync again once it has posted."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/nodate",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This transaction carries no date."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/unm/u1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Map Synthetic Bank · Unmapped to a ledger account before accepting its transactions."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "oconn/org1/chk/o1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a downloaded transaction of this company."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "values": {
+    "kind": "OTHER"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose what to record this transaction as."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees"
+   },
+   "actor": "outsider",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "Company access denied."
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "other",
+   "tx": "oconn/org1/chk/o1",
+   "ref": "oje",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "other.fees"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_ignore",
+   "company": "co",
+   "tx": "conn/org1/chk/nodate",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_ignore",
+   "company": "co",
+   "tx": "conn/org1/chk/nodate",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/nodate",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This transaction is ignored. Return it to review first."
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/nodate",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/nodate",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_ignore",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only a transaction still to review can be ignored."
+  },
+  {
+   "op": "bankfeeds_ignore",
+   "company": "other",
+   "tx": "conn/org1/chk/m2",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a downloaded transaction of this company."
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/m1",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "values": {
+    "kind": "MATCH",
+    "journal_line_id": "hand:2"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "JE 1 is still posted. Void or reverse it from its own page first; then return this transaction to review."
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "CHK-000001 is still posted. Void or reverse it from its own page first; then return this transaction to review."
+  },
+  {
+   "op": "bankfeeds_undo",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "date": "2026-10-12",
+   "reason": "Wrong category",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_undo",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "date": "2026-10-12",
+   "reason": "Twice",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only an unreversed original posted journal can be reversed."
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/j1",
+   "ref": "je1b",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "fees",
+    "payee_name": "Bank"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_undo",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "date": "2026-10-12",
+   "reason": "Duplicate",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/c1",
+   "ref": "chk1b",
+   "values": {
+    "kind": "CHECK",
+    "account_id": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_undo",
+   "company": "co",
+   "tx": "conn/org1/chk/x1",
+   "date": "2026-10-12",
+   "reason": "Wrong account",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/x1",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/x1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "equity"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_undo",
+   "company": "co",
+   "tx": "conn/org1/chk/d2",
+   "date": "2026-10-12",
+   "reason": "Bounced",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_undo",
+   "company": "co",
+   "tx": "conn/org1/chk/m1",
+   "date": "2026-10-12",
+   "reason": "Matched",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Nothing to undo: this item is not accepted."
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/d2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_ignore",
+   "company": "co",
+   "tx": "conn/org1/chk/d2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_accept",
+   "company": "co",
+   "tx": "conn/org1/chk/d1",
+   "values": {
+    "kind": "JOURNAL",
+    "account_id": "income"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_ignore",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_return",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/m2",
+   "result": "m2-after",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_suggest",
+   "company": "co",
+   "tx": "conn/org1/chk/c4",
+   "result": "c4",
+   "expect_error": false
+  }
+ ]
+}

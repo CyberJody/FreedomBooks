@@ -1,0 +1,202 @@
+{
+ "name": "edge-void",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "clerk"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c1",
+   "name": "Synthetic c1",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bank",
+   "company": "c1",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.ar",
+   "company": "c1",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.accdep",
+   "company": "c1",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.card",
+   "company": "c1",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equity",
+   "company": "c1",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.sales",
+   "company": "c1",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "sale",
+   "company": "c1",
+   "date": "2026-05-10",
+   "memo": "Counter sale",
+   "lines": [
+    {
+     "account": "c1.bank",
+     "debit": "86.40"
+    },
+    {
+     "account": "c1.sales",
+     "credit": "80.00"
+    },
+    {
+     "account": "c1.ar",
+     "credit": "6.40"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "sale",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "sale.void",
+   "company": "c1",
+   "journal": "sale",
+   "date": "2026-05-10",
+   "reason": "Void: rang up twice",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "buy",
+   "company": "c1",
+   "date": "2026-05-11",
+   "memo": "Supplies",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "19.99"
+    },
+    {
+     "account": "c1.cogs",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.card",
+     "credit": "20.00"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "buy",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "buy.void",
+   "company": "c1",
+   "journal": "buy",
+   "date": "2026-05-11",
+   "reason": "Void",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-05-10",
+  "2026-05-31"
+ ]
+}

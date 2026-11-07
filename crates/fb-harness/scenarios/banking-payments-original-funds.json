@@ -1,0 +1,353 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_save_invoice",
+   "company": "c",
+   "ref": "invoice",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e28",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "due_date": "2026-10-31",
+    "memo": "Payment through original funds",
+    "tax_mode": "NONE",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Invoice",
+      "quantity": "1",
+      "rate": "25",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_invoice",
+   "company": "c",
+   "record": "invoice",
+   "review": "invoice-review",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "sales_post_invoice",
+   "company": "c",
+   "record": "invoice",
+   "review": "invoice-review",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_receipt",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e29",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "25",
+    "method": "CHECK",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "invoice",
+      "amount": "25"
+     }
+    ]
+   },
+   "review": "payment",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_receipt",
+   "company": "c",
+   "ref": "payment",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e29",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "amount": "25",
+    "method": "CHECK",
+    "destination": "UNDEPOSITED",
+    "allocations": [
+     {
+      "invoice_id": "invoice",
+      "amount": "25"
+     }
+    ]
+   },
+   "review": "payment",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf2",
+   "code": "121",
+   "name": "Other Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 1,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf2",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e2a",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "memo": "Second original destination",
+    "tax_mode": "NONE",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Sale",
+      "quantity": "1",
+      "rate": "10",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "review": "sale",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "ref": "sale",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e2a",
+    "customer_id": "buyer",
+    "date": "2026-10-02",
+    "memo": "Second original destination",
+    "tax_mode": "NONE",
+    "method": "CASH",
+    "destination": "UNDEPOSITED",
+    "lines": [
+     {
+      "item_id": null,
+      "description": "Sale",
+      "quantity": "1",
+      "rate": "10",
+      "taxable": false,
+      "income_account_id": "income"
+     }
+    ]
+   },
+   "review": "sale",
+   "expect_error": false
+  },
+  {
+   "op": "banking_deposit",
+   "company": "c",
+   "ref": "mixed",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e2b",
+    "bank_id": "bank",
+    "date": "2026-10-03",
+    "receipt_ids": [
+     "payment",
+     "sale"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {
+    "payee": "Buyer"
+   },
+   "result": "found-party",
+   "expect_error": false
+  },
+  {
+   "op": "banking_receipt_guard",
+   "company": "c",
+   "receipt": "payment",
+   "date": "2026-10-04",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Reverse deposit DEP-000001 before reversing this receipt."
+  },
+  {
+   "op": "banking_reverse",
+   "company": "c",
+   "deposit": "mixed",
+   "expected_revision": 1,
+   "date": "2026-10-05",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "banking_receipt_guard",
+   "company": "c",
+   "receipt": "payment",
+   "date": "2026-10-04",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "RCP-000001 was released from deposit DEP-000001 on 2026-10-05; the receipt reversal cannot be dated earlier."
+  },
+  {
+   "op": "sales_reverse_receipt",
+   "company": "c",
+   "record": "payment",
+   "expected_revision": 1,
+   "date": "2026-10-05",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

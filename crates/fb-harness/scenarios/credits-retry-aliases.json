@@ -1,0 +1,354 @@
+{
+ "users": [
+  {
+   "username": "credits",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic credits",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank2",
+   "code": "101",
+   "name": "bank2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "200",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer2",
+   "values": {
+    "display_name": "Other buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "payables": "ap",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank",
+     "bank2"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092ae1",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "review": "cm801",
+   "expect_error": false
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092ae1",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "review": "cm801",
+   "ref": "cm801",
+   "expect_error": false
+  },
+  {
+   "op": "credits_record_memo",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092ae1",
+    "customer_id": "buyer",
+    "date": "2026-10-08",
+    "memo": "Returned synthetic service",
+    "tax_mode": "MANUAL",
+    "tax_rate": "8",
+    "tax_label": "Tax",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Taxable return",
+      "quantity": "1",
+      "rate": "10.00",
+      "taxable": true,
+      "income_account_id": "income"
+     },
+     {
+      "item_id": null,
+      "description": "Untaxed",
+      "quantity": "1",
+      "rate": "2.50",
+      "taxable": false,
+      "income_account_id": "income2"
+     }
+    ]
+   },
+   "review": "cm801",
+   "ref": "aaa-memo-retry",
+   "expect_error": false
+  },
+  {
+   "op": "credits_review_refund",
+   "company": "c",
+   "record": "cm801",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092ae2",
+    "date": "2026-10-11",
+    "amount": "2.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "802",
+    "memo": "Synthetic refund"
+   },
+   "review": "refund",
+   "expect_error": false
+  },
+  {
+   "op": "credits_refund",
+   "company": "c",
+   "record": "cm801",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092ae2",
+    "date": "2026-10-11",
+    "amount": "2.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "802",
+    "memo": "Synthetic refund"
+   },
+   "review": "refund",
+   "ref": "refund",
+   "expect_error": false
+  },
+  {
+   "op": "credits_refund",
+   "company": "c",
+   "record": "cm801",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000092ae2",
+    "date": "2026-10-11",
+    "amount": "2.00",
+    "bank_id": "bank",
+    "method": "CHECK",
+    "check_number": "802",
+    "memo": "Synthetic refund"
+   },
+   "review": "refund",
+   "ref": "aaa-refund-retry",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_refund",
+   "company": "c",
+   "record": "refund",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_refund",
+   "company": "c",
+   "record": "aaa-refund-retry",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_memo",
+   "company": "c",
+   "record": "cm801",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  },
+  {
+   "op": "credits_void_memo",
+   "company": "c",
+   "record": "aaa-memo-retry",
+   "expected_revision": 1,
+   "date": "2026-10-20",
+   "reason": "Synthetic correction",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-10-01",
+  "2026-10-08",
+  "2026-10-11",
+  "2026-10-20",
+  "2026-12-31"
+ ]
+}

@@ -1,0 +1,277 @@
+{
+  "name": "d2-first-run",
+  "users": [
+    {
+      "username": "owner",
+      "is_staff": true
+    }
+  ],
+  "as_of": [
+    "2026-10-31"
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "D2 first run",
+      "open_first_run": true,
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_preview",
+      "result": "empty",
+      "company": "c",
+      "expect_error": false,
+      "expect_result": {
+        "empty": true,
+        "revision": 0,
+        "chosen": {},
+        "reasons": {
+          "receivables": "No Accounts receivable account is in the chart yet.",
+          "payables": "No Accounts payable account is in the chart yet.",
+          "undeposited": "No undeposited funds account is in the chart yet.",
+          "collected_tax": "No sales tax account is in the chart yet.",
+          "banks": "No bank account is in the chart yet."
+        },
+        "checklist": {
+          "chart": false,
+          "special": false,
+          "tax": false,
+          "customer": false,
+          "vendor": false,
+          "item": false
+        }
+      }
+    },
+    {
+      "op": "l2_first_run_apply",
+      "company": "c",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Nothing on the chart is clear enough to fill. Set the accounts in Accounting setup."
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "1000",
+      "name": "Checking",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "1100",
+      "name": "Accounts receivable",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "1200",
+      "name": "Undeposited funds",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ap",
+      "code": "2000",
+      "name": "Accounts payable",
+      "detail_type": "PAYABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "2200",
+      "name": "Sales and use tax payable",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "payroll",
+      "code": "2300",
+      "name": "Payroll tax payable",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "4000",
+      "name": "Sales",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "5000",
+      "name": "Supplies",
+      "detail_type": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_preview",
+      "company": "c",
+      "result": "clear",
+      "expect_error": false,
+      "expect_result": {
+        "empty": false,
+        "revision": 0,
+        "chosen": {
+          "receivables": "ar",
+          "payables": "ap",
+          "undeposited": "uf",
+          "collected_tax": "tax",
+          "banks": [
+            "bank"
+          ]
+        },
+        "reasons": {},
+        "checklist": {
+          "chart": true,
+          "special": false,
+          "tax": false,
+          "customer": false,
+          "vendor": false,
+          "item": false
+        }
+      }
+    },
+    {
+      "op": "l2_first_run_apply",
+      "company": "c",
+      "stale": true,
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "The chart or Accounting setup changed. Review the fill again before saving."
+    },
+    {
+      "op": "l2_first_run_apply",
+      "company": "c",
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_preview",
+      "company": "c",
+      "result": "filled",
+      "expect_error": false,
+      "expect_result": {
+        "empty": false,
+        "revision": 1,
+        "chosen": {
+          "receivables": "ar",
+          "payables": "ap",
+          "undeposited": "uf",
+          "collected_tax": "tax",
+          "banks": [
+            "bank"
+          ]
+        },
+        "reasons": {},
+        "checklist": {
+          "chart": true,
+          "special": true,
+          "tax": false,
+          "customer": false,
+          "vendor": false,
+          "item": false
+        }
+      }
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar2",
+      "code": "1101",
+      "name": "Other receivables",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_preview",
+      "company": "c",
+      "result": "ambiguous",
+      "expect_error": false,
+      "expect_result": {
+        "empty": false,
+        "revision": 1,
+        "chosen": {
+          "payables": "ap",
+          "undeposited": "uf",
+          "collected_tax": "tax",
+          "banks": [
+            "bank"
+          ]
+        },
+        "reasons": {
+          "receivables": "More than one Accounts receivable account is in the chart. Pick one in Accounting setup."
+        },
+        "checklist": {
+          "chart": true,
+          "special": true,
+          "tax": false,
+          "customer": false,
+          "vendor": false,
+          "item": false
+        }
+      }
+    },
+    {
+      "op": "l2_first_run_apply",
+      "company": "c",
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_dismiss",
+      "company": "c",
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_dismiss",
+      "company": "c",
+      "expect_error": false
+    },
+    {
+      "op": "l2_first_run_preview",
+      "company": "c",
+      "result": "done",
+      "expect_error": false,
+      "expect_result": {
+        "empty": false,
+        "revision": 2,
+        "chosen": {
+          "payables": "ap",
+          "undeposited": "uf",
+          "collected_tax": "tax",
+          "banks": [
+            "bank"
+          ]
+        },
+        "reasons": {
+          "receivables": "More than one Accounts receivable account is in the chart. Pick one in Accounting setup."
+        },
+        "checklist": {
+          "chart": true,
+          "special": true,
+          "tax": false,
+          "customer": false,
+          "vendor": false,
+          "item": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+/* Audit history: filter row and a wrapping table. Palette and shell stay hybrid v1. */
+form.audit-filters {display:flex; flex-wrap:wrap; gap:8px 14px; align-items:flex-end}
+form.audit-filters label {font-size:12px; font-weight:650}
+form.audit-filters input, form.audit-filters select {display:block; max-width:100%}
+form.audit-filters .errorlist {margin:2px 0 0; padding:0; list-style:none; color:#8a2f3c; font-size:12px}
+.audit-zone {color:#6d6070}
+table.audit-history {width:100%; table-layout:fixed}
+table.audit-history th, table.audit-history td {overflow-wrap:anywhere; vertical-align:top}
+table.audit-history .when {width:13.5em; white-space:nowrap}
+table.audit-history .reason {width:34%}
+@media (max-width:850px) {
+  main table.audit-history {display:block; overflow-x:visible; max-width:100%}
+  main table.audit-history thead {display:none}
+  main table.audit-history tbody, main table.audit-history tr, main table.audit-history td {display:block; width:auto}
+  main table.audit-history tr {border:1px solid #dbd0e0; margin:0 0 10px; padding:6px 8px; background:#fff}
+  main table.audit-history td {padding:3px 0}
+  main table.audit-history td::before {content:attr(data-label); display:block; font-size:11px; color:#6d6070}
+  main table.audit-history .when {white-space:normal; width:auto}
+}

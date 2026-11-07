@@ -1,0 +1,286 @@
+{
+  "users": [
+    {
+      "username": "prepayments",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic prepayments",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability",
+      "code": "230",
+      "name": "liability",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability2",
+      "code": "231",
+      "name": "liability2",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "other",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "customer_deposits": "liability",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae61",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "description": "Synthetic work",
+            "quantity": "1",
+            "rate": "1200.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "inv1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "inv1",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "dep10",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae6a",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "dep10",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae6a",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "dep10",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "dep10",
+      "review": "app20",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae74",
+        "date": "2026-10-03",
+        "invoice_id": "inv1",
+        "amount": "500.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "dep10",
+      "review": "app20",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae74",
+        "date": "2026-10-03",
+        "invoice_id": "inv1",
+        "amount": "500.00"
+      },
+      "ref": "app20",
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_receipt",
+      "company": "c",
+      "review": "rest",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae75",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "700.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "bank_id": "bank",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "700.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "review": "rest",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae75",
+        "customer_id": "buyer",
+        "date": "2026-10-04",
+        "amount": "700.00",
+        "method": "CASH",
+        "destination": "BANK",
+        "bank_id": "bank",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "700.00"
+          }
+        ]
+      },
+      "ref": "rest",
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "dep10",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae6a",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "dep10",
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "dep10",
+      "review": "app20",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae74",
+        "date": "2026-10-03",
+        "invoice_id": "inv1",
+        "amount": "500.00"
+      },
+      "ref": "app20",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-01",
+    "2026-10-03",
+    "2026-10-31"
+  ]
+}

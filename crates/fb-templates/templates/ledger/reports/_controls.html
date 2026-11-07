@@ -1,0 +1,13 @@
+{# Report controls (GET only): dates or as-of, basis, ledger account filter; Print and CSV keep the same parameters. #}
+<form class="filters report-controls" method="get" aria-label="Report options">
+{% if 'as_of' in controls %}<label>As of <input type="date" name="as_of" value="{{ controls.as_of }}"></label>
+{% else %}<label>Dates <select name="preset" id="report-preset">{% for key, label, start, end in presets %}<option value="{{ key }}"{% if end %} data-start="{{ start }}" data-end="{{ end }}"{% endif %}{% if controls.preset == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>From <input type="date" name="start" value="{{ controls.start }}"></label>
+<label>To <input type="date" name="end" value="{{ controls.end }}"></label>{% endif %}
+<label>Basis <select name="basis">{% for key, label in bases %}<option value="{{ key }}"{% if controls.basis == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+{% if 'account' in controls %}<label>Account <select name="account"><option value="">All accounts</option>{% for a in accounts %}<option value="{{ a.pk }}"{% if controls.account == a.pk|stringformat('d') %} selected{% endif %}>{{ a.label }}</option>{% endfor %}</select></label>
+<label>Show <select name="group">{% for key, label in group_choices %}<option value="{{ key }}"{% if controls.group == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% endif %}
+<button type="submit">Run report</button>
+{% if not invalid %}<span class="report-actions"><a class="button secondary" href="{{ print_url }}">Print</a> <a class="button secondary" href="{{ csv_url }}">Download CSV</a></span>{% endif %}
+</form>
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}<p>Nothing was run. Correct the options above.</p></section>{% endif %}

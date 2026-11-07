@@ -1,0 +1,999 @@
+{
+  "users": [
+    {
+      "username": "prepayments",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic prepayments",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability",
+      "code": "230",
+      "name": "liability",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability2",
+      "code": "231",
+      "name": "liability2",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "other",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "customer_deposits": "liability",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae61",
+        "customer_id": "buyer",
+        "date": "2026-10-02",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "description": "Synthetic work",
+            "quantity": "1",
+            "rate": "1200.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "inv1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "inv1",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "dep30",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae7e",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "dep30",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae7e",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "dep30",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_application",
+      "company": "c",
+      "deposit": "dep30",
+      "review": "app31",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae7f",
+        "date": "2026-10-03",
+        "invoice_id": "inv1",
+        "amount": "300.00"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "dep30",
+      "review": "app31",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae7f",
+        "date": "2026-10-03",
+        "invoice_id": "inv1",
+        "amount": "300.00"
+      },
+      "ref": "app31",
+      "expect_error": false
+    },
+    {
+      "op": "sales_void_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 2,
+      "date": "2026-10-12",
+      "reason": "Review void",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply customer deposit CDP-000001 from this invoice before voiding it."
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "dep30",
+      "review": "refund32",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae80",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "dep30",
+      "review": "refund32",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae80",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "ref": "refund32",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "dep30",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Correct",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Unapply this deposit from invoice INV-000001 before voiding it."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "app31",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "sales_void_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 2,
+      "date": "2026-10-09",
+      "reason": "Review void",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Void date cannot precede 2026-10-10, when a customer deposit was unapplied from this invoice."
+    },
+    {
+      "op": "pp_unapply",
+      "company": "c",
+      "record": "app31",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "refund32",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "refund32",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "dep30",
+      "expected_revision": 1,
+      "date": "2026-10-10",
+      "reason": "Correct",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Void date cannot precede 2026-10-11, when this deposit was last released by an unapply or refund void."
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "dep30",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "pp_void_deposit",
+      "company": "c",
+      "record": "dep30",
+      "expected_revision": 1,
+      "date": "2026-10-11",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "dep30",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae7e",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "ref": "dep30",
+      "expect_error": false
+    },
+    {
+      "op": "pp_apply",
+      "company": "c",
+      "deposit": "dep30",
+      "review": "app31",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae7f",
+        "date": "2026-10-03",
+        "invoice_id": "inv1",
+        "amount": "300.00"
+      },
+      "ref": "app31",
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "dep30",
+      "review": "refund32",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aae80",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "ref": "refund32",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "bad-date-1",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-+1-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "bad-date-2",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000002",
+        "customer_id": "buyer",
+        "date": "2026-10-+1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "bad-date-3",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000003",
+        "customer_id": "buyer",
+        "date": "+026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "bad-date-4",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000004",
+        "customer_id": "buyer",
+        "date": "2026W0-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "bad-date-5",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000005",
+        "customer_id": "buyer",
+        "date": "2026W01-",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-100",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000100",
+        "customer_id": "buyer",
+        "date": "2026-+1-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-101",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000101",
+        "customer_id": "buyer",
+        "date": "2026-10-+1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-102",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000102",
+        "customer_id": "buyer",
+        "date": "+026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-103",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000103",
+        "customer_id": "buyer",
+        "date": "2026W0-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-104",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000104",
+        "customer_id": "buyer",
+        "date": "2026W01-",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-105",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000105",
+        "customer_id": "buyer",
+        "date": "2026-1-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-106",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000106",
+        "customer_id": "buyer",
+        "date": "2026-10-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-107",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000107",
+        "customer_id": "buyer",
+        "date": "20261001",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-108",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000108",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-109",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000109",
+        "customer_id": "buyer",
+        "date": "2026W01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-110",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000110",
+        "customer_id": "buyer",
+        "date": "2026W011",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-111",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000111",
+        "customer_id": "buyer",
+        "date": "2026-W01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-112",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000112",
+        "customer_id": "buyer",
+        "date": "2026-W01-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-113",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000113",
+        "customer_id": "buyer",
+        "date": "2026W01-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-114",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000114",
+        "customer_id": "buyer",
+        "date": "2026-W011",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-115",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000115",
+        "customer_id": "buyer",
+        "date": "2026W001",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-116",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000116",
+        "customer_id": "buyer",
+        "date": "2026-W01-",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-117",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000117",
+        "customer_id": "buyer",
+        "date": "0000-01-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-118",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000118",
+        "customer_id": "buyer",
+        "date": "0001-W01-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-119",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000119",
+        "customer_id": "buyer",
+        "date": "9999-W52-7",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-120",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000120",
+        "customer_id": "buyer",
+        "date": "9999-W52-5",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-121",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000121",
+        "customer_id": "buyer",
+        "date": "9999-12-31",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-122",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000122",
+        "customer_id": "buyer",
+        "date": "2026-W53-7",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-123",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000123",
+        "customer_id": "buyer",
+        "date": "2025-W53-1",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-124",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000124",
+        "customer_id": "buyer",
+        "date": "2026-02-29",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-125",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000125",
+        "customer_id": "buyer",
+        "date": "2024-02-29",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-126",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000126",
+        "customer_id": "buyer",
+        "date": "2026-10-01 ",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-127",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000127",
+        "customer_id": "buyer",
+        "date": " 2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-128",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000128",
+        "customer_id": "buyer",
+        "date": "2026-10-01T00:00:00",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "date-129",
+      "values": {
+        "request_key": "00000000-0000-4000-8000-000000000129",
+        "customer_id": "buyer",
+        "date": "\uff12\uff10\uff12\uff16-\uff11\uff10-\uff10\uff11",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "order_reference": "SO-1",
+        "bank_id": "bank"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    }
+  ],
+  "as_of": [
+    "2026-10-01",
+    "2026-10-03",
+    "2026-10-31"
+  ]
+}

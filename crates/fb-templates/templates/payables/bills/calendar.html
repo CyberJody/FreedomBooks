@@ -1,0 +1,38 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('payables/bills/base.css') }}"><link rel="stylesheet" href="{{ static('payables/bills/bills.css') }}"><link rel="stylesheet" href="{{ static('payables/bills/calendar.css') }}">{% endblock %}
+{% block content %}<h1 id="calendar-title">Bill calendar</h1>
+<p>Due dates of posted bills with their current remaining amounts (live recorded payments subtracted). Draft and voided bills are not shown and never add to amounts owed. Record only: no reminders are sent and no funds move. <a href="{{ url('bills:list', company.pk) }}">Bill list</a> · <a href="{{ url('payments:list', company.pk) }}">Bill payments</a></p>
+{% if invalid %}<div class="errorlist" role="alert">{{ form.non_field_errors|safe }}{% for field in form.fields %}{% if field.errors %}<p>{{ field.label }}: {{ field.errors|striptags }}</p>{% endif %}{% endfor %}</div><p><a href="{{ url('bills:calendar', company.pk) }}">Back to this month</a></p>{% else %}
+<nav class="calendar-nav" aria-label="Calendar month navigation">
+{% if previous_query %}<a class="button secondary" rel="prev" href="?{{ previous_query }}" aria-label="Previous month">‹ Previous month</a>{% else %}<span class="button secondary is-disabled" aria-disabled="true">‹ Previous month</span>{% endif %}
+<h2 id="calendar-month">{{ month_label }}</h2>
+{% if next_query %}<a class="button secondary" rel="next" href="?{{ next_query }}" aria-label="Next month">Next month ›</a>{% else %}<span class="button secondary is-disabled" aria-disabled="true">Next month ›</span>{% endif %}
+<a class="button{% if is_current %} secondary{% endif %}" href="?{{ today_query }}" aria-label="Return to the current month">Today</a>
+</nav>
+<form method="get" class="calendar-filter" aria-label="Calendar filters">
+<input type="hidden" name="year" value="{{ year }}"><input type="hidden" name="month" value="{{ month }}">
+<label for="id_vendor">Vendor</label>{{ form.f.vendor.widget|safe }}
+<label class="calendar-check"><input type="checkbox" name="paid" value="1"{% if show_paid %} checked{% endif %}> Show paid bills</label>
+<button type="submit">Apply</button>
+</form>
+<p class="calendar-summary">Outstanding in {{ month_label }}: <strong id="month-total">{{ month_total }}</strong> {{ company.currency }} across {{ entries|length }} entr{{ entries|length|pluralize("y,ies") }}{% if vendor %} for {{ vendor.display_name }}{% endif %}. Today is <time datetime="{{ today|date('Y-m-d') }}">{{ today|date('l j F Y') }}</time> ({{ display_time_zone }} display setting; accounting dates are plain dates).</p>
+<ul class="calendar-legend" aria-label="Status legend">
+<li class="status-overdue"><span class="mark" aria-hidden="true">!</span> Overdue</li>
+<li class="status-today"><span class="mark" aria-hidden="true">•</span> Due today</li>
+<li class="status-upcoming"><span class="mark" aria-hidden="true">›</span> Upcoming</li>
+<li class="status-paid"><span class="mark" aria-hidden="true">✓</span> Paid</li>
+</ul>
+<table class="calendar-grid" aria-labelledby="calendar-month" aria-describedby="calendar-grid-note">
+<caption id="calendar-grid-note" class="muted">Monthly grid: each day lists up to {{ grid_cap }} bills, then links to the agenda below. Narrow screens show the agenda only.</caption>
+<thead><tr>{% for name in weekdays %}<th scope="col"><abbr title="{{ name }}">{{ name[:3] }}</abbr></th>{% endfor %}</tr></thead>
+<tbody>{% for week in weeks %}<tr>{% for day in week %}{% if day %}<td class="calendar-day{% if day.date == today %} is-today{% endif %}{% if day.entries %} has-entries{% endif %}"{% if day.date == today %} aria-current="date"{% endif %}>
+<div class="day-head"><span class="day-number">{{ day.day_number }}</span>{% if day.date == today %}<span class="day-today">Today</span>{% endif %}{% if day.entries %}<span class="day-total amount" title="Remaining due this day">{{ day.total }}</span>{% endif %}</div>
+{% if day.entries %}<ul class="day-entries">{% for e in day.grid_entries %}<li class="status-{{ e.status }}"><a href="{{ url('bills:detail', company.pk, e.bill_id) }}" aria-label="{{ e.label }}" title="{{ e.number }} · {{ e.vendor_name }}{% if e.reference %} · {{ e.reference }}{% endif %}"><span class="mark" aria-hidden="true">{{ e.status_mark }}</span> <span class="entry-vendor">{{ vendor_labels|party_label(e.vendor_id)|default(e.vendor_name) }}</span> <span class="amount">{% if e.status == 'paid' %}paid{% else %}{{ e.remaining }}{% endif %}</span></a></li>{% endfor %}</ul>
+{% if day.hidden_count %}<a class="day-more" href="#{{ day.anchor }}">+{{ day.hidden_count }} more</a>{% endif %}{% endif %}</td>{% else %}<td class="calendar-empty" aria-hidden="true"></td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody>
+</table>
+<section class="calendar-agenda" aria-labelledby="agenda-title">
+<h2 id="agenda-title">Agenda for {{ month_label }}</h2>
+{% for day in agenda %}<h3 id="{{ day.anchor }}" class="agenda-day{% if day.date == today %} is-today{% endif %}"><time datetime="{{ day.date|date('Y-m-d') }}">{{ day.date|date('l j F') }}</time>{% if day.date == today %} <span class="day-today">Today</span>{% endif %} <span class="agenda-total">Day total <span class="amount">{{ day.total }}</span> {{ company.currency }}</span></h3>
+<table class="agenda-table"><thead><tr><th scope="col">Status</th><th scope="col">Bill</th><th scope="col">Vendor</th><th scope="col">Vendor reference</th><th scope="col">Due</th><th scope="col" class="num">Remaining</th><th scope="col">Actions</th></tr></thead>
+<tbody>{% for e in day.entries %}<tr class="status-{{ e.status }}"><td><span class="mark" aria-hidden="true">{{ e.status_mark }}</span> <span class="status-word">{{ e.status_word }}</span></td><td><a href="{{ url('bills:detail', company.pk, e.bill_id) }}">{{ e.number }}</a></td><td>{{ vendor_labels|party_label(e.vendor_id)|default(e.vendor_name) }}</td><td>{{ e.reference|default('—') }}</td><td>{{ e.due_date|date('Y-m-d') }}</td><td class="num amount">{{ e.remaining }}{% if e.status == 'paid' %} <small>(paid in full)</small>{% endif %}</td><td>{% if e.payable %}<a class="pay-link" href="{{ url('payments:new', company.pk) }}?vendor={{ e.vendor_id }}" aria-label="Pay {{ e.number }} for {{ e.vendor_name }} (record a bill payment)">Pay</a> · {% endif %}<a href="{{ url('bills:detail', company.pk, e.bill_id) }}">View bill</a></td></tr>{% endfor %}</tbody></table>
+{% else %}<p class="calendar-none">No bills due in {{ month_label }}{% if vendor %} for {{ vendor.display_name }}{% endif %}{% if not show_paid %} (paid bills hidden){% endif %}. Outstanding: 0.00 {{ company.currency }}.</p>{% endfor %}
+</section>{% endif %}{% endblock %}

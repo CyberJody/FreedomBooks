@@ -1,0 +1,19 @@
+/* Invoice-only additions; existing estimate and shared theme remain intact. */
+th.num {text-align:right;font-variant-numeric:tabular-nums}
+.invoice-post {margin-top:16px}
+.invoice-actions {margin-top:16px}
+.invoice-actions a {margin-left:12px}
+.estimate-line [aria-invalid=true] {border:2px solid #9b3743}
+.tracker-summary {margin:16px 0;padding:12px;border:1px solid #c4b8a8;background:#faf6ef}
+.tracker-note {margin:0 0 10px;font-size:0.92rem;color:#4a4038}
+.tracker-boxes {display:flex;flex-wrap:wrap;gap:10px}
+.tracker-box {flex:1 1 140px;min-width:140px;padding:10px 12px;border:1px solid #8a7a68;background:#fff;text-decoration:none;color:inherit}
+.tracker-box:hover,.tracker-box:focus {border-color:#5c3d52;outline:2px solid #5c3d52;outline-offset:1px}
+.tracker-label {display:block;font-size:0.85rem;font-weight:600;color:#3d342c}
+.tracker-value {display:block;margin-top:4px;font-variant-numeric:tabular-nums}
+.tracker-overdue {border-color:#9b3743}
+.tracker-overdue .tracker-label::after {content:" (past due)";font-weight:400;font-size:0.8rem}
+
+/* Canonical memo/reason text must wrap, including unbroken pasted text. */
+main p, .invoice-history td:nth-child(4) {overflow-wrap:anywhere}
+.invoice-history td:not(:nth-child(4)) {white-space:nowrap}

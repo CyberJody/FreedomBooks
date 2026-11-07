@@ -1,0 +1,44 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}">{% endblock %}{% block content %}
+<div class="heading register-heading"><div><p class="eyebrow">{{ company.name }} · {{ account.get_detail_type_display }} register · {{ company.currency }}</p><h1>{{ account.label }}</h1>
+<p>Posted activity in posting order. Tick a line when it appears on your {% if labels.card %}card{% else %}bank{% endif %} statement.</p></div>
+<p class="register-actions"><a href="{{ url('registers:list', company.pk) }}">All registers</a>{% if not invalid %} · <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}output=print">Print</a> · <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}output=csv">CSV{{ export_token|safe }}</a>{% endif %}</p></div>
+{% if errors %}<ul class="errorlist" role="alert">{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+<form class="filters register-filters" method="get" aria-label="Register filters">
+<label>Dates <select name="preset">{% for value, text in presets %}<option value="{{ value }}"{% if controls.preset == value %} selected{% endif %}>{{ text }}</option>{% endfor %}</select></label>
+<label>From <input type="date" name="start" value="{{ controls.start }}"></label>
+<label>Through <input type="date" name="end" value="{{ controls.end }}"></label>
+<label>Cleared <select name="state">{% for value, text in states %}<option value="{{ value }}"{% if controls.state == value %} selected{% endif %}>{{ text }}</option>{% endfor %}</select></label>
+<label>Payee / name <input type="search" name="payee" value="{{ controls.payee }}" maxlength="120"></label>
+<label>Number <input type="search" name="number" value="{{ controls.number }}" maxlength="30" size="8"></label>
+<label>Amount <input type="text" name="amount" value="{{ controls.amount }}" maxlength="20" size="9" inputmode="decimal"></label>
+<button>Apply</button> <a href="{{ url('register', company.pk, account.pk) }}">Clear</a></form>
+{% if not invalid %}
+<dl class="register-totals" aria-label="Register totals">
+<div><dt>Cleared balance</dt><dd class="amount" id="cleared-balance">{{ totals.cleared }}</dd></div>
+<div><dt>{{ labels.left_open }}</dt><dd class="amount" id="uncleared-left">{{ totals.left_open }}</dd></div>
+<div><dt>{{ labels.right_open }}</dt><dd class="amount" id="uncleared-right">{{ totals.right_open }}</dd></div>
+<div class="ending"><dt>Ending balance{% if end %} through {{ end|date('Y-m-d') }}{% endif %}</dt><dd class="amount" id="ending-balance">{{ totals.ending }}</dd></div>
+</dl>
+<section class="register-box"><table class="register bank-register">
+<thead><tr><th scope="col">Date</th><th scope="col">Number</th><th scope="col">Payee / name</th><th scope="col">Account</th><th scope="col">Memo</th><th scope="col" class="amount">{{ labels.left }}</th><th scope="col" class="mark-col"><span aria-hidden="true">✓</span><span class="sr-only">Cleared</span></th><th scope="col" class="amount">{{ labels.right }}</th><th scope="col" class="amount">Balance</th></tr></thead>
+<tbody>
+{% if start %}<tr class="total"><td colspan="8">Balance before {{ start|date('Y-m-d') }}</td><td class="amount" id="opening-balance">{{ opening }}</td></tr>{% endif %}
+{% if forward is not none %}<tr class="forward"><td colspan="8">Balance forward from page {{ page.previous_page_number }}</td><td class="amount">{{ forward }}</td></tr>{% endif %}
+{% for row in rows %}<tr id="line-{{ row.line.pk }}" class="state-{{ row.state }}{% if row.reversal %} reversal-row{% endif %}">
+<td data-label="Date" class="date">{{ row.line.journal.date|date('Y-m-d') }}</td>
+<td data-label="Number" class="number"><strong class="ref">{{ row.number }}</strong><small class="type">{% if row.source %}{% if row.reversal %}Reversal · {% endif %}{{ row.source.label }} <a href="{{ row.source.url }}">{{ row.source.number }}</a>{% else %}{{ row.type }} <a href="{{ row.url }}">{{ row.number }}</a>{% endif %}</small>{% if row.voided_by %}<small class="void-note">Voided {{ row.voided_by.date|date('Y-m-d') }}</small>{% endif %}</td>
+<td data-label="Payee / name" class="party">{% if row.party %}{{ row.party }}{% else %}—{% endif %}</td>
+<td data-label="Account" class="other">{% if row.splits %}<details><summary>-split-</summary><ul class="splits">{% for s in row.splits %}<li><span>{{ s.code }} · {{ s.name }}</span> <span class="amount">{% if s.debit|report_nonzero %}{{ s.debit }} Dr{% else %}{{ s.credit }} Cr{% endif %}</span>{% if s.memo %}<small>{{ s.memo }}</small>{% endif %}</li>{% endfor %}{% if row.more_splits %}<li><a href="{{ row.journal_url }}">{{ row.more_splits }} more line{{ row.more_splits|pluralize }}</a></li>{% endif %}</ul></details>{% else %}{{ row.other }}{% endif %}</td>
+<td data-label="Memo" class="memo">{{ row.memo }}</td>
+<td data-label="{{ labels.left }}" class="amount">{% if row.left is not none %}{{ row.left }}{% endif %}</td>
+<td data-label="Cleared" class="mark-col">{% if row.state == 'R' %}<span class="mark reconciled" title="Reconciled">R</span>{% else %}<form method="post" action="{{ url('registers:cleared', company.pk, account.pk) }}" class="mark-form">{{ csrf_token|safe }}<input type="hidden" name="line" value="{{ row.line.pk }}"><input type="hidden" name="revision" value="{{ row.revision }}"><input type="hidden" name="state" value="{% if row.state == 'C' %}U{% else %}C{% endif %}"><input type="hidden" name="back" value="{{ back_query }}"><button type="submit" class="mark{% if row.state == 'C' %} on{% endif %}" aria-pressed="{% if row.state == 'C' %}true{% else %}false{% endif %}" aria-label="{% if row.state == 'C' %}Cleared: mark not cleared{% else %}Not cleared: mark cleared{% endif %}">{% if row.state == 'C' %}✓{% else %}&nbsp;{% endif %}</button></form>{% endif %}{% if row.feed %}<small class="feed" title="Seen in a bank feed download">feed</small>{% endif %}</td>
+<td data-label="{{ labels.right }}" class="amount">{% if row.right is not none %}{{ row.right }}{% endif %}</td>
+<td data-label="Balance" class="amount balance">{{ row.balance }}</td>
+</tr>{% else %}<tr><td colspan="9">{% if filtered %}No posted lines match these filters.{% else %}No posted activity{% if start or end %} in this date range{% endif %}.{% endif %}</td></tr>{% endfor %}
+</tbody>
+<tfoot><tr><th colspan="8" scope="row">Ending balance{% if end %} through {{ end|date('Y-m-d') }}{% endif %}</th><th class="amount" id="closing-balance">{{ closing }}</th></tr></tfoot>
+</table></section>
+{% include 'ledger/pager.html' %}
+<p class="muted register-note">Balances count every posted line{% if filtered %}, including lines hidden by the filters{% endif %}. Open an entry from its number to see or void it; posted entries are not edited here.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,364 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    },
+    {
+      "username": "member",
+      "is_staff": false
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "record": "vendor",
+      "model": "vendor",
+      "values": {
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "add_member",
+      "company": "co",
+      "user": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_connect",
+      "company": "co",
+      "state": {
+        "mode": "api_key",
+        "key_last4": "demo",
+        "account_email": "",
+        "registration": true,
+        "model_choices": [
+          {
+            "slug": "demo-model",
+            "display_name": "Demo"
+          },
+          {
+            "slug": "other-model",
+            "display_name": "Other"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_switch",
+      "company": "co",
+      "enabled": true,
+      "expect_error": false
+    },
+    {
+      "op": "assistant_parse",
+      "company": "co",
+      "ref": "fields",
+      "raw": {
+        "vendor_name": "Synthetic supplier",
+        "vendor_address": [
+          "Test address"
+        ],
+        "document_number": "Receipt 42",
+        "document_date": "2026-10-23",
+        "due_date": "",
+        "currency": "USD",
+        "subtotal": "7",
+        "tax": "0",
+        "total": "7",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "unit_price": "2.00",
+            "amount": "7.00"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reading",
+      "request_key": "00000000-0000-0000-0000-0000000186a2",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186a1",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reading",
+      "request_key": "00000000-0000-0000-0000-0000000186a2",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186a1",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_finish",
+      "company": "co",
+      "reading": "reading",
+      "result": "fields",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_initial",
+      "company": "co",
+      "reading": "reading",
+      "ref": "initial",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_queue",
+      "company": "co",
+      "ref": "queue-before",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_save",
+      "company": "co",
+      "reading": "reading",
+      "ref": "bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "Receipt 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a3",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "rate": "2.00",
+            "expense_account_id": "expense",
+            "ai_line": 1
+          }
+        ]
+      },
+      "actor": "member",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This line doesn't add up: 3 × 2.00 = 6.00, the receipt shows 7.00. Change the quantity or price, or tick 'Keep as entered'."
+    },
+    {
+      "op": "assistant_save",
+      "company": "co",
+      "reading": "reading",
+      "ref": "bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "Receipt 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a3",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "rate": "2.00",
+            "expense_account_id": "expense",
+            "ai_line": " +１ "
+          }
+        ]
+      },
+      "actor": "member",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This line doesn't add up: 3 × 2.00 = 6.00, the receipt shows 7.00. Change the quantity or price, or tick 'Keep as entered'."
+    },
+    {
+      "op": "assistant_save",
+      "company": "co",
+      "reading": "reading",
+      "ref": "bad-rate",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "Receipt 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a3",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "rate": "2.335",
+            "expense_account_id": "expense",
+            "ai_line": 1,
+            "keep_as_entered": false
+          }
+        ]
+      },
+      "actor": "member",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "assistant_save",
+      "company": "co",
+      "reading": "reading",
+      "ref": "bill",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "Receipt 42",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a3",
+        "lines": [
+          {
+            "description": "Widgets",
+            "quantity": "3",
+            "rate": "2.00",
+            "expense_account_id": "expense",
+            "ai_line": 1,
+            "keep_as_entered": true
+          }
+        ]
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_begin",
+      "company": "co",
+      "ref": "reading",
+      "request_key": "00000000-0000-0000-0000-0000000186a2",
+      "file": {
+        "source_file_id": "00000000-0000-0000-0000-0000000186a1",
+        "original_name": "synthetic-receipt.png",
+        "content_type": "image/png",
+        "size": 100,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "assistant_queue",
+      "company": "co",
+      "ref": "queue-after",
+      "actor": "member",
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "bill",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "bill",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Synthetic receipt correction",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ],
+  "capture_steps": true
+}

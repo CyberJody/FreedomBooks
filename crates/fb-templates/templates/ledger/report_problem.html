@@ -1,0 +1,17 @@
+{% extends "ledger/base.html" %}
+{% block content %}
+<h1>Report a problem</h1>
+<p>FreedomBooks is an alpha. Keep your real books in your current software.</p>
+<p>Problems are reported as issues on GitHub, the website where the FreedomBooks project lives. You need a free GitHub account.</p>
+<p class="notice" role="note"><strong>GitHub issues are public.</strong> Anyone can read them. Never paste real financial data, customer names, passwords, keys or bank details.</p>
+<ol class="report-steps">
+<li><a class="report-issue-link" href="{{ issue_url }}">Open the GitHub issue page</a> (it opens in your web browser). You can also copy the address: <code>{{ issue_url }}</code></li>
+<li>Write the steps you took, one at a time, starting from Home.</li>
+<li>Say what you expected to happen.</li>
+<li>Say what actually happened. Copy any error message word for word.</li>
+<li>Copy your FreedomBooks version and operating system into the issue:
+<pre class="report-details">FreedomBooks version: {{ about.version }}
+Operating system: {{ about.os }}</pre></li>
+<li>Attach a screenshot only after covering names, amounts and account numbers.</li>
+</ol>
+{% endblock %}

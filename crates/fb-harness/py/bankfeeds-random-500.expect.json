@@ -1,0 +1,2578 @@
+[
+{
+"op": "create_company",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "save_account",
+"expect_error": false
+},
+{
+"op": "l2_save",
+"expect_error": false
+},
+{
+"op": "l2_save",
+"expect_error": false
+},
+{
+"op": "l2_setup",
+"expect_error": false
+},
+{
+"op": "bankfeeds_connect",
+"expect_error": false
+},
+{
+"op": "bankfeeds_connect",
+"expect_error": false
+},
+{
+"op": "sales_review_sale",
+"expect_error": false
+},
+{
+"op": "sales_record_sale",
+"expect_error": false
+},
+{
+"op": "sales_review_sale",
+"expect_error": false
+},
+{
+"op": "sales_record_sale",
+"expect_error": false
+},
+{
+"op": "sales_review_sale",
+"expect_error": false
+},
+{
+"op": "sales_record_sale",
+"expect_error": false
+},
+{
+"op": "save_draft",
+"expect_error": false
+},
+{
+"op": "post_journal",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is still pending at the bank. Sync again once it has posted."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is still pending at the bank. Sync again once it has posted."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Synthetic provider outage."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map Synthetic Bank · CHK to a ledger account before accepting its transactions."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "JE 2 is still posted. Void or reverse it from its own page first; then return this transaction to review."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map Synthetic Bank · CHK to a ledger account before accepting its transactions."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "101 · Savings is already mapped to Synthetic Bank · SAV. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "JE 3 is still posted. Void or reverse it from its own page first; then return this transaction to review."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "100 · Checking is already mapped to Synthetic Bank · CHK. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is already mapped to Synthetic Bank · CC. Clear that mapping first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Transfer from and to two different bank accounts."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "A check needs the feed mapped to a designated bank account (Accounting setup)."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The selected receipts total 40.25, not the bank's 1234.56."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is still pending at the bank. Sync again once it has posted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is already mapped to Synthetic Bank · CC. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "101 · Savings is already mapped to Synthetic Bank · SAV. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Transfer from and to two different bank accounts."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is already mapped to Synthetic Bank · CC. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The minimum amount cannot exceed the maximum."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A rule cannot categorize to it."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a category other than the feed account itself."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "A check needs the feed mapped to a designated bank account (Accounting setup)."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Only an unreversed original posted journal can be reversed."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Only a transaction still to review can be ignored."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map Synthetic Bank · CC to a ledger account before accepting its transactions."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map Synthetic Bank · CC to a ledger account before accepting its transactions."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a category other than the feed account itself."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a category other than the feed account itself."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Synthetic provider outage."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map Synthetic Bank · CC to a ledger account before accepting its transactions."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The minimum amount cannot exceed the maximum."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_move_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_move_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A rule cannot categorize to it."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "101 · Savings is already mapped to Synthetic Bank · SAV. Clear that mapping first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The minimum amount cannot exceed the maximum."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A rule cannot categorize to it."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money going out cannot be recorded as a deposit."
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Synthetic provider outage."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The minimum amount cannot exceed the maximum."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money coming in cannot be recorded as a check."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Synced 3 min ago. SimpleFIN asks apps not to pull too often; try again in 8 min."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is still pending at the bank. Sync again once it has posted."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "101 · Savings is already mapped to Synthetic Bank · SAV. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money going out cannot be recorded as a deposit."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "210 · Card is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Synced 30 min ago. SimpleFIN asks apps not to pull too often; try again in 331 min."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "101 · Savings is already mapped to Synthetic Bank · SAV. Clear that mapping first."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Only a transaction still to review can be ignored."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter nonblank text up to 200 characters."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The minimum amount cannot exceed the maximum."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money going out cannot be recorded as a deposit."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Synthetic provider outage."
+},
+{
+"op": "bankfeeds_rule_active",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A rule cannot categorize to it."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_move_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a rule of this company."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "The minimum amount cannot exceed the maximum."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_return",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose money in, money out, or either."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_undo",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Nothing to undo: this item is not accepted."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Money going out cannot be recorded as a deposit."
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_map",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+},
+{
+"op": "bankfeeds_map",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_save_rule",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A rule cannot categorize to it."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Choose a downloaded transaction of this company."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_store",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": false
+},
+{
+"op": "bankfeeds_suggest",
+"expect_error": false
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+},
+{
+"op": "bankfeeds_ignore",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "Only a transaction still to review can be ignored."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_sync",
+"expect_error": false
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": true,
+"expect_kind": "ValidationError",
+"expect_message": "This transaction is ignored. Return it to review first."
+},
+{
+"op": "bankfeeds_accept",
+"expect_error": false
+},
+{
+"op": "bankfeeds_items",
+"expect_error": false
+}
+]

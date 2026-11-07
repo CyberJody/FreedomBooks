@@ -1,0 +1,281 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "entry",
+   "date": "2026-10-01",
+   "memo": "Clearing locks",
+   "entry_number": "TEST-1",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "10"
+    },
+    {
+     "account": "income",
+     "credit": "10"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "entry",
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "entry:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_reverse_journal",
+   "company": "c",
+   "journal": "entry",
+   "ref": "reversal",
+   "date": "2026-10-31",
+   "reason": "Correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Journal entry TEST-1 is marked cleared in the 100 · bank register. Mark it not cleared there first, then void it."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "statement",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000004e25",
+    "statement_date": "2026-10-31",
+    "ending_balance": "10"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "result": "auto-screen-17",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "expected_revision": 1,
+   "completion_key": "00000000-0000-0000-0000-000000004e26",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "result": "auto-report-17",
+   "expect_error": false
+  },
+  {
+   "op": "banking_reverse_journal",
+   "company": "c",
+   "journal": "entry",
+   "ref": "reversal",
+   "date": "2026-10-31",
+   "reason": "Correction",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Journal entry TEST-1 is reconciled in the 100 · bank register (statement 2026-10-31). It cannot be voided unless that reconciliation is undone: Banking → Reconcile → Undo last reconciliation, then mark it not cleared and void it."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "entry:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line is reconciled. It can change only by undoing that reconciliation."
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "expected_revision": 2,
+   "reason": "Correction",
+   "undo_key": "00000000-0000-0000-0000-000000004e27",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "result": "auto-report-20",
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "entry:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_reverse_journal",
+   "company": "c",
+   "journal": "entry",
+   "ref": "reversal",
+   "date": "2026-10-31",
+   "reason": "Correction",
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {},
+   "result": "reversed",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

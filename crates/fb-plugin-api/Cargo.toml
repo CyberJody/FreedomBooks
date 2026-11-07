@@ -1,0 +1,24 @@
+[package]
+name = "fb-plugin-api"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[features]
+default = ["http-client"]
+http-client = ["dep:reqwest"]
+# Never enable in a production host. Numeric loopback + exact port only.
+test-support = []
+
+[dependencies]
+base64 = "0.22.1"
+rand = "0.8.5"
+reqwest = { version = "0.12.28", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
+secrecy = "0.10.3"
+serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10.9"
+subtle = "2.6.1"
+thiserror = "2.0"
+url = "2.5"
+uuid = { version = "1.29", features = ["serde"] }
+zeroize = "1.9"

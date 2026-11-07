@@ -1,0 +1,15 @@
+{% extends 'ledger/base.html' %}{% block content %}
+{% if mode == 'setup' %}<h1>Set up your books</h1><p>Name the owner and your first company.</p>{% else %}<h1>FreedomBooks is locked</h1><p>Enter your password or recovery key to open these books.</p>{% endif %}
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
+{% if mode == 'setup' %}
+<form class="narrow" method="post" data-gate="setup" novalidate>
+<p><label for="id_owner_name">Owner name:</label><input type="text" name="owner_name" maxlength="150" required id="id_owner_name" value="{{ owner_name }}" autocomplete="off"></p>
+<p><label for="id_company_name">Company name:</label><input type="text" name="company_name" maxlength="200" required id="id_company_name" value="{{ company_name }}" autocomplete="off"></p>
+<p><label for="id_starter_chart">Chart of accounts:</label> <select name="starter_chart" id="id_starter_chart" required><option value="standard"{% if starter_chart != "empty" %} selected{% endif %}>Standard small-business chart (recommended)</option><option value="empty"{% if starter_chart == "empty" %} selected{% endif %}>Start with an empty chart (for accountants)</option></select></p>
+<p><label><input type="checkbox" name="protect" id="id_protect"> Protect these books with my own password</label></p>
+<p class="notice" id="built-in-warning">Without your own password, these books use FreedomBooks’ built-in key. Anyone who gets a copy of this file can open it.</p>
+<div id="own-password-fields" hidden><p><label for="id_lock_password">Password:</label><input type="password" name="lock_password" id="id_lock_password" autocomplete="new-password" disabled></p>
+<p><label for="id_lock_password2">Repeat the password:</label><input type="password" name="lock_password2" id="id_lock_password2" autocomplete="new-password" disabled></p><p>Use at least 8 characters. We will give you a recovery key to keep somewhere safe.</p></div><button>Create books</button></form>
+{% else %}<form class="narrow" method="post" data-gate="unlock" novalidate><p><label for="id_password">Password or recovery key:</label><input type="password" name="password" required id="id_password" autocomplete="current-password"></p><button>Unlock</button></form>{% endif %}
+<details class="narrow"><summary>Restore a backup</summary><p>This backup is from another computer. Enter your password or recovery key. Built-in-key backups need neither.</p><form method="post" data-gate="restore"><p><label for="id_restore_name">Name for the restored book</label><input name="name" id="id_restore_name" value="Recovered books" maxlength="60" required></p><p><label for="id_restore_secret">Password or recovery key, if protected</label><input type="password" name="secret" id="id_restore_secret" autocomplete="off"></p><button>Choose a backup to restore…</button></form></details>
+{% endblock %}

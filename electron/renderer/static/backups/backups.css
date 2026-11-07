@@ -1,0 +1,34 @@
+/* Backups page (P0-1): reuses the hybrid v1 shell; only the status grid and file table are styled here. */
+body.shell .backup-status dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 18px;margin:0 0 14px;padding:12px 14px;background:var(--fb-panel);border:1px solid var(--fb-tan-line);border-radius:4px}
+body.shell .backup-status .backup-folder{grid-column:1/-1}
+body.shell .backup-status dt{font-size:11px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:#6b5a4a}
+body.shell .backup-status dd{margin:2px 0 0;overflow-wrap:anywhere}
+body.shell .backup-status code,body.shell .backup-files code{font-size:12.5px;overflow-wrap:anywhere}
+body.shell .backup-create{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 16px}
+body.shell .backup-create form,body.shell .backup-create p{margin:0}
+body.shell .backup-warning{padding:4px 10px;border-left:3px solid #bd7657;background:#fbf1ea;color:#6b3a24;font-size:13px}
+body.shell .backup-panel h2{margin:0;padding:10px 12px 8px}
+body.shell .backup-panel > p{padding:0 12px}
+body.shell .backup-files{width:100%;table-layout:auto}
+body.shell .backup-files td{vertical-align:top}
+body.shell .backup-files tr.backup-new td{background:var(--fb-lavender)}
+body.shell .backup-help pre{margin:6px 0;padding:8px 10px;background:var(--fb-tan-soft);border:1px solid var(--fb-tan-line);border-radius:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+body.shell details.backup-help{padding:12px 14px;border:1px solid var(--fb-tan-line);border-radius:4px;background:var(--fb-panel)}
+@media (max-width:900px){body.shell .backup-status dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+body.shell .backup-files .nowrap{white-space:nowrap}
+/* Phone width: each backup becomes a small card (file name on its own line, then labelled facts). */
+@media (max-width:700px){
+body.shell .backup-files thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+body.shell .backup-files tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid var(--fb-tan-line)}
+body.shell .backup-files td{border:0;padding:3px 10px;text-align:left}
+body.shell .backup-files td:first-child{grid-column:1/-1;padding-top:8px}
+body.shell .backup-files td[data-label]::before{content:attr(data-label) ": ";font-weight:650;color:#6b5a4a}
+body.shell .backup-files .nowrap{white-space:normal}
+}
+/* BACKUPS-POLISH: the restore card starts at its heading (h2's page margin left a gap at the top), the
+   details line of a refused restore is small, and the busy line shows while a backup or restore runs. */
+body.shell .backup-restore > h2:first-child{margin-top:0}
+body.shell .message-detail{display:block;margin-top:4px;font-size:12px;color:#6b5a4a;overflow-wrap:anywhere}
+body.shell .backup-busy{margin:0 0 14px}
+body.shell main[aria-busy=true] button:disabled{opacity:.55;cursor:progress}
+body.shell main[aria-busy=true] table.backup-files a[aria-disabled=true]{pointer-events:none;color:#8d8492}

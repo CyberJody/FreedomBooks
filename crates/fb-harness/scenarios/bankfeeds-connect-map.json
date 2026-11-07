@@ -1,0 +1,721 @@
+{
+ "users": [
+  {
+   "username": "feeds",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-15",
+  "2099-12-31"
+ ],
+ "strict_outcomes": true,
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "co",
+   "name": "Synthetic feeds",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "co",
+   "ref": "fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "vendor",
+   "ref": "vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "co",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "co",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "payables": "ap",
+    "banks": [
+     "bank",
+     "savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "other",
+   "name": "Other synthetic",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.bank",
+   "code": "100",
+   "name": "Checking",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.savings",
+   "code": "101",
+   "name": "Savings",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.card",
+   "code": "210",
+   "name": "Card",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.ar",
+   "code": "110",
+   "name": "Receivables",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.uf",
+   "code": "120",
+   "name": "Undeposited",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.ap",
+   "code": "200",
+   "name": "Payables",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.tax",
+   "code": "220",
+   "name": "Tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.old",
+   "code": "130",
+   "name": "Old bank",
+   "kind": "ASSET",
+   "active": false,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.equity",
+   "code": "300",
+   "name": "Equity",
+   "kind": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.income",
+   "code": "400",
+   "name": "Income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.expense",
+   "code": "500",
+   "name": "Expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "other",
+   "ref": "other.fees",
+   "code": "510",
+   "name": "Bank fees",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "other",
+   "model": "vendor",
+   "ref": "other.vendor",
+   "values": {
+    "display_name": "Synthetic utility",
+    "billing_address": "Test address"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "other",
+   "model": "customer",
+   "ref": "other.buyer",
+   "values": {
+    "display_name": "Synthetic buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "other",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "other.ar",
+    "undeposited": "other.uf",
+    "collected_tax": "other.tax",
+    "payables": "other.ap",
+    "banks": [
+     "other.bank",
+     "other.savings"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "conn",
+   "host": "Bridge.Example.TEST",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "labelled",
+   "label": "  Credit union  ",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "long",
+   "label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter text up to 120 characters."
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "blank",
+   "label": "   ",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "typed",
+   "label": 7,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter text up to 120 characters."
+  },
+  {
+   "op": "bankfeeds_connect",
+   "company": "co",
+   "ref": "outsider",
+   "actor": "outsider",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "Company access denied."
+  },
+  {
+   "op": "bankfeeds_mappable",
+   "company": "co",
+   "result": "mappable",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_mappable",
+   "company": "co",
+   "actor": "outsider",
+   "result": "outsider",
+   "expect_error": true,
+   "expect_kind": "PermissionDenied",
+   "expect_message": "Company access denied."
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-10T15:00:00Z",
+   "result": "first",
+   "pull": {
+    "accounts": [
+     {
+      "conn_key": "org1",
+      "remote_id": "chk",
+      "name": "Everyday checking",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "t1",
+        "posted_on": "2026-10-01",
+        "transacted_on": null,
+        "amount": "-12.50",
+        "description": "Coffee",
+        "pending": false
+       }
+      ]
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "cc",
+      "name": "Card",
+      "org_name": "Synthetic Bank",
+      "currency": "USD",
+      "balance": "-40.00",
+      "available": "-40.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "c1",
+        "posted_on": "2026-10-02",
+        "transacted_on": null,
+        "amount": "-40.00",
+        "description": "Fuel",
+        "pending": false
+       }
+      ]
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "eur",
+      "name": "Euro",
+      "org_name": "Synthetic Bank",
+      "currency": "eur",
+      "balance": "1000.00",
+      "available": "1000.00",
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": [
+       {
+        "remote_id": "e1",
+        "posted_on": "2026-10-03",
+        "transacted_on": null,
+        "amount": "5.00",
+        "description": "Euro",
+        "pending": false
+       }
+      ]
+     },
+     {
+      "conn_key": "org1",
+      "remote_id": "url",
+      "name": "Points",
+      "org_name": "Synthetic Bank",
+      "currency": "https://example.test/points",
+      "balance": null,
+      "available": null,
+      "balance_epoch": 1790000000,
+      "skipped": [],
+      "transactions": []
+     }
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "card",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "bank",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "100 · Checking is already mapped to Synthetic Bank · Everyday checking. Clear that mapping first."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "income",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "ar",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "110 · Receivables is a receivables (A/R) control account. Customer balances must tie out to it: record an invoice or a customer receipt instead (or a credit memo or refund). A bank feed cannot map to it."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "uf",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "120 · Undeposited is an undeposited-funds control account. Record customer receipts or sales receipts to undeposited funds and move them to a bank with Make deposits instead. A bank feed cannot map to it."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "old",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Map a feed to an active postable bank (asset) or credit card (liability) account."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "other.bank",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose an account from this company."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/eur",
+   "account": "savings",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Synthetic Bank · Euro is in eur; this company keeps its books in USD. Multi-currency feeds are not supported."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/url",
+   "account": "savings",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Synthetic Bank · Points is in https://example.test/points; this company keeps its books in USD. Multi-currency feeds are not supported."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": true,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a record from this company."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/missing",
+   "account": "savings",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a downloaded account of this company."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "other",
+   "feed": "conn/org1/chk",
+   "account": "other.bank",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a downloaded account of this company."
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": null,
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": null,
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": "savings",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/cc",
+   "account": "card",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_mappable",
+   "company": "co",
+   "result": "after",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_forget",
+   "company": "co",
+   "connection": "labelled",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_forget",
+   "company": "co",
+   "connection": "labelled",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_forget",
+   "company": "other",
+   "connection": "conn",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a bank feed connection of this company."
+  },
+  {
+   "op": "bankfeeds_forget",
+   "company": "co",
+   "connection": "missing",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a bank feed connection of this company."
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "labelled",
+   "now": "2026-10-11T15:00:00Z",
+   "pull": {
+    "accounts": []
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This connection was forgotten. Connect again with a new setup token."
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "other",
+   "connection": "conn",
+   "now": "2026-10-11T15:00:00Z",
+   "pull": {
+    "accounts": []
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a bank feed connection of this company."
+  },
+  {
+   "op": "bankfeeds_forget",
+   "company": "co",
+   "connection": "conn",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": null,
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_map",
+   "company": "co",
+   "feed": "conn/org1/chk",
+   "account": "bank",
+   "expect_error": false
+  },
+  {
+   "op": "bankfeeds_sync",
+   "company": "co",
+   "connection": "conn",
+   "now": "2026-10-30T15:00:00Z",
+   "force": true,
+   "pull": {
+    "accounts": []
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This connection was forgotten. Connect again with a new setup token."
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+{% extends 'salestax/base.html' %}
+{% block salestax_head %}{% if kind == 'group' %}<script src="{{ static('salestax/group.js') }}" defer></script>{% endif %}{% endblock %}
+{% block salestax_content %}
+<div class="heading"><h1>{% if item %}Edit{% else %}New{% endif %} tax {{ kind }}</h1><a href="{{ url('salestax:list', company.pk) }}">Back to tax rates &amp; groups</a></div>
+{% if item and not item.active %}<p class="notice">This {{ kind }} is inactive. Saving does not reactivate it.</p>{% endif %}
+<form method="post" class="master-form" novalidate>{{ csrf_token|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.non_field_errors|safe }}
+<div class="fields">{% for field in form.visible_fields %}<div class="field{% if field.name == 'members' %} wide{% endif %}">{{ field.label_tag|safe }}{% if field.help_text and field.name == 'members' %}<div class="helptext">{{ field.help_text }}</div>{% endif %}{{ field.errors|safe }}{{ field.widget|safe }}{% if field.help_text and field.name != 'members' %}<div class="helptext">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}</div>
+{% if kind == 'group' %}<p class="group-rate">Group rate: <strong id="group-rate">{{ group_rate }}%</strong> <span class="helptext">(sum of the chosen rates; each rate is figured and rounded separately on a form)</span></p>{{ rates|json_script('tax-rates') }}{% endif %}
+{% if kind == 'rate' and groups %}<p class="helptext">Part of: {% for g in groups %}{{ g.name }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+<div class="actions"><button type="submit">Save</button><a href="{{ url('salestax:list', company.pk) }}">Cancel</a></div>
+</form>
+{% endblock %}

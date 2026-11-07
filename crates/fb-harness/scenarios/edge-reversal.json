@@ -1,0 +1,316 @@
+{
+ "name": "edge-reversal",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "clerk"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c1",
+   "name": "Synthetic c1",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bank",
+   "company": "c1",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.ar",
+   "company": "c1",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.accdep",
+   "company": "c1",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.card",
+   "company": "c1",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equity",
+   "company": "c1",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.sales",
+   "company": "c1",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j1",
+   "company": "c1",
+   "date": "2026-03-01",
+   "memo": "Equipment on the card",
+   "lines": [
+    {
+     "account": "c1.equip",
+     "debit": "1200.00",
+     "description": "Mower"
+    },
+    {
+     "account": "c1.card",
+     "credit": "1200.00",
+     "name": "Card co"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "j1",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j1r",
+   "company": "c1",
+   "journal": "j1",
+   "date": "2026-03-15",
+   "reason": "Returned the mower",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j1r2",
+   "company": "c1",
+   "journal": "j1",
+   "date": "2026-03-16",
+   "reason": "Twice",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only an unreversed original posted journal can be reversed."
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j1rr",
+   "company": "c1",
+   "journal": "j1r",
+   "date": "2026-03-16",
+   "reason": "Reverse the reversal",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only an unreversed original posted journal can be reversed."
+  },
+  {
+   "op": "save_draft",
+   "ref": "j2",
+   "company": "c1",
+   "date": "2026-03-02",
+   "memo": "Draft only",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "5"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "5"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j2r",
+   "company": "c1",
+   "journal": "j2",
+   "date": "2026-03-03",
+   "reason": "Draft",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only an unreversed original posted journal can be reversed."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "j2",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j2early",
+   "company": "c1",
+   "journal": "j2",
+   "date": "2026-03-01",
+   "reason": "Too early",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Supply a reason and a reversal date on or after the original date."
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j2blank",
+   "company": "c1",
+   "journal": "j2",
+   "date": "2026-03-05",
+   "reason": "   ",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Supply a reason and a reversal date on or after the original date."
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j2bad",
+   "company": "c1",
+   "journal": "j2",
+   "date": "not a date",
+   "reason": "Bad date",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a valid date."
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j2r",
+   "company": "c1",
+   "journal": "j2",
+   "date": "2026-03-31",
+   "reason": "  Month-end correction  ",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "j3",
+   "company": "c1",
+   "date": "2026-03-31",
+   "memo": "Accrued depreciation",
+   "lines": [
+    {
+     "account": "c1.dep",
+     "debit": "75.50"
+    },
+    {
+     "account": "c1.accdep",
+     "credit": "75.50"
+    }
+   ],
+   "adjusting": true,
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "j3",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "j3r",
+   "company": "c1",
+   "journal": "j3",
+   "date": "2026-04-01",
+   "reason": "Auto-reverse accrual xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "journal": "j3r",
+   "company": "c1",
+   "date": "2026-04-01",
+   "memo": "Edit a reversal",
+   "lines": [],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Posted journals cannot be edited."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "j3r",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only drafts can be posted."
+  }
+ ],
+ "as_of": [
+  "2026-03-14",
+  "2026-03-31",
+  "2026-12-31"
+ ]
+}

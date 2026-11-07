@@ -1,0 +1,2 @@
+GET /callback?state=abc&code=xyz HTTP/1.1
+Host: 127.0.0.1:1

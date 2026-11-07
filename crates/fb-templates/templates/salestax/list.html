@@ -1,0 +1,16 @@
+{% extends 'salestax/base.html' %}
+{% block salestax_content %}
+<div class="heading"><h1>Tax rates &amp; groups</h1><div class="heading-actions"><a class="button" href="{{ url('salestax:rate_new', company.pk) }}">New tax rate</a><a class="button secondary" href="{{ url('salestax:group_new', company.pk) }}">New tax group</a></div></div>
+{% if not settings.charge_tax %}<p class="notice">Sales tax is turned off, so sales forms offer only No tax. <a href="{{ url('salestax:settings', company.pk) }}">Turn it on in Settings</a>.</p>{% endif %}
+<form class="list-filter" method="get" novalidate>{{ filter_form.as_p|safe }}<button type="submit">Show</button></form>
+<section class="table-wrap"><table class="tax-items"><thead><tr><th>Name</th><th>Type</th><th>Description</th><th class="amount">Rate</th><th>Tax agency</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead><tbody>
+{% for row in rows %}{% with item=row.item %}<tr data-tax-item="{{ item.pk }}">
+<td><a href="{% if item.kind == 'GROUP' %}{{ url('salestax:group_edit', company.pk, item.pk) }}{% else %}{{ url('salestax:rate_edit', company.pk, item.pk) }}{% endif %}">{{ item.name }}</a>{% if settings.default_item_id == item.pk %} <span class="badge">Default</span>{% endif %}</td>
+<td>{{ item.get_kind_display }}</td><td>{{ item.description }}</td><td class="amount" data-rate>{{ row.rate|pct }}%</td>
+<td>{% if item.kind == 'GROUP' %}{% for m in row.members %}<span class="member">{{ m.name }} {{ m.rate|pct }}% — {{ m.agency.display_name }}</span>{% endfor %}{% else %}{{ item.agency.display_name }}{% endif %}</td>
+<td>{% if item.active %}Active{% else %}<span class="badge">Inactive</span>{% endif %}</td>
+<td><form method="post" action="{{ url('salestax:status', company.pk, item.pk) }}">{{ status_tokens[item.pk]|safe }}<input type="hidden" name="expected_revision" value="{{ item.revision }}"><input type="hidden" name="active" value="{% if item.active %}0{% else %}1{% endif %}"><button type="submit" class="secondary small">{% if item.active %}Deactivate{% else %}Reactivate{% endif %}</button></form></td>
+</tr>{% endwith %}{% else %}<tr><td colspan="7">No tax rates yet. Add one for each county, city or state you collect sales tax for.</td></tr>{% endfor %}
+</tbody></table></section>
+<p class="helptext">Rates are never deleted, only deactivated, so saved forms keep their history.</p>
+{% endblock %}

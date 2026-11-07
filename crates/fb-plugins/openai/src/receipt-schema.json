@@ -1,0 +1,80 @@
+{
+  "type": "json_schema",
+  "name": "receipt_fields",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "vendor_name": {
+        "type": "string"
+      },
+      "vendor_address": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "document_number": {
+        "type": "string"
+      },
+      "document_date": {
+        "type": "string"
+      },
+      "due_date": {
+        "type": "string"
+      },
+      "currency": {
+        "type": "string"
+      },
+      "subtotal": {
+        "type": "string"
+      },
+      "tax": {
+        "type": "string"
+      },
+      "total": {
+        "type": "string"
+      },
+      "lines": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "string"
+            },
+            "unit_price": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "description",
+            "quantity",
+            "unit_price",
+            "amount"
+          ]
+        }
+      }
+    },
+    "required": [
+      "vendor_name",
+      "vendor_address",
+      "document_number",
+      "document_date",
+      "due_date",
+      "currency",
+      "subtotal",
+      "tax",
+      "total",
+      "lines"
+    ]
+  }
+}

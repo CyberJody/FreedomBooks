@@ -1,0 +1,57 @@
+/* N07 bill calendar. Status is always carried by a word or mark, never colour alone. */
+.calendar-nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:18px 0 10px}
+.calendar-nav h2{margin:0;min-width:200px;text-align:center}
+.calendar-filter{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 14px}
+.calendar-filter label{font-size:13px;font-weight:650}
+.calendar-check{display:inline-flex;align-items:center;gap:6px;font-weight:500}
+.calendar-summary{font-size:15px}
+.calendar-legend{list-style:none;display:flex;gap:18px;flex-wrap:wrap;padding:0;margin:0 0 14px;font-size:13px}
+.mark{display:inline-block;min-width:1.2em;text-align:center;font-weight:800}
+.status-overdue .mark,.status-overdue .status-word{color:#9b252e}
+.status-today .mark,.status-today .status-word{color:#684276}
+.status-upcoming .mark,.status-upcoming .status-word{color:#4a5c3a}
+.status-paid .mark,.status-paid .status-word{color:#6c636f}
+
+.calendar-grid{table-layout:fixed;background:#fff;border:1px solid #ded8df;border-radius:9px;margin-bottom:26px}
+.calendar-grid caption{caption-side:bottom;text-align:left;padding:8px 4px}
+.calendar-grid th{text-align:center}
+.calendar-grid td{height:112px;padding:8px;vertical-align:top;border-right:1px solid #eee9ef}
+.calendar-grid td:last-child{border-right:0}
+.calendar-empty{background:#faf8fb}
+.calendar-day.is-today{background:#f3edf6;box-shadow:inset 0 0 0 2px #886095}
+.day-head{display:flex;align-items:baseline;gap:6px;margin-bottom:6px}
+.day-number{font-weight:700;color:#43364b}
+.day-today{font-size:11px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:#684276}
+.day-total{margin-left:auto;font-size:12px;color:#43364b;font-weight:700}
+.day-entries{list-style:none;margin:0;padding:0;font-size:12px;line-height:1.35}
+.day-entries li{margin:0 0 4px}
+.day-entries a{display:flex;gap:4px;align-items:baseline;text-decoration:none;padding:2px 4px;border-radius:4px;border-left:3px solid transparent;color:#25222a;min-width:0}
+.day-entries a:hover,.day-entries a:focus{background:#eee8f1}
+.day-entries .entry-vendor{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day-entries .status-overdue a{border-left-color:#9b252e;background:#fff0f1}
+.day-entries .status-today a{border-left-color:#684276}
+.day-entries .status-upcoming a{border-left-color:#4a5c3a}
+.day-entries .status-paid a{border-left-color:#b7afba;color:#6c636f}
+.day-more{font-size:12px;font-weight:650}
+
+.calendar-agenda{padding-bottom:12px}
+.calendar-agenda>h2{padding:0 18px}
+.calendar-agenda h3.agenda-day{font-size:15px;margin:22px 0 8px;padding:0 18px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.agenda-total{font-weight:500;color:#43364b;font-size:13px}
+.agenda-table{table-layout:fixed;border-top:1px solid #ded8df}
+.agenda-table th:nth-child(1){width:12%}.agenda-table th:nth-child(2){width:12%}.agenda-table th:nth-child(3){width:20%}.agenda-table th:nth-child(4){width:19%}.agenda-table th:nth-child(5){width:11%}.agenda-table th:nth-child(6){width:11%}.agenda-table th:nth-child(7){width:15%}
+.agenda-table td{overflow-wrap:anywhere}
+.agenda-table .status-overdue td:first-child{background:#fff0f1}
+.calendar-none{padding:18px;margin:0 18px 6px;background:#faf8fb;border:1px solid #ded8df;border-radius:9px}
+
+/* Narrow screens: the grid becomes unreadable; the agenda carries the same rows and totals. */
+@media (max-width:850px){
+  .calendar-grid{display:none}
+  .calendar-nav h2{min-width:0;width:100%;order:-1}
+  .agenda-table thead{display:none}
+  .agenda-table tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;padding:10px 12px;border-bottom:1px solid #eee9ef}
+  .agenda-table td{display:block;padding:2px 0;border:0}
+  .agenda-table td.num{text-align:left}
+}
+
+.calendar-nav .is-disabled{opacity:.45;cursor:default;pointer-events:none}

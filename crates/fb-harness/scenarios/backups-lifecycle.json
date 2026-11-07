@@ -1,0 +1,130 @@
+{
+  "users": [
+    {
+      "username": "owner",
+      "is_staff": true
+    }
+  ],
+  "as_of": [
+    "2026-12-31"
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic backup company",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "cash",
+      "code": "1000",
+      "name": "Cash",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "capital",
+      "code": "3000",
+      "name": "Capital",
+      "kind": "EQUITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "zero",
+      "code": "9000",
+      "name": "Zero account",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "c",
+      "ref": "j",
+      "date": "2026-10-01",
+      "memo": "Synthetic contribution",
+      "lines": [
+        {
+          "account": "cash",
+          "debit": "123.45",
+          "credit": "0"
+        },
+        {
+          "account": "capital",
+          "debit": "0",
+          "credit": "123.45"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "post_journal",
+      "company": "c",
+      "journal": "j",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "c",
+      "ref": "draft",
+      "date": "2026-10-02",
+      "memo": "Synthetic draft",
+      "lines": [
+        {
+          "account": "cash",
+          "debit": "10",
+          "credit": "0"
+        },
+        {
+          "account": "capital",
+          "debit": "0",
+          "credit": "10"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "backups_snapshot",
+      "ref": "first",
+      "expect_error": false
+    },
+    {
+      "op": "post_journal",
+      "company": "c",
+      "journal": "draft",
+      "expect_error": false
+    },
+    {
+      "op": "backups_verify",
+      "backup": "first",
+      "expect_error": false
+    },
+    {
+      "op": "backups_restore",
+      "backup": "first",
+      "expect_error": false
+    },
+    {
+      "op": "backups_refuse_existing",
+      "backup": "first",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Restore only goes into a NEW target."
+    },
+    {
+      "op": "backups_snapshot",
+      "ref": "second",
+      "expect_error": false
+    },
+    {
+      "op": "backups_restore",
+      "backup": "second",
+      "expect_error": false
+    }
+  ]
+}

@@ -1,0 +1,1124 @@
+{
+  "name": "sales-estimates-d4",
+  "users": [
+    {
+      "username": "owner",
+      "is_staff": true
+    }
+  ],
+  "as_of": [
+    "2026-10-31"
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Kettle Pond Supply",
+      "currency": "USD",
+      "expect_error": false
+    },
+    {
+      "op": "create_company",
+      "ref": "other",
+      "name": "Other synthetic books",
+      "expect_error": false,
+      "open_first_run": true
+    },
+    {
+      "op": "save_account",
+      "company": "other",
+      "ref": "other-income",
+      "code": "4000",
+      "name": "Other income",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "other",
+      "model": "customer",
+      "ref": "other-buyer",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "other",
+      "model": "item",
+      "ref": "other-item",
+      "values": {
+        "code": "OTHER",
+        "description": "Other item",
+        "kind": "SERVICE",
+        "sale_rate": "1.00",
+        "income_account": "other-income"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "1000",
+      "name": "Checking",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "1100",
+      "name": "Accounts receivable",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "1200",
+      "name": "Undeposited funds",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "equip",
+      "code": "1500",
+      "name": "Equipment",
+      "detail_type": "FIXED_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "accdep",
+      "code": "1590",
+      "name": "Accumulated depreciation",
+      "detail_type": "FIXED_ASSET",
+      "is_contra": true,
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "tax",
+      "code": "2200",
+      "name": "Sales tax payable",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "equity",
+      "code": "3000",
+      "name": "Owner's equity",
+      "detail_type": "EQUITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "4000",
+      "name": "Sales & services",
+      "detail_type": "INCOME",
+      "description": "Lawn & garden <work>",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "expense",
+      "code": "5000",
+      "name": "Supplies",
+      "detail_type": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Maple & Birch Café"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer2",
+      "values": {
+        "display_name": "Otter Creek Farm"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "item",
+      "ref": "mow",
+      "values": {
+        "code": "MOW",
+        "description": "Lawn mowing",
+        "kind": "SERVICE",
+        "sale_rate": "45.00",
+        "income_account": "income",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "collected_tax": "tax",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000a1",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "memo": "October mowing",
+        "tax_mode": "MANUAL",
+        "tax_rate": "6.25",
+        "tax_label": "State tax",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Lawn mowing",
+            "quantity": "4",
+            "rate": "45.00",
+            "taxable": true,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "c",
+      "record": "inv1",
+      "expected_revision": 1,
+      "review": "review1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "c",
+      "ref": "inv2",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000a2",
+        "customer_id": "buyer2",
+        "date": "2026-10-20",
+        "memo": "Hedge trimming",
+        "tax_mode": "MANUAL",
+        "tax_rate": "0",
+        "tax_label": "Exempt",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Hedge trimming",
+            "quantity": "2",
+            "rate": "30.00",
+            "taxable": false,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "sales_review_receipt",
+      "company": "c",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000b1",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "50.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "50.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "expect_error": false
+    },
+    {
+      "op": "sales_record_receipt",
+      "company": "c",
+      "ref": "payment1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000b1",
+        "customer_id": "buyer",
+        "date": "2026-10-15",
+        "amount": "50.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "allocations": [
+          {
+            "invoice_id": "inv1",
+            "amount": "50.00"
+          }
+        ]
+      },
+      "review": "pay1",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "c",
+      "ref": "manual",
+      "date": "2026-10-31",
+      "memo": "Depreciation adjustment",
+      "entry_number": "JE-3",
+      "adjusting": true,
+      "request_key": "00000000-0000-0000-0000-0000000000c0",
+      "lines": [
+        {
+          "account": "expense",
+          "debit": "12.34",
+          "credit": "0",
+          "description": "Equipment",
+          "name": "Dana"
+        },
+        {
+          "account": "accdep",
+          "debit": "0",
+          "credit": "12.34",
+          "description": "Equipment",
+          "name": "Dana"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "twin1",
+      "values": {
+        "display_name": "Twin buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "twin2",
+      "values": {
+        "display_name": "Twin buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "banking_begin",
+      "company": "c",
+      "account": "bank",
+      "ref": "history-reconciliation",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000000de",
+        "statement_date": "2026-10-31",
+        "ending_balance": "0.00"
+      },
+      "expect_error": false
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "vendor",
+      "ref": "agency",
+      "values": {
+        "display_name": "County Revenue",
+        "business_name": "County office",
+        "billing_address": "1 Main Street\tPond, NY 10000",
+        "email": "tax@example.invalid"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "vendor",
+      "ref": "vendor",
+      "values": {
+        "display_name": "Pond Supply",
+        "default_expense_account": "expense",
+        "default_terms": "30"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "vendor",
+      "ref": "archived-vendor",
+      "values": {
+        "display_name": "Archived supplier"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_active",
+      "model": "vendor",
+      "record": "archived-vendor",
+      "active": false
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "customer",
+      "record": "buyer",
+      "values": {
+        "billing_address": "22 Maple Street\tPond, NY 10000",
+        "notes": "Preferred delivery\tSide door",
+        "email": "buyer@example.invalid"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "customer",
+      "ref": "exempt",
+      "values": {
+        "display_name": "Resale buyer",
+        "tax_status": "EXEMPT",
+        "exemption_number": "RESALE-2026"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "item",
+      "ref": "goods",
+      "values": {
+        "code": "SEED",
+        "description": "Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · Grass é seed · ",
+        "kind": "NONSTOCK",
+        "sale_rate": "9.995",
+        "purchase_cost": "4.50",
+        "income_account": "income",
+        "expense_account": "expense",
+        "taxable": false
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_rate",
+      "ref": "county",
+      "values": {
+        "name": "County",
+        "description": "County sales tax",
+        "rate": "6.25",
+        "agency_id": "agency"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_rate",
+      "ref": "city",
+      "values": {
+        "name": "City",
+        "description": "City sales tax",
+        "rate": "1.5",
+        "agency_id": "agency"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_rate",
+      "ref": "old-tax",
+      "values": {
+        "name": "Old tax",
+        "description": "Old rate",
+        "rate": "0",
+        "agency_id": "agency"
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_tax_active",
+      "record": "old-tax",
+      "active": false,
+      "expected_revision": 1
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_group",
+      "ref": "combined",
+      "values": {
+        "name": "County and City",
+        "description": "Sales tax",
+        "member_ids": [
+          "county",
+          "city"
+        ]
+      }
+    },
+    {
+      "company": "c",
+      "expect_error": false,
+      "op": "l2_settings",
+      "values": {
+        "expected_revision": 0,
+        "charge_tax": true,
+        "default_item_id": "combined",
+        "owed_basis": "ACCRUAL",
+        "filing_frequency": "QUARTERLY"
+      }
+    },
+    {
+      "op": "create_company",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "activity",
+      "name": "Activity synthetic books"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-bank",
+      "code": "1000",
+      "name": "Checking",
+      "detail_type": "BANK"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-ar",
+      "code": "1100",
+      "name": "Receivables",
+      "detail_type": "RECEIVABLE"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-uf",
+      "code": "1200",
+      "name": "Undeposited",
+      "detail_type": "OTHER_CURRENT_ASSET"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-ap",
+      "code": "2000",
+      "name": "Payables",
+      "detail_type": "PAYABLE"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-tax",
+      "code": "2200",
+      "name": "Tax",
+      "detail_type": "OTHER_CURRENT_LIABILITY"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-cdp",
+      "code": "2300",
+      "name": "Customer deposits",
+      "detail_type": "OTHER_CURRENT_LIABILITY"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-income",
+      "code": "4000",
+      "name": "Income",
+      "detail_type": "INCOME"
+    },
+    {
+      "op": "save_account",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-expense",
+      "code": "5000",
+      "name": "Expense",
+      "detail_type": "EXPENSE"
+    },
+    {
+      "op": "l2_save",
+      "company": "activity",
+      "expect_error": false,
+      "model": "customer",
+      "ref": "act-buyer",
+      "values": {
+        "display_name": "Activity buyer"
+      }
+    },
+    {
+      "op": "l2_save",
+      "company": "activity",
+      "expect_error": false,
+      "model": "vendor",
+      "ref": "act-vendor",
+      "values": {
+        "display_name": "Activity vendor"
+      }
+    },
+    {
+      "op": "l2_setup",
+      "company": "activity",
+      "expect_error": false,
+      "expected_revision": 0,
+      "values": {
+        "receivables": "act-ar",
+        "undeposited": "act-uf",
+        "payables": "act-ap",
+        "collected_tax": "act-tax",
+        "customer_deposits": "act-cdp",
+        "banks": [
+          "act-bank"
+        ]
+      }
+    },
+    {
+      "op": "sales_save_invoice",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-inv1",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-000000000afe",
+        "customer_id": "act-buyer",
+        "date": "2026-10-01",
+        "due_date": "2026-10-31",
+        "memo": "Activity invoice",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "item_id": null,
+            "description": "Work",
+            "quantity": "1",
+            "rate": "100.00",
+            "income_account_id": "act-income",
+            "taxable": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "sales_review_invoice",
+      "company": "activity",
+      "expect_error": false,
+      "record": "act-inv1",
+      "expected_revision": 1,
+      "review": "act-inv-review"
+    },
+    {
+      "op": "sales_post_invoice",
+      "company": "activity",
+      "expect_error": false,
+      "record": "act-inv1",
+      "expected_revision": 1,
+      "review": "act-inv-review"
+    },
+    {
+      "op": "payables_save",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-bill",
+      "values": {
+        "vendor_id": "act-vendor",
+        "date": "2026-10-01",
+        "due_date": "2026-10-31",
+        "reference": "DELIVERY-1",
+        "request_key": "00000000-0000-0000-0000-0000000002bd",
+        "lines": [
+          {
+            "description": "Supplies",
+            "quantity": "1",
+            "rate": "30.50",
+            "expense_account_id": "act-expense"
+          }
+        ]
+      }
+    },
+    {
+      "op": "payables_post",
+      "company": "activity",
+      "expect_error": false,
+      "bill": "act-bill",
+      "expected_revision": 1
+    },
+    {
+      "op": "payables_pay",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-billpay",
+      "values": {
+        "vendor_id": "act-vendor",
+        "date": "2026-10-15",
+        "amount": "10.00",
+        "method": "OTHER",
+        "reference": "Sample payment",
+        "memo": "",
+        "bank_id": "act-bank",
+        "request_key": "00000000-0000-0000-0000-0000000002be",
+        "allocations": [
+          {
+            "bill_id": "act-bill",
+            "amount": "10.00"
+          }
+        ]
+      }
+    },
+    {
+      "op": "checks_save",
+      "company": "activity",
+      "expect_error": false,
+      "ref": "act-check",
+      "values": {
+        "bank_id": "act-bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "act-vendor",
+        "date": "2026-10-20",
+        "check_number": "101",
+        "memo": "Supplies check",
+        "request_key": "00000000-0000-0000-0000-0000000002bf",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "act-expense",
+            "rate": "12.34"
+          }
+        ]
+      }
+    },
+    {
+      "op": "checks_record",
+      "company": "activity",
+      "expect_error": false,
+      "check": "act-check",
+      "expected_revision": 1
+    },
+    {
+      "op": "credits_review_memo",
+      "company": "activity",
+      "expect_error": false,
+      "review": "act-memo-review",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c0",
+        "customer_id": "act-buyer",
+        "date": "2026-10-16",
+        "memo": "Returned service",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "description": "Return",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "act-income",
+            "item_id": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "credits_record_memo",
+      "company": "activity",
+      "expect_error": false,
+      "review": "act-memo-review",
+      "ref": "act-memo",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c0",
+        "customer_id": "act-buyer",
+        "date": "2026-10-16",
+        "memo": "Returned service",
+        "tax_mode": "NONE",
+        "lines": [
+          {
+            "description": "Return",
+            "quantity": "1",
+            "rate": "10.00",
+            "taxable": false,
+            "income_account_id": "act-income",
+            "item_id": null
+          }
+        ]
+      }
+    },
+    {
+      "op": "credits_review_application",
+      "company": "activity",
+      "expect_error": false,
+      "record": "act-memo",
+      "review": "act-apply-review",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c1",
+        "date": "2026-10-17",
+        "allocations": [
+          {
+            "invoice_id": "act-inv1",
+            "amount": "3.00"
+          }
+        ]
+      }
+    },
+    {
+      "op": "credits_apply",
+      "company": "activity",
+      "expect_error": false,
+      "record": "act-memo",
+      "review": "act-apply-review",
+      "ref": "act-memo-application",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c1",
+        "date": "2026-10-17",
+        "allocations": [
+          {
+            "invoice_id": "act-inv1",
+            "amount": "3.00"
+          }
+        ]
+      }
+    },
+    {
+      "op": "credits_review_refund",
+      "company": "activity",
+      "expect_error": false,
+      "record": "act-memo",
+      "review": "act-refund-review",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c2",
+        "date": "2026-10-18",
+        "amount": "2.00",
+        "bank_id": "act-bank",
+        "method": "OTHER",
+        "check_number": "",
+        "memo": "Refund"
+      }
+    },
+    {
+      "op": "credits_refund",
+      "company": "activity",
+      "expect_error": false,
+      "record": "act-memo",
+      "review": "act-refund-review",
+      "ref": "act-memo-refund",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c2",
+        "date": "2026-10-18",
+        "amount": "2.00",
+        "bank_id": "act-bank",
+        "method": "OTHER",
+        "check_number": "",
+        "memo": "Refund"
+      }
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "activity",
+      "expect_error": false,
+      "review": "act-deposit-review",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c3",
+        "customer_id": "act-buyer",
+        "date": "2026-10-19",
+        "amount": "50.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "bank_id": "act-bank",
+        "order_reference": "ORDER-1"
+      }
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "activity",
+      "expect_error": false,
+      "review": "act-deposit-review",
+      "ref": "act-deposit",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000002c3",
+        "customer_id": "act-buyer",
+        "date": "2026-10-19",
+        "amount": "50.00",
+        "method": "CHECK",
+        "destination": "BANK",
+        "bank_id": "act-bank",
+        "order_reference": "ORDER-1"
+      }
+    },
+    {
+      "company": "activity",
+      "expect_error": false,
+      "op": "save_account",
+      "ref": "stale-expense",
+      "code": "5999",
+      "name": "Old expense",
+      "detail_type": "EXPENSE"
+    },
+    {
+      "company": "activity",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "vendor",
+      "ref": "stale-vendor",
+      "values": {
+        "display_name": "Stale vendor",
+        "default_expense_account": "stale-expense"
+      }
+    },
+    {
+      "company": "activity",
+      "expect_error": false,
+      "op": "l2_save",
+      "model": "item",
+      "ref": "stale-item",
+      "values": {
+        "code": "STALE",
+        "description": "Old default",
+        "kind": "SERVICE",
+        "sale_rate": "5",
+        "expense_account": "stale-expense"
+      }
+    },
+    {
+      "company": "activity",
+      "expect_error": false,
+      "op": "save_account",
+      "account": "stale-expense",
+      "code": "5999",
+      "name": "Old expense",
+      "detail_type": "EXPENSE",
+      "active": false
+    },
+    {
+      "op": "sales_save_estimate",
+      "company": "c",
+      "expect_error": false,
+      "ref": "estimate1",
+      "values": {
+        "request_key": "54d40000-0000-4000-8000-000000000001",
+        "customer_id": "buyer",
+        "date": "2026-10-20",
+        "expiry": "2026-12-31",
+        "memo": "Synthetic estimate\tRetained evidence",
+        "tax_mode": "ITEM",
+        "tax_item_id": "combined",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Mow & trim <front>",
+            "quantity": "2.5",
+            "rate": "45.00",
+            "taxable": true
+          },
+          {
+            "item_id": null,
+            "description": "Included at no charge",
+            "quantity": "1",
+            "rate": "0.00",
+            "taxable": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "sales_save_estimate",
+      "company": "c",
+      "expect_error": false,
+      "ref": "estimate2",
+      "values": {
+        "request_key": "54d40000-0000-4000-8000-000000000002",
+        "customer_id": "buyer",
+        "date": "2026-10-20",
+        "expiry": "2026-12-31",
+        "memo": "Synthetic estimate\tRetained evidence",
+        "tax_mode": "ITEM",
+        "tax_item_id": "combined",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Mow & trim <front>",
+            "quantity": "2.5",
+            "rate": "45.00",
+            "taxable": true
+          },
+          {
+            "item_id": null,
+            "description": "Included at no charge",
+            "quantity": "1",
+            "rate": "0.00",
+            "taxable": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "sales_transition_estimate",
+      "company": "c",
+      "expect_error": false,
+      "record": "estimate2",
+      "expected_revision": 1,
+      "state": "ACCEPTED"
+    },
+    {
+      "op": "sales_save_estimate",
+      "company": "c",
+      "expect_error": false,
+      "ref": "estimate3",
+      "values": {
+        "request_key": "54d40000-0000-4000-8000-000000000003",
+        "customer_id": "buyer",
+        "date": "2026-10-20",
+        "expiry": "2026-12-31",
+        "memo": "Synthetic estimate\tRetained evidence",
+        "tax_mode": "ITEM",
+        "tax_item_id": "combined",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Mow & trim <front>",
+            "quantity": "2.5",
+            "rate": "45.00",
+            "taxable": true
+          },
+          {
+            "item_id": null,
+            "description": "Included at no charge",
+            "quantity": "1",
+            "rate": "0.00",
+            "taxable": false
+          }
+        ]
+      }
+    },
+    {
+      "op": "sales_transition_estimate",
+      "company": "c",
+      "expect_error": false,
+      "record": "estimate3",
+      "expected_revision": 1,
+      "state": "CANCELLED",
+      "reason": "Synthetic cancellation"
+    },
+    {
+      "op": "sales_review_sale",
+      "company": "c",
+      "expect_error": false,
+      "values": {
+        "request_key": "54d40000-0000-4000-8000-000000000010",
+        "customer_id": "buyer",
+        "date": "2026-10-22",
+        "method": "CASH",
+        "reference": "Synthetic counter sale",
+        "memo": "Cash sale\tTest only",
+        "destination": "UNDEPOSITED",
+        "bank_id": null,
+        "tax_mode": "ITEM",
+        "tax_item_id": "combined",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Mow & trim",
+            "quantity": "1",
+            "rate": "45.00",
+            "taxable": true,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "review": "sale1"
+    },
+    {
+      "op": "sales_record_sale",
+      "company": "c",
+      "expect_error": false,
+      "values": {
+        "request_key": "54d40000-0000-4000-8000-000000000010",
+        "customer_id": "buyer",
+        "date": "2026-10-22",
+        "method": "CASH",
+        "reference": "Synthetic counter sale",
+        "memo": "Cash sale\tTest only",
+        "destination": "UNDEPOSITED",
+        "bank_id": null,
+        "tax_mode": "ITEM",
+        "tax_item_id": "combined",
+        "lines": [
+          {
+            "item_id": "mow",
+            "description": "Mow & trim",
+            "quantity": "1",
+            "rate": "45.00",
+            "taxable": true,
+            "income_account_id": "income"
+          }
+        ]
+      },
+      "review": "sale1",
+      "ref": "sale1"
+    },
+    {
+      "op": "sales_convert_estimate",
+      "company": "c",
+      "record": "estimate2",
+      "ref": "converted",
+      "expected_revision": 2,
+      "date": "2026-10-23",
+      "due_date": "2026-11-22",
+      "expect_error": false
+    },
+    {
+      "op": "sales_transition_estimate",
+      "company": "c",
+      "record": "estimate2",
+      "state": "DRAFT",
+      "expected_revision": 2,
+      "expect_error": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('desktop/keys.css') }}">{% endblock %}{% block content %}
+<h1>{% if kit %}FreedomBooks Emergency Kit{% else %}Your recovery key{% endif %}</h1>
+{% if errors %}<section class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</section>{% endif %}
+{% if authorized %}
+<p>{{ company.name }} · {{ date }}</p><p>Keep this key somewhere safe, away from this computer. It opens your books and backups if you forget your password.</p>
+<p class="recovery-key"><strong>{{ recovery_key }}</strong></p>
+<p>To restore on another computer, install FreedomBooks, choose Restore a backup, select your backup file, and enter this recovery key.</p>
+{% if kit %}<p>Anyone with this key and a backup can open your books. Keep the kit separate from your backup files.</p><button type="button" id="print-now">Print / Save as PDF</button><p><a href="/settings/recovery-key/">Back to recovery key</a></p>
+{% else %}<form method="post">{{ csrf_token|safe }}<button name="action" value="copy">Copy recovery key</button> <button name="action" value="print">Print</button> <button name="action" value="save">Save to USB / file…</button> <button name="action" value="later" class="secondary">Remind me later</button></form>
+<p id="recovery-copy-status" role="status" aria-live="polite"></p>
+<p class="notice">Saving this key on the same computer will not help if the computer is lost or stops working. Use a USB drive or print it.</p>
+{% if not saved %}<p role="status">Recovery key not saved yet</p>{% endif %}{% endif %}
+{% else %}<form class="narrow" method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="show"><p><label for="id_current_password">Enter your password to show the recovery key</label><input type="password" name="current_password" id="id_current_password" autocomplete="current-password" required></p><button>Show my recovery key</button></form>{% endif %}
+{% endblock %}

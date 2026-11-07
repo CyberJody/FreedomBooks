@@ -1,0 +1,27 @@
+[package]
+name = "fb-node"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "napi-rs bridge: loads fb-app/fb-core into Electron's main process with a fixed set of calls."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+fb-app = { path = "../fb-app" }
+napi = { version = "=3.16.0", default-features = false, features = ["napi8", "dyn-symbols"] }
+napi-derive = "=3.7.0"
+serde_json = { version = "1", features = ["preserve_order"] }
+zeroize = "1"
+
+[build-dependencies]
+napi-build = "=2.6.0"
+
+[features]
+simplefin = ["fb-app/simplefin"]
+# Dev/test builds only: show the plugin surfaces (see fb-app `plugins`).
+plugins = ["fb-app/plugins"]
+# Smoke only: also allow the fake OAuth provider origin for Outcome::External.
+fake-network = ["plugins"]
+key-test-hooks = ["fb-app/key-test-hooks"]

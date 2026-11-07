@@ -1,0 +1,19 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/setup.css') }}">{% endblock %}{% block content %}
+<div class="heading"><div><p class="eyebrow">{{ company.name }}</p><h1>Review Accounting setup</h1><p>These choices come from your chart. Nothing is saved until you confirm.</p></div></div>
+{% for error in errors %}<p class="notice" role="alert">{{ error }}</p>{% endfor %}
+<ul class="setup-list">
+{% for row in proposal.rows %}
+<li>
+<span class="setup-state{% if row.accounts %} is-done{% else %} is-optional{% endif %}">{% if row.accounts %}Will set{% else %}Left for you{% endif %}</span>
+<div><strong>{{ row.label }}</strong>
+{% if row.accounts %}<p>{% for account in row.accounts %}{{ account }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+{% if row.reason %}<p>{{ row.reason }}</p>{% endif %}
+</div>
+</li>
+{% endfor %}
+</ul>
+<div class="setup-actions">
+{% if not proposal.empty %}<form method="post" action="{{ url('setup_fill', company.pk) }}">{{ csrf_token|safe }}<input type="hidden" name="action" value="apply"><input type="hidden" name="digest" value="{{ proposal.digest }}"><input type="hidden" name="expected_revision" value="{{ proposal.revision }}"><button type="submit">Use these choices</button></form>{% endif %}
+<a class="button secondary" href="{{ url('setup_start', company.pk) }}">Back</a>
+</div>
+{% endblock %}

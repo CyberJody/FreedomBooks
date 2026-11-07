@@ -1,0 +1,30 @@
+{
+  "name": "freedombooks-desktop",
+  "version": "0.1.0-d4",
+  "private": true,
+  "description": "FreedomBooks desktop window over the Rust core (local only, not packaged)",
+  "main": "main/main.cjs",
+  "scripts": {
+    "build:native": "node scripts/build-native.cjs",
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "smoke": "node scripts/smoke-secfix1.cjs",
+    "smoke:legacy": "node scripts/smoke.cjs",
+    "smoke:backups": "node scripts/smoke-backups.cjs",
+    "smoke:attach": "node scripts/smoke-attach.cjs",
+    "package": "node ../packaging/package.cjs",
+    "smoke:submit-once": "node scripts/smoke-submit-once.cjs",
+    "smoke:keys": "node scripts/smoke-keys.cjs",
+    "smoke:starter-chart": "node scripts/smoke-starter-chart.cjs",
+    "smoke:numbering": "node scripts/smoke-numbering-flow.cjs"
+  },
+  "devDependencies": {
+    "electron": "45.2.0",
+    "playwright": "1.64.1"
+  },
+  "productName": "FreedomBooks",
+  "build": {
+    "appId": "app.freedombooks.FreedomBooks",
+    "productName": "FreedomBooks"
+  }
+}

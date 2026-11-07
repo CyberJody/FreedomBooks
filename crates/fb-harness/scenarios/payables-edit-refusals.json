@@ -1,0 +1,382 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Edit",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a5",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Edit",
+        "memo": "Revised",
+        "request_key": "00000000-0000-0000-0000-0000000186a5",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ],
+        "bill_id": "b",
+        "expected_revision": 1
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "b",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "Edit",
+        "memo": "Revised",
+        "request_key": "00000000-0000-0000-0000-0000000186a5",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ],
+        "bill_id": "b",
+        "expected_revision": 1
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This record changed since you opened it. Reload and review before saving."
+    },
+    {
+      "op": "payables_review",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 2,
+      "review": "r",
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 1,
+      "values": {
+        "payables": "ap2",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 2,
+      "review": "r",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Posting mapping changed. Open a new review before posting."
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 2,
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "b",
+      "expected_revision": 3,
+      "date": "2026-10-24",
+      "reason": "Test correction",
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a6",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "0",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite positive value with at most 4 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a7",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.00001",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite positive value with at most 4 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a8",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "1.001",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186a9",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1",
+            "rate": "-1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite nonnegative value with at most 2 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186aa",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "NaN",
+            "rate": "1",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a finite positive value with at most 4 decimal places within the supported limit."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186ab",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "99999999999999",
+            "rate": "99999999999999",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Document amount exceeds 99999999999999.99."
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "zero",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "zero",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000186ac",
+        "lines": [
+          {
+            "description": "Gross cost including supplier tax",
+            "quantity": "1.005",
+            "rate": "0",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "zero",
+      "expected_revision": 1,
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "A zero-total document cannot be posted."
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ]
+}

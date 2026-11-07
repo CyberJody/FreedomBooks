@@ -1,0 +1,37 @@
+"use strict";
+const catalogNode = document.getElementById("invoice-catalog");
+if (catalogNode) {
+  const catalog = JSON.parse(catalogNode.textContent);
+  const lines = document.getElementById("invoice-lines");
+  lines.addEventListener("change", event => {
+    if (!event.target.name.endsWith("-item")) return;
+    const item = catalog[event.target.value];
+    if (!item) return;
+    const row = event.target.closest("fieldset");
+    row.querySelector('[name$="-description"]').value = item.description;
+    row.querySelector('[name$="-rate"]').value = item.rate;
+    row.querySelector('[name$="-income_account"]').value = item.income_account;
+  });
+  document.getElementById("add-line").addEventListener("click", () => {
+    const count = document.getElementById("id_lines-TOTAL_FORMS");
+    const index = Number(count.value);
+    if (index >= 50) return;
+    const holder = document.createElement("div");
+    holder.innerHTML = document.getElementById("empty-line").innerHTML.replaceAll("__prefix__", String(index));
+    lines.append(holder.firstElementChild);
+    count.value = String(index + 1);
+    lines.lastElementChild.querySelector("select").focus();
+  });
+}
+
+const terms = document.querySelector('[name="terms"]');
+if (terms) terms.addEventListener('change', () => {
+  const input = document.querySelector('[name="date"]');
+  const due = document.querySelector('[name="due_date"]');
+  if (terms.value === '' || !/^\d{4}-\d{2}-\d{2}$/.test(input.value)) return;
+  const [y,m,d] = input.value.split('-').map(Number);
+  // UTC calendar components: never convert a local timestamp across timezones.
+  const day = new Date(Date.UTC(y,m-1,d));
+  day.setUTCDate(day.getUTCDate()+Number(terms.value));
+  due.value = day.toISOString().slice(0,10);
+});

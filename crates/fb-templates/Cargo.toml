@@ -1,0 +1,13 @@
+[package]
+name = "fb-templates"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The ported screen templates (minijinja) and the view models they render. No I/O."
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+minijinja = { version = "2", default-features = false, features = ["builtins", "macros", "multi_template", "adjacent_loop_items", "serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+fb-money = { path = "../fb-money" }

@@ -1,0 +1,366 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "increase",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "6200.27"
+    },
+    {
+     "account": "income",
+     "credit": "6200.27"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "increase",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "decrease",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "266.85"
+    },
+    {
+     "account": "bank",
+     "credit": "266.85"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "decrease",
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "increase:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "decrease:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "statement",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002716",
+    "statement_date": "2026-10-31",
+    "ending_balance": "5933.43"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "expected_revision": 1,
+   "completion_key": "00000000-0000-0000-0000-000000002717",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The difference is 0.01, not 0.00. Tick exactly the lines on the statement, or correct the statement ending balance with Modify, then reconcile."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "statement",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002718",
+    "statement_date": "2026-10-31",
+    "ending_balance": "5933.42",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "result": "auto-screen-21",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "expected_revision": 2,
+   "completion_key": "00000000-0000-0000-0000-000000002719",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "result": "auto-report-21",
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {
+    "state": "R"
+   },
+   "result": "reconciled",
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "second",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000271a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "5933.42"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "second",
+   "result": "auto-screen-24",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "second",
+   "expected_revision": 1,
+   "completion_key": "00000000-0000-0000-0000-00000000271b",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "second",
+   "result": "auto-report-24",
+   "expect_error": false
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "expected_revision": 3,
+   "reason": "Synthetic correction",
+   "undo_key": "00000000-0000-0000-0000-00000000271c",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Only the most recent reconciliation of this account can be undone (statement 2026-10-31). Undo that one first."
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "second",
+   "expected_revision": 2,
+   "reason": "Synthetic correction",
+   "undo_key": "00000000-0000-0000-0000-00000000271d",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "second",
+   "result": "auto-report-26",
+   "expect_error": false
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "expected_revision": 3,
+   "reason": "Synthetic correction",
+   "undo_key": "00000000-0000-0000-0000-00000000271e",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "statement",
+   "result": "auto-report-27",
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {
+    "state": "C"
+   },
+   "result": "undone",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

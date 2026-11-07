@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>{{ account.label }} register · {{ company.name }}</title>
+<link rel="stylesheet" href="{{ static('sales/print.css') }}"><link rel="stylesheet" href="{{ static('ledger/reports.css') }}"><link rel="stylesheet" href="{{ static('banking/registers.css') }}">
+<style>@page { size: letter landscape; @bottom-center { content: "{% if stamp %}{{ stamp|css_string }} · {% endif %}{{ company.name|css_string }} · {{ account.code|css_string }} {{ account.name|css_string }} · printed {{ generated|date('Y-m-d H:i') }} UTC\A Page " counter(page) " of " counter(pages); white-space: pre; text-align: center; font: 8pt system-ui, sans-serif; color: #444; } }</style></head>
+<body class="print-body report-print">
+<div class="print-toolbar" role="toolbar" aria-label="Print actions">{% with audience='internal' %}{% include 'ledger/includes/print_toolbar_note.html' %}{% endwith %}
+<span class="print-toolbar-actions"><button type="button" id="print-now">Print / Save as PDF</button> <a href="{{ screen_url }}">Back to the register</a></span></div>
+<article class="sheet report-paper register-paper" lang="en">
+{% if fb_print_synthetic %}<div class="watermark" aria-hidden="true">TEST ONLY</div>{% endif %}
+<header class="report-head"><p class="report-company">{{ company.name }}</p><h1>{{ account.label }} register</h1>
+<p class="report-period">{% if start %}{{ start|date('Y-m-d') }}{% else %}Beginning{% endif %} through {% if end %}{{ end|date('Y-m-d') }}{% else %}latest posting{% endif %}{% if filtered %} · filtered: {{ filter_text }}{% endif %} · {{ company.currency }}</p></header>
+<dl class="register-totals print"><div><dt>Cleared balance</dt><dd class="amount">{{ totals.cleared }}</dd></div><div><dt>{{ labels.left_open }}</dt><dd class="amount">{{ totals.left_open }}</dd></div><div><dt>{{ labels.right_open }}</dt><dd class="amount">{{ totals.right_open }}</dd></div><div><dt>Ending balance</dt><dd class="amount">{{ totals.ending }}</dd></div></dl>
+<table class="bank-register print-register"><thead><tr><th>Date</th><th>Number</th><th>Type</th><th>Payee / name</th><th>Account</th><th>Memo</th><th class="amount">{{ labels.left }}</th><th>✓</th><th class="amount">{{ labels.right }}</th><th class="amount">Balance</th></tr></thead>
+<tbody>{% if start %}<tr class="total"><td colspan="9">Balance before {{ start|date('Y-m-d') }}</td><td class="amount">{{ opening }}</td></tr>{% endif %}
+{% for row in rows %}<tr><td>{{ row.line.journal.date|date('Y-m-d') }}</td><td>{{ row.number }}</td><td>{{ row.type }}</td><td>{% if row.party %}{{ row.party }}{% else %}—{% endif %}</td><td>{{ row.other }}</td><td>{{ row.memo }}</td><td class="amount">{% if row.left is not none %}{{ row.left }}{% endif %}</td><td>{% if row.state == 'C' %}✓{% elif row.state == 'R' %}R{% endif %}</td><td class="amount">{% if row.right is not none %}{{ row.right }}{% endif %}</td><td class="amount">{{ row.balance }}</td></tr>{% else %}<tr><td colspan="10">No posted lines.</td></tr>{% endfor %}</tbody>
+<tfoot><tr><th colspan="9">Ending balance</th><th class="amount">{{ closing }}</th></tr></tfoot></table>
+<p class="report-printed">Printed {{ generated|date('Y-m-d H:i') }} UTC{% if stamp %} · {{ stamp }}{% endif %} · {{ total }} line{{ total|pluralize }}</p>
+</article>
+<script src="{{ static('sales/print.js') }}" defer></script>
+</body></html>

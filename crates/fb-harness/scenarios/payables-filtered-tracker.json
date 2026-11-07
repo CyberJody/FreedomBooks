@@ -1,0 +1,647 @@
+{
+  "users": [
+    {
+      "username": "bill-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic bills",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap2",
+      "code": "201",
+      "name": "Other payable",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Asset",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor",
+      "model": "vendor",
+      "values": {
+        "display_name": "Acme",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "ref": "vendor2",
+      "model": "vendor",
+      "values": {
+        "display_name": "VENDOR Ω"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "dotless",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "I",
+        "request_key": "00000000-0000-0000-0000-0000000c3501",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "dotless",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "dotless-reverse",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "ı",
+        "request_key": "00000000-0000-0000-0000-0000000c3502",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "dotless-reverse",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "dotted",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-23",
+        "reference": "",
+        "memo": "İ",
+        "request_key": "00000000-0000-0000-0000-0000000c3503",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "dotted",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "sigma",
+      "values": {
+        "vendor_id": "vendor2",
+        "date": "2026-10-23",
+        "due_date": "2026-11-24",
+        "reference": "",
+        "memo": "Σ ς σ",
+        "request_key": "00000000-0000-0000-0000-0000000c3504",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "sigma",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "sharp",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "ß",
+        "request_key": "00000000-0000-0000-0000-0000000c3505",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "sharp",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "ligature",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "ﬃ",
+        "request_key": "00000000-0000-0000-0000-0000000c3506",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "ligature",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "accent",
+      "values": {
+        "vendor_id": "vendor2",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "É",
+        "memo": "",
+        "request_key": "00000000-0000-0000-0000-0000000c3507",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "accent",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "decomposed",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "é",
+        "request_key": "00000000-0000-0000-0000-0000000c3508",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "decomposed",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "literal",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "%_\\",
+        "request_key": "00000000-0000-0000-0000-0000000c3509",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "literal",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "draft",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "I",
+        "request_key": "00000000-0000-0000-0000-0000000c350a",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "paid",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "I",
+        "request_key": "00000000-0000-0000-0000-0000000c350b",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "paid",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_pay",
+      "company": "co",
+      "ref": "payment",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-11-01",
+        "amount": "1.01",
+        "method": "OTHER",
+        "reference": "",
+        "memo": "",
+        "bank_id": "bank",
+        "request_key": "00000000-0000-0000-0000-0000000c350c",
+        "allocations": [
+          {
+            "bill_id": "paid",
+            "amount": "1.01"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_save",
+      "company": "co",
+      "ref": "void",
+      "values": {
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "due_date": "2026-11-22",
+        "reference": "",
+        "memo": "I",
+        "request_key": "00000000-0000-0000-0000-0000000c350d",
+        "lines": [
+          {
+            "description": "Synthetic filter vector",
+            "quantity": "1.005",
+            "rate": "1.00",
+            "expense_account_id": "expense"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "payables_post",
+      "company": "co",
+      "bill": "void",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "payables_void",
+      "company": "co",
+      "bill": "void",
+      "expected_revision": 2,
+      "date": "2026-10-24",
+      "reason": "Synthetic filter test",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-23",
+    "2026-10-24",
+    "2099-12-31"
+  ],
+  "payables_tracker_filters": [
+    {
+      "name": "query-0",
+      "filters": {
+        "q": "ı"
+      }
+    },
+    {
+      "name": "query-1",
+      "filters": {
+        "q": "I"
+      }
+    },
+    {
+      "name": "query-2",
+      "filters": {
+        "q": "i"
+      }
+    },
+    {
+      "name": "query-3",
+      "filters": {
+        "q": "İ"
+      }
+    },
+    {
+      "name": "query-4",
+      "filters": {
+        "q": "σ"
+      }
+    },
+    {
+      "name": "query-5",
+      "filters": {
+        "q": "ς"
+      }
+    },
+    {
+      "name": "query-6",
+      "filters": {
+        "q": "Σ"
+      }
+    },
+    {
+      "name": "query-7",
+      "filters": {
+        "q": "ß"
+      }
+    },
+    {
+      "name": "query-8",
+      "filters": {
+        "q": "SS"
+      }
+    },
+    {
+      "name": "query-9",
+      "filters": {
+        "q": "ﬃ"
+      }
+    },
+    {
+      "name": "query-10",
+      "filters": {
+        "q": "FFI"
+      }
+    },
+    {
+      "name": "query-11",
+      "filters": {
+        "q": "é"
+      }
+    },
+    {
+      "name": "query-12",
+      "filters": {
+        "q": "é"
+      }
+    },
+    {
+      "name": "query-13",
+      "filters": {
+        "q": "%_\\"
+      }
+    },
+    {
+      "name": "query-14",
+      "filters": {
+        "q": "Ω"
+      }
+    },
+    {
+      "name": "query-15",
+      "filters": {
+        "q": "bill"
+      }
+    },
+    {
+      "name": "query-16",
+      "filters": {
+        "q": "not found"
+      }
+    },
+    {
+      "name": "state-OUTSTANDING",
+      "filters": {
+        "q": "ı",
+        "state": "OUTSTANDING"
+      }
+    },
+    {
+      "name": "state-OVERDUE",
+      "filters": {
+        "q": "ı",
+        "state": "OVERDUE"
+      }
+    },
+    {
+      "name": "state-PAID_RECENT",
+      "filters": {
+        "q": "ı",
+        "state": "PAID_RECENT"
+      }
+    },
+    {
+      "name": "state-OPEN",
+      "filters": {
+        "q": "ı",
+        "state": "OPEN"
+      }
+    },
+    {
+      "name": "state-DRAFT",
+      "filters": {
+        "q": "ı",
+        "state": "DRAFT"
+      }
+    },
+    {
+      "name": "state-VOID",
+      "filters": {
+        "q": "ı",
+        "state": "VOID"
+      }
+    },
+    {
+      "name": "vendor",
+      "filters": {
+        "vendor": "vendor2"
+      }
+    },
+    {
+      "name": "date-range",
+      "filters": {
+        "start": "2026-11-23",
+        "end": "2026-11-24"
+      }
+    },
+    {
+      "name": "combined",
+      "filters": {
+        "q": "σ",
+        "vendor": "vendor2",
+        "start": "2026-11-24",
+        "end": "2026-11-24",
+        "state": "OUTSTANDING"
+      }
+    },
+    {
+      "name": "wrong-vendor",
+      "filters": {
+        "q": "σ",
+        "vendor": "vendor"
+      }
+    }
+  ]
+}

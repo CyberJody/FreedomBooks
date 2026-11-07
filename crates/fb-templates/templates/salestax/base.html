@@ -1,0 +1,8 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('directory/lists.css') }}"><link rel="stylesheet" href="{{ static('salestax/salestax.css') }}">{% block salestax_head %}{% endblock %}{% endblock %}
+{% block content %}<div class="master-data sales-tax">
+<p class="eyebrow">{{ company.name }} · {{ company.currency }} · Sales tax</p>
+<nav class="tab-links" aria-label="Sales tax pages"><a href="{{ url('salestax:settings', company.pk) }}"{% if tab == 'settings' %} aria-current="page"{% endif %}>Settings</a><a href="{{ url('salestax:list', company.pk) }}"{% if tab == 'rates' %} aria-current="page"{% endif %}>Tax rates &amp; groups</a></nav>
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+{% block salestax_content %}{% endblock %}
+</div>{% endblock %}

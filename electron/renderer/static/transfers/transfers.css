@@ -1,0 +1,22 @@
+/* N16 transfers: tan/plum theme, same family as payments and checks. */
+.transfer .notice {border:1px solid #74576f;background:#f6efe6;padding:10px 12px}
+.transfer-face {border:1px solid #74576f;background:#fbf7f1;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 24px;max-width:900px}
+.transfer-face > div {margin:0}
+.transfer-face label {display:block;font-size:12px}
+.transfer-face select, .transfer-face input, .transfer-face textarea {width:100%;box-sizing:border-box}
+.transfer-face .field-memo {grid-column:1/-1}
+.transfer-face .balance {display:block;font-size:12px;color:#654760;font-variant-numeric:tabular-nums;margin-top:4px}
+.transfer-face {margin-bottom:16px}
+.transfer-review {max-width:900px;box-sizing:border-box;padding:4px 12px 12px;margin-bottom:16px}
+.transfer-review table {width:100%}
+.transfer .table-scroll {overflow-x:auto;max-width:100%}
+.transfer button + button {margin-left:8px}
+.transfer-document table {max-width:900px}
+.transfer .num {text-align:right;font-variant-numeric:tabular-nums}
+.transfer .long-text {overflow-wrap:anywhere;white-space:pre-line}
+.transfer-facts {display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 16px}
+.transfer-facts dt {font-weight:bold}
+.transfer-facts dd {margin:0}
+.transfer-filters {flex-wrap:wrap}
+.transfer-filters select, .transfer-filters input {display:block}
+@media(max-width:850px){.transfer-face{grid-template-columns:1fr}.transfer-facts{grid-template-columns:1fr}.transfer-review{padding:4px 6px 8px}.transfer-review th,.transfer-review td,.transfer-document th,.transfer-document td{padding:8px 6px}.transfer .num{white-space:nowrap}.transfer button{margin:4px 0}.transfer button + button{margin-left:0}}

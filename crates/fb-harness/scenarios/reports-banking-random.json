@@ -1,0 +1,5572 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line0",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "90.7"
+    },
+    {
+     "account": "bank",
+     "credit": "90.7"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line0",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line1",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "139.32"
+    },
+    {
+     "account": "income",
+     "credit": "139.32"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line2",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "4.46"
+    },
+    {
+     "account": "income",
+     "credit": "4.46"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line2",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line3",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "4.11"
+    },
+    {
+     "account": "bank",
+     "credit": "4.11"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line3",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line4",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "120.87"
+    },
+    {
+     "account": "income",
+     "credit": "120.87"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line4",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line5",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "187.83"
+    },
+    {
+     "account": "income",
+     "credit": "187.83"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line5",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line6",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "64.61"
+    },
+    {
+     "account": "bank",
+     "credit": "64.61"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line6",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line7",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "75.57"
+    },
+    {
+     "account": "income",
+     "credit": "75.57"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line7",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line8",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "6.21"
+    },
+    {
+     "account": "income",
+     "credit": "6.21"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line8",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line9",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "expense",
+     "debit": "104.32"
+    },
+    {
+     "account": "bank",
+     "credit": "104.32"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line9",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line10",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "113.69"
+    },
+    {
+     "account": "income",
+     "credit": "113.69"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line10",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "company": "c",
+   "ref": "line11",
+   "date": "2026-10-01",
+   "memo": "Synthetic statement line",
+   "lines": [
+    {
+     "account": "bank",
+     "debit": "38.81"
+    },
+    {
+     "account": "income",
+     "credit": "38.81"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c",
+   "journal": "line11",
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002725",
+    "statement_date": "2026-10-31",
+    "ending_balance": "0.00"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002726",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-61.6",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002727",
+    "statement_date": "2026-10-31",
+    "ending_balance": "43.53",
+    "expected_revision": 2
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 3,
+   "shown": {
+    "line5:1": 1,
+    "line9:2": 1,
+    "line6:2": 0
+   },
+   "ticked": [
+    "line5:1",
+    "line9:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002728",
+    "statement_date": "2026-10-31",
+    "ending_balance": "17.82",
+    "expected_revision": 3
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002729",
+    "statement_date": "2026-10-31",
+    "ending_balance": "88.14",
+    "expected_revision": 4
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000272a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-20.89",
+    "expected_revision": 5
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000272b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-7.96",
+    "expected_revision": 6
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000272c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-66.02",
+    "expected_revision": 7
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 8,
+   "shown": {
+    "line11:1": 0,
+    "line2:1": 1,
+    "line0:2": 0
+   },
+   "ticked": [
+    "line2:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 8,
+   "shown": {
+    "line11:1": 0,
+    "line8:1": 0,
+    "line9:2": 2,
+    "line3:2": 0,
+    "line0:2": 0
+   },
+   "ticked": [
+    "line11:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000272d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-53.71",
+    "expected_revision": 9
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000272e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-64.69",
+    "expected_revision": 10
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 11,
+   "shown": {
+    "line9:2": 2,
+    "line7:1": 0,
+    "line5:1": 1,
+    "line4:1": 0,
+    "line11:1": 1
+   },
+   "ticked": [
+    "line7:1",
+    "line11:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000272f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "17.27",
+    "expected_revision": 12
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 13,
+   "shown": {
+    "line1:1": 1,
+    "line6:2": 0,
+    "line4:1": 0,
+    "line7:1": 1,
+    "line5:1": 2
+   },
+   "ticked": [
+    "line6:2",
+    "line4:1",
+    "line7:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 14,
+   "shown": {
+    "line3:2": 0,
+    "line2:1": 1,
+    "line5:1": 2
+   },
+   "ticked": [
+    "line2:1",
+    "line5:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 15,
+   "shown": {
+    "line8:1": 1,
+    "line3:2": 0,
+    "line11:1": 1
+   },
+   "ticked": [
+    "line8:1",
+    "line3:2",
+    "line11:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002730",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-51.08",
+    "expected_revision": 16
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 17,
+   "shown": {
+    "line3:2": 1,
+    "line8:1": 1,
+    "line10:1": 2,
+    "line1:1": 2,
+    "line11:1": 2
+   },
+   "ticked": [
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002731",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-31.98",
+    "expected_revision": 18
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002732",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-50.66",
+    "expected_revision": 19
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002733",
+    "statement_date": "2026-10-31",
+    "ending_balance": "78.73",
+    "expected_revision": 20
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002734",
+    "statement_date": "2026-10-31",
+    "ending_balance": "35.42",
+    "expected_revision": 21
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 22,
+   "shown": {
+    "line1:1": 3,
+    "line7:1": 2
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002735",
+    "statement_date": "2026-10-31",
+    "ending_balance": "46.59",
+    "expected_revision": 23
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002736",
+    "statement_date": "2026-10-31",
+    "ending_balance": "79.77",
+    "expected_revision": 24
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 25,
+   "shown": {
+    "line1:1": 4,
+    "line7:1": 2,
+    "line8:1": 3
+   },
+   "ticked": [
+    "line1:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002737",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-46.93",
+    "expected_revision": 26
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 27,
+   "shown": {
+    "line9:2": 3
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002738",
+    "statement_date": "2026-10-31",
+    "ending_balance": "49.74",
+    "expected_revision": 28
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002739",
+    "statement_date": "2026-10-31",
+    "ending_balance": "2.47",
+    "expected_revision": 29
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000273a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-34.89",
+    "expected_revision": 30
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000273b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "97.7",
+    "expected_revision": 31
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000273c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "32.25",
+    "expected_revision": 32
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 33,
+   "shown": {
+    "line9:2": 4,
+    "line8:1": 4,
+    "line10:1": 3,
+    "line6:2": 1
+   },
+   "ticked": [
+    "line8:1",
+    "line6:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000273d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "61.44",
+    "expected_revision": 34
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000273e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "84.12",
+    "expected_revision": 35
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 36,
+   "shown": {
+    "line8:1": 6,
+    "line7:1": 2
+   },
+   "ticked": [
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000273f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-30.58",
+    "expected_revision": 37
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 38,
+   "shown": {
+    "line10:1": 5,
+    "line3:2": 3
+   },
+   "ticked": [
+    "line10:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002740",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-12.12",
+    "expected_revision": 39
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002741",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-52.66",
+    "expected_revision": 40
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 41,
+   "shown": {
+    "line0:2": 6
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002742",
+    "statement_date": "2026-10-31",
+    "ending_balance": "1.99",
+    "expected_revision": 41
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002743",
+    "statement_date": "2026-10-31",
+    "ending_balance": "28.21",
+    "expected_revision": 42
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002744",
+    "statement_date": "2026-10-31",
+    "ending_balance": "53.67",
+    "expected_revision": 43
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002745",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-90.18",
+    "expected_revision": 44
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002746",
+    "statement_date": "2026-10-31",
+    "ending_balance": "67.68",
+    "expected_revision": 45
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 46,
+   "shown": {
+    "line5:1": 9,
+    "line1:1": 5,
+    "line3:2": 5
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002747",
+    "statement_date": "2026-10-31",
+    "ending_balance": "76.66",
+    "expected_revision": 47
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 0,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002748",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-11.91",
+    "expected_revision": 48
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 49,
+   "shown": {
+    "line9:2": 4,
+    "line0:2": 6
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002749",
+    "statement_date": "2026-10-31",
+    "ending_balance": "13.52",
+    "expected_revision": 49
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000274a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "63.66",
+    "expected_revision": 50
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 51,
+   "shown": {
+    "line11:1": 7,
+    "line8:1": 7,
+    "line5:1": 10,
+    "line2:1": 2,
+    "line6:2": 3
+   },
+   "ticked": [
+    "line5:1",
+    "line6:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000274b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-68.44",
+    "expected_revision": 52
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000274c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-32.01",
+    "expected_revision": 53
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000274d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-3.98",
+    "expected_revision": 54
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000274e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-56.99",
+    "expected_revision": 55
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000274f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "23.29",
+    "expected_revision": 56
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002750",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-15.71",
+    "expected_revision": 57
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002751",
+    "statement_date": "2026-10-31",
+    "ending_balance": "67.64",
+    "expected_revision": 58
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002752",
+    "statement_date": "2026-10-31",
+    "ending_balance": "54.16",
+    "expected_revision": 59
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 60,
+   "shown": {
+    "line9:2": 5
+   },
+   "ticked": [
+    "line9:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002753",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-2.83",
+    "expected_revision": 60
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002754",
+    "statement_date": "2026-10-31",
+    "ending_balance": "62.74",
+    "expected_revision": 61
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002755",
+    "statement_date": "2026-10-31",
+    "ending_balance": "15.35",
+    "expected_revision": 62
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 63,
+   "shown": {
+    "line9:2": 5,
+    "line7:1": 5,
+    "line4:1": 7,
+    "line8:1": 9
+   },
+   "ticked": [
+    "line7:1",
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002756",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-6.45",
+    "expected_revision": 64
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002757",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-82.81",
+    "expected_revision": 65
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 3,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002758",
+    "statement_date": "2026-10-31",
+    "ending_balance": "88.56",
+    "expected_revision": 66
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002759",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-29.18",
+    "expected_revision": 67
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000275a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-39.71",
+    "expected_revision": 68
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 4,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000275b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-4.7",
+    "expected_revision": 69
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 70,
+   "shown": {
+    "line1:1": 9,
+    "line9:2": 9,
+    "line2:1": 5,
+    "line8:1": 9,
+    "line0:2": 7
+   },
+   "ticked": [
+    "line9:2",
+    "line2:1",
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000275c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "31.06",
+    "expected_revision": 71
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 72,
+   "shown": {
+    "line7:1": 5
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 73,
+   "shown": {
+    "line3:2": 8
+   },
+   "ticked": [
+    "line3:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 4,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 74,
+   "shown": {
+    "line0:2": 8,
+    "line10:1": 10
+   },
+   "ticked": [
+    "line0:2",
+    "line10:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000275d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "87.4",
+    "expected_revision": 75
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000275e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-67.87",
+    "expected_revision": 76
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000275f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "98.41",
+    "expected_revision": 77
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 78,
+   "shown": {
+    "line9:2": 9,
+    "line6:2": 5
+   },
+   "ticked": [
+    "line9:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002760",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-0.62",
+    "expected_revision": 79
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002761",
+    "statement_date": "2026-10-31",
+    "ending_balance": "28.63",
+    "expected_revision": 80
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002762",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-0.42",
+    "expected_revision": 81
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002763",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-32.37",
+    "expected_revision": 82
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 5,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002764",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-30.15",
+    "expected_revision": 83
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002765",
+    "statement_date": "2026-10-31",
+    "ending_balance": "98.78",
+    "expected_revision": 84
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 85,
+   "shown": {
+    "line3:2": 10,
+    "line1:1": 11
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002766",
+    "statement_date": "2026-10-31",
+    "ending_balance": "42.03",
+    "expected_revision": 86
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 12,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002767",
+    "statement_date": "2026-10-31",
+    "ending_balance": "21.4",
+    "expected_revision": 87
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 88,
+   "shown": {
+    "line7:1": 7,
+    "line8:1": 14,
+    "line4:1": 13
+   },
+   "ticked": [
+    "line7:1",
+    "line4:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002768",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-84.22",
+    "expected_revision": 88
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002769",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-96.01",
+    "expected_revision": 89
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000276a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-15.65",
+    "expected_revision": 90
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000276b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-63.56",
+    "expected_revision": 91
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000276c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "58.57",
+    "expected_revision": 92
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 93,
+   "shown": {
+    "line10:1": 11,
+    "line6:2": 6,
+    "line0:2": 11,
+    "line11:1": 11,
+    "line9:2": 10
+   },
+   "ticked": [
+    "line10:1",
+    "line0:2",
+    "line9:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000276d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-68.22",
+    "expected_revision": 94
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000276e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "83.52",
+    "expected_revision": 95
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 96,
+   "shown": {
+    "line3:2": 10,
+    "line9:2": 11,
+    "line1:1": 14,
+    "line11:1": 12,
+    "line8:1": 15
+   },
+   "ticked": [
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 97,
+   "shown": {
+    "line0:2": 11,
+    "line2:1": 6,
+    "line8:1": 15
+   },
+   "ticked": [
+    "line0:2",
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 6,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000276f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-78.43",
+    "expected_revision": 97
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 12,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002770",
+    "statement_date": "2026-10-31",
+    "ending_balance": "17.87",
+    "expected_revision": 98
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 99,
+   "shown": {
+    "line11:1": 14,
+    "line3:2": 10,
+    "line5:1": 14,
+    "line6:2": 7,
+    "line4:1": 13
+   },
+   "ticked": [
+    "line3:2",
+    "line5:1",
+    "line6:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 100,
+   "shown": {
+    "line1:1": 14,
+    "line2:1": 9,
+    "line7:1": 8,
+    "line8:1": 17,
+    "line3:2": 11
+   },
+   "ticked": [
+    "line1:1",
+    "line7:1",
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002771",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-44.48",
+    "expected_revision": 101
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002772",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-31.06",
+    "expected_revision": 102
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 6,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 7,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 103,
+   "shown": {
+    "line8:1": 17,
+    "line4:1": 14,
+    "line3:2": 12,
+    "line7:1": 9,
+    "line9:2": 13
+   },
+   "ticked": [
+    "line8:1",
+    "line4:1",
+    "line7:1",
+    "line9:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002773",
+    "statement_date": "2026-10-31",
+    "ending_balance": "7.95",
+    "expected_revision": 104
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002774",
+    "statement_date": "2026-10-31",
+    "ending_balance": "97.98",
+    "expected_revision": 105
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002775",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-37.81",
+    "expected_revision": 106
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002776",
+    "statement_date": "2026-10-31",
+    "ending_balance": "44.69",
+    "expected_revision": 107
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002777",
+    "statement_date": "2026-10-31",
+    "ending_balance": "79.91",
+    "expected_revision": 108
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 109,
+   "shown": {
+    "line1:1": 15,
+    "line8:1": 17,
+    "line11:1": 14,
+    "line3:2": 12,
+    "line10:1": 11
+   },
+   "ticked": [
+    "line1:1",
+    "line3:2",
+    "line10:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002778",
+    "statement_date": "2026-10-31",
+    "ending_balance": "46.33",
+    "expected_revision": 110
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002779",
+    "statement_date": "2026-10-31",
+    "ending_balance": "53.1",
+    "expected_revision": 111
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 112,
+   "shown": {
+    "line6:2": 8,
+    "line4:1": 15,
+    "line1:1": 16,
+    "line8:1": 18
+   },
+   "ticked": [
+    "line4:1",
+    "line1:1",
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000277a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "8.33",
+    "expected_revision": 113
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000277b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-28.23",
+    "expected_revision": 114
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000277c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-33.95",
+    "expected_revision": 115
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 13,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000277d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "33.09",
+    "expected_revision": 116
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000277e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "66.9",
+    "expected_revision": 117
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 118,
+   "shown": {
+    "line5:1": 16,
+    "line1:1": 17
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 18,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 119,
+   "shown": {
+    "line8:1": 19,
+    "line11:1": 14,
+    "line4:1": 16,
+    "line2:1": 11,
+    "line3:2": 14
+   },
+   "ticked": [
+    "line2:1",
+    "line3:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000277f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-69.36",
+    "expected_revision": 120
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002780",
+    "statement_date": "2026-10-31",
+    "ending_balance": "33.59",
+    "expected_revision": 121
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 122,
+   "shown": {
+    "line4:1": 16
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 122,
+   "shown": {
+    "line2:1": 11,
+    "line11:1": 14
+   },
+   "ticked": [
+    "line2:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002781",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-71.7",
+    "expected_revision": 122
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 123,
+   "shown": {
+    "line10:1": 12,
+    "line7:1": 10,
+    "line9:2": 14,
+    "line11:1": 15,
+    "line2:1": 11
+   },
+   "ticked": [
+    "line7:1",
+    "line2:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 12,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "C",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 124,
+   "shown": {
+    "line7:1": 11,
+    "line10:1": 13,
+    "line4:1": 16,
+    "line11:1": 16,
+    "line5:1": 16
+   },
+   "ticked": [
+    "line7:1",
+    "line4:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 125,
+   "shown": {
+    "line1:1": 18,
+    "line6:2": 8,
+    "line4:1": 17,
+    "line8:1": 20,
+    "line0:2": 12
+   },
+   "ticked": [
+    "line0:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002782",
+    "statement_date": "2026-10-31",
+    "ending_balance": "23.54",
+    "expected_revision": 126
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 18,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 127,
+   "shown": {
+    "line8:1": 20,
+    "line10:1": 14,
+    "line4:1": 19,
+    "line5:1": 16,
+    "line1:1": 18
+   },
+   "ticked": [
+    "line8:1",
+    "line10:1",
+    "line5:1",
+    "line1:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 21,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 17,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "C",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002783",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-54.24",
+    "expected_revision": 128
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 17,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002784",
+    "statement_date": "2026-10-31",
+    "ending_balance": "98.23",
+    "expected_revision": 129
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002785",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-82.64",
+    "expected_revision": 130
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 20,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 8,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 131,
+   "shown": {
+    "line4:1": 20
+   },
+   "ticked": [],
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002786",
+    "statement_date": "2026-10-31",
+    "ending_balance": "81.58",
+    "expected_revision": 131
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002787",
+    "statement_date": "2026-10-31",
+    "ending_balance": "79.08",
+    "expected_revision": 132
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "U",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "C",
+   "expected_revision": 22,
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 133,
+   "shown": {
+    "line8:1": 23,
+    "line0:2": 13
+   },
+   "ticked": [
+    "line8:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 134,
+   "shown": {
+    "line6:2": 9,
+    "line2:1": 11,
+    "line1:1": 19,
+    "line5:1": 18,
+    "line4:1": 20
+   },
+   "ticked": [
+    "line5:1"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "C",
+   "expected_revision": 9,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "C",
+   "expected_revision": 20,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 23,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002788",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-73.92",
+    "expected_revision": 135
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line0:2",
+   "state": "C",
+   "expected_revision": 13,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002789",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-74.48",
+    "expected_revision": 136
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line7:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "C",
+   "expected_revision": 19,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 10,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000278a",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-32.42",
+    "expected_revision": 137
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000278b",
+    "statement_date": "2026-10-31",
+    "ending_balance": "81.34",
+    "expected_revision": 138
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line11:1",
+   "state": "U",
+   "expected_revision": 17,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line1:1",
+   "state": "U",
+   "expected_revision": 21,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 24,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 9,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 24,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line9:2",
+   "state": "C",
+   "expected_revision": 14,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000278c",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-64.68",
+    "expected_revision": 139
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_ticks",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 140,
+   "shown": {
+    "line4:1": 20,
+    "line9:2": 15,
+    "line5:1": 19,
+    "line10:1": 16,
+    "line6:2": 10
+   },
+   "ticked": [
+    "line5:1",
+    "line6:2"
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "C",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000278d",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-28.86",
+    "expected_revision": 141
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000278e",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-7.62",
+    "expected_revision": 142
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line5:1",
+   "state": "U",
+   "expected_revision": 19,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "U",
+   "expected_revision": 15,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 20,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 21,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line6:2",
+   "state": "U",
+   "expected_revision": 11,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000278f",
+    "statement_date": "2026-10-31",
+    "ending_balance": "-45.26",
+    "expected_revision": 143
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line2:1",
+   "state": "C",
+   "expected_revision": 11,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line3:2",
+   "state": "U",
+   "expected_revision": 16,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This line changed after the register was opened. Reload the register and try again."
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line8:1",
+   "state": "U",
+   "expected_revision": 24,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "U",
+   "expected_revision": 21,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line10:1",
+   "state": "C",
+   "expected_revision": 16,
+   "expect_error": false
+  },
+  {
+   "op": "banking_clear",
+   "company": "c",
+   "line": "line4:1",
+   "state": "C",
+   "expected_revision": 22,
+   "expect_error": false
+  },
+  {
+   "op": "banking_begin",
+   "company": "c",
+   "ref": "random",
+   "account": "bank",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-000000002790",
+    "statement_date": "2026-10-31",
+    "ending_balance": "306.02",
+    "expected_revision": 144
+   },
+   "expect_error": false
+  },
+  {
+   "op": "banking_screen",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "result": "auto-screen-538",
+   "expect_error": false
+  },
+  {
+   "op": "banking_finish",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 145,
+   "completion_key": "00000000-0000-0000-0000-000000002791",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "result": "auto-report-538",
+   "expect_error": false
+  },
+  {
+   "op": "banking_undo",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "expected_revision": 146,
+   "reason": "Synthetic correction",
+   "undo_key": "00000000-0000-0000-0000-000000002792",
+   "expect_error": false
+  },
+  {
+   "op": "banking_report",
+   "company": "c",
+   "account": "bank",
+   "reconciliation": "random",
+   "result": "auto-report-539",
+   "expect_error": false
+  },
+  {
+   "op": "banking_register",
+   "company": "c",
+   "account": "bank",
+   "values": {
+    "state": "open"
+   },
+   "result": "random-final",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ],
+ "financial_reports": {
+  "profit_loss": [
+   [
+    null,
+    "2099-12-31"
+   ],
+   [
+    "2026-01-01",
+    "2026-12-31"
+   ],
+   [
+    "2026-09-01",
+    "2026-09-30"
+   ],
+   [
+    "2026-10-01",
+    "2026-10-10"
+   ],
+   [
+    "2026-10-11",
+    "2026-10-20"
+   ],
+   [
+    "2026-10-21",
+    "2026-10-31"
+   ],
+   [
+    "2026-11-01",
+    "2026-12-31"
+   ],
+   [
+    "2025-01-01",
+    "2025-12-31"
+   ]
+  ],
+  "balance_sheet": [
+   "2025-12-31",
+   "2026-09-30",
+   "2026-10-10",
+   "2026-10-20",
+   "2026-10-31",
+   "2026-12-31",
+   "2027-01-01",
+   "2099-12-31"
+  ],
+  "general_ledger": [
+   [
+    null,
+    "2099-12-31",
+    "",
+    null
+   ],
+   [
+    "2026-10-01",
+    "2026-10-31",
+    "",
+    null
+   ],
+   [
+    "2026-10-11",
+    "2026-10-20",
+    "pl",
+    null
+   ],
+   [
+    "2027-01-01",
+    "2027-01-31",
+    "asset",
+    null
+   ]
+  ]
+ }
+}

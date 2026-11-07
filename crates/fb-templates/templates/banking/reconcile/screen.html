@@ -1,0 +1,43 @@
+{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}"><link rel="stylesheet" href="{{ static('banking/reconcile.css') }}"><script src="{{ static('banking/reconcile.js') }}" defer></script>{% endblock %}{% block content %}
+<div class="heading register-heading"><div><p class="eyebrow">{{ company.name }} · Reconcile · {{ company.currency }}</p><h1>Reconcile {{ account.label }}</h1>
+<p class="statement-line">Statement date <strong id="statement-date">{{ rec.statement_date|date('Y-m-d') }}</strong> · {{ words.ending }} <strong class="amount" id="statement-ending">{{ totals.ending }}</strong> · <a href="{{ url('reconcile:begin', company.pk, account.pk) }}">Modify</a></p></div>
+<p class="register-actions"><a href="{{ url('reconcile:list', company.pk) }}">All accounts</a> · <a href="{{ url('register', company.pk, account.pk) }}">Register</a> · <a href="{{ url('reconcile:history', company.pk, account.pk) }}">History</a></p></div>
+{% if errors %}<ul class="errorlist" role="alert">{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
+{% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+{% for note in notes %}<p class="notice warning" role="note">{{ note }}</p>{% endfor %}
+{% if too_many %}<p class="notice warning" role="alert">{{ total }} lines are not reconciled up to this statement date; this screen lists at most {{ cap }}. Reconcile an earlier statement first (Modify the statement date), or mark lines in the register.</p>{% endif %}
+<form method="post" id="reconcile-form" data-sign="{{ sign }}" data-beginning="{{ totals.beginning }}" data-ending="{{ totals.ending }}">{{ csrf_token|safe }}
+<input type="hidden" name="reconciliation" value="{{ rec.pk }}"><input type="hidden" name="revision" value="{{ rec.revision }}">
+<input type="hidden" name="shown" value="{{ shown }}"><input type="hidden" name="completion_key" value="{{ completion_key }}"><input type="hidden" name="options" value="1">
+<div class="rec-options"><label><input type="checkbox" name="hide_later" value="1"{% if rec.hide_later %} checked{% endif %}> Hide transactions after the statement date</label>
+{% if hidden_cleared %}<span class="muted"> · {{ hidden_cleared }} cleared line{{ hidden_cleared|pluralize }} dated later {{ hidden_cleared|pluralize("is,are") }} hidden and not part of this statement.</span>{% endif %}
+<span class="rec-mark-all" hidden><button type="button" class="secondary" data-mark="all">Mark all</button> <button type="button" class="secondary" data-mark="none">Unmark all</button></span></div>
+<div class="rec-lists">
+<section class="rec-list" aria-labelledby="left-title"><h2 id="left-title">{{ words.left }}</h2>
+<table class="rec-table" data-side="credit"><thead><tr><th scope="col" class="mark-col"><span aria-hidden="true">✓</span><span class="sr-only">Cleared</span></th><th scope="col">Date</th><th scope="col">Number</th><th scope="col">Payee / name</th><th scope="col">Memo</th><th scope="col" class="amount">Amount</th></tr></thead><tbody>
+{% for row in left %}<tr id="line-{{ row.line.pk }}"{% if row.state == 'C' %} class="is-cleared"{% endif %}><td class="mark-col"><input type="checkbox" name="tick" value="{{ row.line.pk }}" data-cents="{{ row.cents }}" data-side="credit" aria-label="Cleared: {{ row.number }} {{ row.left }}"{% if row.state == 'C' %} checked{% endif %}></td>
+<td data-label="Date" class="date">{{ row.line.journal.date|date('Y-m-d') }}</td><td data-label="Number" class="number"><a href="{{ row.url }}">{{ row.number }}</a><small class="type">{{ row.type }}</small></td><td data-label="Payee / name" class="party">{% if row.party %}{{ row.party }}{% else %}—{% endif %}</td><td data-label="Memo" class="memo">{{ row.memo }}</td><td data-label="Amount" class="amount">{{ row.left }}</td></tr>
+{% else %}<tr><td colspan="6" class="empty">Nothing to reconcile on this side.</td></tr>{% endfor %}
+</tbody></table></section>
+<section class="rec-list" aria-labelledby="right-title"><h2 id="right-title">{{ words.right }}</h2>
+<table class="rec-table" data-side="debit"><thead><tr><th scope="col" class="mark-col"><span aria-hidden="true">✓</span><span class="sr-only">Cleared</span></th><th scope="col">Date</th><th scope="col">Number</th><th scope="col">Payee / name</th><th scope="col">Memo</th><th scope="col" class="amount">Amount</th></tr></thead><tbody>
+{% for row in right %}<tr id="line-{{ row.line.pk }}"{% if row.state == 'C' %} class="is-cleared"{% endif %}><td class="mark-col"><input type="checkbox" name="tick" value="{{ row.line.pk }}" data-cents="{{ row.cents }}" data-side="debit" aria-label="Cleared: {{ row.number }} {{ row.right }}"{% if row.state == 'C' %} checked{% endif %}></td>
+<td data-label="Date" class="date">{{ row.line.journal.date|date('Y-m-d') }}</td><td data-label="Number" class="number"><a href="{{ row.url }}">{{ row.number }}</a><small class="type">{{ row.type }}</small></td><td data-label="Payee / name" class="party">{% if row.party %}{{ row.party }}{% else %}—{% endif %}</td><td data-label="Memo" class="memo">{{ row.memo }}</td><td data-label="Amount" class="amount">{{ row.right }}</td></tr>
+{% else %}<tr><td colspan="6" class="empty">Nothing to reconcile on this side.</td></tr>{% endfor %}
+</tbody></table></section>
+</div>
+<div class="rec-footer">
+<dl class="rec-totals" aria-label="Reconciliation totals">
+<div><dt>Beginning balance</dt><dd class="amount" id="beginning">{{ totals.beginning }}</dd></div>
+<div><dt>{{ words.right_summary }} (<span id="count-debit">{{ totals.n_debit }}</span>)</dt><dd class="amount" id="cleared-debit">{{ totals.cleared_debit_display }}</dd></div>
+<div><dt>{{ words.left_summary }} (<span id="count-credit">{{ totals.n_credit }}</span>)</dt><dd class="amount" id="cleared-credit">{{ totals.cleared_credit_display }}</dd></div>
+<div><dt>Cleared balance</dt><dd class="amount" id="cleared-balance">{{ totals.cleared }}</dd></div>
+<div><dt>{{ words.ending }}</dt><dd class="amount" id="ending">{{ totals.ending }}</dd></div>
+<div class="difference{% if totals.difference|report_nonzero %} off{% else %} zero{% endif %}" id="difference-box"><dt>Difference</dt><dd class="amount" id="difference">{{ totals.difference }}</dd></div>
+</dl>
+<div class="button-bar rec-buttons"><button type="submit" name="action" value="save" class="secondary">Save and recalculate</button> <button type="submit" name="action" value="leave" class="secondary">Leave</button>
+<button type="submit" name="action" value="reconcile" id="reconcile-now"{% if totals.difference|report_nonzero or too_many %} disabled{% endif %}>Reconcile now</button></div>
+<p class="muted rec-hint" id="reconcile-hint">{% if totals.difference|report_nonzero %}Reconcile now is available when the difference is 0.00. Leave keeps your ticks.{% else %}The difference is 0.00: reconcile now to lock these lines.{% endif %}</p>
+</div>
+</form>
+{% endblock %}

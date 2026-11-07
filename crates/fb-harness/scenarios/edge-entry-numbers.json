@@ -1,0 +1,1385 @@
+{
+ "name": "edge-entry-numbers",
+ "users": [
+  {
+   "username": "owner"
+  },
+  {
+   "username": "clerk"
+  },
+  {
+   "username": "stranger"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c1",
+   "name": "Synthetic c1",
+   "currency": "USD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.bank",
+   "company": "c1",
+   "code": "1000",
+   "name": "Checking",
+   "detail_type": "BANK",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.ar",
+   "company": "c1",
+   "code": "1100",
+   "name": "Receivables",
+   "detail_type": "RECEIVABLE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equip",
+   "company": "c1",
+   "code": "1500",
+   "name": "Equipment",
+   "detail_type": "FIXED_ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.accdep",
+   "company": "c1",
+   "code": "1590",
+   "name": "Accumulated depreciation",
+   "detail_type": "FIXED_ASSET",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.card",
+   "company": "c1",
+   "code": "2100",
+   "name": "Company card",
+   "detail_type": "CREDIT_CARD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.equity",
+   "company": "c1",
+   "code": "3000",
+   "name": "Owner's equity",
+   "detail_type": "EQUITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.draw",
+   "company": "c1",
+   "code": "3100",
+   "name": "Owner's draw",
+   "detail_type": "EQUITY",
+   "is_contra": true,
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.sales",
+   "company": "c1",
+   "code": "4000",
+   "name": "Sales",
+   "detail_type": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.cogs",
+   "company": "c1",
+   "code": "5000",
+   "name": "Materials",
+   "detail_type": "COST_OF_GOODS_SOLD",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.exp",
+   "company": "c1",
+   "code": "6000",
+   "name": "Supplies",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "ref": "c1.dep",
+   "company": "c1",
+   "code": "6100",
+   "name": "Depreciation",
+   "detail_type": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n1",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "First",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n2",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Second",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n3",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Custom",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "  FAM2010 ",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n4",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Next after custom",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n5",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Width kept",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "0099",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n6",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Width kept next",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n7",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "No digits",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "ADJ-A",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n8",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Fallback",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n9",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Duplicate",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "FAM2010",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Entry number FAM2010 is already used by another journal entry. Choose another number."
+  },
+  {
+   "op": "save_draft",
+   "ref": "n10",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Too long",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "xxxxxxxxxxxxxxxxxxxxx",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter an entry number up to 20 characters."
+  },
+  {
+   "op": "save_draft",
+   "ref": "n11",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Zero width",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "A​B",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An entry number cannot contain control or formatting characters."
+  },
+  {
+   "op": "save_draft",
+   "ref": "n12",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Astral",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾🧾",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n13",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "19 digits",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "1000000000000000000",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n14",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "18 nines",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "999999999999999999",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n15",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "After 18 nines",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n16",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "20 nines",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "99999999999999999999",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "n17",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "After 20 nines",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "journal": "n1",
+   "company": "c1",
+   "date": "2026-10-30",
+   "memo": "Edited",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expected_revision": 1,
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "journal": "n1",
+   "company": "c1",
+   "date": "2026-10-30",
+   "memo": "Stale",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expected_revision": 1,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This journal entry changed since you opened it. Reload it and review before saving or posting."
+  },
+  {
+   "op": "save_draft",
+   "journal": "n1",
+   "company": "c1",
+   "date": "2026-10-30",
+   "memo": "Clash",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "entry_number": "2",
+   "expected_revision": 2,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Entry number 2 is already used by another journal entry. Choose another number."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "n1",
+   "expected_revision": 1,
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This journal entry changed since you opened it. Reload it and review before saving or posting."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "n1",
+   "expected_revision": 2,
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "k1",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Keyed",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "request_key": "6d1f3a52-0d1e-4c6b-9a57-1e5b3f0c2a10",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "k1",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Keyed",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "request_key": "{6D1F3A52-0D1E-4C6B-9A57-1E5B3F0C2A10}",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "k2",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Keyed but changed",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "request_key": "6d1f3a52-0d1e-4c6b-9a57-1e5b3f0c2a10",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This retry key belongs to a different journal entry. Start a new entry instead."
+  },
+  {
+   "op": "save_draft",
+   "ref": "k3",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Bad key",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "request_key": "nope",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Supply a stable UUID request key."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "k1",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "k1",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Keyed",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "request_key": "6d1f3a52-0d1e-4c6b-9a57-1e5b3f0c2a10",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "big",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Over the total bound",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "99999999999999.99"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "99999999999999.99"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.01"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "big",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Journal entry totals cannot exceed 99999999999999.99."
+  },
+  {
+   "op": "save_draft",
+   "ref": "fifty",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Fifty lines",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 0"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 1"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 2"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 3"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 4"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 5"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 6"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 7"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 8"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 9"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 10"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 11"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 12"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 13"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 14"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 15"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 16"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 17"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 18"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 19"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 20"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 21"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 22"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 23"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 24"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 25"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 26"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 27"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 28"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 29"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 30"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 31"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 32"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 33"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 34"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 35"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 36"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 37"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 38"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 39"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 40"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 41"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 42"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 43"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 44"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 45"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 46"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 47"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01",
+     "name": "Name 48"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.49"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "fifty",
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "fiftyone",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "51 lines",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.50"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A journal entry has at most 50 lines."
+  },
+  {
+   "op": "save_draft",
+   "ref": "extra",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Extra field",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1",
+     "billable": true
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Unexpected journal line fields."
+  },
+  {
+   "op": "save_draft",
+   "ref": "longname",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Long name",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1",
+     "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter a name up to 120 characters."
+  },
+  {
+   "op": "save_draft",
+   "ref": "baddate",
+   "company": "c1",
+   "date": "2026-02-30",
+   "memo": "Bad date",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "“2026-02-30” value has the correct format (YYYY-MM-DD) but it is an invalid date."
+  },
+  {
+   "op": "save_draft",
+   "ref": "blankmemo",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This field cannot be blank."
+  },
+  {
+   "op": "save_draft",
+   "ref": "altdate",
+   "company": "c1",
+   "date": "2026-1-5",
+   "memo": "Short ISO date",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "100.00",
+     "description": "Expense part"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "100.00",
+     "description": "Bank part"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "save_draft",
+   "ref": "one",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "One line",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "5"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "one",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Posting needs at least two nonzero lines and equal debits and credits (debits 5.00, credits 0.00)."
+  },
+  {
+   "op": "save_draft",
+   "ref": "unbal",
+   "company": "c1",
+   "date": "2026-10-31",
+   "memo": "Unbalanced",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "5"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "4.99"
+    }
+   ],
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "unbal",
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Posting needs at least two nonzero lines and equal debits and credits (debits 5.00, credits 4.99)."
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "n2",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "n3",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "n12",
+   "expect_error": false
+  },
+  {
+   "op": "post_journal",
+   "company": "c1",
+   "journal": "altdate",
+   "expect_error": false
+  },
+  {
+   "op": "reverse_journal",
+   "ref": "n2r",
+   "company": "c1",
+   "journal": "n2",
+   "date": "2026-11-01",
+   "reason": "Wrong month",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-10-31",
+  "2026-11-30"
+ ]
+}

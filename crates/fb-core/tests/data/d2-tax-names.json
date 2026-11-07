@@ -1,0 +1,470 @@
+[
+  [
+    "Sales Tax Payable",
+    true
+  ],
+  [
+    "Sales tax payable",
+    true
+  ],
+  [
+    "Local sales tax payable",
+    true
+  ],
+  [
+    "SalesTax Payable",
+    true
+  ],
+  [
+    "Sales taxes payable",
+    true
+  ],
+  [
+    "Sales and use tax payable",
+    true
+  ],
+  [
+    "Sales & Use Tax Payable",
+    true
+  ],
+  [
+    "Collected tax",
+    true
+  ],
+  [
+    "Collected sales tax",
+    true
+  ],
+  [
+    "Tax collected",
+    true
+  ],
+  [
+    "Sales tax collected",
+    true
+  ],
+  [
+    "GST/HST Payable",
+    true
+  ],
+  [
+    "GST payable",
+    true
+  ],
+  [
+    "HST payable",
+    true
+  ],
+  [
+    "VAT payable",
+    true
+  ],
+  [
+    "VAT control",
+    true
+  ],
+  [
+    "PST payable",
+    true
+  ],
+  [
+    "QST payable",
+    true
+  ],
+  [
+    "Income tax payable",
+    false
+  ],
+  [
+    "Payroll tax payable",
+    false
+  ],
+  [
+    "Payroll taxes payable",
+    false
+  ],
+  [
+    "Federal income tax payable",
+    false
+  ],
+  [
+    "State income tax withheld",
+    false
+  ],
+  [
+    "Property tax payable",
+    false
+  ],
+  [
+    "Use tax payable",
+    false
+  ],
+  [
+    "Tax payable",
+    false
+  ],
+  [
+    "Federal tax payable",
+    false
+  ],
+  [
+    "Franchise tax payable",
+    false
+  ],
+  [
+    "Excise tax collected",
+    false
+  ],
+  [
+    "Withholding tax collected",
+    false
+  ],
+  [
+    "Payroll liabilities",
+    false
+  ],
+  [
+    "FICA payable",
+    false
+  ],
+  [
+    "Unemployment tax payable",
+    false
+  ],
+  [
+    "Employee taxes withheld",
+    false
+  ],
+  [
+    "Accrued expenses",
+    false
+  ],
+  [
+    "Private loan",
+    false
+  ],
+  [
+    "Payroll sales tax",
+    false
+  ],
+  [
+    "Sales tax",
+    true
+  ],
+  [
+    "Sales tax",
+    true
+  ],
+  [
+    "\u017fales tax",
+    true
+  ],
+  [
+    "\u017fales tax",
+    true
+  ],
+  [
+    "VAT",
+    true
+  ],
+  [
+    "VAT",
+    true
+  ],
+  [
+    "Payroll sales tax",
+    false
+  ],
+  [
+    "Payroll sales tax",
+    false
+  ],
+  [
+    "\u00e9Sales tax",
+    false
+  ],
+  [
+    "Sales tax\u00e9",
+    false
+  ],
+  [
+    "\u00e9\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax\u00e9",
+    false
+  ],
+  [
+    "\u00e9VAT",
+    false
+  ],
+  [
+    "VAT\u00e9",
+    false
+  ],
+  [
+    "\u00e9Payroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax\u00e9",
+    false
+  ],
+  [
+    "\u0301Sales tax",
+    true
+  ],
+  [
+    "Sales tax\u0301",
+    true
+  ],
+  [
+    "\u0301\u017fales tax",
+    true
+  ],
+  [
+    "\u017fales tax\u0301",
+    true
+  ],
+  [
+    "\u0301VAT",
+    true
+  ],
+  [
+    "VAT\u0301",
+    true
+  ],
+  [
+    "\u0301Payroll sales tax",
+    false
+  ],
+  [
+    "Payroll sales tax\u0301",
+    false
+  ],
+  [
+    "_Sales tax",
+    false
+  ],
+  [
+    "Sales tax_",
+    false
+  ],
+  [
+    "_\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax_",
+    false
+  ],
+  [
+    "_VAT",
+    false
+  ],
+  [
+    "VAT_",
+    false
+  ],
+  [
+    "_Payroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax_",
+    false
+  ],
+  [
+    "\u00b2Sales tax",
+    false
+  ],
+  [
+    "Sales tax\u00b2",
+    false
+  ],
+  [
+    "\u00b2\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax\u00b2",
+    false
+  ],
+  [
+    "\u00b2VAT",
+    false
+  ],
+  [
+    "VAT\u00b2",
+    false
+  ],
+  [
+    "\u00b2Payroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax\u00b2",
+    false
+  ],
+  [
+    "\u212aSales tax",
+    false
+  ],
+  [
+    "Sales tax\u212a",
+    false
+  ],
+  [
+    "\u212a\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax\u212a",
+    false
+  ],
+  [
+    "\u212aVAT",
+    false
+  ],
+  [
+    "VAT\u212a",
+    false
+  ],
+  [
+    "\u212aPayroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax\u212a",
+    false
+  ],
+  [
+    "\u0130Sales tax",
+    false
+  ],
+  [
+    "Sales tax\u0130",
+    false
+  ],
+  [
+    "\u0130\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax\u0130",
+    false
+  ],
+  [
+    "\u0130VAT",
+    false
+  ],
+  [
+    "VAT\u0130",
+    false
+  ],
+  [
+    "\u0130Payroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax\u0130",
+    false
+  ],
+  [
+    "\u0131Sales tax",
+    false
+  ],
+  [
+    "Sales tax\u0131",
+    false
+  ],
+  [
+    "\u0131\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax\u0131",
+    false
+  ],
+  [
+    "\u0131VAT",
+    false
+  ],
+  [
+    "VAT\u0131",
+    false
+  ],
+  [
+    "\u0131Payroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax\u0131",
+    false
+  ],
+  [
+    "\u017fSales tax",
+    false
+  ],
+  [
+    "Sales tax\u017f",
+    false
+  ],
+  [
+    "\u017f\u017fales tax",
+    false
+  ],
+  [
+    "\u017fales tax\u017f",
+    false
+  ],
+  [
+    "\u017fVAT",
+    false
+  ],
+  [
+    "VAT\u017f",
+    false
+  ],
+  [
+    "\u017fPayroll sales tax",
+    true
+  ],
+  [
+    "Payroll sales tax\u017f",
+    false
+  ],
+  [
+    "\u001cSales tax",
+    true
+  ],
+  [
+    "Sales tax\u001c",
+    true
+  ],
+  [
+    "\u001c\u017fales tax",
+    true
+  ],
+  [
+    "\u017fales tax\u001c",
+    true
+  ],
+  [
+    "\u001cVAT",
+    true
+  ],
+  [
+    "VAT\u001c",
+    true
+  ],
+  [
+    "\u001cPayroll sales tax",
+    false
+  ],
+  [
+    "Payroll sales tax\u001c",
+    false
+  ]
+]

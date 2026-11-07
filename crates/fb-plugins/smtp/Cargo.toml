@@ -1,0 +1,19 @@
+[package]
+name = "fb-plugin-smtp"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[dependencies]
+fb-plugin-api = { path = "../../fb-plugin-api", default-features = false }
+lettre = { version = "=0.11.23", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls", "ring", "webpki-roots"] }
+tokio = { version = "1", features = ["rt", "time", "net"] }
+zeroize = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std", "io"] }
+
+[dev-dependencies]
+base64 = "0.23"
+mailparse = "0.16"
+fb-plugin-testkit = { path = "../../fb-plugin-testkit" }
+rcgen = "0.14"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }

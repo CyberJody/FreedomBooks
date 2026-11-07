@@ -1,0 +1,719 @@
+{
+ "users": [
+  {
+   "username": "l2",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic L2a",
+   "expect_error": false
+  },
+  {
+   "op": "create_company",
+   "ref": "o",
+   "name": "Other synthetic",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "asset",
+   "code": "asset",
+   "name": "asset",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "bank",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ap",
+   "code": "ap",
+   "name": "ap",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "taxacct",
+   "code": "taxacct",
+   "name": "taxacct",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "income",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "expense",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll0",
+   "code": "100-1",
+   "name": "100-1",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact0",
+   "values": {
+    "display_name": "100-1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll1",
+   "code": "1000",
+   "name": "1000",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact1",
+   "values": {
+    "display_name": "1000"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll2",
+   "code": "a",
+   "name": "a",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact2",
+   "values": {
+    "display_name": "a"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll3",
+   "code": "A",
+   "name": "A",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact3",
+   "values": {
+    "display_name": "A"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll4",
+   "code": "\u00e1",
+   "name": "\u00e1",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact4",
+   "values": {
+    "display_name": "\u00e1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll5",
+   "code": "a-b",
+   "name": "a-b",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact5",
+   "values": {
+    "display_name": "a-b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll6",
+   "code": "ab",
+   "name": "ab",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact6",
+   "values": {
+    "display_name": "ab"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll7",
+   "code": "a b",
+   "name": "a b",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact7",
+   "values": {
+    "display_name": "a b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll8",
+   "code": "a_b",
+   "name": "a_b",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact8",
+   "values": {
+    "display_name": "a_b"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll9",
+   "code": "\u00e9",
+   "name": "\u00e9",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact9",
+   "values": {
+    "display_name": "\u00e9"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll10",
+   "code": "e\u0301",
+   "name": "e\u0301",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact10",
+   "values": {
+    "display_name": "e\u0301"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll11",
+   "code": "\u00c9",
+   "name": "\u00c9",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact11",
+   "values": {
+    "display_name": "\u00c9"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll12",
+   "code": "\u00c6",
+   "name": "\u00c6",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact12",
+   "values": {
+    "display_name": "\u00c6"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll13",
+   "code": "AE",
+   "name": "AE",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact13",
+   "values": {
+    "display_name": "AE"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll14",
+   "code": "\u00df",
+   "name": "\u00df",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact14",
+   "values": {
+    "display_name": "\u00df"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll15",
+   "code": "ss",
+   "name": "ss",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact15",
+   "values": {
+    "display_name": "ss"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll16",
+   "code": "Z",
+   "name": "Z",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact16",
+   "values": {
+    "display_name": "Z"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll17",
+   "code": "z",
+   "name": "z",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact17",
+   "values": {
+    "display_name": "z"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll18",
+   "code": "1\u00e2",
+   "name": "1\u00e2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact18",
+   "values": {
+    "display_name": "1\u00e2"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "coll19",
+   "code": "1,\u00e2",
+   "name": "1,\u00e2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "contact19",
+   "values": {
+    "display_name": "1,\u00e2"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case0",
+   "values": {
+    "code": "I",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase0",
+   "values": {
+    "name": "I",
+    "description": "I",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case1",
+   "values": {
+    "code": "i",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An item with this code / name already exists in this company (including archived items)."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase1",
+   "values": {
+    "name": "i",
+    "description": "i",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case2",
+   "values": {
+    "code": "\u0130",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An item with this code / name already exists in this company (including archived items)."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase2",
+   "values": {
+    "name": "\u0130",
+    "description": "\u0130",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case3",
+   "values": {
+    "code": "\u0131",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An item with this code / name already exists in this company (including archived items)."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase3",
+   "values": {
+    "name": "\u0131",
+    "description": "\u0131",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case4",
+   "values": {
+    "code": "\u212a",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase4",
+   "values": {
+    "name": "\u212a",
+    "description": "\u212a",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case5",
+   "values": {
+    "code": "k",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An item with this code / name already exists in this company (including archived items)."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase5",
+   "values": {
+    "name": "k",
+    "description": "k",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case6",
+   "values": {
+    "code": "\u017f",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase6",
+   "values": {
+    "name": "\u017f",
+    "description": "\u017f",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case7",
+   "values": {
+    "code": "s",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An item with this code / name already exists in this company (including archived items)."
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase7",
+   "values": {
+    "name": "s",
+    "description": "s",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case8",
+   "values": {
+    "code": "\u00df",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase8",
+   "values": {
+    "name": "\u00df",
+    "description": "\u00df",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "case9",
+   "values": {
+    "code": "SS",
+    "kind": "SERVICE",
+    "sale_rate": "1"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "taxcase9",
+   "values": {
+    "name": "SS",
+    "description": "SS",
+    "rate": "1",
+    "new_agency_name": "Agency"
+   },
+   "expect_error": false
+  }
+ ]
+}

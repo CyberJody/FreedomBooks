@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<title>{{ deposit.identity.number }} · Customer deposit · {{ deposit.company_snapshot.name }}</title>
+<link rel="stylesheet" href="{{ static('sales/print.css') }}"></head>
+<body class="print-body{% if deposit.is_void %} marked{% endif %}">
+<div class="print-toolbar" role="toolbar" aria-label="Print actions">{% with audience='customer' %}{% include 'ledger/includes/print_toolbar_note.html' %}{% endwith %}
+<span class="print-toolbar-actions"><button type="button" id="print-now">Print / Save as PDF</button> <a href="{{ url('prepayments:detail', company.pk, deposit.pk) }}">Back to deposit</a></span></div>
+<article class="sheet" lang="en">
+{% if fb_print_synthetic %}<div class="watermark" aria-hidden="true">TEST ONLY</div>{% endif %}
+{% if deposit.is_void %}<div class="status-stamp" aria-hidden="true">VOID</div>{% endif %}
+<header class="doc-head">
+<div class="company-block"><h1 class="company-name">{{ deposit.company_snapshot.name }}</h1><p class="company-meta">Currency {{ deposit.company_snapshot.currency }}</p></div>
+<div class="title-block"><p class="doc-title">DEPOSIT RECEIPT{% if deposit.is_void %} <span class="doc-mark">VOID</span>{% endif %}</p>
+<table class="meta-box"><thead><tr><th>Date</th><th>Deposit #</th></tr></thead><tbody><tr><td>{{ deposit.date|date('Y-m-d') }}</td><td>{{ deposit.identity.number }}</td></tr></tbody></table>
+<p class="revision-line">Status: {% if deposit.is_void %}Voided{% else %}Recorded{% endif %}<br>Printed {{ printed_at|date('Y-m-d H:i') }} UTC{% if stamp %} · {{ stamp }}{% endif %}</p></div>
+</header>
+<section class="party-row">
+<div class="party-box"><p class="box-label">Received from</p>
+<p class="party-name">{{ deposit.customer_snapshot.display_name }}</p>{% if deposit.customer_snapshot.business_name %}<p>{{ deposit.customer_snapshot.business_name }}</p>{% endif %}{% if deposit.customer_snapshot.billing_address %}<p class="party-address">{{ deposit.customer_snapshot.billing_address|linebreaksbr }}</p>{% endif %}</div>
+<table class="terms-box"><thead><tr><th>Payment method</th><th>Reference</th></tr></thead><tbody><tr><td>{{ deposit.get_method_display }}</td><td>{{ deposit.reference|default('—') }}</td></tr></tbody></table>
+</section>
+<table class="lines"><thead><tr><th class="col-desc">Description</th><th class="col-num">Amount</th></tr></thead>
+<tbody><tr><td class="col-desc">Deposit (prepayment) on account{% if deposit.prepayment.order_reference %} · order reference: {{ deposit.prepayment.order_reference }}{% endif %}{% if deposit.prepayment.estimate_id %} · estimate {{ deposit.prepayment.estimate.identity.number }}{% endif %}</td><td class="col-num" id="print-amount">{{ deposit.amount }}</td></tr></tbody></table>
+<section class="foot-row">
+<div class="message-box"><p class="box-label">Memo</p><p class="memo">{{ deposit.memo|linebreaksbr }}</p><p class="posting-note">{% if deposit.is_void %}Voided — the original posting is cancelled by its linked reversal.{% else %}Received in advance and held on account. It will be applied to a future invoice; it is not an invoice and no amount is due.{% endif %}</p></div>
+<table class="totals"><tbody>
+<tr class="grand"><th>Deposit received {{ deposit.company_snapshot.currency }}</th><td id="print-total">{{ deposit.amount }}</td></tr>
+<tr><th>Applied to invoices</th><td id="print-applied">{{ deposit.applied }}</td></tr>
+<tr><th>Refunded</th><td id="print-refunded">{{ deposit.refunded }}</td></tr>
+<tr class="grand due"><th>Remaining on account</th><td id="print-remaining">{{ deposit.remaining }}</td></tr>
+</tbody></table>
+</section>
+</article>
+<script src="{{ static('sales/print.js') }}" defer></script>
+</body></html>

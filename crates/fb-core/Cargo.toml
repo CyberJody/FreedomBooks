@@ -1,0 +1,64 @@
+[package]
+name = "fb-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+fb-money = { path = "../fb-money" }
+fb-ids = { path = "../fb-ids" }
+fb-db = { path = "../fb-db" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+regex = "1"
+rust_decimal = "1"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+unicode-normalization = "0.1"
+icu_casemap = { version = "=2.4.0", features = ["compiled_data"] }
+uuid = { version = "1.18", features = ["v5"] }
+chacha20poly1305 = { version = "0.10", features = ["stream"] }
+hkdf = "0.12"
+getrandom = "0.4"
+crc32fast = "1"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
+
+aes-gcm = { version = "0.10", features = ["zeroize"] }
+aes = { version = "0.8", features = ["zeroize"] }
+scrypt = "0.11"
+argon2 = "0.5"
+base64 = "0.22"
+zeroize = { version = "1", features = ["derive"] }
+rand = "0.8"
+tar = "0.4"
+tempfile = "3"
+fs2 = "0.4"
+same-file = "1"
+
+# Unix attachment/backup file handling (directory-relative, no-follow opens).
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["fs", "process"] }
+
+# Windows attachment store backend (see src/attachments/storage/windows.rs). Already in Cargo.lock via rustix/errno.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Wdk_Foundation",
+    "Wdk_Storage_FileSystem",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+fb-db = { path = "../fb-db", features = ["test-support"] }
+proptest = "1"
+tempfile = "3"
+aho-corasick = "1"
+syn = { version = "2", features = ["full", "visit"] }
+
+[dev-dependencies.uuid]
+version = "1.18"
+features = ["v4"]

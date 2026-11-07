@@ -1,0 +1,479 @@
+{
+ "users": [
+  {
+   "username": "reports",
+   "is_staff": true
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Report controls",
+   "currency": "USD",
+   "expect_error": false
+  }
+ ],
+ "financial_reports": {
+  "profit_loss": [
+   [
+    null,
+    "2026-10-31"
+   ]
+  ],
+  "balance_sheet": [
+   "2026-10-31"
+  ],
+  "general_ledger": [
+   [
+    null,
+    "2026-10-31",
+    "",
+    null
+   ]
+  ],
+  "forms": [
+   {
+    "form": "range",
+    "data": {},
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "last_month"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_quarter"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_year"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "year_to_date"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "custom",
+     "start": "2026-10-01",
+     "end": "2026-10-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "basis": "CASH",
+     "preset": "this_month"
+    },
+    "today": "2028-02-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "last_month"
+    },
+    "today": "2028-02-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_quarter"
+    },
+    "today": "2028-02-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "last_month"
+    },
+    "today": "2027-01-01"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "year_to_date"
+    },
+    "today": "2027-01-01"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_month"
+    },
+    "today": "2026-12-31"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_quarter"
+    },
+    "today": "2026-12-31"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_year"
+    },
+    "today": "2026-12-31"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_quarter"
+    },
+    "today": "2026-03-31"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_quarter"
+    },
+    "today": "2026-07-01"
+   },
+   {
+    "form": "range",
+    "data": {
+     "start": "notadate",
+     "preset": "custom"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "custom",
+     "end": "2026-13-45"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "custom",
+     "start": "2026-12-01",
+     "end": "2026-01-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "bogus"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "basis": "ACCRUALX"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "custom",
+     "end": "0001-01-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "custom",
+     "start": "",
+     "end": ""
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "start": "2026-10-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": "2026-10-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "this_month",
+     "start": "2020-01-01",
+     "end": "2020-01-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": "10/31/2026"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": " 2026-10-31 "
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": "Oct 31 2026"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "start": "1900-01-01",
+     "end": "2026-01-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "start": "1900-01-02",
+     "end": "9999-12-30"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": "9999-12-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "basis": "X",
+     "preset": "Y",
+     "start": "bad",
+     "end": "bad"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "start": "2026-10-31",
+     "end": "2026-10-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "start": "  ",
+     "end": "2026-10-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "basis": "cash"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "preset": "custom"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "group": "nope"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "group": "income",
+     "preset": "custom",
+     "start": "0001-01-01",
+     "end": "2026-01-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "account": "abc"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "group": "receivable"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "group": "le",
+     "preset": "last_month"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "group": "bogus",
+     "account": "x1",
+     "preset": "nope"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {},
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {},
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "garbage"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "0001-01-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "99999-01-01"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "2026-10-31",
+     "basis": "CASH"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "",
+     "basis": ""
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "basis": "NONE",
+     "as_of": "x"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "preset": "custom",
+     "group": "bogus"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "start": "2026-12-01",
+     "end": "2026-01-01",
+     "account": "bad"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "preset": "custom",
+     "account": "x12"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "ledger",
+    "data": {
+     "start": "2026-12-01",
+     "end": "2026-01-01",
+     "group": "pl"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": "𐵂𐵀𐵂𐵆-10-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "range",
+    "data": {
+     "end": "٢٠٢٦-10-31"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "10/31/𐵂𐵀𐵂𐵆"
+    },
+    "today": "2026-10-29"
+   },
+   {
+    "form": "as_of",
+    "data": {
+     "as_of": "Oct 31 ۲۰۲۶"
+    },
+    "today": "2026-10-29"
+   }
+  ]
+ }
+}

@@ -1,0 +1,250 @@
+[
+  {
+    "name": "0001_ledger",
+    "sha256": "d059d9c8174c6995702241d5d73d79e522af09249d000eee55792131b73bd278"
+  },
+  {
+    "name": "0002_review_hardening",
+    "sha256": "3f5c8e7ed780e5ed9be1f1ea4ac8e16c955e5d3b8eec77b5e2022780d0b08b7e"
+  },
+  {
+    "name": "0003_callback_and_collision_hardening",
+    "sha256": "a12b266e5d5c660adad991a41337cfc197cfc9ae45ee56e8f240411528540d9c"
+  },
+  {
+    "name": "0004_directory_documents_tax",
+    "sha256": "39ec6fc4ca0b4d6f64a763a576eecdc3f7acf9ca00d086706eb003bac1f865c8"
+  },
+  {
+    "name": "0005_source_journal_hooks",
+    "sha256": "f76dc697989501f4948dd14630d13b2660fe271966c8caffd54491213af9b95c"
+  },
+  {
+    "name": "0006_l2a_hardening",
+    "sha256": "3113ad4b52a530b55daf83727e23a183b3d4cb3dee0eecf9c5acad1d553709aa"
+  },
+  {
+    "name": "0007_permanent_identities",
+    "sha256": "f70b80b0f91be8ca2d6b1c5462675cf167aec70ebdaf79ed10440210b6c795a6"
+  },
+  {
+    "name": "0008_l2a_permanent_identities",
+    "sha256": "0512f742ec53b2ec2c29a5b6d4029702000615b1bdc8249d52125f32fa1a8ffa"
+  },
+  {
+    "name": "0009_l2a_review_fixes",
+    "sha256": "89cf623ddc52e139e9db0def029ec5ba0d418bd628cd5c7c74bc2dd2ef1c813a"
+  },
+  {
+    "name": "0010_sales",
+    "sha256": "904b5b96279ee81a3fdead725edbc07d48ec2c7a290b4e61f83d672bf417f072"
+  },
+  {
+    "name": "0011_sales_references",
+    "sha256": "b4f83bb2c7387c6afc5c42d17e0376b70219230f666ce00c4ef95883d4aed3a3"
+  },
+  {
+    "name": "0012_sales_undeposited",
+    "sha256": "19dd75d33164dc0a92e10630a58c3ebad131ce05b3cc8df31b5d39a44ec331d3"
+  },
+  {
+    "name": "0013_sales_owned_seals",
+    "sha256": "41c6b85ccb31d93c0e36b51711d3be73c00fbf3df833e0e186d86011696d132e"
+  },
+  {
+    "name": "0014_sales_hardening",
+    "sha256": "8c93edeefe65a6b0ce0a2a20add35d59bfdb7f880b2c26a67530955b51055851"
+  },
+  {
+    "name": "0015_sales_core_adoption",
+    "sha256": "e225f043655d5fe099cab246d3ce336b06816ad5188a3180120c81f4a5511974"
+  },
+  {
+    "name": "0016_sales_review_fixes",
+    "sha256": "177a1299ca122373c3d934b465d6bb0b713ad51801e0b7c7cf66d84b8ed3e64a"
+  },
+  {
+    "name": "0020_payables",
+    "sha256": "4606c2a27c7c6249e46b03c9122469d5d2137244fa86fa981397a454fefd7b71"
+  },
+  {
+    "name": "0021_payables_hardening",
+    "sha256": "a9c6e55949e3e20a121ed779eab8c2bf03054fd9188efddd7f84e3e9bdc193c2"
+  },
+  {
+    "name": "0022_payables_source_hardening",
+    "sha256": "7ff03c7ba41097a7323f691909ca9de51fa9fa7a9ea3174a4f9ce18eeb1c3084"
+  },
+  {
+    "name": "0023_payables_parent_unique_keys",
+    "sha256": "1ab8d6746beab2c058aacc6a79ba0db772ac1a18e6ec2e4c5f19f6c000758387"
+  },
+  {
+    "name": "0024_payables_line_calculation",
+    "sha256": "16607436d137ff4b4837f49b72e55e49b2d00b2b47e7884b48554548dad87742"
+  },
+  {
+    "name": "0025_payables_core_hardening",
+    "sha256": "35aa3720875ed59d985d34c9ce7db231b5090f75cc4578018e0b50872b106281"
+  },
+  {
+    "name": "0026_payables_core_adoption",
+    "sha256": "194493aafa4848559a321097e438d42c77c013450a8cfe36e2fc2c92ae9cf60f"
+  },
+  {
+    "name": "0027_payables_snapshots_and_origins",
+    "sha256": "6e5487a19846dcfbafee7f25cacad4c09dc72b077dda8d058be1a3b06643db51"
+  },
+  {
+    "name": "0030_checks_transfers",
+    "sha256": "f5cc80eeb81d4139b81ee05a56aefe6c1575f18aef7fdaee077a99aea7bf8b3a"
+  },
+  {
+    "name": "0031_checks_parent_eligibility",
+    "sha256": "513a0d2f9333902ee35bd32b05d6685b69b91f410ce8e4e9848028be305fcb3b"
+  },
+  {
+    "name": "0032_checks_root_parent_ordering",
+    "sha256": "46adbdbe7fbcabdc6586359b36d68d4a8528c8966d64e6d40b5e2278cf95bcaf"
+  },
+  {
+    "name": "0033_checks_review_fixes",
+    "sha256": "c4733c5404b4b29c063425a1176e6c59301d8c9c518bea6c943e09ba6203f9fe"
+  },
+  {
+    "name": "0050_banking",
+    "sha256": "b3b2a89c96eeef60112328196f98cd782682c2223a2c033b02ad3efb1c5137a9"
+  },
+  {
+    "name": "0051_banking_integrity",
+    "sha256": "3f41aa112cca1e2892b7de3abe288165dd7ca45154f3fbd26687850fbd3c6001"
+  },
+  {
+    "name": "0052_banking_completion",
+    "sha256": "d10f2514838a2b662692244009cfa1ac3b026c2fcab2032fd58438190b370f63"
+  },
+  {
+    "name": "0053_banking_actors",
+    "sha256": "b845c2c32ffffc1f06a0ecbdf18b1251b5be46930f0badd10812510150531e97"
+  },
+  {
+    "name": "0054_banking_review",
+    "sha256": "e49e4c7e4a78d707f66252c32c69c07794ab157e6a8a8adccf275565a11b58e7"
+  },
+  {
+    "name": "0055_banking_unique_json",
+    "sha256": "f1598cdfc219ff860b60e9aff0cdda5ee144df2e15d9fca2947fddf5f45b178e"
+  },
+  {
+    "name": "0060_credits",
+    "sha256": "d21ef90d0025bb30258e2fc72a31df1a99b99c2ce775175d45d545cb80028637"
+  },
+  {
+    "name": "0061_credits_review_fixes",
+    "sha256": "c89d0823f7712510a7adbbcda8071fbac48d7f8506dec257f7138cc1595630dc"
+  },
+  {
+    "name": "0070_prepayments",
+    "sha256": "b3e1fe3ed4a632cc732ce4b61b6a098fd597e232db249c42eacf0161096605b1"
+  },
+  {
+    "name": "0071_prepayment_number_eligibility",
+    "sha256": "cb4099b66a7a388259e2db5d7f298f906efe49a66eaf6ddb8bb65ce345656c57"
+  },
+  {
+    "name": "0072_prepayment_review_fixes",
+    "sha256": "447d09c92d61a44fd10a25e49b871de360a7ac759b9c6fb68cda99c1830ee7e7"
+  },
+  {
+    "name": "0073_shared_check_numbers",
+    "sha256": "c2db01cc02800a8c92f6759f836c3cf6539555eac8de4ad476b9fcac70688174"
+  },
+  {
+    "name": "0074_shared_settlements",
+    "sha256": "7d43fde16637cae3b2f91c5e2befe9411f2a002d834769f0175eb1008442a966"
+  },
+  {
+    "name": "0075_restore_sales_receipt_destination",
+    "sha256": "9336fb2f6dc21302d0671d2cecc9c52263a266797876e077a914954c665c9916"
+  },
+  {
+    "name": "0076_credit_check_numbers",
+    "sha256": "ace7d5caa9bd640ce4761d73210087d4e5efaf3d1faa30664e7d3dd5258026a1"
+  },
+  {
+    "name": "0077_credit_settlements",
+    "sha256": "27cac095323611689fa3c4903773a1e72e063458beefacfd3297994637b2c536"
+  },
+  {
+    "name": "0078_shared_unique_json",
+    "sha256": "b9a700457df4b2ed125a660170ae2ff1ac9b2f162ec81896c91b0e03202689aa"
+  },
+  {
+    "name": "0079_restore_sales_receipt_snapshot",
+    "sha256": "bb74309679b9354d5dbd4bca5f085ddf4d74206a29446b91c4c6a115a791fc1f"
+  },
+  {
+    "name": "0100_assistant",
+    "sha256": "9a19f9648161d8aa3bbd05b3cb8c02bffc42bbe8c9faa17985db8f7ca0bccc08"
+  },
+  {
+    "name": "0101_assistant_unique_json",
+    "sha256": "8037619b6ec35952cdfcf3df7c1f22aa49a3e271c016283d18b4b9d7a9887785"
+  },
+  {
+    "name": "0102_assistant_model_selection",
+    "sha256": "000a29801fa2ee900b5cd93708860f1a8e7e4c707203cf60fa1abd808e6e5ae0"
+  },
+  {
+    "name": "0103_assistant_completion",
+    "sha256": "b1d8511235f57d985d6a62ee71ee28d94f195b6414c9086dbb6f03a2ec022e0a"
+  },
+  {
+    "name": "0110_attachments",
+    "sha256": "f10d636831d66c3b9db40bb29e59c1419c4ddca650edd2ce78a2a745d7949d42"
+  },
+  {
+    "name": "0111_attachment_text",
+    "sha256": "8448d90f2753b4bbf2817ac8ae2d344d62237698243aeae21f09955e58975bee"
+  },
+  {
+    "name": "0120_owner",
+    "sha256": "3c2b079e8bbde538afd8adb71c539cb4640654789d436ee11cbe1ffdc23d9308"
+  },
+  {
+    "name": "0121_owner_eligibility",
+    "sha256": "a4285ffa6b9a2dc9fd593a11ce6497f37de5011cafd51d916c72007baf99cb73"
+  },
+  {
+    "name": "0130_shared_validators",
+    "sha256": "f45d828dce6dcbaa60e6f3e5e671b7efad1e4c1cc4032bfe82461e9b37e0bd93"
+  },
+  {
+    "name": "0131_estimates",
+    "sha256": "091e77f895c5111c8a5c083890c5f4182fd1129ab0f284a79ceb181d23472598"
+  },
+  {
+    "name": "0132_estimate_validators",
+    "sha256": "e5f3bed49b583436312c1f0d98175e5a595805e5f313565eb4f4ad0cd1c21e0c"
+  },
+  {
+    "name": "0133_bankfeeds",
+    "sha256": "a4ae87117082c94004c7aa9fe6627177e286b24e4905d6291554a706901c1e51"
+  },
+  {
+    "name": "0134_bankfeeds_hardening",
+    "sha256": "7e1f24fc5193e6d3795776a138e615cd26889ab5a5e5e712305f45bb26f764f7"
+  },
+  {
+    "name": "0135_bankfeeds_activation_eligibility",
+    "sha256": "2f0ab1afe93eb85cfe3483b848026c3771e360d7d1baedf9fa23de15952a8383"
+  },
+  {
+    "name": "0136_bankfeeds_identity",
+    "sha256": "56cbebfca0523829ddbd3e8876d885190c926dc278f718f63c8dcc0458757312"
+  },
+  {
+    "name": "0137_bankfeeds_reconnect",
+    "sha256": "1380f690f155ef24a1f3a47c4b5777b508de5522ab0c74d01f56e4e2bfb15bf9"
+  }
+]

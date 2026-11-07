@@ -1,0 +1,289 @@
+{
+ "users": [
+  {
+   "username": "sales",
+   "is_staff": true
+  },
+  {
+   "username": "outsider"
+  }
+ ],
+ "steps": [
+  {
+   "op": "create_company",
+   "ref": "c",
+   "name": "Synthetic sales",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "bank",
+   "code": "100",
+   "name": "bank",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar",
+   "code": "110",
+   "name": "ar",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "ar2",
+   "code": "111",
+   "name": "ar2",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "uf",
+   "code": "120",
+   "name": "uf",
+   "kind": "ASSET",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "tax",
+   "code": "210",
+   "name": "tax",
+   "kind": "LIABILITY",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income",
+   "code": "400",
+   "name": "income",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "income2",
+   "code": "410",
+   "name": "income2",
+   "kind": "INCOME",
+   "expect_error": false
+  },
+  {
+   "op": "save_account",
+   "company": "c",
+   "ref": "expense",
+   "code": "500",
+   "name": "expense",
+   "kind": "EXPENSE",
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "customer",
+   "ref": "buyer",
+   "values": {
+    "display_name": "Buyer"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_save",
+   "company": "c",
+   "model": "item",
+   "ref": "work",
+   "values": {
+    "code": "WORK",
+    "description": "Synthetic work",
+    "kind": "SERVICE",
+    "sale_rate": "9.99",
+    "income_account": "income",
+    "expense_account": "expense"
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_setup",
+   "company": "c",
+   "expected_revision": 0,
+   "values": {
+    "receivables": "ar",
+    "undeposited": "uf",
+    "collected_tax": "tax",
+    "banks": [
+     "bank"
+    ]
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_settings",
+   "company": "c",
+   "values": {
+    "charge_tax": true,
+    "default_item_id": null,
+    "owed_basis": "ACCRUAL",
+    "filing_frequency": "QUARTERLY",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "tax1",
+   "values": {
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "3",
+    "new_agency_name": "Agency 1",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "tax2",
+   "values": {
+    "name": "Rate 2",
+    "description": "Rate 2",
+    "rate": "4",
+    "new_agency_name": "Agency 2",
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "l2_group",
+   "company": "c",
+   "ref": "group",
+   "values": {
+    "name": "Combined",
+    "description": "Combined",
+    "member_ids": [
+     "tax1",
+     "tax2"
+    ],
+    "expected_revision": 0
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_review_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000005a",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "ITEM",
+    "tax_rate": null,
+    "tax_label": "",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Half cents",
+      "quantity": "1",
+      "rate": "112.50",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ],
+    "tax_item_id": "group",
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "group-sale",
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000005a",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "ITEM",
+    "tax_rate": null,
+    "tax_label": "",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Half cents",
+      "quantity": "1",
+      "rate": "112.50",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ],
+    "tax_item_id": "group",
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "group-sale",
+   "ref": "group-sale",
+   "expect_error": false
+  },
+  {
+   "op": "l2_rate",
+   "company": "c",
+   "ref": "tax1",
+   "values": {
+    "item_id": "tax1",
+    "name": "Rate 1",
+    "description": "Rate 1",
+    "rate": "5",
+    "agency_id": "agency-for:tax1",
+    "expected_revision": 1
+   },
+   "expect_error": false
+  },
+  {
+   "op": "sales_record_sale",
+   "company": "c",
+   "values": {
+    "request_key": "00000000-0000-0000-0000-00000000005a",
+    "customer_id": "buyer",
+    "date": "2026-10-01",
+    "memo": "Synthetic invoice",
+    "tax_mode": "ITEM",
+    "tax_rate": null,
+    "tax_label": "",
+    "lines": [
+     {
+      "item_id": "work",
+      "description": "Half cents",
+      "quantity": "1",
+      "rate": "112.50",
+      "taxable": true,
+      "income_account_id": "income"
+     }
+    ],
+    "tax_item_id": "group",
+    "method": "CASH",
+    "destination": "UNDEPOSITED"
+   },
+   "review": "group-sale",
+   "ref": "group-sale",
+   "expect_error": false
+  }
+ ],
+ "as_of": [
+  "2026-09-30",
+  "2026-10-01",
+  "2026-10-02",
+  "2026-10-03"
+ ]
+}

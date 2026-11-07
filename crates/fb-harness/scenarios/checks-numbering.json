@@ -1,0 +1,242 @@
+{
+  "users": [
+    {
+      "username": "check-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic checks",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank2",
+      "code": "101",
+      "name": "Savings",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Equipment",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "model": "vendor",
+      "ref": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "model": "item",
+      "ref": "item",
+      "values": {
+        "code": "Parts",
+        "description": "Parts",
+        "kind": "NONSTOCK",
+        "sale_rate": "2.00",
+        "purchase_cost": "1.00",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank",
+          "bank2"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "c",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "OTHER",
+        "vendor_id": null,
+        "date": "2026-10-23",
+        "check_number": "",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e2",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ],
+        "print_later": true,
+        "payee_name": "Cash supplier"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_record",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 1,
+      "expect_error": false
+    },
+    {
+      "op": "checks_number",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 2,
+      "number": "99999999999999999999",
+      "expect_error": false
+    },
+    {
+      "op": "checks_number",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 2,
+      "number": "99999999999999999999",
+      "expect_error": false
+    },
+    {
+      "op": "checks_next",
+      "company": "co",
+      "bank": "bank",
+      "ref": "overflow-next",
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "duplicate",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "99999999999999999999",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e3",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Check number 99999999999999999999 is already used by a live check on this bank account. Choose another number or void the other check first."
+    },
+    {
+      "op": "checks_void",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 3,
+      "date": "2026-10-24",
+      "reason": "Release number",
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "replacement",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "99999999999999999999",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e4",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "leading",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "0001",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e5",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_next",
+      "company": "co",
+      "bank": "bank",
+      "ref": "fallback-next",
+      "expect_error": false
+    }
+  ]
+}

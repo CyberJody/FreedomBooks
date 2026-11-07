@@ -1,0 +1,457 @@
+{
+  "users": [
+    {
+      "username": "check-test",
+      "is_staff": true
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic checks",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank",
+      "code": "100",
+      "name": "Bank",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "bank2",
+      "code": "101",
+      "name": "Savings",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "ap",
+      "code": "200",
+      "name": "Payables",
+      "kind": "LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "expense",
+      "code": "500",
+      "name": "Expense",
+      "kind": "EXPENSE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "asset",
+      "code": "150",
+      "name": "Equipment",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "model": "vendor",
+      "ref": "vendor",
+      "values": {
+        "display_name": "Synthetic supplier",
+        "billing_address": "Test address"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "co",
+      "model": "item",
+      "ref": "item",
+      "values": {
+        "code": "Parts",
+        "description": "Parts",
+        "kind": "NONSTOCK",
+        "sale_rate": "2.00",
+        "purchase_cost": "1.00",
+        "expense_account": "expense"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "co",
+      "expected_revision": 0,
+      "values": {
+        "payables": "ap",
+        "banks": [
+          "bank",
+          "bank2"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "c",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "101",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e6",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_review",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 1,
+      "review": "old",
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "c",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "101",
+        "memo": "Edited",
+        "request_key": "00000000-0000-0000-0000-0000000493e6",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ],
+        "check_id": "c",
+        "expected_revision": 1
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_record",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 2,
+      "review": "old",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Check or posting mapping changed. Open a new review before recording."
+    },
+    {
+      "op": "checks_record",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 1,
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "This record changed since you opened it. Reload and review before saving."
+    },
+    {
+      "op": "checks_record",
+      "company": "co",
+      "check": "c",
+      "expected_revision": 2,
+      "expect_error": false
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "a​",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e7",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "A check number cannot contain control or formatting characters."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "xxxxxxxxxxxxxxxxxxxxx",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e8",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a check number up to 20 characters."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493e9",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ],
+        "print_later": true
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "A check marked print later has no number yet; clear the number or the flag."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "expense",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493ea",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Choose a designated bank account (Accounting setup) that is an active postable asset account."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "OTHER",
+        "vendor_id": null,
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493eb",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ],
+        "payee_name": ""
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter nonblank text up to 120 characters."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493ec",
+        "lines": []
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter between 1 and 50 lines across the Expenses and Items tabs."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493ed",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "ap",
+            "rate": "1.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "200 · Payables is a payables (A/P) control account. Vendor balances must tie out to it: record a bill or a bill payment instead. Check lines may not use the paying bank or the receivables, payables, undeposited-funds and collected-sales-tax control accounts. Clear the account for later correction or replace it."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493ee",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "bank",
+            "rate": "1.00"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "100 · Bank is the bank this check is paid from; a check cannot also charge it. Check lines may not use the paying bank or the receivables, payables, undeposited-funds and collected-sales-tax control accounts. Clear the account for later correction or replace it."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493ef",
+        "lines": [
+          {
+            "tab": "ITEM",
+            "item_id": "item",
+            "account_id": "expense",
+            "quantity": "1",
+            "rate": "0"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Every check line must be a positive amount."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "bad",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-02-30",
+        "check_number": "202",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493f0",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "account_id": "expense",
+            "description": "Materials",
+            "rate": "12.34"
+          }
+        ]
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Enter a valid calendar date."
+    },
+    {
+      "op": "checks_save",
+      "company": "co",
+      "ref": "draft",
+      "values": {
+        "bank_id": "bank",
+        "payee_kind": "VENDOR",
+        "vendor_id": "vendor",
+        "date": "2026-10-23",
+        "check_number": "300",
+        "memo": "Synthetic check",
+        "request_key": "00000000-0000-0000-0000-0000000493f1",
+        "lines": [
+          {
+            "tab": "EXPENSE",
+            "rate": "1"
+          }
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "checks_review",
+      "company": "co",
+      "check": "draft",
+      "expected_revision": 1,
+      "review": "missing",
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Choose an account on every line before recording."
+    }
+  ]
+}

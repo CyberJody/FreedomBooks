@@ -1,0 +1,58 @@
+/* P0-2 bank feeds: tan/plum family, same as transfers and checks. */
+.bankfeed .notice {border:1px solid #74576f;background:#f6efe6;padding:10px 12px;margin:10px 0}
+.bankfeed .notice.error {border-color:#a2433a;background:#fbeeea}
+.bankfeed .notice.ok {border-color:#557b60;background:#edf5ee}
+.bankfeed .num {text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bankfeed .muted {color:#6f6364;font-size:12px}
+.bankfeed .actions {display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.bankfeed .actions form {display:inline}
+.bankfeed table.feed-list td, .bankfeed table.review td {vertical-align:top}
+.bankfeed .table-scroll {overflow-x:auto;max-width:100%}
+.bankfeed .connect-face {border:1px solid #74576f;background:#fbf7f1;padding:16px;max-width:720px}
+.bankfeed .connect-face label {display:block;font-size:12px;font-weight:650;margin-top:10px}
+.bankfeed .connect-face input, .bankfeed .connect-face textarea {width:100%;box-sizing:border-box}
+.bankfeed .steps {margin:0 0 12px 18px;padding:0}
+.bankfeed .steps li {margin:4px 0}
+.bankfeed .rule-face {border:1px solid #74576f;background:#fbf7f1;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 24px;max-width:860px}
+.bankfeed .rule-face > div {margin:0}
+.bankfeed .rule-face label {display:block;font-size:12px;font-weight:650}
+.bankfeed .rule-face select, .bankfeed .rule-face input[type=text] {width:100%;box-sizing:border-box}
+.bankfeed .rule-face .full {grid-column:1/-1}
+.bankfeed .buttons {margin:14px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bankfeed .buttons button, .bankfeed .buttons a {margin:0}
+.bankfeed table.review {width:100%}
+.bankfeed table.review-new {table-layout:fixed;min-width:1040px}
+.bankfeed table.review th {white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bankfeed table.review th, .bankfeed table.review td {padding:6px 7px}
+.bankfeed table.review select, .bankfeed table.review input[type=text] {width:100%;box-sizing:border-box;font-size:12.5px;padding:3px 5px;margin:0 0 4px}
+.bankfeed table.review .c-pick {width:3.5%}
+.bankfeed table.review .c-date {width:8%}
+.bankfeed table.review .c-acct {width:12%}
+.bankfeed table.review .c-desc {width:19%}
+.bankfeed table.review .c-amt {width:8%}
+.bankfeed table.review .c-kind {width:14%}
+.bankfeed table.review .c-cat {width:15%}
+.bankfeed table.review .c-detail {width:13.5%}
+.bankfeed table.review .c-act {width:7%}
+.bankfeed table.review .desc, .bankfeed table.review .acct {overflow-wrap:anywhere;font-size:12.5px}
+.bankfeed table.review .row-buttons button, .bankfeed table.review .row-buttons a {display:block;width:100%;box-sizing:border-box;font-size:12px;padding:3px 6px;margin:0 0 4px;text-align:center}
+.bankfeed table.review .row-buttons form {display:inline}
+.bankfeed table.review .sugg {display:block;font-size:11.5px;color:#4f6a54;margin-top:3px}
+.bankfeed table.review tr.row-error td {background:#fbeeea}
+.bankfeed table.review .row-error-text {color:#8a2f27;font-size:12px}
+.bankfeed .review-filters {display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-end;margin:12px 0}
+.bankfeed .review-filters label {display:block;font-size:12px;font-weight:650;max-width:100%;min-width:0}
+.bankfeed .review-filters select, .bankfeed .review-filters input {display:block;max-width:100%;box-sizing:border-box}
+.bankfeed .in {color:#2f5f3a}
+.bankfeed .out {color:#7a2f27}
+.bankfeed .rule-row-buttons form {display:inline}
+.bankfeed .rule-row-buttons button {font-size:12px;padding:3px 7px}
+.bankfeed .results {list-style:none;margin:10px 0;padding:0}
+.bankfeed .results li {padding:4px 8px;margin:3px 0;border-left:3px solid #557b60;background:#edf5ee}
+.bankfeed .results li.bad {border-left-color:#a2433a;background:#fbeeea}
+@media(max-width:850px){.bankfeed .review-filters label{width:100%}.bankfeed .review-filters select,.bankfeed .review-filters input{width:100%}.bankfeed .rule-face{grid-template-columns:1fr}.bankfeed table.review .desc{max-width:none}}
+
+.bankfeed .new-feed-account {margin:8px 0;padding:10px;min-width:220px;border:1px solid #b8a6b4}
+.bankfeed .new-feed-account label {display:block;margin-top:6px}
+.bankfeed .new-feed-account input, .bankfeed .new-feed-account select {width:100%;box-sizing:border-box}
+.bankfeed .new-feed-account .muted {max-width:300px;font-size:12px}

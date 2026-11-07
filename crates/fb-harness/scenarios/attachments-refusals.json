@@ -1,0 +1,402 @@
+{
+  "users": [
+    {
+      "username": "test",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "co",
+      "name": "Synthetic attachment book",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "cash",
+      "code": "100",
+      "name": "Cash",
+      "kind": "ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "co",
+      "ref": "equity",
+      "code": "300",
+      "name": "Equity",
+      "kind": "EQUITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_draft",
+      "company": "co",
+      "ref": "j",
+      "date": "2026-01-01",
+      "memo": "Test",
+      "lines": [
+        {
+          "account": "cash",
+          "debit": "1.00",
+          "credit": "0"
+        },
+        {
+          "account": "equity",
+          "debit": "0",
+          "credit": "1.00"
+        }
+      ],
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad0",
+      "name": "fake.pdf",
+      "hex": "4d5a90000300000004000000ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000546869732070726f6772616d2063616e6e6f742062652072756e20696e20444f53206d6f64652e",
+      "request_key": "00000000-0000-0000-0000-0000000dbbaa",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "Only PDF, PNG, JPEG or WebP files can be attached. \"fake.pdf\" is a different kind of file (checked from its contents, not its name), so it was not attached."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad1",
+      "name": "fake.pdf",
+      "hex": "3c21646f63747970652068746d6c3e3c68746d6c3e3c626f64793e3c7363726970743e616c65727428646f63756d656e742e636f6f6b6965293c2f7363726970743e3c2f626f64793e3c2f68746d6c3e",
+      "request_key": "00000000-0000-0000-0000-0000000dbbab",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "Only PDF, PNG, JPEG or WebP files can be attached. \"fake.pdf\" is a different kind of file (checked from its contents, not its name), so it was not attached."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad2",
+      "name": "photo.heic",
+      "hex": "000000186674797068656963000000006d69663168656963000000000000000000000000000000000000000000000000",
+      "request_key": "00000000-0000-0000-0000-0000000dbbac",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "\"photo.heic\" is a HEIC photo (the iPhone default), which cannot be attached yet. Save or share the photo as JPEG and attach that."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad3",
+      "name": "fake.exe",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbad",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The file name ends in .exe but the file is a PDF document. Rename it to end in .pdf and attach it again."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad4",
+      "name": "invalid.png",
+      "hex": "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c49444154789c6338b1a50200043c01f5201698a50000000049454e44ae4260823c21646f63747970652068746d6c3e3c68746d6c3e3c626f64793e3c7363726970743e616c65727428646f63756d656e742e636f6f6b6965293c2f7363726970743e3c2f626f64793e3c2f68746d6c3e",
+      "request_key": "00000000-0000-0000-0000-0000000dbbae",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "\"invalid.png\" is not a valid PNG file (checked from its contents), so it was not attached."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad5",
+      "name": "invalid.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a253c21646f63747970652068746d6c3e3c68746d6c3e3c626f64793e3c7363726970743e616c65727428646f63756d656e742e636f6f6b6965293c2f7363726970743e3c2f626f64793e3c2f68746d6c3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbaf",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "\"invalid.pdf\" is not a valid PDF file (checked from its contents), so it was not attached."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "bad6",
+      "name": "empty.pdf",
+      "hex": "",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb0",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The file is empty, so it was not attached."
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file0",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb1",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file1",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb2",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file2",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb3",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file3",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb4",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file4",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb5",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file5",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb6",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file6",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb7",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file7",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb8",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file8",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbb9",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file9",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbba",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file10",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbbb",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file11",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbbc",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file12",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbbd",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file13",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbbe",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file14",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbbf",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file15",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc0",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file16",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc1",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file17",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc2",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file18",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc3",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "file19",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc4",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "capped",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc5",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "This document already has 20 attachments, the most it can have. Remove one before attaching another."
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "file0",
+      "reason": "remove",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "room",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc6",
+      "expect_error": false
+    },
+    {
+      "op": "attachment_add",
+      "company": "co",
+      "journal": "j",
+      "ref": "throttled",
+      "name": "scan.pdf",
+      "hex": "255044462d312e340a25e2e3cfd30a312030206f626a3c3c2f547970652f436174616c6f673e3e656e646f626a0a747261696c65723c3c2f526f6f742031203020523e3e0a2525454f460a",
+      "request_key": "00000000-0000-0000-0000-0000000dbbc7",
+      "uploads_per_window": 1,
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "Too many files were attached in the last few minutes. Wait a few minutes and try again."
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "room",
+      "reason": "    ",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "Give a reason for removing the attachment."
+    },
+    {
+      "op": "attachment_remove",
+      "company": "co",
+      "attachment": "room",
+      "reason": "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
+      "expect_error": true,
+      "expect_kind": "Refused",
+      "expect_message": "The reason can be at most 500 characters."
+    }
+  ],
+  "capture_steps": true
+}

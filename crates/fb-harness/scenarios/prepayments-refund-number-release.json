@@ -1,0 +1,237 @@
+{
+  "users": [
+    {
+      "username": "prepayments",
+      "is_staff": true
+    },
+    {
+      "username": "outsider"
+    }
+  ],
+  "steps": [
+    {
+      "op": "create_company",
+      "ref": "c",
+      "name": "Synthetic prepayments",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "bank",
+      "code": "100",
+      "name": "bank",
+      "kind": "ASSET",
+      "detail_type": "BANK",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "ar",
+      "code": "110",
+      "name": "ar",
+      "kind": "ASSET",
+      "detail_type": "RECEIVABLE",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "uf",
+      "code": "120",
+      "name": "uf",
+      "kind": "ASSET",
+      "detail_type": "OTHER_CURRENT_ASSET",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability",
+      "code": "230",
+      "name": "liability",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "liability2",
+      "code": "231",
+      "name": "liability2",
+      "kind": "LIABILITY",
+      "detail_type": "OTHER_CURRENT_LIABILITY",
+      "expect_error": false
+    },
+    {
+      "op": "save_account",
+      "company": "c",
+      "ref": "income",
+      "code": "400",
+      "name": "income",
+      "kind": "INCOME",
+      "detail_type": "INCOME",
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "buyer",
+      "values": {
+        "display_name": "Buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_save",
+      "company": "c",
+      "model": "customer",
+      "ref": "other",
+      "values": {
+        "display_name": "Other buyer"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "l2_setup",
+      "company": "c",
+      "expected_revision": 0,
+      "values": {
+        "receivables": "ar",
+        "undeposited": "uf",
+        "customer_deposits": "liability",
+        "banks": [
+          "bank"
+        ]
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_deposit",
+      "company": "c",
+      "review": "dep100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec4",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_deposit",
+      "company": "c",
+      "review": "dep100",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec4",
+        "customer_id": "buyer",
+        "date": "2026-10-01",
+        "amount": "500.00",
+        "method": "CHECK",
+        "destination": "UNDEPOSITED",
+        "order_reference": "SO-1"
+      },
+      "ref": "dep100",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "dep100",
+      "review": "refund101",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec5",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "dep100",
+      "review": "refund101",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec5",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "ref": "refund101",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "dep100",
+      "review": "same-number",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec6",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "Check number 4001 is already used by deposit refund CDR-000001 on this bank account. Choose another number or void that refund first."
+    },
+    {
+      "op": "pp_void_refund",
+      "company": "c",
+      "record": "refund101",
+      "expected_revision": 1,
+      "date": "2026-10-05",
+      "reason": "Correct",
+      "expect_error": false
+    },
+    {
+      "op": "pp_review_refund",
+      "company": "c",
+      "deposit": "dep100",
+      "review": "refund103",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec7",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "expect_error": false
+    },
+    {
+      "op": "pp_record_refund",
+      "company": "c",
+      "deposit": "dep100",
+      "review": "refund103",
+      "values": {
+        "request_key": "00000000-0000-0000-0000-0000000aaec7",
+        "date": "2026-10-04",
+        "amount": "100.00",
+        "bank_id": "bank",
+        "method": "CHECK",
+        "check_number": "4001"
+      },
+      "ref": "refund103",
+      "expect_error": false
+    }
+  ],
+  "as_of": [
+    "2026-10-01",
+    "2026-10-03",
+    "2026-10-31"
+  ]
+}
