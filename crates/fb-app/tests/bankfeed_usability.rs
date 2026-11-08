@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App, Command, Outcome, keys::MasterKey, screens};
 use fb_core::{bankfeeds as bf, services, store};
 use serde_json::json;
@@ -15,6 +16,7 @@ fn fixture() -> (tempfile::TempDir, App, String, Vec<String>) {
         )
         .unwrap()
         .company_id;
+    support::sign_in(&mut app);
     let o = app.open_mut().unwrap();
     let conn = bf::connect(
         &mut o.book,

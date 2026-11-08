@@ -2,6 +2,7 @@
 //! unless the build has the `plugins` feature. Run without it, this file tests the release build;
 //! every plugin route refuses GET and POST, and no core page links to one. A book that already has a
 //! bank-feed connection (made in a dev build) still opens and takes writes.
+mod support;
 use fb_app::credentials::BookCredentials;
 use fb_app::keys::MasterKey;
 use fb_app::{App, AppError, Command, Outcome, screens};
@@ -45,6 +46,7 @@ fn books(plugins: bool) -> Books {
     app.backups.configure(&dir.path().join("data")).unwrap();
     app.today = || chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
     let c = app.create_book(&path, &key, "owner", "Hidden plugin books").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     let account = |app: &mut App, code: &str, detail: &str| -> String {
         command(app, json!({"type":"SaveAccount","company_id":c,"code":code,"name":code,"detail_type":detail}))["id"].as_str().unwrap().into()
     };
@@ -195,6 +197,7 @@ fn a_book_with_bank_feed_connections_opens_and_writes_in_a_release_build() {
     release.simplefin = false;
     release.backups.configure(&b._dir.path().join("data")).unwrap();
     release.open_book(&b.path, &b.key).expect("a release build opens a book with bank-feed connections");
+    support::sign_in(&mut release);
     assert!(release.messages.is_empty(), "no bank-feed notice in a release build: {:?}", release.messages);
     assert_eq!(rename(&mut release, &b.c, "Renamed in release"), "Renamed in release");
     // The readable connection's mask was restored too: its secret never reaches the books.
@@ -210,5 +213,6 @@ fn a_book_with_bank_feed_connections_opens_and_writes_in_a_release_build() {
     let mut dev = App::new();
     dev.plugins = true;
     dev.open_book(&b.path, &b.key).unwrap();
+    support::sign_in(&mut dev);
     assert_eq!(dev.messages.len(), 1, "{:?}", dev.messages);
 }

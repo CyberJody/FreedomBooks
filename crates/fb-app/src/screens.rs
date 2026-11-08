@@ -15,6 +15,7 @@ mod d8;
 pub mod backups;
 mod printing;
 mod protection;
+mod identity;
 mod d9;
 pub(crate) use d8::export_report;
 pub(crate) use d6::{is_d6_command, run_d6_command};
@@ -144,11 +145,17 @@ fn arg_company(route: &Route) -> AppResult<CompanyId> {
 pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
     let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let params = parse_query(query);
+    if identity::handles(path) { return identity::render(app, path, &[], None); }
+    if app.is_open() && app.identity_location().is_some() { return Ok(Rendered { html: crate::identity::SIGN_IN.into(), status: 303, route: "sign-in".into() }); }
+    app.authorize_path(target, crate::identity::Permission::Read)?;
     if ![crate::protection::RECOVERY, crate::protection::KIT].contains(&path) { app.recovery_authorized = false; }
     if protection::handles(path) { return protection::render(app, path, &[]); }
     let route = resolve(path).ok_or_else(|| AppError::NotFound(path.to_owned()))?;
     if !plugin_allowed(app, &route.name) {
         return Err(AppError::NotFound(path.to_owned()));
+    }
+    if let Some(company) = route.args.get("company_id").and_then(|s| CompanyId::parse(s)) {
+        app.ai_select_company(company)?;
     }
     let name = route.name.clone();
     let (html, status) = match name.as_str() {
@@ -183,11 +190,13 @@ fn shell(app: &mut App, company: Option<CompanyId>, current: &Current<'_>) -> Ap
     // DESKTOP-BACKUPS: a restored book opened beside the main one says so on every page.
     // Built-in-key and auto-open books cannot lock, so they return to the main book by reopening the app.
     let back = if app.can_lock() { "Lock (File › Lock)" } else { "Quit and reopen FreedomBooks" };
-    let banner = match (app.upgrade_notice.take(), app.backups.viewing_restored()) {
+    let mut banner = match (app.upgrade_notice.take(), app.backups.viewing_restored()) {
         (Some(notice), _) => notice,
         (None, Some(name)) => format!("Restored book “{name}” is open. {back} to return to your main book."),
         (None, None) => String::new(),
     };
+    let role = app.authenticated_session()?.role;
+    if role == crate::identity::Role::Readonly { banner.push_str(" Read-only access: view and print. Ask an administrator for permission to save changes."); }
     let plugins = app.plugins;
     let bankfeeds = app.bankfeeds_enabled();
     let open = app.open_mut()?;
@@ -958,6 +967,8 @@ pub fn submit(app: &mut App, path: &str, fields: &[(String, String)]) -> AppResu
     if fields.len() > 2000 || fields.iter().any(|(k, v)| k.len() > 100 || v.len() > 10_000) {
         return Err(AppError::Invalid("Form too large.".into()));
     }
+    if identity::handles(path) { return identity::submit(app,path,fields); }
+    app.authorize_path(path, if get(fields,"action")==Some("desktop_print") { crate::identity::Permission::Read } else { crate::identity::Permission::Write })?;
     if get(fields, "action") == Some("desktop_print") { return printing::submit(app, path, fields); }
     if protection::handles(path) { return protection::submit(app, path, fields); }
     let route = resolve(path).ok_or_else(|| AppError::NotFound(path.to_owned()))?;

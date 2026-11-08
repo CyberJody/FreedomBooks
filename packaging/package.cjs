@@ -34,10 +34,10 @@ async function build(options = {}) {
   metadata.freedomBooksFeatures = {simplefin: Boolean(netHelper)};
   if (incomplete) metadata.freedomBooksIncomplete = 'Windows fb-node native module not built; this developer shell is NOT runnable or releasable.';
   try {
-    for (const dir of ['main', 'preload', 'renderer']) fs.cpSync(path.join(root, 'electron', dir), path.join(stage, dir), {recursive: true});
+    for (const dir of ['main', 'preload', 'renderer', 'agent']) fs.cpSync(path.join(root, 'electron', dir), path.join(stage, dir), {recursive: true});
     // SQLite respects the process umask when it first creates its encrypted
     // database/WAL. Keep packaged first-run files private even with a 022 login.
-    fs.writeFileSync(path.join(stage, 'main/install-entry.cjs'), "'use strict';\nif (process.platform !== 'win32') process.umask(0o077);\nrequire('./main.cjs');\n");
+    fs.writeFileSync(path.join(stage, 'main/install-entry.cjs'), "'use strict';\nif (process.platform !== 'win32') process.umask(0o077);\nrequire('./entry.cjs');\n");
     fs.mkdirSync(path.join(stage, 'native'));
     if (incomplete) fs.writeFileSync(path.join(stage, 'native/PENDING.txt'), metadata.freedomBooksIncomplete + '\n');
     else fs.copyFileSync(native, path.join(stage, 'native/fb-node.node'));

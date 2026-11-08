@@ -48,11 +48,11 @@ DEFAULT_ROOTS = [
     "fb-plugin-gmail",
     "fb-plugin-m365",
 ]
-# Crates that vendor C sources whose own license files live below the crate
-# root; read them too so the copyright of the embedded code is reported.
+# License files/headers below the crate root, including embedded C sources.
 EXTRA_LICENSE_FILES = {
     "sqlcipher-src": ["sqlcipher/LICENSE-sqlcipher", "sqlcipher/LICENSE-libtomcrypt"],
     "openssl-src": ["openssl/LICENSE.txt"],
+    "qrcodegen": ["src/lib.rs"],  # Upstream puts its MIT notice in the source header.
 }
 LICENSE_FILE_RE = re.compile(r"^(LICEN[CS]E|COPYING|COPYRIGHT|NOTICE|UNLICENSE)", re.I)
 # A real copyright line, not the Apache appendix template or prose about notices.
@@ -173,7 +173,7 @@ def rust_packages(roots: list[str]) -> list[dict]:
             continue  # our own workspace crates
         is_pm = any("proc-macro" in t["kind"] for t in p["targets"])
         usage = "linked" if pid in linked and not is_pm else ("proc-macro" if is_pm else "build-time")
-        if p["name"] in EXTRA_LICENSE_FILES:
+        if p["name"] in {"sqlcipher-src", "openssl-src"}:
             usage = "build-time; vendored C linked into binary"
         pdir = Path(p["manifest_path"]).parent
         files = license_files(pdir)

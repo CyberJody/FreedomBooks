@@ -1,4 +1,5 @@
 #![cfg(all(unix, feature = "key-test-hooks"))]
+mod support;
 use fb_app::{App, keys::MasterKey, protection::Record};
 const PASSWORD: &str = "Synthetic audit password";
 
@@ -13,9 +14,11 @@ fn audit_failure_child() {
     app.os_store_usable = true;
     let own = action != "book.protection_changed";
     app.create_protected_book(&path,"Synthetic audit owner","Synthetic audit company",own.then_some(PASSWORD)).unwrap();
+    support::sign_in(&mut app);
+    if !app.builtin() { app.authorize_recovery(PASSWORD).unwrap(); }
     let old = serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap();
     let result = match action.as_str() {
-        "book.password_prompt" => app.change_ask_password(PASSWORD,false),
+        "book.password_prompt" => app.change_ask_password(PASSWORD,true),
         "book.recovery_saved" => app.recovery_saved(),
         "book.protection_changed" => app.change_protection("",Some(PASSWORD)),
         _ => panic!("unknown action"),
@@ -26,7 +29,12 @@ fn audit_failure_child() {
     assert_eq!(serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap(),old,
         "failed actor audit must roll back published protection state");
     app.open_book(&path, &Record::read(&path).unwrap().unwrap().keys.unlock(PASSWORD).unwrap()).unwrap();
+    support::sign_in(&mut app);
     assert!(app.is_open());
+    let audit_action = std::env::var("FB_KEY_FAIL_AUDIT").unwrap();
+    let count: i64 = app.open_mut().unwrap().book.read(|q| q.query_row(
+        "SELECT count(*) FROM ledger_auditevent WHERE action=?1", [&audit_action], |r| r.get(0))).unwrap();
+    assert_eq!(count, 0, "failed operation must not retain an actor event");
     assert_eq!(app.company_name_for_kit().unwrap(),"Synthetic audit company");
 }
 

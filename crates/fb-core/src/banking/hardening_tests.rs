@@ -218,7 +218,11 @@ fn completed_operator_identity_survives_rename_upgrade_and_undo_of_an_empty_stat
     assert_eq!(fb_db::test_support::snapshot(reopened.connection()).unwrap(), copy.expected);
     drop(reopened);
     assert_eq!(fb_db::test_support::snapshot(f.book.connection()).unwrap(),copy.expected,"actor backfill must preserve every row, using the audit identity after rename");
-    assert_eq!(f.snap(),before);
+    let mut expected = before.clone();
+    let desktop = &mut expected.iter_mut().find(|(table, _)| table == "desktop_user").unwrap().1;
+    assert!(desktop.is_empty(), "the source fixture has no configured desktop identities");
+    *desktop = copy.expected["desktop_user"].clone();
+    assert_eq!(f.snap(), expected);
     let r = undo_last(
         &mut f.book,
         f.u,

@@ -1,5 +1,6 @@
 //! DESKTOP-JODY1 (Jody, 11/03): "Report a problem" is a how-to for filing a public GitHub issue, and the
 //! footer carries no disclaimer filler. Synthetic encrypted book; no network.
+mod support;
 use fb_app::{App, Host, ISSUE_URL, keys, screens};
 
 fn app() -> (App, String) {
@@ -9,6 +10,7 @@ fn app() -> (App, String) {
     let mut app = App::new();
     app.simplefin = false;
     let c = app.create_book(&dir.join("books.fbbook"), &keys::new_master_key().unwrap(), "Owner", "Synthetic company").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     (app, c)
 }
 

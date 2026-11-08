@@ -21,6 +21,9 @@ fn main_b0b216a_prefix_is_byte_exact_and_bankfeeds_append_in_order() {
         "0182_company_document_data",
         "0183_company_document_json_ownership",
         "0184_release_guard_union",
+        "0185_desktop_users",
+        "0186_desktop_user_value_guards",
+        "0187_desktop_mfa",
     ]);
 }
 
@@ -62,7 +65,7 @@ fn genuine_main_schema_upgrades_without_row_loss_and_hashes_equal_a_fresh_book()
     assert!(prior_deposit_sql.contains("estimate_id TEXT CHECK(estimate_id IS NULL)"));
     assert_eq!(deposit_sql,prior_deposit_sql.replace("estimate_id TEXT CHECK(estimate_id IS NULL)","estimate_id TEXT REFERENCES sales_estimate(id)"));
     for (object,hash) in prior_schema {
-        if !["view:fb_json_invalid","view:fb_value_invalid","table:prepayments_customerdeposit"].contains(&object.as_str()) {
+        if !["view:fb_json_invalid","view:fb_value_invalid","table:prepayments_customerdeposit","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) {
             assert_eq!(head_schema[&object],hash,"main object {object} changed");
         }
     }
@@ -84,7 +87,7 @@ fn original_onboarding_base_upgrades_with_exact_rows_and_schema_inventory() {
         let hash: String = Sha256::digest(MIGRATIONS[n].1.as_bytes()).iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(hash, row["sha256"], "{} changed from assigned original base", MIGRATIONS[n].0);
     }
-    assert_eq!(MIGRATIONS[prefix.len()..].iter().map(|m| m.0).collect::<Vec<_>>(), ["0162_numbering", "0180_company_documents", "0181_company_document_guards", "0182_company_document_data", "0183_company_document_json_ownership", "0184_release_guard_union"]);
+    assert_eq!(MIGRATIONS[prefix.len()..].iter().map(|m| m.0).collect::<Vec<_>>(), ["0162_numbering", "0180_company_documents", "0181_company_document_guards", "0182_company_document_data", "0183_company_document_json_ownership", "0184_release_guard_union", "0185_desktop_users", "0186_desktop_user_value_guards", "0187_desktop_mfa"]);
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("original-base.fbbook");
     let key = [83;32];
@@ -102,16 +105,24 @@ fn original_onboarding_base_upgrades_with_exact_rows_and_schema_inventory() {
     let after_schema = schema_hashes(&book.conn).unwrap();
     let prior_tables: BTreeSet<_> = before_rows.keys().cloned().collect();
     let head_tables: BTreeSet<_> = after_rows.keys().cloned().collect();
-    assert_eq!(head_tables.difference(&prior_tables).map(String::as_str).collect::<Vec<_>>(), ["company_document_details", "fb_numbering"]);
+    assert_eq!(head_tables.difference(&prior_tables).map(String::as_str).collect::<Vec<_>>(), ["company_document_details", "desktop_mfa_recovery", "desktop_mfa_totp", "desktop_user", "fb_numbering"]);
     assert!(prior_tables.is_subset(&head_tables));
     for (table, rows) in before_rows { assert_eq!(after_rows[&table], rows, "all original rows in {table} survive"); }
     assert!(after_rows["company_document_details"].is_empty(), "existing books get no unsolicited document details");
     assert!(after_rows["fb_numbering"].is_empty(), "upgrading never opts existing books into a sequence");
     for (object, hash) in &before_schema {
-        if object != "view:fb_value_invalid" && object != "view:fb_json_invalid" { assert_eq!(&after_schema[object], hash, "prior object {object} survives unchanged"); }
+        if !["view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) { assert_eq!(&after_schema[object], hash, "prior object {object} survives unchanged"); }
     }
     let added: BTreeSet<_> = after_schema.keys().filter(|k| !before_schema.contains_key(*k)).map(String::as_str).collect();
     assert_eq!(added, BTreeSet::from([
+        "table:desktop_user", "view:desktop_user_invalid",
+        "table:desktop_mfa_totp", "table:desktop_mfa_recovery",
+        "trigger:fb_valid_desktop_mfa_totp_insert", "trigger:fb_valid_desktop_mfa_totp_update",
+        "trigger:fb_valid_desktop_mfa_recovery_insert", "trigger:fb_valid_desktop_mfa_recovery_update",
+        "trigger:desktop_mfa_totp_identity",
+        "trigger:fb_valid_desktop_user_insert", "trigger:fb_valid_desktop_user_update",
+        "trigger:desktop_user_identity", "trigger:desktop_user_kept", "trigger:desktop_user_password_kept",
+        "trigger:desktop_user_last_admin", "trigger:desktop_user_last_active", "trigger:desktop_user_last_member",
         "table:company_document_details",
         "trigger:company_documents_data_insert", "trigger:company_documents_data_update",
         "trigger:company_documents_identity_insert", "trigger:company_documents_identity_update", "trigger:company_documents_identity_delete",

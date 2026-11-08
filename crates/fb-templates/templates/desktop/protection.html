@@ -3,12 +3,12 @@
 {% if errors %}<section class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</section>{% endif %}
 {% if builtin %}
 <p>These books use FreedomBooks’ built-in key.</p><p class="notice">Anyone who gets a copy of this file can open it.</p>
-<p>Backups open on any FreedomBooks install. File › Lock and idle lock do not apply because there is no private password to ask for.</p>
+<p>Backups open on any FreedomBooks install. File › Lock, idle lock and switching users still end the individual sign-in session.</p>
 {% elif legacy %}<p>Choose a password to finish setting up recovery and portable backups for these books.</p>
 {% else %}<p>These books are protected with your own password.</p>
 <form class="narrow" method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="ask">
-<p><label><input type="checkbox" name="ask_password"{% if ask_password %} checked{% endif %}> Ask for a password when opening these books</label></p>
-<p>{% if os_store %}When off, this computer opens the books using its system keyring. File › Lock and idle lock are off too.{% else %}This computer has no system keyring. Keep asking for your password when opening these books.{% endif %}</p>
+<p><label><input type="checkbox" name="ask_password"{% if ask_password %} checked{% endif %}> Also require the book password before user sign-in</label></p>
+<p>{% if os_store %}Normally, sign in with your user name and password, followed by MFA if enabled. This computer keeps the book key in its secure system keyring. Turn this extra prompt on if you also want to enter the book password each time. File › Lock and idle lock still end your user session.{% else %}This computer has no system keyring. Keep asking for your password when opening these books.{% endif %}</p>
 <p><label for="id_current_password">Current password</label><input type="password" id="id_current_password" name="current_password" autocomplete="current-password" required></p><button>Save setting</button></form>
 <p><a href="/settings/recovery-key/">Show my recovery key</a></p>
 {% endif %}

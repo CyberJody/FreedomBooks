@@ -455,7 +455,14 @@ fn populated_pre_0070_copy_upgrades_preserving_receipts_and_all_existing_rows() 
         for (t, rows) in before.as_object().unwrap() {
             assert_eq!(&after[t], rows, "{t}");
         }
-        assert_eq!(after, current);
+        fb_db::test_support::assert_desktop_user_backfill(b.connection());
+        assert_eq!(current["desktop_user"], json!([]));
+        let mut expected = current.clone();
+        let mut roles: Vec<_> = fb_db::test_support::desktop_user_backfill(b.connection()).unwrap()
+            .iter().map(|row| format!("{row:?}")).collect();
+        roles.sort();
+        expected["desktop_user"] = json!(roles);
+        assert_eq!(after, expected);
         assert!(b.check().unwrap().is_empty());
         drop(b);
         assert!(
@@ -2024,7 +2031,14 @@ fn fix1_populated_0071_copy_upgrades_preserving_every_prepayment_row() {
         for (t, rows) in before.as_object().unwrap() {
             assert_eq!(&after[t], rows, "{t}");
         }
-        assert_eq!(after, current);
+        fb_db::test_support::assert_desktop_user_backfill(b.connection());
+        assert_eq!(current["desktop_user"], json!([]));
+        let mut expected = current.clone();
+        let mut roles: Vec<_> = fb_db::test_support::desktop_user_backfill(b.connection()).unwrap()
+            .iter().map(|row| format!("{row:?}")).collect();
+        roles.sort();
+        expected["desktop_user"] = json!(roles);
+        assert_eq!(after, expected);
         assert!(b.check().unwrap().is_empty());
         drop(b);
         assert!(

@@ -4,6 +4,7 @@
 //! trail, company scoping, registers and the trial balance. L2a adds directory, sales tax and
 //! document identities/configuration/snapshots/calculations and generic source boundaries.
 
+pub mod agent_provenance;
 pub mod backups;
 pub mod accounts;
 pub mod assistant;
@@ -43,3 +44,5 @@ pub use error::{FbError, FbResult};
 pub use fb_db::Book;
 pub use fb_ids::{AccountId, CompanyId, JournalId, UserId};
 pub use fb_money::Money;
+
+pub mod desktop_mfa;

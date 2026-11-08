@@ -45,18 +45,22 @@ fn every_trigger_and_required_guard_from_ten_reviewed_heads_survives_with_exact_
     assert!(missing.is_empty(), "{}", missing.join("\n"));
     // INT-L4, desktop estimates and the 44 reviewed bank-feed triggers.
     // Require the full union of reviewed inventories, including D4, with exact head counts.
-    assert_eq!(installed.len(), 944);
-    assert_eq!(required.len(), 577);
+    assert_eq!(installed.len(), 957);
+    assert_eq!(required.len(), 583);
     let value_guards: BTreeSet<&str> = value_guard_triggers().collect();
-    assert_eq!(value_guards.len(), 174);
+    assert_eq!(value_guards.len(), 180);
     // Both lanes add distinct guards; retain their complete reviewed union.
     assert!(value_guards.contains("fb_valid_plugin_credential_insert"));
     assert!(value_guards.contains("fb_valid_plugin_credential_update"));
     assert!(value_guards.contains("fb_valid_fb_numbering_insert"));
     assert!(value_guards.contains("fb_valid_fb_numbering_update"));
+    assert!(value_guards.contains("fb_valid_desktop_user_insert"));
+    assert!(value_guards.contains("fb_valid_desktop_user_update"));
+    for name in ["fb_valid_desktop_mfa_totp_insert", "fb_valid_desktop_mfa_totp_update", "fb_valid_desktop_mfa_recovery_insert", "fb_valid_desktop_mfa_recovery_update"] { assert!(value_guards.contains(name)); }
+    assert!(installed.contains("desktop_mfa_totp_identity"));
     assert!(value_guards.is_disjoint(&required));
     assert!(value_guards.iter().all(|name| installed.contains(*name)));
-    assert_eq!(installed.iter().filter(|name| !value_guards.contains(name.as_str())).count(), 770);
+    assert_eq!(installed.iter().filter(|name| !value_guards.contains(name.as_str())).count(), 777);
     for name in ["company_documents_data_insert", "company_documents_data_update",
         "fb_json_company_document_details_insert", "fb_json_company_document_details_update",
         "company_documents_identity_insert", "company_documents_identity_update", "company_documents_identity_delete"] {

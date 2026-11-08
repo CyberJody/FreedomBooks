@@ -1,4 +1,5 @@
 //! D8 report boundaries on an encrypted, synthetic book. Core arithmetic has its L4 parity suite.
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -22,6 +23,7 @@ fn fixture() -> (App, String, String) {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     let open = app.open_mut().unwrap();
     let c = company.parse().unwrap();
     let a = fb_core::services::save_account(

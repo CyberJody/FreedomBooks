@@ -1,4 +1,5 @@
 //! D6 form and review boundaries against a real encrypted book.
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, keys, screens};
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -14,6 +15,7 @@ fn fixture()->(App,String,String,String,String,String){
     let path=std::env::temp_dir().join(format!("fb-d6-{}-{}",std::process::id(),N.fetch_add(1,Ordering::SeqCst)));std::fs::create_dir_all(&path).unwrap();
     let mut app=App::new();app.today=||chrono::NaiveDate::from_ymd_opt(2026,11,1).unwrap();
     let c=app.create_book(&path.join("book.fbbook"),&keys::new_master_key().unwrap(),"owner","D6 test books").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     let bank=account(&mut app,&c,"1000","BANK");let savings=account(&mut app,&c,"1010","BANK");let ap=account(&mut app,&c,"2000","PAYABLE");let expense=account(&mut app,&c,"5000","EXPENSE");
     command(&mut app,json!({"type":"SaveSetup","company_id":c,"expected_revision":0,"receivables_id":null,"undeposited_id":null,"payables_id":ap,"bank_ids":[bank,savings]}));
     let o=app.open_mut().unwrap();let vendor=fb_core::directory::save_record(&mut o.book,o.owner,c.parse().unwrap(),fb_core::directory::Model::Vendor,&json!({"display_name":"Supplier"}),None).unwrap()["id"].as_str().unwrap().to_owned();
@@ -50,8 +52,10 @@ fn transfer_changed_after_review_refuses_without_posting_and_lock_drops_review()
     command(&mut app,json!({"type":"RecordTransfer","company_id":c,"values":values,"review_token":review["token"]}));assert_eq!(count(&mut app,"transfers_transfer"),1);
     let mut unused=values.clone();unused["request_key"]=json!("00000000-0000-0000-0000-000000000602");
     let review=command(&mut app,json!({"type":"ReviewTransfer","company_id":c,"values":unused}));
-    let path=std::env::temp_dir().join(format!("fb-d6-other-{}-{}.fbbook",std::process::id(),N.fetch_add(1,Ordering::SeqCst)));app.create_book(&path,&keys::new_master_key().unwrap(),"owner","Other book").unwrap();
-    let err=app.run(parse_command(&json!({"type":"RecordTransfer","company_id":c,"values":values,"review_token":review["token"]}).to_string()).unwrap()).unwrap_err();assert!(err.to_string().contains("fresh transfer review"));assert_eq!(count(&mut app,"transfers_transfer"),0);
+    let path=std::env::temp_dir().join(format!("fb-d6-other-{}-{}.fbbook",std::process::id(),N.fetch_add(1,Ordering::SeqCst)));let other=app.create_book(&path,&keys::new_master_key().unwrap(),"owner","Other book").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
+    assert!(app.run(parse_command(&json!({"type":"RecordTransfer","company_id":c,"values":values,"review_token":review["token"]}).to_string()).unwrap()).is_err());
+    let err=app.run(parse_command(&json!({"type":"RecordTransfer","company_id":other,"values":values,"review_token":review["token"]}).to_string()).unwrap()).unwrap_err();assert!(err.to_string().contains("fresh transfer review"),"{err}");assert_eq!(count(&mut app,"transfers_transfer"),0);
 }
 
 #[test]

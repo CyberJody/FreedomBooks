@@ -1,4 +1,5 @@
 //! The host cannot acknowledge another connection with an unrelated valid mask.
+mod support;
 use fb_app::{App, credentials::BookCredentials, keys::MasterKey};
 use fb_core::{Book, bankfeeds};
 use fb_plugin_api::{CredentialScope, CredentialStore, SecretBytes};
@@ -29,6 +30,7 @@ fn restoration_requires_authenticated_current_envelope_on_the_same_book_and_conn
     let mut app = App::new();
     app.plugins = true;
     let co = app.create_book(&path, &key, "Capability operator", "Synthetic capability").unwrap().company_id;
+    support::sign_in(&mut app);
     let mut scopes = Vec::new();
     for _ in 0..2 {
         let o = app.open_mut().unwrap();

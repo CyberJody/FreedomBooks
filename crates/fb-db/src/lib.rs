@@ -134,6 +134,9 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ("0182_company_document_data", include_str!("../sql/0182_company_document_data.sql")),
     ("0183_company_document_json_ownership", include_str!("../sql/0183_company_document_json_ownership.sql")),
     ("0184_release_guard_union", include_str!("../sql/0184_release_guard_union.sql")),
+    ("0185_desktop_users", include_str!("../sql/0185_desktop_users.sql")),
+    ("0186_desktop_user_value_guards", include_str!("../sql/0186_desktop_user_value_guards.sql")),
+    ("0187_desktop_mfa", include_str!("../sql/0187_desktop_mfa.sql")),
 ];
 
 /// Every trigger the schema must carry. A book missing one was altered outside the core and is refused.
@@ -187,6 +190,8 @@ pub const REQUIRED_TRIGGERS: &[&str] = &[
     "fb_estimate_parent_fb_user_delete",
     "fb_estimate_parent_fb_user_update",
     "fb_sales_receipt_snapshot",
+    "desktop_user_identity", "desktop_user_kept", "desktop_user_password_kept",
+    "desktop_user_last_admin", "desktop_user_last_active", "desktop_user_last_member",
     "fb_owner_insert", "fb_owner_update", "fb_owner_delete",
     "fb_owner_user_insert", "fb_owner_user_update", "fb_owner_user_delete",
     "attachment_text_insert",
@@ -645,7 +650,7 @@ pub const REQUIRED_INDEXES: &[&str] = &[
 /// The shared value guards of 0130 (one BEFORE INSERT and one BEFORE UPDATE per table with TEXT columns),
 /// required like [`REQUIRED_TRIGGERS`]; named from the migration itself so the two cannot drift.
 pub fn value_guard_triggers() -> impl Iterator<Item = &'static str> {
-    [include_str!("../sql/0130_shared_validators.sql"), include_str!("../sql/0132_estimate_validators.sql"), include_str!("../sql/0137_bankfeeds_reconnect.sql"), include_str!("../sql/0161_credential_validators.sql"), include_str!("../sql/0162_numbering.sql"), include_str!("../sql/0181_company_document_guards.sql")]
+    [include_str!("../sql/0130_shared_validators.sql"), include_str!("../sql/0132_estimate_validators.sql"), include_str!("../sql/0137_bankfeeds_reconnect.sql"), include_str!("../sql/0161_credential_validators.sql"), include_str!("../sql/0162_numbering.sql"), include_str!("../sql/0181_company_document_guards.sql"), include_str!("../sql/0186_desktop_user_value_guards.sql"), include_str!("../sql/0187_desktop_mfa.sql")]
         .into_iter().flat_map(str::lines)
         .filter_map(|line| line.strip_prefix("CREATE TRIGGER "))
         .filter_map(|rest| rest.split(' ').next())
@@ -658,7 +663,8 @@ pub const VIOLATION_QUERIES: &[(&str, &str)] = &[
     ("invalid estimate conversion copy", include_str!("estimates_conversion_integrity.sql")),
     ("invalid estimate states", "SELECT r.id FROM sales_estimaterevision r LEFT JOIN sales_estimaterevision p ON p.estimate_id=r.estimate_id AND p.number=r.number-1 JOIN sales_estimate e ON e.id=r.estimate_id WHERE NOT fb_estimate_transition_ok(coalesce(p.state,''),r.state,json_extract(r.data,'$.action'),json_extract(r.data,'$.reason')) OR json_extract(r.data,'$.company_snapshot.id') IS NOT e.company_id OR json_extract(r.data,'$.id') IS NOT r.id OR json_extract(r.data,'$.number') IS NOT r.number OR json_extract(r.data,'$.customer_id') IS NOT r.customer_id OR json_extract(r.data,'$.date') IS NOT r.date OR json_extract(r.data,'$.expiry') IS NOT r.expiry OR json_extract(r.data,'$.state') IS NOT r.state"),
     ("invalid estimate evidence", "SELECT e.id FROM sales_estimate e WHERE NOT EXISTS(SELECT 1 FROM sales_estimaterevision r JOIN estimate_seal s ON s.kind='revision' AND s.doc_id=r.id WHERE r.estimate_id=e.id AND r.number=e.revision) UNION ALL SELECT r.id FROM sales_estimaterevision r WHERE NOT fb_sales_header_ok('invoice',r.data) OR NOT fb_sales_document_ok(json_set(r.data,'$.state','DRAFT'),(SELECT json_group_array(json(l.data)) FROM (SELECT data FROM sales_estimateline WHERE revision_id=r.id ORDER BY position) l),r.total)"),
-    ("owner", "SELECT 'invalid owner account' FROM accounts_owner o WHERE (SELECT count(*) FROM fb_user) != 1 OR NOT EXISTS(SELECT 1 FROM fb_user u WHERE u.id=o.user_id AND u.is_active=1 AND u.is_staff=1)"),
+    ("desktop user administration", "SELECT problem FROM desktop_user_invalid"),
+    ("owner", "SELECT 'invalid owner account' FROM accounts_owner o WHERE NOT EXISTS(SELECT 1 FROM fb_user u WHERE u.id=o.user_id)"),
     ("invalid stored text, identifier, date or timestamp", "SELECT problem FROM fb_value_invalid"),
     ("invalid numbering settings", "SELECT company_id FROM fb_numbering_invalid"),
     ("invalid attachment evidence", "SELECT id FROM attachment_invalid UNION ALL SELECT id FROM attachment_audit_invalid UNION ALL SELECT id FROM attachment_text_invalid"),

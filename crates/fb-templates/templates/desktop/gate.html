@@ -1,5 +1,5 @@
 {% extends 'ledger/base.html' %}{% block content %}
-{% if mode == 'setup' %}<h1>Set up your books</h1><p>Name the owner and your first company.</p>{% else %}<h1>FreedomBooks is locked</h1><p>Enter your password or recovery key to open these books.</p>{% endif %}
+{% if mode == 'setup' %}<h1>Set up your books</h1><p>Name the owner and your first company. Next, set the owner’s individual user password.</p>{% else %}<h1>Unlock these books on this computer</h1><p>Enter the book password or recovery key, then sign in with your user name and password. The secure system keyring normally opens the book for you. This prompt is needed when its saved key is unavailable or the extra book-password prompt is enabled.</p>{% endif %}
 {% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
 {% if mode == 'setup' %}
 <form class="narrow" method="post" data-gate="setup" novalidate>

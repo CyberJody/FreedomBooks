@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App,Command,Outcome,commands::StarterChart,keys,screens};
 
 fn post(app:&mut App,path:&str,fields:Vec<(String,String)>)->Outcome {
@@ -15,6 +16,7 @@ fn field(html:&str,name:&str)->String {
 fn chart_creation_document_details_and_numbering_share_real_company_forms_without_erasure() {
     let dir=tempfile::tempdir().unwrap();let path=dir.path().join("combined.fbbook");let key=keys::new_master_key().unwrap();let mut app=App::new();
     let c=app.create_book_with_chart(&path,&key,"Owner","First seller",StarterChart::Standard).unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     assert_eq!(count(&mut app,"ledger_account"),34);
     let new=screens::render(&mut app,"/companies/new/").unwrap().html;
     assert!(new.contains("starter_chart") && !new.contains("id_payment_instructions"));
@@ -35,6 +37,7 @@ fn chart_creation_document_details_and_numbering_share_real_company_forms_withou
     assert_eq!(count(&mut app,"ledger_account"),68);
     assert_eq!(count(&mut app,"company_document_details"),1);assert_eq!(count(&mut app,"fb_numbering"),1);
     app.lock();app.open_book(&path,&key).unwrap();
+    support::sign_in(&mut app);
     let html=screens::render(&mut app,&edit).unwrap().html;
     assert!(html.contains("Preserved address") && html.contains("INV-000100"));
     assert_eq!(count(&mut app,"ledger_account"),68);

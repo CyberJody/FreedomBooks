@@ -1,5 +1,6 @@
 //! Attaching a file from a document or journal page: the add POST asks the main process for the native
 //! file chooser (a one-time ticket), and the chosen path comes back through `backups::dialog_result`.
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 use fb_core::{CompanyId, services};
 use serde_json::json;
@@ -22,6 +23,7 @@ impl Fixture {
         std::fs::create_dir(dir.path().join("books")).unwrap();
         let mut app = App::new();
         let co = app.create_book(&dir.path().join("books/default.fbbook"), &keys::new_master_key().unwrap(), "Owner", "Attach Co").unwrap().company_id;
+        support::sign_in(&mut app);
         Self { _dir: dir, app, co, files }
     }
     fn account(&mut self, code: &str, kind: &str) -> String {

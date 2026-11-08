@@ -54,6 +54,7 @@ mod tests {
         // N13 against the reference page as Django renders it; plugins hidden is N14 (release.rs).
         app.plugins = true;
         app.create_book(&dir.join("b.fbbook"), &fb_app::keys::new_master_key().unwrap(), "owner", "Synthetic").unwrap();
+        app.enroll_owner("Synthetic screen comparison password").unwrap();
         app.host = host;
         let html = fb_app::screens::render(&mut app, path).unwrap().html;
         let _ = std::fs::remove_dir_all(&dir);
@@ -66,12 +67,18 @@ mod tests {
         fb_app::Host::new(VERSION, OS)
     }
 
+    // This rule owns report copy and footer copy. The frozen Django shell predates the
+    // intentionally removed alpha banner and named-user controls; those have desktop tests.
+    fn report_content(html: &str) -> &str {
+        html.split_once("<main id=\"main\">").expect("report main content").1
+    }
+
     #[test]
-    fn the_reference_report_page_matches_exactly_the_approved_desktop_page() {
+    fn reference_report_content_and_footer_match_the_approved_desktop_copy() {
         let (py, rs) = maps();
         let rust = rust_page("/help/report/", screendiff_host());
-        let a = normalize(DJANGO_REPORT, &py);
-        let b = normalize(&rust, &rs);
+        let a = report_content(&normalize(DJANGO_REPORT, &py)).to_owned();
+        let b = report_content(&normalize(&rust, &rs)).to_owned();
         assert_eq!(first_difference(&a, &b), None);
         assert!(b.contains("FreedomBooks version: 0.0.0-screendiff Operating system: Screen-diff OS 1"));
         // Without the rule (i.e. as the desktop side) the reference page is still the old page.
@@ -82,7 +89,7 @@ mod tests {
     fn any_other_difference_on_those_screens_still_differs() {
         let (py, rs) = maps();
         let rust = rust_page("/help/report/", screendiff_host());
-        let a = normalize(DJANGO_REPORT, &py);
+        let a = report_content(&normalize(DJANGO_REPORT, &py)).to_owned();
         // Desktop-side changes: wording, the link, version/OS, the old footer phrase, the old placeholder.
         for (old, new) in [
             ("GitHub issues are public.", "GitHub issues are private."),
@@ -93,10 +100,10 @@ mod tests {
             ("</ol>", "</ol><p>No report address is set on this install.</p>"),
         ] {
             assert!(rust.contains(old), "{old}");
-            assert_ne!(normalize(&rust.replacen(old, new, 1), &rs), a, "{old} -> {new}");
+            assert_ne!(report_content(&normalize(&rust.replacen(old, new, 1), &rs)), a, "{old} -> {new}");
         }
         let other_host = rust_page("/help/report/", fb_app::Host::new("0.1.0", OS));
-        assert_ne!(normalize(&other_host, &rs), a, "the version must be the fixed screen-diff value");
+        assert_ne!(report_content(&normalize(&other_host, &rs)), a, "the version must be the fixed screen-diff value");
         // Reference-side changes: the rule needs the exact old fragment, so a changed reference differs.
         for (old, new) in [
             ("This page does not list an outside address.", "This page lists an address."),
@@ -105,7 +112,7 @@ mod tests {
             ("Bank feeds are read-only", "Bank feeds are live"),
         ] {
             assert!(DJANGO_REPORT.contains(old), "{old}");
-            assert_ne!(normalize(&DJANGO_REPORT.replacen(old, new, 1), &py), normalize(&rust, &rs), "{old} -> {new}");
+            assert_ne!(report_content(&normalize(&DJANGO_REPORT.replacen(old, new, 1), &py)), report_content(&normalize(&rust, &rs)), "{old} -> {new}");
         }
     }
 
@@ -146,6 +153,7 @@ mod tests {
         let mut app = fb_app::App::new();
         app.plugins = false;
         app.create_book(&dir.join("b.fbbook"), &fb_app::keys::new_master_key().unwrap(), "owner", "Synthetic").unwrap();
+        app.enroll_owner("Synthetic screen comparison password").unwrap();
         app.host = screendiff_host();
         let rust = normalize(&fb_app::screens::render(&mut app, "/").unwrap().html, &rs);
         let _ = std::fs::remove_dir_all(&dir);

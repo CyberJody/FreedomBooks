@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App, credentials::BookCredentials, keys::MasterKey};
 use fb_plugin_api::{CredentialScope, CredentialStore, SecretBytes};
 use uuid::Uuid;
@@ -12,6 +13,7 @@ fn credentials_persist_encrypt_authenticate_scope_and_forget() {
     app.device_key = Some(MasterKey::new(*device));
     app.plugins = true;
     let c = app.create_book(&path, &key, "Vault operator", "Synthetic vault company").unwrap().company_id;
+    support::sign_in(&mut app);
     let o = app.open_mut().unwrap();
     let other = fb_core::services::create_company(&mut o.book, o.owner, "Other synthetic vault", "USD", false).unwrap().id;
     let open = app.open.take().unwrap();
@@ -29,6 +31,7 @@ fn credentials_persist_encrypt_authenticate_scope_and_forget() {
     }).unwrap();
     drop(book);
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     let open = app.open.take().unwrap();
     let store = BookCredentials::new(open.book, open.owner, &device).unwrap();
     assert!(store.load(&scope).unwrap().unwrap().expose() == secret);
@@ -84,6 +87,7 @@ fn credential_scope_metadata_is_validated_on_write_and_reopen() {
     let mut app = App::new();
     app.plugins = true;
     let company = app.create_book(&path, &key, "Metadata operator", "Synthetic metadata").unwrap().company_id;
+    support::sign_in(&mut app);
     let open = app.open.take().unwrap();
     let scope = CredentialScope { company_id: company.to_db().parse().unwrap(), plugin_id: "openai".into(), connection_id: Uuid::new_v4() };
     let store = BookCredentials::new(open.book, open.owner, &key).unwrap();

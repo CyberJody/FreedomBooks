@@ -50,6 +50,12 @@ impl Host {
         self.book = Some(book.to_owned());
         self.key = Some(MasterKey::new(**key));
     }
+    pub(crate) fn invalidate_identity(&mut self) {
+        self.messages.clear();
+        self.restored = None;
+        self.restore_pending = None;
+        self.ticket = None;
+    }
     pub(crate) fn locked(&mut self) {
         self.book = None;
         self.key = None;
@@ -535,6 +541,7 @@ pub(crate) fn verified_copy(host: &Host, source: &fb_db::Unmigrated, book: &Path
 
 /// The main process hands back the path the user picked (empty when the dialog was cancelled).
 pub fn dialog_result(app: &mut App, ticket: &str, chosen: &str) -> AppResult<Outcome> {
+    app.authorize(None, crate::identity::Permission::Write)?;
     let Some((expected, at, waiting)) = app.backups.ticket.take() else {
         return Err(AppError::Invalid("This action has expired. Open the screen again and retry.".into()));
     };
@@ -690,7 +697,7 @@ fn restore_with_secret(app: &mut App, file: &Path, name: &str, secret: &str) -> 
         // A pre-portable backup shares this installation's legacy master and receipt key.
         // Reuse its already-authorized portable wraps when they match that older layout.
         app.protection.as_ref().filter(|r| r.keys.receipts(&key).is_ok_and(|k| *k == *key)).cloned().map(|mut r| {
-            r.ask_password = r.keys.mode == core::portable::Mode::OwnPassword;
+            r.ask_password = false;
             r.recovery_saved = false;
             r
         })
@@ -753,8 +760,8 @@ fn open_restored(app: &mut App) -> AppResult<Outcome> {
     };
     app.open_book(&path, &key)?;
     app.backups.viewing = Some(name);
-    let home = app.first_company()?.map(|c| url("company_home", &[&c.to_db()])).unwrap_or_else(|| "/".into());
-    Ok(Outcome::Redirect { location: home })
+    // A restored file carries its own roster; opening it never transfers the current identity.
+    Ok(Outcome::Redirect { location: crate::identity::SIGN_IN.into() })
 }
 
 pub fn restore_from_gate(app: &mut App, file: &Path, name: &str, secret: &str) -> AppResult<PathBuf> {
@@ -804,6 +811,7 @@ mod tests {
         let mut app = App::new();
         app.backups.configure(d.path()).unwrap();
         app.create_book(&live, &key, "Owner", "Scratch Co").unwrap();
+        app.enroll_owner("Synthetic backup unit password").unwrap();
         let c = app.first_company().unwrap().unwrap();
         let name = back_up(&mut app, c).unwrap();
         let file = app.backups.folder().unwrap().join(&name);
@@ -864,6 +872,7 @@ mod tests {
         app.backups.configure(d.path()).unwrap();
         std::fs::create_dir_all(d.path().join("books")).unwrap();
         app.create_book(&d.path().join("books/default.fbbook"), &key, "Owner", "Scratch Co").unwrap();
+        app.enroll_owner("Synthetic backup unit password").unwrap();
         let c = app.first_company().unwrap().unwrap();
         let ticket = app.backups.mint(Waiting::Folder { company: c }).unwrap();
         assert!(dialog_result(&mut app, "0".repeat(64).as_str(), "").is_err());
@@ -897,6 +906,7 @@ mod tests {
         let mut app = App::new();
         app.backups.configure(d.path()).unwrap();
         app.create_book(&d.path().join("books/default.fbbook"), &key, "Owner", "Scratch Co").unwrap();
+        app.enroll_owner("Synthetic backup unit password").unwrap();
         let c = app.first_company().unwrap().unwrap();
         let name = back_up(&mut app, c).unwrap();
         let file = app.backups.folder().unwrap().join(name);

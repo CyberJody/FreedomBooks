@@ -3,7 +3,7 @@
   "version": "0.1.0-d4",
   "private": true,
   "description": "FreedomBooks desktop window over the Rust core (local only, not packaged)",
-  "main": "main/main.cjs",
+  "main": "main/entry.cjs",
   "scripts": {
     "build:native": "node scripts/build-native.cjs",
     "start": "electron .",

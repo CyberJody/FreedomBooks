@@ -1,4 +1,5 @@
 #![cfg(all(unix, feature = "key-test-hooks"))]
+mod support;
 use fb_app::{App, keys::MasterKey, protection::{self, Record}};
 use std::process::Command;
 
@@ -16,6 +17,8 @@ fn publication_child() {
     app.os_store_usable = true;
     app.create_protected_book(&path, "Publication owner", "Synthetic publication books",
         (action != "book.protection_changed").then_some(PASSWORD)).unwrap();
+    support::sign_in(&mut app);
+    if !app.builtin() { app.authorize_recovery(PASSWORD).unwrap(); }
     let before = serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap();
     let company = app.first_company().unwrap().unwrap();
     let open = app.open_mut().unwrap();
@@ -25,7 +28,7 @@ fn publication_child() {
             "Synthetic work preceding protection".into(), serde_json::json!({}))
     }).unwrap();
     let result = match action.as_str() {
-        "book.password_prompt" => app.change_ask_password(PASSWORD, false),
+        "book.password_prompt" => app.change_ask_password(PASSWORD, true),
         "book.recovery_saved" => app.recovery_saved(),
         "book.protection_changed" => app.change_protection("", Some(PASSWORD)),
         _ => panic!("unknown action"),
@@ -60,6 +63,7 @@ fn publication_recovery_child() {
     app.backups.configure(std::path::Path::new(&root)).unwrap();
     app.device_key = Some(MasterKey::new([83;32]));
     app.open_book(&path, &after.keys.unlock(PASSWORD).unwrap()).unwrap();
+    support::sign_in(&mut app);
     let action = std::env::var("FB_PUBLICATION_RECOVER_ACTION").unwrap();
     let count: i64 = app.open_mut().unwrap().book.read(|q| q.query_row(
         "SELECT count(*) FROM ledger_auditevent WHERE action=?1", [&action], |r| r.get(0))).unwrap();
@@ -70,6 +74,7 @@ fn publication_recovery_child() {
     assert_eq!(app.company_name_for_kit().unwrap(), "Synthetic publication books");
     assert!(!protection::sidecar(&path, ".rekey.json").exists());
     assert!(!protection::sidecar(&path, ".rekey-before").exists());
+
 }
 
 #[test]

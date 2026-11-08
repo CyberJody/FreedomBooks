@@ -9,6 +9,8 @@
 //! `backup_dialog_async`), so the Electron main thread never waits for it. Every synchronous call only
 //! *tries* the lock: while a task holds the books it fails at once with `BUSY` instead of blocking the
 //! main thread, so nothing else can run against the books meanwhile (no second command, no lock).
+pub mod ai;
+
 use fb_app::{App, AppError, Outcome, keys, screens};
 use napi::bindgen_prelude::AsyncTask;
 use napi::{Env, Error, Result, Status, Task};
@@ -66,9 +68,11 @@ pub fn set_host(version: String, os: String) -> Result<()> {
 /// `{"open": bool}`.
 #[napi]
 pub fn app_state() -> Result<String> {
-    let app = app()?;
+    let mut app = app()?;
+    let signed_in = app.authenticated_session().is_ok();
+    let generation = app.session_generation();
     let path = app.book_path().map(|p| p.display().to_string());
-    Ok(json(serde_json::json!({"open": app.is_open(), "path": path, "can_lock":app.can_lock(), "builtin":app.builtin(), "viewing_restored":app.backups.viewing_restored().is_some()})))
+    Ok(json(serde_json::json!({"open": app.is_open(), "signed_in":signed_in, "session_generation":generation, "path": path, "can_lock":app.can_lock(), "builtin":app.builtin(), "viewing_restored":app.backups.viewing_restored().is_some()})))
 }
 
 /// 32 random bytes as hex, for the shell to seal with the OS store (`safeStorage`).
@@ -127,7 +131,9 @@ fn open_with(path: &str, key: &keys::MasterKey) -> Result<String> {
 }
 
 fn opened_location(app: &mut App) -> Result<String> {
-    let home = if app.protection.is_none() {
+    let home = if let Some(location) = app.identity_location() {
+        location.to_owned()
+    } else if app.protection.is_none() {
         fb_app::protection::SETTINGS.to_owned()
     } else if app.recovery_authorized && app.protection.as_ref().is_some_and(|r| !r.recovery_saved) {
         fb_app::protection::RECOVERY.to_owned()
@@ -141,6 +147,13 @@ fn opened_location(app: &mut App) -> Result<String> {
 #[napi]
 pub fn lock() -> Result<()> {
     app()?.lock();
+    Ok(())
+}
+
+/// Named-user lock for books whose encryption policy keeps the file open on this desktop.
+#[napi]
+pub fn sign_out() -> Result<()> {
+    app()?.sign_out();
     Ok(())
 }
 
@@ -181,7 +194,7 @@ fn render_in(app: &mut App, target: &str) -> Result<String> {
 #[napi]
 pub fn render_async(target: String) -> Result<AsyncTask<Work>> {
     screen_target(&target)?;
-    Ok(AsyncTask::new(Work::Render(target)))
+    Work::new(Action::Render(target))
 }
 
 /// First run or lock screen (works while the book is closed).
@@ -206,7 +219,7 @@ pub fn backup_dialog(ticket: String, chosen: String) -> Result<String> {
 }
 
 /// BACKUPS-POLISH: the long Backups work, off the main thread.
-pub enum Work {
+enum Action {
     Render(String),
     Run(Zeroizing<String>),
     Dialog(String, Zeroizing<String>),
@@ -215,33 +228,39 @@ pub enum Work {
     RecoverySaved(Zeroizing<String>),
 }
 
+/// Every queued task is bound when accepted, then checked under the same APP lease used to
+/// execute it. Results are checked again before delivery so old-account pages cannot escape.
+pub struct Work { generation: u64, action: Action }
+impl Work {
+    fn new(action: Action) -> Result<AsyncTask<Self>> {
+        Ok(AsyncTask::new(Self { generation: app()?.session_generation(), action }))
+    }
+}
 impl Task for Work {
-    type Output = String;
+    type Output = (String,u64);
     type JsValue = String;
 
-    fn compute(&mut self) -> Result<String> {
-        match self {
-            Work::Render(target) => render_in(&mut *app_blocking()?, target),
-            Work::Run(command_json) => run_in(&mut *app_blocking()?, command_json),
-            Work::Dialog(chosen, ticket) => dialog_in(&mut *app_blocking()?, ticket, chosen),
-            Work::RecoverySaved(ticket) => {
-                app_blocking()?.recovery_saved_export(ticket).map_err(app_error)?;
-                Ok(String::new())
-            }
-            Work::Create { path, owner, company, password, protect, chart } => {
-                let mut app = app_blocking()?;
-                app.create_protected_book_with_chart(Path::new(path), owner, company, protect.then_some(password.as_str()), *chart).map_err(app_error)?;
+    fn compute(&mut self) -> Result<Self::Output> {
+        let mut app=app_blocking()?;
+        if self.generation!=app.session_generation() { return Err(fail("The active user changed. Open the screen again.")); }
+        let output=match &mut self.action {
+            Action::Render(target) => render_in(&mut app, target),
+            Action::Run(command_json) => run_in(&mut app, command_json),
+            Action::Dialog(chosen,ticket) => dialog_in(&mut app,ticket,chosen),
+            Action::RecoverySaved(ticket) => { app.recovery_saved_export(ticket).map_err(app_error)?; Ok(String::new()) }
+            Action::Create { path,owner,company,password,protect,chart } => {
+                app.create_protected_book_with_chart(Path::new(path),owner,company,protect.then_some(password.as_str()),*chart).map_err(app_error)?;
                 opened_location(&mut app)
             }
-            Work::Restore { file, name, secret } => {
-                let mut app = app_blocking()?;
-                screens::backups::restore_from_gate(&mut app, Path::new(file), name, secret).map_err(app_error)?;
+            Action::Restore { file,name,secret } => {
+                screens::backups::restore_from_gate(&mut app,Path::new(file),name,secret).map_err(app_error)?;
                 opened_location(&mut app)
             }
-        }
+        }?;
+        Ok((output,app.session_generation()))
     }
-
-    fn resolve(&mut self, _env: Env, output: String) -> Result<String> {
+    fn resolve(&mut self, _env: Env, (output,generation): Self::Output) -> Result<String> {
+        if generation!=app()?.session_generation() { return Err(fail("The active user changed. Open the screen again.")); }
         Ok(output)
     }
 }
@@ -260,14 +279,14 @@ fn dialog_in(app: &mut App, ticket: &str, chosen: &str) -> Result<String> {
 /// `books.run` for a command that may take long ("Create backup now"): the same parsing and dispatch as
 /// `run`, on a pool thread. Resolves to the `Outcome` JSON.
 #[napi]
-pub fn run_async(command_json: String) -> AsyncTask<Work> {
-    AsyncTask::new(Work::Run(Zeroizing::new(command_json)))
+pub fn run_async(command_json: String) -> Result<AsyncTask<Work>> {
+    Work::new(Action::Run(Zeroizing::new(command_json)))
 }
 
 /// `backup_dialog` on a pool thread: the restore, copy or folder step after the native dialog.
 #[napi]
-pub fn backup_dialog_async(ticket: String, chosen: String) -> AsyncTask<Work> {
-    AsyncTask::new(Work::Dialog(chosen, Zeroizing::new(ticket)))
+pub fn backup_dialog_async(ticket: String, chosen: String) -> Result<AsyncTask<Work>> {
+    Work::new(Action::Dialog(chosen, Zeroizing::new(ticket)))
 }
 
 /// The command/query JSON Schema.
@@ -343,12 +362,16 @@ mod tests {
         assert_eq!(rx.recv().unwrap().as_deref(), Some("BUSY"));
         drop(held);
         assert!(app().is_ok());
-        let mut work = Work::Run(Zeroizing::new("{\"type\":\"Nope\"}".to_owned()));
+        let mut work = Work { generation: app().unwrap().session_generation(), action: Action::Run(Zeroizing::new("{\"type\":\"Nope\"}".to_owned())) };
         assert!(work.compute().is_err(), "a task parses commands exactly like run");
         assert!(render_async("not a local path".to_owned()).is_err());
         assert!(render_async(format!("/{}", "x".repeat(4096))).is_err());
-        let mut render = Work::Render("/c/0195b4a4-55af-719e-96cb-a2f946b067bf/backups/".to_owned());
+        let mut render = Work { generation: app().unwrap().session_generation(), action: Action::Render("/c/0195b4a4-55af-719e-96cb-a2f946b067bf/backups/".to_owned()) };
         assert!(render.compute().is_err(), "a worker cannot render a closed book");
+        let generation=app().unwrap().session_generation();
+        let mut stale=Work { generation, action: Action::Run(Zeroizing::new("invalid old request".to_owned())) };
+        app().unwrap().sign_out();
+        assert!(stale.compute().unwrap_err().reason.contains("active user changed"), "a stale worker is refused before parsing or executing its request");
     }
 }
 
@@ -442,8 +465,8 @@ pub fn validate_recovery_export(ticket: String) -> Result<()> {
 }
 
 #[napi]
-pub fn recovery_saved_async(ticket: String) -> AsyncTask<Work> {
-    AsyncTask::new(Work::RecoverySaved(Zeroizing::new(ticket)))
+pub fn recovery_saved_async(ticket: String) -> Result<AsyncTask<Work>> {
+    Work::new(Action::RecoverySaved(Zeroizing::new(ticket)))
 }
 
 #[napi]
@@ -460,12 +483,12 @@ pub fn restore_book_from_gate(file: String, name: String, secret: String) -> Res
 pub fn create_protected_book_async(path: String, owner: String, company: String, password: String, protect: bool, starter_chart: Option<String>) -> Result<AsyncTask<Work>> {
     let password = Zeroizing::new(password);
     let chart = chart_choice(starter_chart)?;
-    Ok(AsyncTask::new(Work::Create { path, owner, company, password, protect, chart }))
+    Work::new(Action::Create { path, owner, company, password, protect, chart })
 }
 
 #[napi]
-pub fn restore_book_from_gate_async(file: String, name: String, secret: String) -> AsyncTask<Work> {
-    AsyncTask::new(Work::Restore { file, name, secret: Zeroizing::new(secret) })
+pub fn restore_book_from_gate_async(file: String, name: String, secret: String) -> Result<AsyncTask<Work>> {
+    Work::new(Action::Restore { file, name, secret: Zeroizing::new(secret) })
 }
 
 // Compatibility for trusted older callers; renderer setup always submits an explicit choice.

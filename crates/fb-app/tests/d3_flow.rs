@@ -1,4 +1,5 @@
 //! Real form commands against encrypted books: omission compatibility, scoping, no-write errors.
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 use fb_core::directory::{self, Model};
 use serde_json::{Value, json};
@@ -22,6 +23,7 @@ fn fixture() -> (App, String) {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     (app, c)
 }
 fn post(app: &mut App, path: &str, fields: &[(&str, &str)]) -> Outcome {

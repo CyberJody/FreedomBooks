@@ -7,6 +7,7 @@
 //!   poll → connected with the plan ("Using ChatGPT plan" state) → disconnect wipes the vault row.
 //! - The R11 vectors through the same desktop connect → pull → accept path, every stored TEXT dumped
 //!   for R11's independent stdlib decoders (scored by `staging/wave4-fix1/net/check_leak.py`).
+mod support;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use fb_app::keys::MasterKey;
 use fb_app::net::ProcessNet;
@@ -73,6 +74,7 @@ fn desk(net: ProcessNet) -> Desk {
     app.plugins = true;
     app.os_store_usable = true;
     let co = app.create_book(&path, &key, "Synthetic owner", "Synthetic company").unwrap().company_id;
+    support::sign_in(&mut app);
     let (bank, expense) = {
         let open = app.open_mut().unwrap();
         let bank = services::save_account(&mut open.book, open.owner, co, AccountInput::new("9100", "Feed checking").kind("ASSET").detail("BANK")).unwrap().id;
@@ -150,6 +152,7 @@ fn simplefin_connect_pull_accept_reopen_through_fb_net() {
 
     d.app.lock();
     d.app.open_book(&d.path, &d.key).unwrap();
+    support::sign_in(&mut d.app);
     assert!(d.app.messages.is_empty(), "no reconnect notice: {:?}", d.app.messages);
     // Mask restored: a write through the bank-feed services is allowed after reopen.
     let other = items.iter().find(|i| i.status == "NEW").unwrap().id.clone();
@@ -187,6 +190,7 @@ fn needs_reconnect_connection_is_never_pulled() {
     }
     d.app.lock();
     d.app.open_book(&d.path, &d.key).unwrap();
+    support::sign_in(&mut d.app);
     assert_eq!(d.app.messages.len(), 1, "{:?}", d.app.messages);
     let refused = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap_err();
     assert_eq!(refused, bankfeeds::UNSAFE_CREDENTIAL);
@@ -234,6 +238,7 @@ fn without_the_helper_plugins_say_so() {
     app.plugins = true;
     app.os_store_usable = true;
     let co = app.create_book(&dir.path().join("b.fbbook"), &key, "Owner", "Co").unwrap().company_id;
+    support::sign_in(&mut app);
     let unavailable = Err("Bank feeds and ChatGPT aren't available in this build.".to_owned());
     assert_eq!(plugins::bankfeed_connect(&mut app, co, "token", "Feed").unwrap(), unavailable);
     assert_eq!(plugins::chatgpt_start(&mut app, co).unwrap(), unavailable);
@@ -286,6 +291,7 @@ fn chatgpt_sign_in_and_disconnect_through_fb_net() {
     // A reopen keeps the sign-in (vault + row); disconnect revokes and wipes the vault row.
     d.app.lock();
     d.app.open_book(&d.path, &d.key).unwrap();
+    support::sign_in(&mut d.app);
     assert_eq!(plugins::chatgpt_disconnect(&mut d.app, co).unwrap(), Ok(()));
     assert!(!envelope(&mut d.app, co, "openai", &company), "disconnect wipes the vault row");
     assert_eq!(provider.lock().unwrap().revoked, 1);
@@ -395,6 +401,7 @@ fn r11_vectors_through_desktop_connect_pull_accept() {
         }
         d.app.lock();
         d.app.open_book(&d.path, &d.key).unwrap();
+        support::sign_in(&mut d.app);
         let reconnect = !d.app.messages.is_empty();
         let stored = texts(&mut d.app);
         d.app.lock();
@@ -431,6 +438,7 @@ fn simplefin_requires_os_sealing_before_claim_or_sync_and_preserves_saved_creden
     d.app.os_store_usable = false;
     d.app.lock();
     d.app.open_book(&d.path, &d.key).unwrap();
+    support::sign_in(&mut d.app);
     let before = texts(&mut d.app);
     let error = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap_err();
     assert!(error.contains("OS keyring"), "{error}");

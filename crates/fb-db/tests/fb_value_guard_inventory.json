@@ -316,6 +316,17 @@
   "doc_id": "text",
   "kind": "text"
  },
+ "desktop_mfa_recovery": {
+  "user_id": "uuid"
+ },
+ "desktop_mfa_totp": {
+  "user_id": "uuid"
+ },
+ "desktop_user": {
+  "password_hash": "text",
+  "role": "text",
+  "user_id": "uuid"
+ },
  "directory_customer": {
   "billing_address": "text",
   "business_name": "text",

@@ -58,13 +58,9 @@ impl BookCredentials {
         let mut loaded = Vec::new();
         let mut unreadable = Vec::new();
         for (company, connection, active) in scopes {
-            let scope = CredentialScope {
-                company_id: company.parse().map_err(|_| PluginError::CredentialStore)?,
-                connection_id: connection.parse().map_err(|_| PluginError::CredentialStore)?,
-                plugin_id: "simplefin".into(),
-            };
+            // Install masks for the entire file before ANY Writer is allowed. This internal
+            // restore never exposes credentials or grants company access to the signed-in user.
             let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
-            self.check(&mut book, &scope)?;
             let restored = book.authenticate_bankfeed_restore(&connection, &self.wrapping_key)
                 .or_else(|e| match &self.legacy_key {
                     Some(key) => book.authenticate_bankfeed_restore(&connection, key),
@@ -88,6 +84,7 @@ impl BookCredentials {
             // An incompatible legacy value remains masked, quarantined and unable
             // to sync.
             let co = CompanyId::parse(&company).ok_or(PluginError::CredentialStore)?;
+            if book.read(|q| fb_core::services::access(q,self.actor,co)).is_err() { continue; }
             if let Err(error) = fb_core::bankfeeds::restore_connection_credentials(
                 &mut book, self.actor, co, &connection, &record, Vec::<String>::new(),
             ) && error.message() != fb_core::bankfeeds::UNSAFE_CREDENTIAL {
@@ -97,6 +94,7 @@ impl BookCredentials {
         let mut labels = Vec::new();
         for (company, connection, proof) in unreadable {
             let co = CompanyId::parse(&company).ok_or(PluginError::CredentialStore)?;
+            if book.read(|q| fb_core::services::access(q,self.actor,co)).is_err() { continue; }
             labels.push(fb_core::bankfeeds::flag_unreadable_credential(&mut book, self.actor, co, &connection, &proof)
                 .map_err(|_| PluginError::CredentialStore)?);
         }
@@ -108,8 +106,8 @@ impl BookCredentials {
 
     fn restore_ai_credentials(&self) -> PluginResult<()> {
         let companies = self.book.lock().map_err(|_| PluginError::CredentialStore)?.read(|q| {
-            q.prepare("SELECT company_id FROM assistant_connection WHERE status='connected' AND credential_present=1")?
-                .query_map([], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()
+            q.prepare("SELECT company_id FROM assistant_connection WHERE status='connected' AND credential_present=1 AND company_id IN (SELECT company_id FROM ledger_company_members WHERE user_id=?1)")?
+                .query_map([self.actor.to_db()], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()
         }).map_err(|_| PluginError::CredentialStore)?;
         for company in companies {
             let scope = CredentialScope { company_id:company.parse().map_err(|_| PluginError::WrongScope)?, plugin_id:"openai".into(), connection_id:company.parse().map_err(|_| PluginError::WrongScope)? };
@@ -125,8 +123,8 @@ impl BookCredentials {
     fn migrate_legacy_envelopes(&self) -> PluginResult<()> {
         let Some(legacy) = &self.legacy_key else { return Ok(()) };
         let scopes = self.book.lock().map_err(|_| PluginError::CredentialStore)?.read(|q| {
-            q.prepare("SELECT company_id,plugin_id,connection_id FROM plugin_credential ORDER BY company_id,plugin_id,connection_id")?
-                .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?
+            q.prepare("SELECT company_id,plugin_id,connection_id FROM plugin_credential WHERE company_id IN (SELECT company_id FROM ledger_company_members WHERE user_id=?1) ORDER BY company_id,plugin_id,connection_id")?
+                .query_map([self.actor.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?
                 .collect::<Result<Vec<_>, _>>()
         }).map_err(|_| PluginError::CredentialStore)?;
         let mut migrated = false;

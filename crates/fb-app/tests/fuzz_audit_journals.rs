@@ -5,6 +5,7 @@
 //! lines and tax, bills, reversals), the sum of its line debits equals the sum of its credits, every
 //! line has exactly one positive side, the trial balance balances, the book's own integrity check is
 //! clean; and the invoice total shown on the invoice equals the receivable debit of its journal.
+mod support;
 use fb_app::commands::{InvoiceLineValues, InvoiceValues, JournalLineValues, Outcome, parse_command};
 use fb_app::{App, keys};
 use proptest::prelude::*;
@@ -44,6 +45,7 @@ fn setup(tax_rate: &str) -> Books {
     app.today = || chrono::NaiveDate::from_ymd_opt(2026, 11, 2).unwrap();
     let (dir, path) = tmp();
     let c = app.create_book(&path, &keys::new_master_key().unwrap(), "Owner", "Prop Co").unwrap().company_id.to_string();
+    support::sign_in(&mut app);
     let acct = |app: &mut App, code: &str, name: &str, t: &str| run(app, json!({"type": "SaveAccount", "company_id": c, "code": code, "name": name, "detail_type": t})).unwrap()["id"].as_str().unwrap().to_owned();
     let bank = acct(&mut app, "1000", "Checking", "BANK");
     let ar = acct(&mut app, "1100", "Accounts receivable", "RECEIVABLE");

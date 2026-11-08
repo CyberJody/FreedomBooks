@@ -1,4 +1,5 @@
 //! Wave 0 items 4 and 5: plain "can't open" messages, and a verified copy before any upgrade.
+mod support;
 use fb_app::{
     App, AppError, Command, Outcome,
     keys::MasterKey,
@@ -88,10 +89,12 @@ fn wrong_password_and_wrong_recovery_key_get_the_same_words_and_change_nothing()
     assert_eq!(message(e), WRONG);
     // The recovery key opens it.
     app.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut app);
     let key = MasterKey::new(**app.master_key().unwrap());
     let recovery = Record::read(&path).unwrap().unwrap().keys.recovery_text(&key).unwrap();
     app.lock();
     app.open_with_secret(&path, &recovery).unwrap();
+    support::sign_in(&mut app);
     assert!(app.is_open());
     assert!(files(&app.backups.folder().unwrap()).is_empty(), "no copy when no upgrade is needed");
 }
@@ -102,6 +105,7 @@ fn a_book_without_a_key_record_and_the_wrong_key_says_wrong_key() {
     let path = d.path().join("legacy.fbbook");
     let mut app = app_at(d.path());
     app.create_book(&path, &MasterKey::new([9; 32]), "Legacy owner", "Legacy company").unwrap();
+    support::sign_in(&mut app);
     app.lock();
     let e = app.open_book(&path, &MasterKey::new([8; 32])).unwrap_err();
     assert!(matches!(e, AppError::Open(OpenError::WrongKey)), "{e:?}");
@@ -192,6 +196,7 @@ fn an_upgrade_writes_a_verified_copy_first_and_says_where_once() {
     let from = fb_db::MIGRATIONS.len() - 1;
     let to = fb_db::MIGRATIONS.len();
     app.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut app);
     let folder = app.backups.folder().unwrap();
     let copies = files(&folder);
     assert_eq!(copies.len(), 1);
@@ -228,6 +233,7 @@ fn an_upgrade_writes_a_verified_copy_first_and_says_where_once() {
     // Opening again: nothing to upgrade, so no new copy and no notice.
     app.lock();
     app.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(files(&folder), vec![copy.clone()]);
     assert!(app.upgrade_notice.is_none());
     // Retention: it is listed (and verified) beside a normal backup, which removes nothing.
@@ -244,6 +250,7 @@ fn an_upgrade_writes_a_verified_copy_first_and_says_where_once() {
     let mut other = app_at(elsewhere.path());
     other.device_key = Some(MasterKey::new([72; 32]));
     screens::backups::restore_from_gate(&mut other, &copy, "Before the upgrade", PASSWORD).unwrap();
+    support::sign_in(&mut other);
     assert_eq!(other.company_name_for_kit().unwrap(), "Synthetic open company");
 }
 
@@ -253,6 +260,7 @@ fn built_in_key_books_get_the_copy_too() {
     let (mut app, path, key) = setup(d.path(), false);
     make_prior(&mut app, &path, &key);
     app.open_with_secret(&path, "").unwrap();
+    support::sign_in(&mut app);
     let copies = files(&app.backups.folder().unwrap());
     assert_eq!(copies.len(), 1);
     assert_eq!(backups::read_header(&copies[0]).unwrap()["book_keys"]["mode"], "built-in");
@@ -289,6 +297,7 @@ fn a_failed_copy_means_no_upgrade_and_the_book_is_byte_identical() {
     assert!(files(&folder).is_empty());
     // With the folder fixed, the same book copies and upgrades.
     app.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(files(&folder).len(), 1);
     assert_eq!(user_version(&path, &key), from as i64 + 1);
 }
@@ -349,6 +358,7 @@ fn a_copied_builtin_book_gets_a_portable_copy_before_local_key_adoption() {
     assert!(Record::read(&path).unwrap().is_none(), "a failed copy must not adopt keys early");
 
     app.open_with_secret(&path, "").unwrap();
+    support::sign_in(&mut app);
     let copies = files(&app.backups.folder().unwrap());
     assert_eq!(copies.len(), 1);
     assert!(retention::verified_note(&copies[0]));
@@ -356,6 +366,7 @@ fn a_copied_builtin_book_gets_a_portable_copy_before_local_key_adoption() {
     let mut other = app_at(elsewhere.path());
     other.device_key = Some(MasterKey::new([73; 32]));
     screens::backups::restore_from_gate(&mut other, &copies[0], "Copied built-in books", "").unwrap();
+    support::sign_in(&mut other);
     assert_eq!(other.company_name_for_kit().unwrap(), "Synthetic open company");
     let header = backups::read_header(&copies[0]).unwrap();
     assert_eq!(header["format_version"], 4);
@@ -376,14 +387,17 @@ fn historical_layouts_are_copied_before_desktop_upgrade() {
         for suffix in ["-wal", "-shm"] { let _ = fs::remove_file(sidecar(&path, suffix)); }
         fs::rename(prior, &path).unwrap();
         app.open_with_secret(&path, "").unwrap();
+        support::sign_in(&mut app);
         assert_eq!(app.company_name_for_kit().unwrap(), "Synthetic open company");
         let copies = files(&app.backups.folder().unwrap());
         assert_eq!(copies.len(), 1, "{boundary}");
         let elsewhere = tempfile::tempdir().unwrap();
         let mut restored = app_at(elsewhere.path());
         screens::backups::restore_from_gate(&mut restored, &copies[0], "Historical restored", "").unwrap();
+        support::sign_in(&mut restored);
         assert_eq!(restored.company_name_for_kit().unwrap(), "Synthetic open company");
         app.lock(); app.open_with_secret(&path, "").unwrap();
+        support::sign_in(&mut app);
         assert_eq!(app.company_name_for_kit().unwrap(), "Synthetic open company");
     }
 }

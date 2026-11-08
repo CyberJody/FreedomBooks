@@ -117,7 +117,7 @@ fn fix8_sources() -> Vec<(String, String)> {
     out.sort();
     // Decoder tables moved beside the sealed Book policy; every service module
     // still participates, and every newly added module is scanned automatically.
-    for required in ["accept.rs", "credentials.rs", "mod.rs", "rules.rs", "secrets.rs", "staging.rs", "text.rs"] {
+    for required in ["accept.rs", "credentials.rs", "mapping.rs", "mod.rs", "rules.rs", "secrets.rs", "staging.rs", "text.rs"] {
         assert!(out.iter().any(|(name, _)| name == required), "missing {required}");
     }
     out
@@ -182,7 +182,7 @@ fn fix8_every_write_goes_through_the_choke_point() {
             assert!(bare.is_empty(), "{name}: `{needle}` outside the choke point at lines {:?}", bare.iter().map(|&i| line(i)).collect::<Vec<_>>());
         }
         for (i, _) in src.match_indices("command(book") {
-            assert!(src[i..].starts_with("command(book, secrets, |w| {"), "{name}:{}: a write transaction without the connection's secrets", line(i));
+            assert!(src[i..].starts_with("command(book, secrets, |w|"), "{name}:{}: a write transaction without the connection's secrets", line(i));
         }
         for (i, _) in src.match_indices("let payload = ") {
             assert!(src[i..].starts_with("let payload = w.value(&json!("), "{name}:{}: a payload for another module not masked where it is bound", line(i));
@@ -225,7 +225,7 @@ fn fix8_every_write_goes_through_the_choke_point() {
     }
     write_paths.sort();
     let expected = [
-        "accept", "connect", "forget", "ignore", "map_account", "move_rule", "record_sync_failure", "return_to_review", "save_rule", "set_rule_active", "stage_bank_transactions",
+        "accept", "connect", "forget", "ignore", "map_account", "move_rule", "record_sync_failure", "return_to_review", "save_mappings", "save_rule", "set_rule_active", "stage_bank_transactions",
         "store_pull",
     ];
     assert_eq!(write_paths, expected, "the write paths changed: drive the new one in fix8_split_secrets_every_write_path_and_audit_action and list it here");
@@ -316,6 +316,11 @@ fn fix8_split_secrets_every_write_path_and_audit_action() {
     returned.push(format!("{:?}", save_rule(&mut f.book, f.u, f.c, &json!({"rule_id":rule.id,"name":password,"match_text":"edited","account_id":office}), &known).unwrap()));
     returned.push(format!("{:?}", move_rule(&mut f.book, f.u, f.c, &other.id, &json!("up"), &known).unwrap()));
     returned.push(format!("{:?}", set_rule_active(&mut f.book, f.u, f.c, &rule.id, &json!(false), &known).unwrap()));
+    // The inline account-creation path must mask the user-entered name and its downstream audit.
+    let card = f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE remote_id='ACT-card'", [], |r| r.get::<_,String>(0)).unwrap();
+    for kind in [NewAccountKind::Checking, NewAccountKind::Savings, NewAccountKind::CreditCard] {
+        save_mappings(&mut f.book, f.u, f.c, &f.conn, &[(card.clone(), MappingTarget::New { name: password.into(), kind })], &known).unwrap();
+    }
     returned.push(forget(&mut f.book, f.u, f.c, second["id"].as_str().unwrap(), &known).unwrap().to_string());
     // the credential is gone with the forgotten connection: the host has no set to pass
     f.secrets = SecretSet::none();

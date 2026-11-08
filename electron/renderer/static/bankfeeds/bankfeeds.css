@@ -56,3 +56,16 @@
 .bankfeed .new-feed-account label {display:block;margin-top:6px}
 .bankfeed .new-feed-account input, .bankfeed .new-feed-account select {width:100%;box-sizing:border-box}
 .bankfeed .new-feed-account .muted {max-width:300px;font-size:12px}
+
+.bankfeed #review-tools {border:1px solid #b8a6b4;background:#fbf7f1;padding:10px 14px;margin:14px 0}
+.bankfeed #review-tools[hidden] {display:none}
+.bankfeed #review-keys {font-size:12px;margin:0}
+.bankfeed #review-tools fieldset {min-width:0;border:1px solid #b8a6b4}
+.bankfeed .bulk-fields {display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end}
+.bankfeed .bulk-fields label {display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:650}
+.bankfeed .bulk-fields select, .bankfeed .bulk-fields input[type=text] {width:240px;max-width:100%}
+.bankfeed #bulk-changes {max-height:180px;overflow:auto;font-size:12px}
+.bankfeed #bulk-summary {cursor:pointer}
+.bankfeed table.review tr:focus-within {outline:2px solid #74576f;outline-offset:-2px}
+.bankfeed table.review tr.draft-edited td {border-bottom:2px solid #557b60}
+.bankfeed table.review tr:has(input[name=sel]:checked) td {background:#f3edf4}

@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{
     App, Command, Outcome,
     commands::{StarterChart, parse_command},
@@ -48,6 +49,7 @@ fn first_run_and_new_company_offer_standard_and_empty_charts() {
         StarterChart::Standard,
     )
     .unwrap();
+    support::sign_in(&mut app);
     assert_eq!(count(&mut app, "ledger_account"), 34);
     let html = screens::render(&mut app, "/companies/new/").unwrap().html;
     assert!(html.contains("Standard small-business chart (recommended)"));
@@ -90,6 +92,7 @@ fn opening_existing_seeded_books_and_editing_companies_never_add_accounts() {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     run(
         &mut app,
         json!({"type":"SaveAccount", "company_id":c,"code":"1000","name":"Existing cash","detail_type":"BANK"}),
@@ -97,6 +100,7 @@ fn opening_existing_seeded_books_and_editing_companies_never_add_accounts() {
     let before = count(&mut app, "ledger_auditevent");
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(count(&mut app, "ledger_account"), 1);
     assert_eq!(count(&mut app, "ledger_auditevent"), before);
     run(
@@ -155,6 +159,7 @@ fn protected_first_run_routes_the_chart_without_changing_password_or_builtin_mod
         let mut app = App::new();
         app.backups.configure(dir.path()).unwrap();
         app.create_protected_book_with_chart(&path, "Chart owner", "Chart company", password, chart).unwrap();
+        support::sign_in(&mut app);
         assert_eq!(count(&mut app, "ledger_account"), expected);
         assert_eq!(app.builtin(), password.is_none());
         assert_eq!(app.can_lock(), password.is_some());
@@ -162,15 +167,17 @@ fn protected_first_run_routes_the_chart_without_changing_password_or_builtin_mod
         let record = fb_app::protection::Record::read(&path).unwrap().unwrap();
         assert_eq!(record.keys.password.is_some(), password.is_some());
         assert_eq!(record.keys.recovery.is_some(), password.is_some());
-        if password.is_none() {
+        if let Some(password)=password {
+            app.authorize_recovery(password).unwrap();
+            assert!(app.recovery_text().is_ok());
+        } else {
             let html = screens::render(&mut app, fb_app::protection::SETTINGS).unwrap().html;
             assert!(html.contains(fb_core::backups::portable::BUILTIN_WARNING));
             assert!(!html.to_lowercase().contains("encrypted"));
-        } else {
-            assert!(app.recovery_text().is_ok());
         }
         app.lock();
         app.open_with_secret(&path, password.unwrap_or("")).unwrap();
+        support::sign_in(&mut app);
         assert_eq!(count(&mut app, "ledger_account"), expected);
         assert_eq!(count(&mut app, "ledger_auditevent"), before);
     }

@@ -54,6 +54,18 @@ pub fn identity_blind(conn: &Connection, mut snap: Snapshot) -> rusqlite::Result
     Ok(snap)
 }
 
+/// The only data added by 0185: unconfigured roles derived from existing staff flags.
+pub fn desktop_user_backfill(conn: &Connection) -> rusqlite::Result<Vec<Vec<Value>>> {
+    conn.prepare("SELECT id,CASE WHEN is_staff=1 OR is_superuser=1 THEN 'administrator' ELSE 'bookkeeper' END,NULL FROM fb_user ORDER BY id")?
+        .query_map([], |r| Ok(vec![r.get(0)?, r.get(1)?, r.get(2)?]))?.collect()
+}
+
+pub fn assert_desktop_user_backfill(conn: &Connection) {
+    let actual: Vec<Vec<Value>> = conn.prepare("SELECT user_id,role,password_hash FROM desktop_user ORDER BY user_id").unwrap()
+        .query_map([], |r| Ok(vec![r.get(0)?, r.get(1)?, r.get(2)?])).unwrap().collect::<Result<_,_>>().unwrap();
+    assert_eq!(actual, desktop_user_backfill(conn).unwrap(), "upgrade must derive every role and leave every password unconfigured");
+}
+
 pub struct PriorCopy {
     pub before: Snapshot,
     pub expected: Snapshot,
@@ -86,15 +98,26 @@ pub fn populated_copy(
             + usize::from(inclusive);
         MIGRATIONS[..end].iter().collect()
     };
+    conn.execute_batch("BEGIN IMMEDIATE")?;
     for (_, sql) in &migrations {
         conn.execute_batch(sql)?;
     }
+    conn.execute_batch("COMMIT")?;
     let mut expected = snapshot(source)?;
     let prior_empty = snapshot(&conn)?;
+    if !prior_empty.contains_key("desktop_user") {
+        // Old fixtures may reproduce an unconfigured roster, never discard a configured password.
+        let has_desktop: bool=source.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='desktop_user')",[],|r|r.get(0))?;
+        let enrolled: i64 = if has_desktop { source.query_row("SELECT count(*) FROM desktop_user WHERE password_hash IS NOT NULL",[],|r|r.get(0))? } else { 0 };
+        if enrolled != 0 { return Err(DbError::Integrity(vec!["cannot discard enrolled desktop users".into()])); }
+        let backfill = source.prepare("SELECT id,CASE WHEN is_staff=1 OR is_superuser=1 THEN 'administrator' ELSE 'bookkeeper' END,NULL FROM fb_user ORDER BY id")?
+            .query_map([],|r|Ok(vec![r.get(0)?,r.get(1)?,r.get(2)?]))?.collect::<Result<Vec<_>,_>>()?;
+        expected.insert("desktop_user".into(),backfill);
+    }
     for (table, rows) in &expected {
         if !prior_empty.contains_key(table)
             && !rows.is_empty()
-            && !matches!(table.as_str(), "sales_seal" | "sales_seal_due")
+            && !matches!(table.as_str(), "sales_seal" | "sales_seal_due" | "desktop_user")
             // 0053 reconstructs actor evidence from the canonical audit trail.
             && !(table == "banking_reconciliationactor" && migrations.iter().all(|(n,_)| *n < "0053_banking_actors"))
             // 0134 retires withdrawn bank-feed identities from the audit trail.

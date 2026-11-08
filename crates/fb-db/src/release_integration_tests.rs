@@ -31,6 +31,7 @@ fn release_integration_authenticates_populated_source_histories_and_reopens() {
         assert!(supported_migrations(&names),"unsupported genuine {label} history");
         let dir=tempfile::tempdir().unwrap();let path=dir.path().join("prior.fbbook");let key=[62;32];
         let conn=Connection::open(&path).unwrap();conn.execute_batch(&format!("PRAGMA key=\"x'{}'\"",hex(&key))).unwrap();Book::configure(&conn).unwrap();
+        conn.execute_batch("BEGIN IMMEDIATE").unwrap();
         for (_,sql) in &layout {conn.execute_batch(sql).unwrap();}
         conn.execute_batch(&format!("PRAGMA user_version={}",layout.len())).unwrap();
         conn.execute("INSERT INTO ledger_company(id,name,currency) VALUES(?1,'Synthetic historical seller','USD')",[COMPANY]).unwrap();
@@ -46,6 +47,7 @@ fn release_integration_authenticates_populated_source_histories_and_reopens() {
                 INSERT INTO fb_numbering(company_id,kind,scope,start,revision,audit_id)
                 VALUES('00000000-0000-7000-8000-000000000001','INV','','100',1,'00000000-0000-7000-8000-000000000003');").unwrap();
         }
+        conn.execute_batch("COMMIT").unwrap();
         let before=test_support::snapshot(&conn).unwrap();let prior_schema=schema_hashes(&conn).unwrap();drop(conn);
         let old=match Book::open_staged(&path,&key).unwrap() {Opened::Behind(old)=>old,Opened::Current(_)=>panic!("{label} unexpectedly current")};
         assert_eq!(old.migrations().iter().map(|m|m.0.to_owned()).collect::<Vec<_>>(),names);
@@ -54,10 +56,13 @@ fn release_integration_authenticates_populated_source_histories_and_reopens() {
         assert_eq!(test_support::snapshot(&copy).unwrap(),before);assert_eq!(schema_hashes(&copy).unwrap(),prior_schema);drop(copy);
         let book=old.upgrade().unwrap();let after=test_support::snapshot(&book.conn).unwrap();
         for (table,rows) in &before {assert_eq!(&after[table],rows,"{label}: changed {table}");}
-        assert_eq!(after.len(),before.len()+usize::from(!before.contains_key("fb_numbering"))+usize::from(!before.contains_key("company_document_details")));
+        assert_eq!(after.len(),before.len()+3+usize::from(!before.contains_key("fb_numbering"))+usize::from(!before.contains_key("company_document_details")));
+        assert!(after["desktop_mfa_totp"].is_empty());
+        assert!(after["desktop_mfa_recovery"].is_empty());
+        test_support::assert_desktop_user_backfill(&book.conn);
         let upgraded_schema=schema_hashes(&book.conn).unwrap();
         for (object,hash) in prior_schema {
-            if object!="view:fb_value_invalid" && object!="view:fb_json_invalid" {assert_eq!(upgraded_schema[&object],hash,"{label}: changed {object}");}
+            if !["view:fb_value_invalid","view:fb_json_invalid","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) {assert_eq!(upgraded_schema[&object],hash,"{label}: changed {object}");}
         }
         let fresh=Book::create(&dir.path().join("fresh.fbbook"),&key).unwrap();assert_eq!(schema_hashes(&book.conn).unwrap(),schema_hashes(&fresh.conn).unwrap());
         assert!(book.check().unwrap().is_empty());drop(book);

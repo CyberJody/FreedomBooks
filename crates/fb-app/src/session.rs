@@ -141,6 +141,9 @@ impl Default for Host {
 }
 
 pub struct App {
+    pub ai: crate::ai::Authority,
+    pub(crate) identity: crate::identity::Identity,
+    pub(crate) legacy_credentials: bool,
     pub host: Host,
     pub protection: Option<crate::protection::Record>,
     pub recovery_authorized: bool,
@@ -201,6 +204,9 @@ impl App {
 
     pub fn new() -> App {
         App {
+            ai: Default::default(),
+            identity: Default::default(),
+            legacy_credentials: false,
             host: Host::default(),
             protection: None,
             recovery_authorized: false,
@@ -255,6 +261,7 @@ impl App {
         }
         let mut book = Book::create(path, key).map_err(|e| AppError::Invalid(format!("Could not create the book: {e:?}")))?;
         let owner = fb_core::users::create_user(&mut book, owner_name, true)?;
+        book.write(|tx| tx.execute("INSERT INTO desktop_user(user_id,role) VALUES(?1,'administrator')", [owner.to_db()]))?;
         let company = fb_core::services::create_company_with_chart(&mut book, owner, company_name, "USD", true, chart.into())?;
         self.lock();
         self.vault_key = self.device_key.as_ref().and_then(|k| crate::credentials::wrapping_key(k).ok());
@@ -267,37 +274,21 @@ impl App {
     pub fn open_book(&mut self, path: &Path, key: &MasterKey) -> AppResult<()> {
         self.lock();
         let record = crate::protection::Record::read(path)?;
-        let (mut book, upgraded) = self.open_and_upgrade(path, key, record.as_ref())?;
-        let (owner, owner_name, staff) = book
-            .read(|tx| {
-                tx.query_row("SELECT id, username, is_staff FROM fb_user WHERE is_active=1 ORDER BY id LIMIT 1", [], |r| {
-                    Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, bool>(2)?))
-                })
-            })
-            .map_err(|_| AppError::Invalid("This book has no owner account.".into()))?;
-        let owner = UserId::parse(&owner).ok_or_else(|| AppError::Invalid("This book's owner id is damaged.".into()))?;
-        let legacy = record.is_none();
-        let device = self.device_key.as_ref().ok_or_else(|| AppError::Invalid("Connection key storage is unavailable.".into()))?;
-        let vault = crate::credentials::BookCredentials::with_device_key(book, owner, device, legacy.then_some(&**key))
-            .map_err(|_| AppError::Invalid("The stored connection credentials could not be restored.".into()))?;
-        let reconnect = vault.restore_bankfeeds()
-            .map_err(|_| AppError::Invalid("The stored connection credentials could not be restored.".into()))?;
-        let book = vault.into_book()
-            .map_err(|_| AppError::Invalid("The stored connection credentials could not be restored.".into()))?;
-        self.vault_key = self.device_key.as_ref().and_then(|k| crate::credentials::wrapping_key(k).ok());
-        self.open = Some(Open { book, owner, owner_name, staff });
+        let (book, upgraded) = self.open_and_upgrade(path, key, record.as_ref())?;
+        // Unlocking proves access to the file, never a named user's identity.
+        // Credential restore runs after password verification, under the actual actor.
+        self.legacy_credentials = record.is_none();
+        self.open = Some(Open { book, owner: UserId::new(), owner_name: String::new(), staff: false });
         self.backups.opened(path, key);
         self.protection = record;
         self.upgrade_notice = upgraded;
-        let show_connections = self.bankfeeds_enabled();
-        for label in reconnect.into_iter().filter(|_| show_connections) {
-            self.messages.push(reconnect_notice(&label));
-        }
         Ok(())
     }
 
     /// Lock: close the book (its key leaves memory with the connection) and forget every form token.
     pub fn lock(&mut self) {
+        self.invalidate_identity();
+        self.legacy_credentials = false;
         self.open = None;
         self.protection = None;
         self.recovery_authorized = false;
@@ -313,6 +304,7 @@ impl App {
     }
 
     pub fn open_mut(&mut self) -> AppResult<&mut Open> {
+        self.authenticated_session()?;
         self.open.as_mut().ok_or(AppError::Locked)
     }
 
@@ -345,6 +337,7 @@ impl App {
     }
 
     pub fn run(&mut self, command: Command) -> AppResult<Outcome> {
+        self.authorize_command(&command)?;
         if let Command::SubmitForm { path, token, fields } = command {
             // A form that carries no command token never had one to expire: say it could not be sent.
             if token.is_empty() {
@@ -503,6 +496,7 @@ impl App {
         if let Query::Schema = query {
             return Ok(crate::commands::schema());
         }
+        self.authorize_query(&query)?;
         let open = self.open_mut()?;
         let actor = open.owner;
         let book = &mut open.book;

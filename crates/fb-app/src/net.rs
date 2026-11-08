@@ -292,8 +292,8 @@ pub(crate) fn bankfeed_connect(app: &mut App, co: CompanyId, setup_token: &str, 
     if !app.os_store_usable {
         return Ok(Err(BANK_KEYRING_REQUIRED.into()));
     }
-    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn || !r.ask_password) {
-        return Ok(Err("Add your own password and ask for it when opening these books before saving a connection.".into()));
+    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn) {
+        return Ok(Err("Add your own password in Book protection before saving a connection. User sign-in can use this computer's secure keyring.".into()));
     }
     // Network, outside any write: claim the access URL.
     let mut request = json!({"op": "simplefin_claim", "setup_token": setup_token});
@@ -424,8 +424,8 @@ pub(crate) fn chatgpt_start(app: &mut App, co: CompanyId) -> AppResult<Result<St
     if app.net.is_none() {
         return Ok(Err(UNAVAILABLE.into()));
     }
-    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn || !r.ask_password) {
-        return Ok(Err("Add your own password and ask for it when opening these books before saving a connection.".into()));
+    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn) {
+        return Ok(Err("Add your own password in Book protection before saving a connection. User sign-in can use this computer's secure keyring.".into()));
     }
     // An earlier sign-in's record lets the plugin reuse its registered client and `login_hint`
     // (never `id_token_hint`, F-M6). An unreadable record counts as none, like Python's `_read`.
@@ -445,6 +445,8 @@ pub(crate) fn chatgpt_start(app: &mut App, co: CompanyId) -> AppResult<Result<St
                     let _ = net_call(app, &json!({"op": "chatgpt_cancel", "company": co.to_db()}));
                     return Ok(Err(refusal(e)?));
                 }
+                let generation=app.session_generation();
+                app.identity.pending_signins.insert(co,generation);
                 Ok(Ok(url.to_owned()))
             }
             None => Ok(Err(HELPER_FAILED.into())),
@@ -455,16 +457,18 @@ pub(crate) fn chatgpt_start(app: &mut App, co: CompanyId) -> AppResult<Result<St
 }
 
 pub(crate) fn chatgpt_poll(app: &mut App, co: CompanyId) -> AppResult<Option<Result<(), Refusal>>> {
+    if app.identity.pending_signins.get(&co)!=Some(&app.session_generation()) { return Ok(None); }
     app.open_mut()?;
-    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn || !r.ask_password) { return Ok(None); }
+    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn) { return Ok(None); }
     if app.net.is_none() {
         return Ok(None);
     }
     let reply = net_call(app, &json!({"op": "chatgpt_poll", "company": co.to_db()}));
     let mut reply = match reply {
         Ok(v) if v["pending"] == true || v["none"] == true => return Ok(None),
-        Ok(v) if v["ok"] == true => v,
+        Ok(v) if v["ok"] == true => { app.identity.pending_signins.remove(&co); v },
         Ok(v) => {
+            app.identity.pending_signins.remove(&co);
             // Python `complete_callback`: `_audit(..., 'ai.signin_failed', {'mode': 'siwc', 'code': …})`.
             let code = v["code"].as_str().unwrap_or("failed");
             let open = app.open_mut()?;
@@ -474,7 +478,7 @@ pub(crate) fn chatgpt_poll(app: &mut App, co: CompanyId) -> AppResult<Option<Res
             }
             return Ok(Some(Err(net_error(&v))));
         }
-        Err(message) => return Ok(Some(Err(message))),
+        Err(message) => { app.identity.pending_signins.remove(&co); return Ok(Some(Err(message))); },
     };
     let record = SecretBytes::new(reply["record"].as_str().unwrap_or("").as_bytes().to_vec());
     let state = json!({
@@ -509,6 +513,7 @@ pub(crate) fn chatgpt_poll(app: &mut App, co: CompanyId) -> AppResult<Option<Res
 }
 
 pub(crate) fn chatgpt_disconnect(app: &mut App, co: CompanyId) -> AppResult<Result<(), Refusal>> {
+    if app.identity.pending_signins.remove(&co).is_some() { let _=net_call(app,&json!({"op":"chatgpt_cancel","company":co.to_db()})); }
     let row = {
         let open = app.open_mut()?;
         let owner = open.owner;

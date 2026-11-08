@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 
 fn field(html: &str,name:&str)->String {
@@ -13,6 +14,7 @@ fn first_run_refuses_controls_before_trim_and_before_creating_the_book() {
         assert!(!path.exists());assert!(!app.is_open());
     }
     app.create_book(&path,&key,"Owner\tName","Valid company").unwrap();
+    support::sign_in(&mut app);
     assert!(app.is_open());
 }
 
@@ -20,6 +22,7 @@ fn first_run_refuses_controls_before_trim_and_before_creating_the_book() {
 fn renderer_rejects_direct_mutations_and_requires_live_path_bound_tokens() {
     let dir=tempfile::tempdir().unwrap();let mut app=App::new();
     let c=app.create_book(&dir.path().join("test.fbbook"),&keys::new_master_key().unwrap(),"Owner","Company").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     let cmd=Command::PostInvoice{company_id:c.clone(),invoice_id:uuid::Uuid::new_v4().to_string(),expected_revision:1};
     assert!(app.run_renderer(cmd).unwrap_err().to_string().contains("Unknown command"));
     let path=format!("/c/{c}/accounts/new/");
@@ -39,6 +42,7 @@ fn renderer_rejects_direct_mutations_and_requires_live_path_bound_tokens() {
 fn security_screen_fixtures_refuse_invisible_text_and_keep_field_errors() {
     let dir=tempfile::tempdir().unwrap();let mut app=App::new();
     let c=app.create_book(&dir.path().join("test.fbbook"),&keys::new_master_key().unwrap(),"Owner","Company").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     // Dedicated Rust-only fixtures for the documented v1 security difference.
     for (suffix,field_name,value) in [
         ("accounts/new/","name","Account\u{202e}"),

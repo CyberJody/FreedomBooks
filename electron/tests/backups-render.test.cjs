@@ -6,10 +6,13 @@ const path=require('node:path');
 const vm=require('node:vm');
 const target='fb://app/c/0195b4a4-55af-719e-96cb-a2f946b067bf/backups/';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function fixture(bankFeeds=false) {
-  const state={open:true,pending:[],sync:0};
+function fixture(bankFeeds=false, canLock=true) {
+  const state={open:true,signedIn:true,generation:1,pending:[],sync:0,agentRevoked:0};
   const native={setHost(){},pluginsEnabled:()=>false,bankfeedsEnabled:()=>bankFeeds,configureBackups(){},
-    appState:()=>JSON.stringify({open:state.open,can_lock:true}),lock:()=>{state.open=false;},
+    aiInvalidate:()=>{state.agentRevoked++;},
+    appState:()=>JSON.stringify({open:state.open,can_lock:canLock,signed_in:state.signedIn,session_generation:state.generation}),
+    lock:()=>{state.open=false;state.signedIn=false;state.generation++;},
+    signOut:()=>{state.signedIn=false;state.generation++;state.agentRevoked++;},
     renderGate:()=>'<h1>Unlock</h1>',render:()=>{state.sync++;throw new Error('Backups must run on worker');},
     run:()=>{throw new Error('Bank requests must run on worker');},
     runAsync:command=>new Promise((resolve,reject)=>state.pending.push({command:JSON.parse(command),resolve,reject})),
@@ -20,11 +23,12 @@ function fixture(bankFeeds=false) {
   const stubs={electron,'./development.cjs':{nativeModule:()=>'/native',userData:()=>'/synthetic',netHelper:()=>'/synthetic/fb-net'},'/native':native,
     './keys.cjs':{userDataDir:()=>'/synthetic',store:()=>({exists:()=>true,returnToMain(){}})},
     './identity.cjs':{configure(){},claimInstance:()=>true},'./about.cjs':{osLabel:()=>''},
+    './ai-desktop.cjs':{create:()=>({menuItems:[]})},
     './save-file.cjs':{create:()=>({})},'./printing.cjs':{controller:()=>({})},
     './guards.cjs':require('../main/guards.cjs')};
   const sandbox={URL,Response,Buffer,__dirname:path.join(__dirname,'../main'),module:{exports:{}},
     require:n=>Object.hasOwn(stubs,n)?stubs[n]:require(n)};
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../main/main.cjs'),'utf8')+'\nmodule.exports={handle,lockNow,calls};',sandbox);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../main/main.cjs'),'utf8')+'\nmodule.exports={handle,lockNow,calls,getPending:()=>pending};',sandbox);
   return {...sandbox.module.exports,state};
 }
 const result=()=>JSON.stringify({html:'<h1>Synthetic book Backups</h1>',status:200,route:'backups:page'});
@@ -70,4 +74,45 @@ test('SimpleFIN connect and sync use worker admission and discard results after 
     assert.equal(f.state.open,false);
     assert.ok(!JSON.stringify(result).includes('private bank'));
   }
+});
+
+test('OS/idle lock revokes AI authority even in built-in-key mode without book locking',()=>{
+  const f=fixture(false,false);f.lockNow();assert.equal(f.state.open,true);assert.equal(f.state.agentRevoked,1);
+});
+
+test('identity-only deferred lock suppresses completed HTML and never stamps an old page as a new session',async()=>{
+  const f=fixture(true,false);
+  const rendered=f.handle({url:target,method:'GET'});
+  await tick();f.lockNow();f.state.pending[0].resolve(result());
+  const response=await rendered;
+  assert.ok(!(await response.text()).includes('Synthetic book Backups'));
+  assert.equal(f.state.open,true);assert.equal(f.state.signedIn,false);
+  const g=fixture(true,false);
+  const path='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/bank-feeds/connect/';
+  const outcome=g.calls['books.run']({type:'SubmitForm',path,token:'synthetic',fields:[]});
+  await tick();g.lockNow();g.state.pending[0].resolve(JSON.stringify({outcome:'page',html:'private old bank form',status:200}));
+  const settled=await Promise.allSettled([outcome]);
+  assert.ok(!JSON.stringify(settled).includes('private old bank form'));
+  assert.equal(g.getPending(),null,'old invalid HTML must never be relabelled under the new generation');
+});
+
+test('successful authentication may return its new generation, but deferred lock still ends it',async()=>{
+  for(const deferredLock of [false,true]) {
+    const f=fixture(false,false);
+    const operation=f.calls['books.run']({type:'SubmitForm',path:'/desktop/sign-in/',token:'synthetic',fields:[]});
+    await tick();
+    if(deferredLock)f.lockNow();
+    f.state.generation++;
+    f.state.pending[0].resolve(JSON.stringify({outcome:'redirect',location:'/c/0195b4a4-55af-719e-96cb-a2f946b067bf/home/'}));
+    const outcome=await operation;
+    assert.equal(outcome.location,deferredLock?'/desktop/sign-in/':'/c/0195b4a4-55af-719e-96cb-a2f946b067bf/home/');
+  }
+});
+
+
+test('OS lock cancels an unfinished MFA sign-in even without a live actor',()=>{
+  const f=fixture(false,false);f.state.signedIn=false;
+  const generation=f.state.generation;f.lockNow();
+  assert.equal(f.state.generation,generation+1,'pending sign-in must be invalidated');
+  assert.equal(f.state.agentRevoked,1);assert.equal(f.state.open,true);
 });

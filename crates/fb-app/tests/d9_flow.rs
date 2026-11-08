@@ -1,5 +1,6 @@
 //! D9 bank-feed screens on an encrypted synthetic book: the Rust-only reconnect state and desktop
 //! messages, invalid POSTs that write nothing, and a rule saved through the narrowed SubmitForm path.
+mod support;
 use fb_app::{App, Command, Outcome, keys::MasterKey, screens};
 use fb_core::{CompanyId, bankfeeds, services::{self, AccountInput}};
 use serde_json::json;
@@ -35,6 +36,7 @@ fn book() -> (tempfile::TempDir, std::path::PathBuf, MasterKey, App, CompanyId) 
     app.plugins = true;
     app.os_store_usable = true;
     let co = app.create_book(&path, &key, "D9 operator", "D9 synthetic feeds").unwrap().company_id;
+    support::sign_in(&mut app);
     (dir, path, key, app, co)
 }
 
@@ -48,6 +50,7 @@ fn a_connection_whose_sign_in_is_unreadable_offers_forget_and_connect_again_neve
     }
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(app.messages.len(), 1);
     let list = format!("/c/{}/bank-feeds/", co.to_db());
     let page = screens::render(&mut app, &list).unwrap();

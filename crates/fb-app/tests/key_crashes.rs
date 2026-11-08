@@ -1,4 +1,5 @@
 #![cfg(all(unix, feature = "key-test-hooks"))]
+mod support;
 use fb_app::{
     App,
     keys::MasterKey,
@@ -36,13 +37,15 @@ fn crash_child() {
             own.then_some(PASSWORD),
         )
         .unwrap();
+        support::sign_in(&mut a);
     } else {
         let record = Record::read(&path).unwrap().unwrap();
         a.open_book(&path, &record.keys.unlock(PASSWORD).unwrap())
             .unwrap();
+        support::sign_in(&mut a);
         a.os_store_usable = true;
         match std::env::var("FB_CRASH_OPERATION").unwrap().as_str() {
-            "prompt" => a.change_ask_password(PASSWORD, false).unwrap(),
+            "prompt" => a.change_ask_password(PASSWORD, true).unwrap(),
             "saved" => { a.authorize_recovery(PASSWORD).unwrap(); a.recovery_saved().unwrap(); },
             _ => a.change_protection(PASSWORD, (!own).then_some(PASSWORD)).unwrap(),
         }
@@ -56,6 +59,7 @@ fn rollback_itself_can_be_interrupted_and_retried_without_an_actor_event() {
         let path = root.path().join("books/default.fbbook");
         let mut a = app(root.path());
         a.create_protected_book(&path, "Rollback owner", "Synthetic rollback books", None).unwrap();
+        support::sign_in(&mut a);
         let old = Record::read(&path).unwrap().unwrap();
         a.lock();
         kill_at(root.path(), false, "rekey", "protection-before-audit");
@@ -65,6 +69,7 @@ fn rollback_itself_can_be_interrupted_and_retried_without_an_actor_event() {
         assert!(!protection::recover_key_change(&path).unwrap());
         assert_eq!(serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap(), serde_json::to_value(&old).unwrap());
         a.open_book(&path, &old.keys.unlock(PASSWORD).unwrap()).unwrap();
+        support::sign_in(&mut a);
         assert_eq!(a.company_name_for_kit().unwrap(), "Synthetic rollback books");
         let count: i64 = a.open_mut().unwrap().book.read(|q| q.query_row(
             "SELECT count(*) FROM ledger_auditevent WHERE action='book.protection_changed'", [], |r| r.get(0))).unwrap();
@@ -124,6 +129,7 @@ fn first_run_sigkill_never_leaves_an_unopenable_book() {
                 let record = Record::read(&path).unwrap().unwrap();
                 a.open_book(&path, &record.keys.unlock(PASSWORD).unwrap())
                     .unwrap();
+                support::sign_in(&mut a);
             } else {
                 a.create_protected_book(
                     &path,
@@ -132,6 +138,7 @@ fn first_run_sigkill_never_leaves_an_unopenable_book() {
                     own.then_some(PASSWORD),
                 )
                 .unwrap();
+                support::sign_in(&mut a);
             }
             assert_eq!(
                 a.company_name_for_kit().unwrap(),
@@ -171,6 +178,7 @@ fn rekey_sigkill_at_each_commit_boundary_keeps_old_book_openable() {
                 own.then_some(PASSWORD),
             )
             .unwrap();
+            support::sign_in(&mut a);
             let old = Record::read(&path).unwrap().unwrap();
             a.lock();
             kill_at(root.path(), own, "rekey", point);
@@ -183,6 +191,7 @@ fn rekey_sigkill_at_each_commit_boundary_keeps_old_book_openable() {
             assert_eq!(after.keys.mode, old.keys.mode);
             a.open_book(&path, &old.keys.unlock(PASSWORD).unwrap())
                 .unwrap();
+            support::sign_in(&mut a);
             assert_eq!(
                 a.company_name_for_kit().unwrap(),
                 "Crash-safe synthetic books"
@@ -203,6 +212,7 @@ fn sigkill_while_sqlcipher_is_rekeying_rolls_back_both_directions() {
             own.then_some(PASSWORD),
         )
         .unwrap();
+        support::sign_in(&mut a);
         // Valid audit payload makes the page walk long enough to kill inside PRAGMA rekey.
         let company = a.first_company().unwrap().unwrap();
         let open = a.open_mut().unwrap();
@@ -216,6 +226,7 @@ fn sigkill_while_sqlcipher_is_rekeying_rolls_back_both_directions() {
         assert!(protection::recover_rekey(&path).unwrap());
         a.open_book(&path, &old.keys.unlock(PASSWORD).unwrap())
             .unwrap();
+        support::sign_in(&mut a);
         assert_eq!(
             a.company_name_for_kit().unwrap(),
             "Crash-safe synthetic books"
@@ -311,6 +322,7 @@ fn upgrade_sigkill_after_verified_copy_precedes_the_first_schema_change() {
     drop(old);
     let mut a = app(root.path());
     a.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut a);
     assert_eq!(a.company_name_for_kit().unwrap(), "Synthetic upgrade books");
 }
 
@@ -323,6 +335,7 @@ fn protection_publication_and_actor_audit_have_one_crash_boundary() {
             let own = operation != "rekey";
             let mut a = app(root.path());
             a.create_protected_book(&path,"Crash owner","Crash-safe synthetic books",own.then_some(PASSWORD)).unwrap();
+            support::sign_in(&mut a);
             let before = Record::read(&path).unwrap().unwrap();
             a.lock();
             kill_at(root.path(), own, operation, if committed { "protection-committed" } else { "protection-before-audit" });
@@ -331,11 +344,12 @@ fn protection_publication_and_actor_audit_have_one_crash_boundary() {
             let action = match operation { "prompt" => "book.password_prompt", "saved" => "book.recovery_saved", _ => "book.protection_changed" };
             if !committed { assert_eq!(serde_json::to_value(&after).unwrap(),serde_json::to_value(&before).unwrap()); }
             a.open_book(&path,&after.keys.unlock(PASSWORD).unwrap()).unwrap();
+            support::sign_in(&mut a);
             let count: i64 = a.open_mut().unwrap().book.read(|q| q.query_row("SELECT count(*) FROM ledger_auditevent WHERE action=?1",[action],|r| r.get(0))).unwrap();
             assert_eq!(count,i64::from(committed),"{operation}");
             if committed {
                 match operation {
-                    "prompt" => assert!(!after.ask_password),
+                    "prompt" => assert!(after.ask_password),
                     "saved" => assert!(after.recovery_saved),
                     _ => assert_ne!(after.keys.mode,before.keys.mode),
                 }

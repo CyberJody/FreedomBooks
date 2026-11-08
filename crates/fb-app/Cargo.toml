@@ -13,6 +13,9 @@ fb-money = { path = "../fb-money" }
 fb-templates = { path = "../fb-templates" }
 fb-plugin-api = { path = "../fb-plugin-api", default-features = false }
 hkdf = "0.12"
+ring = "0.17"
+data-encoding = "2"
+subtle = "2"
 sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
@@ -24,6 +27,8 @@ zeroize = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 uuid = { version = "1.18", features = ["v4"] }
 chrono-tz = "0.10"
+qrcodegen = "=1.8.0"
+percent-encoding = "2.3.2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -41,7 +46,6 @@ sha2 = "0.10"
 fb-db = { path = "../fb-db", features = ["test-support"] }
 # WAVE4 plugin tests only (fake providers on 127.0.0.1); never in the normal graph.
 fb-plugin-testkit = { path = "../fb-plugin-testkit" }
-ring = "0.17"
 base64 = "0.22.1"
 url = "2.5"
 proptest = "1"

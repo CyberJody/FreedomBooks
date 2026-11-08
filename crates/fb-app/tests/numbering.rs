@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App, Command, Outcome, Query, commands::parse_command, keys, screens};
 use serde_json::{Value, json};
 
@@ -14,6 +15,7 @@ fn fixture() -> (tempfile::TempDir, App, String) {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     (dir, app, c)
 }
 fn field(html: &str, name: &str) -> String {

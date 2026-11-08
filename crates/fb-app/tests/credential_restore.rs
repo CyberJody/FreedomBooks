@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App, Command, Outcome, credentials::BookCredentials, keys::MasterKey};
 use fb_core::{Book, bankfeeds};
 use fb_plugin_api::{CredentialScope, CredentialStore, SecretBytes};
@@ -11,6 +12,7 @@ fn desktop_submission_cannot_write_before_restore_and_reopen_masks_later_writes(
     let mut app = App::new();
     app.plugins = true;
     let company = app.create_book(&path, &key, "Restore operator", "Synthetic restoration").unwrap().company_id;
+    support::sign_in(&mut app);
     let access = "https://SyntheticUser1234:SyntheticPassword1234@fixture.test/access";
     let secrets = bankfeeds::SecretSet::from_access_url(access, Vec::<String>::new()).unwrap();
     let o = app.open_mut().unwrap();
@@ -42,6 +44,7 @@ fn desktop_submission_cannot_write_before_restore_and_reopen_masks_later_writes(
     assert_eq!(snapshot(&mut app), before);
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     let token = app.tokens.mint(&form);
     let outcome = app.run_renderer(Command::SubmitForm {
         path: form, token,
@@ -53,6 +56,7 @@ fn desktop_submission_cannot_write_before_restore_and_reopen_masks_later_writes(
     assert!(after.contains("***"));
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(snapshot(&mut app), after);
 }
 
@@ -73,11 +77,13 @@ fn missing_credential_opens_with_reconnect_needed() {
     let mut app = App::new();
     app.plugins = true;
     let company = app.create_book(&path, &key, "Missing operator", "Synthetic missing").unwrap().company_id;
+    support::sign_in(&mut app);
     let o = app.open_mut().unwrap();
     bankfeeds::connect(&mut o.book, o.owner, company, &json!("Synthetic feed"), "fixture.test", &bankfeeds::SecretSet::none()).unwrap();
     app.lock();
     // Lead decision (WAVE4 fix 1): the books open; only that connection waits for a reconnect.
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert!(app.is_open());
     let flagged: i64 = app.open_mut().unwrap().book.read(|tx| tx.query_row("SELECT count(*) FROM bankfeeds_connection WHERE needs_reconnect=1", [], |r| r.get(0))).unwrap();
     assert_eq!(flagged, 1);
@@ -91,6 +97,7 @@ fn all_masks_are_loaded_before_legacy_quarantine_writes() {
     let mut app = App::new();
     app.plugins = true;
     let co = app.create_book(&path, &key, "Legacy operator", "Synthetic legacy").unwrap().company_id;
+    support::sign_in(&mut app);
     let mut scopes = Vec::new();
     for _ in 0..2 {
         let o = app.open_mut().unwrap();
@@ -104,8 +111,10 @@ fn all_masks_are_loaded_before_legacy_quarantine_writes() {
     }
     drop(store);
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     let count: i64 = app.open_mut().unwrap().book.read(|tx| tx.query_row("SELECT count(*) FROM bankfeeds_connection WHERE active=1 AND needs_reconnect=1", [], |r| r.get(0))).unwrap();
     assert_eq!(count, 2);
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
 }

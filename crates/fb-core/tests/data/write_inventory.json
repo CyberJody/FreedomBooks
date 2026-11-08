@@ -1,6 +1,23 @@
 {
+  "crates/fb-app/src/ai/import.rs": {
+    "run:write": 1
+  },
+  "crates/fb-app/src/ai/operations.rs": {
+    "execute:prepare": 1
+  },
   "crates/fb-app/src/credentials.rs": {
-    ":prepare": 3
+    "migrate_legacy_envelopes:prepare": 1,
+    "restore_ai_credentials:prepare": 1,
+    "restore_bankfeeds:prepare": 1
+  },
+  "crates/fb-app/src/identity.rs": {
+    "bootstrap_owner:prepare": 1,
+    "enroll_owner:execute": 1,
+    "enroll_owner:prepare": 1,
+    "enroll_owner:write": 1,
+    "save_desktop_user:execute": 6,
+    "save_desktop_user:prepare": 1,
+    "save_desktop_user:write": 1
   },
   "crates/fb-app/src/screens.rs": {
     "home:prepare": 1,
@@ -58,17 +75,27 @@
   },
   "crates/fb-app/src/screens/d9.rs": {
     "feeds:prepare": 1,
-    "overview:prepare": 1,
+    "overview:prepare": 1
+  },
+  "crates/fb-app/src/screens/d9/review.rs": {
     "review_page:prepare": 3,
     "run_review_post:prepare": 1
   },
+  "crates/fb-app/src/screens/identity.rs": {
+    "render:prepare": 3
+  },
   "crates/fb-app/src/session.rs": {
-    ":prepare": 1
+    "create_book_with_chart:execute": 1,
+    "create_book_with_chart:write": 1,
+    "query:prepare": 1
   },
   "crates/fb-core/src/accounts.rs": {
     "create_owner:write": 1,
     "create_owner_tx:atomic": 1,
     "create_owner_tx:execute": 2
+  },
+  "crates/fb-core/src/agent_provenance.rs": {
+    "record:execute": 1
   },
   "crates/fb-core/src/assistant/mod.rs": {
     "begin_read:write": 1,
@@ -149,7 +176,7 @@
     "control_accounts:prepare": 1,
     "forget:execute": 1,
     "items:prepare": 1,
-    "map_account:execute": 2,
+    "map_account_tx:execute": 2,
     "match_candidates:prepare": 1,
     "receipt_candidates:prepare": 1
   },
@@ -169,7 +196,7 @@
     "upsert:execute": 2
   },
   "crates/fb-core/src/bankfeeds/write.rs": {
-    ":execute": 1
+    "execute:execute": 1
   },
   "crates/fb-core/src/banking/cleared.rs": {
     "set_cleared_tx:atomic": 1,
@@ -256,6 +283,14 @@
   "crates/fb-core/src/credits/refunds.rs": {
     "record_refund:execute": 1,
     "void_refund:execute": 1
+  },
+  "crates/fb-core/src/desktop_mfa.rs": {
+    "audit:prepare": 1,
+    "change:execute": 4,
+    "change:write": 1,
+    "consume:execute": 2,
+    "consume:write": 1,
+    "read:prepare": 1
   },
   "crates/fb-core/src/directory.rs": {
     "get:prepare": 1,
@@ -445,7 +480,9 @@
     "set_active:write": 1
   },
   "crates/fb-db/src/plugin_credentials.rs": {
-    ":execute": 2,
-    ":write": 2
+    "delete_credential_envelope:execute": 1,
+    "delete_credential_envelope:write": 1,
+    "put_credential_envelope:execute": 1,
+    "put_credential_envelope:write": 1
   }
 }

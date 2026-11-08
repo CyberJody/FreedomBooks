@@ -1,5 +1,6 @@
 //! Card numbers in payment documents' free text are refused at the form and the service, and text
 //! that reaches the audit history or a CSV export is shown masked.
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, keys, screens};
 use fb_core::services;
 use serde_json::{Value, json};
@@ -76,6 +77,7 @@ fn book() -> Book {
     let mut app = App::new();
     app.today = || chrono::NaiveDate::from_ymd_opt(2026, 11, 5).unwrap();
     let c = app.create_book(&temp.path().join("book.fbbook"), &keys::new_master_key().unwrap(), "Owner", "Synthetic cards").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     let mut account = |code: &str, kind: &str| run(&mut app, json!({"type":"SaveAccount","company_id":c,"code":code,"name":code,"detail_type":kind}))["id"].as_str().unwrap().to_owned();
     let bank = account("1000", "BANK");
     let savings = account("1010", "BANK");

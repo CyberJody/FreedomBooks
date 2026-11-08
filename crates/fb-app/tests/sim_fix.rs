@@ -1,5 +1,6 @@
 //! SIM-FIX: findings of the v1 virtual-employee run, checked against the desktop screens
 //! (TRIAGE.md at the repo root has the decision and the v1 file:line for each item).
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 use fb_core::services;
 use serde_json::json;
@@ -19,6 +20,7 @@ impl Fixture {
         let mut app = App::new();
         let path = std::env::temp_dir().join(format!("fb-app-simfix-{}.fbbook", uuid::Uuid::new_v4()));
         let c = app.create_book(&path, &keys::new_master_key().unwrap(), "Owner", "Synthetic SIM-FIX books").unwrap().company_id;
+        support::sign_in(&mut app);
         let o = app.open_mut().unwrap();
         let mut account = |code: &str, kind: &str, detail: Option<&str>| {
             let mut v = services::AccountInput::new(code, code);
@@ -295,6 +297,8 @@ fn extra_audit_history_names_sales_tax_actions_and_records() {
     assert!(table.contains(r#"<td data-label="Action">Sales tax rate made inactive</td>"#));
     assert!(table.contains(&format!(r#"<a href="/c/{c}/sales-tax/rates/{rate_id}/edit/">County</a>"#)), "{table}");
     assert!(!table.contains("no longer on file"), "{table}");
+    assert!(table.contains("User password set up</td>"), "{table}");
+    assert!(table.contains("Owner</td>"), "{table}");
     // The filter offers the new labels and accepts them.
     assert!(html.contains(r#"<option value="salestax.rate.created">Sales tax rate created</option>"#));
     let filtered = screens::render(&mut f.app, &format!("/c/{c}/history/?action=salestax.rate.created")).unwrap();

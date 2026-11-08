@@ -1,4 +1,5 @@
 //! D2 forms exercised against an actual encrypted book; invalid fields must never reach writes.
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, keys, screens};
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -23,6 +24,7 @@ fn fixture() -> (App, String) {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     (app, c)
 }
 fn command(app: &mut App, value: Value) -> Value {

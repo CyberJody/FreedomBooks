@@ -1,6 +1,7 @@
 //! WAVE4 fix 1, lead decision on review finding 3: one connection's unreadable saved sign-in never
 //! makes the books unopenable. The books open, that connection is marked "reconnect needed" (audited,
 //! no pulls), and every other connection keeps restore-before-any-command and its mask.
+mod support;
 use fb_app::{App, Command, Outcome, credentials::BookCredentials, keys::MasterKey};
 use fb_core::{CompanyId, bankfeeds, directory::{self, Model}, services::{self, AccountInput, DraftInput, line}};
 use fb_plugin_api::{CredentialScope, CredentialStore, SecretBytes};
@@ -59,6 +60,7 @@ fn damaged_connection_opens(damage: Damage) {
     let mut app = App::new();
     app.plugins = true;
     let co = app.create_book(&path, &key, "Reconnect operator", "Synthetic reconnect").unwrap().company_id;
+    support::sign_in(&mut app);
     let other_co = {
         let o = app.open_mut().unwrap();
         services::create_company(&mut o.book, o.owner, "Synthetic second company", "USD", true).unwrap().id
@@ -74,6 +76,7 @@ fn damaged_connection_opens(damage: Damage) {
             save_envelope(&mut app, &key, co, &damaged, DAMAGED);
             app.lock();
             app.open_book(&path, &key).unwrap();
+            support::sign_in(&mut app);
             app.open_mut().unwrap().book.write(|tx| {
                 let mut blob: Vec<u8> = tx.query_row("SELECT cipher_blob FROM plugin_credential WHERE connection_id=?1", [&damaged], |r| r.get(0))?;
                 blob[3] ^= 0x40;
@@ -84,6 +87,7 @@ fn damaged_connection_opens(damage: Damage) {
     app.lock();
 
     app.open_book(&path, &key).expect("one unreadable sign-in must not lock the books");
+    support::sign_in(&mut app);
     assert!(app.is_open());
     assert_eq!(app.messages, vec!["The saved sign-in for Checking feed couldn't be read. Your books are fine. Reconnect or forget this connection on the Bank feeds page.".to_owned()]);
     assert!(flagged(&mut app, &damaged));
@@ -108,6 +112,7 @@ fn damaged_connection_opens(damage: Damage) {
     drop(store);
     // Reopening keeps it flagged without a second audit, and still says so.
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert!(flagged(&mut app, &damaged));
     assert_eq!(count(&mut app, "SELECT count(*) FROM ledger_auditevent WHERE action='bankfeed.reconnect_required'"), 1);
     assert_eq!(app.messages.len(), 1);
@@ -116,6 +121,7 @@ fn damaged_connection_opens(damage: Damage) {
     bankfeeds::forget(&mut o.book, o.owner, co, &damaged, &bankfeeds::SecretSet::none()).unwrap();
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert!(app.messages.is_empty());
     assert!(pull(&mut app, co, &healthy).is_ok());
 }
@@ -140,6 +146,7 @@ fn readable_credentials_cannot_be_released_from_the_write_guard() {
     let mut app = App::new();
     app.plugins = true;
     let co = app.create_book(&path, &key, "Guard operator", "Synthetic guard").unwrap().company_id;
+    support::sign_in(&mut app);
     let healthy = connect(&mut app, co, "Healthy feed", Some(HEALTHY));
     save_envelope(&mut app, &key, co, &healthy, HEALTHY);
     app.lock();
@@ -153,7 +160,7 @@ fn readable_credentials_cannot_be_released_from_the_write_guard() {
 }
 
 fn populate(app: &mut App, co: CompanyId) {
-    let o = app.open_mut().unwrap();
+    let o = app.open.as_mut().unwrap();
     let u = o.owner;
     services::create_company(&mut o.book, u, "Second frozen company", "USD", false).unwrap();
     let bank = services::save_account(&mut o.book, u, co, AccountInput::new("100", "Frozen bank").kind("ASSET")).unwrap().id;
@@ -181,31 +188,38 @@ fn frozen_0140_book_with_an_active_connection_opens_with_reconnect_needed() {
     app.backups.configure(dir.path()).unwrap();
     let co = app.create_book(&src, &key, "Frozen owner", "Frozen company").unwrap().company_id;
     populate(&mut app, co);
-    let conn = connect(&mut app, co, "Prior feed", None);
+    let conn = {
+        let o=app.open.as_mut().unwrap();
+        bankfeeds::connect(&mut o.book,o.owner,co,&json!("Prior feed"),"fixture.test",&bankfeeds::SecretSet::none()).unwrap()["id"].as_str().unwrap().to_owned()
+    };
     let copy = {
-        let o = app.open_mut().unwrap();
+        let o = app.open.as_mut().unwrap();
         fb_db::test_support::populated_copy(o.book.connection(), &prior, &key, "0140_deposit_estimates", true).unwrap()
     };
     let mut expected_before = copy.expected.clone();
-    for table in ["plugin_credential", "company_document_details", "fb_numbering"] {
-        assert_eq!(expected_before.remove(table), Some(Vec::new()), "the later {table} table must be empty");
+    for table in ["plugin_credential", "company_document_details", "fb_numbering", "desktop_user", "desktop_mfa_totp", "desktop_mfa_recovery"] {
+        let later=expected_before.remove(table).unwrap();
+        if table!="desktop_user" { assert!(later.is_empty(),"the later {table} table must be empty"); }
         assert!(!copy.before.contains_key(table), "{table} did not exist at the frozen boundary");
     }
     assert_eq!(copy.before, expected_before);
     app.lock();
     app.open_book(&prior, &key).expect("a pre-vault book with a connection must open");
+    support::sign_in(&mut app);
     assert!(app.upgrade_notice.as_deref().is_some_and(|n| n.contains("freedombooks-prior140-before-upgrade-")));
     assert!(flagged(&mut app, &conn));
     assert_eq!(app.messages.len(), 1);
     let after = fb_db::test_support::snapshot(app.open_mut().unwrap().book.connection()).unwrap();
     for (table, rows) in &copy.expected {
-        if table != "bankfeeds_connection" && table != "ledger_auditevent" {
+        if table != "bankfeeds_connection" && table != "ledger_auditevent" && table != "desktop_user" {
             assert_eq!(after.get(table), Some(rows), "{table} changed on open");
         }
     }
     let audits = &after["ledger_auditevent"];
-    assert_eq!(audits.len(), copy.expected["ledger_auditevent"].len() + 1);
-    assert_eq!(&audits[..audits.len() - 1], &copy.expected["ledger_auditevent"][..]);
+    let prior_audits=&copy.expected["ledger_auditevent"];
+    // One reconnect event plus explicit owner enrollment in each of the two companies.
+    assert_eq!(audits.len(),prior_audits.len()+1+copy.expected["ledger_company"].len());
+    assert_eq!(&audits[..prior_audits.len()],&prior_audits[..]);
     assert_eq!(count(&mut app, "SELECT count(*) FROM fb_value_invalid"), 0);
     let integrity: String = app.open_mut().unwrap().book.read(|q| q.query_row("PRAGMA integrity_check", [], |r| r.get(0))).unwrap();
     assert_eq!(integrity, "ok");
@@ -214,5 +228,6 @@ fn frozen_0140_book_with_an_active_connection_opens_with_reconnect_needed() {
     rename(&mut app, co, "plain");
     app.lock();
     app.open_book(&prior, &key).unwrap();
+    support::sign_in(&mut app);
     assert!(flagged(&mut app, &conn));
 }

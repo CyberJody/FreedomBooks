@@ -13,17 +13,20 @@ pub type Refusal = String;
 /// any write), register the connection in the core, and keep the claimed credential in the book's
 /// vault. Returns the new connection id. The token is never stored, echoed or returned.
 pub fn bankfeed_connect(app: &mut App, co: CompanyId, setup_token: &str, label: &str) -> AppResult<Result<String, Refusal>> {
+    app.authorize(Some(co), crate::identity::Permission::Administer)?;
     crate::net::bankfeed_connect(app, co, setup_token, label)
 }
 
 /// `bankfeeds.services.sync` with the manual minimum interval: begin, pull (network), then store or
 /// record the failure. Returns the summary text the list page shows after `"<label>: "`.
 pub fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -> AppResult<Result<String, Refusal>> {
+    app.authorize(Some(co), crate::identity::Permission::Write)?;
     crate::net::bankfeed_sync(app, co, connection_id)
 }
 
 /// `bankfeeds.services.forget`: deactivate in the core, then wipe the vault envelope.
 pub fn bankfeed_forget(app: &mut App, co: CompanyId, connection_id: &str) -> AppResult<()> {
+    app.authorize(Some(co), crate::identity::Permission::Administer)?;
     crate::net::bankfeed_forget(app, co, connection_id)
 }
 
@@ -31,16 +34,19 @@ pub fn bankfeed_forget(app: &mut App, co: CompanyId, connection_id: &str) -> App
 /// Returns the authorization URL the main process opens in the system browser; the screen then shows
 /// the assistant page, which finishes the sign-in when the callback has arrived.
 pub fn chatgpt_start(app: &mut App, co: CompanyId) -> AppResult<Result<String, Refusal>> {
+    app.authorize(Some(co), crate::identity::Permission::Administer)?;
     crate::net::chatgpt_start(app, co)
 }
 
 /// Finish a sign-in whose callback has arrived (called by the assistant page render). `Ok(None)`
 /// while still waiting or when none is running.
 pub fn chatgpt_poll(app: &mut App, co: CompanyId) -> AppResult<Option<Result<(), Refusal>>> {
+    app.authorize(Some(co), crate::identity::Permission::Administer)?;
     crate::net::chatgpt_poll(app, co)
 }
 
 /// `assistant.services.disconnect`: wipe the stored tokens and record the disconnect.
 pub fn chatgpt_disconnect(app: &mut App, co: CompanyId) -> AppResult<Result<(), Refusal>> {
+    app.authorize(Some(co), crate::identity::Permission::Administer)?;
     crate::net::chatgpt_disconnect(app, co)
 }

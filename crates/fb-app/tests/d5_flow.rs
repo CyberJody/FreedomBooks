@@ -1,4 +1,5 @@
 //! Credit/deposit forms use the same opaque, exact-intent review capabilities as the core.
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, keys, screens};
 use serde_json::{Value, json};
 fn run(app: &mut App, v: Value) -> Value {
@@ -62,6 +63,7 @@ impl F {
             .unwrap()
             .company_id
             .to_db();
+        support::sign_in(&mut app);
         let mut account = |code: &str, kind: &str| {
             run(&mut app,json!({"type":"SaveAccount","company_id":c,"code":code,"name":code,"detail_type":kind}))["id"].as_str().unwrap().to_owned()
         };

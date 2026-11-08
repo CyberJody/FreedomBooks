@@ -159,7 +159,11 @@ fn populated_prior_prefixes_upgrade_and_tampered_schema_is_not_repaired() {
                 continue;
             }
             let book = opened.unwrap();
-            assert_eq!(snapshot(book.connection()), before);
+            fb_db::test_support::assert_desktop_user_backfill(book.connection());
+            let mut after = snapshot(book.connection());
+            assert_eq!(before["desktop_user"], json!([]));
+            after["desktop_user"] = json!([]); // Only the independently checked 0185 backfill is new.
+            assert_eq!(after, before);
             assert!(book.check().unwrap().is_empty());
             drop(book);
             assert!(

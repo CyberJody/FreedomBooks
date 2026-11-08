@@ -1,8 +1,8 @@
 'use strict';
 // FreedomBooks desktop main process (ARCHITECTURE 8). It owns the window, the one native module (fb-node)
-// and the key store. It never serves HTTP: pages come from the in-process `fb://app/` scheme handler,
+// and the key store. Desktop pages come from the in-process `fb://app/` scheme handler,
 // which renders screens through fb-node and serves only the bundled static files.
-const { app, BrowserWindow, Menu, ipcMain, protocol, session, dialog, powerMonitor, shell, clipboard } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, protocol, session, dialog, powerMonitor, shell, clipboard, safeStorage } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const keys = require('./keys.cjs');
@@ -53,20 +53,36 @@ let pending = null;
 // synchronous calls answer BUSY instead of waiting), page loads wait for it without blocking, and a lock
 // or quit asked for meanwhile happens as soon as it finishes.
 const BUSY_TEXT = 'The books are busy. Wait for the current operation to finish, then try again.';
-const LONG_COMMAND = /^(?:\/c\/[0-9a-f-]{36}\/(?:backups\/create|bank-feeds\/connect|bank-feeds\/[0-9a-f-]{36}\/sync)\/|\/settings\/(?:book-protection|restore-backup)\/)$/;
+const LONG_COMMAND = /^(?:\/desktop\/(?:sign-in|users|mfa)\/|\/c\/[0-9a-f-]{36}\/(?:backups\/create|bank-feeds\/connect|bank-feeds\/[0-9a-f-]{36}\/sync)\/|\/settings\/(?:book-protection|restore-backup)\/)$/;
 const BACKUPS_PAGE = /^\/c\/[0-9a-f-]{36}\/backups\/$/;
 let busy = null;
 let lockWhenIdle = false;
+const localAI = require('./ai-desktop.cjs').create({app,native,dialog,clipboard,safeStorage,root:userData,window:()=>win,exclusive,busy:()=>!!busy});
 function exclusive(work) {
   if (busy) throw new Error(BUSY_TEXT);
-  busy = Promise.resolve().then(work).finally(() => {
+  const capture = result => ({...result,generation:JSON.parse(native.appState()).session_generation});
+  busy = Promise.resolve().then(work).then(value => capture({value}),error => capture({error})).finally(() => {
     busy = null;
     if (lockWhenIdle) {
       lockWhenIdle = false;
       lockNow();
     }
+  }).then(result => {
+    // Native completion may itself sign in/out. Bind its resulting session BEFORE the
+    // deferred-lock finalizer, then suppress that output if the finalizer ended it.
+    requireGeneration(result.generation);
+    if(Object.hasOwn(result,'error')) throw result.error;
+    return result.value;
   });
   return busy;
+}
+function requireGeneration(generation) {
+  if (generation !== JSON.parse(native.appState()).session_generation) {
+    throw Object.assign(new Error('The active user changed. Open the screen again.'), {code:'SESSION_CHANGED'});
+  }
+}
+function sessionLocation() {
+  return JSON.parse(native.appState()).open ? '/desktop/sign-in/' : '/';
 }
 
 function page(html, status = 200) {
@@ -92,7 +108,7 @@ function syncBookKeys() {
     try { store.sealBook(native.keyForSealing()); } catch { store.removeSealedKey(); }
   } else store.removeSealedKey();
   const item = Menu.getApplicationMenu()?.getMenuItemById('lock-books');
-  if (item) item.enabled = state.can_lock;
+  if (item) item.enabled = state.can_lock || state.signed_in;
 }
 
 async function saveRecovery() {
@@ -126,6 +142,7 @@ async function handle(request) {
       return new Response(Buffer.from(data.base64,'base64'), {headers:{'content-type':data.mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':guards.CSP}});
     } catch { return new Response('Not found', {status:404}); }
   }
+  if (pending && pending.generation !== undefined && pending.generation !== JSON.parse(native.appState()).session_generation) pending = null;
   if (pending && pending.path === target) {
     const { html, status } = pending;
     pending = null;
@@ -156,6 +173,9 @@ async function handle(request) {
     }
     return page(r.html, r.status);
   } catch (e) {
+    if (e.code === 'SESSION_CHANGED') {
+      return JSON.parse(native.appState()).open ? Response.redirect(ORIGIN+'/desktop/sign-in/',303) : page(gate(),200);
+    }
     if (String(e.message) === 'LOCKED') return page(gate(), 200);
     return page(native.renderGate('unlock', false, '', JSON.stringify([String(e.message)])), 404);
   }
@@ -166,7 +186,15 @@ function lockNow() {
     lockWhenIdle = true;
     return;
   }
-  if (!JSON.parse(native.appState()).can_lock) return;
+  const state = JSON.parse(native.appState());
+  if (!state.can_lock) {
+    if (!state.open) return;
+    // Also cancel a password-verified MFA challenge on OS/idle/manual lock.
+    native.signOut();
+    pending = null;
+    if (win && !win.isDestroyed()) win.loadURL(`${ORIGIN}/desktop/sign-in/`);
+    return;
+  }
   native.lock();
   store.returnToMain();
   pending = null;
@@ -179,7 +207,13 @@ const calls = {
     if (busy) throw new Error(BUSY_TEXT);
     const command = guards.command(payload, { plugins: PLUGINS, bankFeeds: BANK_FEEDS });
     const long = command.type === 'SubmitForm' && LONG_COMMAND.test(command.path);
-    const outcome = JSON.parse(long ? await exclusive(() => native.runAsync(JSON.stringify(command))) : native.run(JSON.stringify(command)));
+    let outcome;
+    try { outcome = JSON.parse(long ? await exclusive(() => native.runAsync(JSON.stringify(command))) : native.run(JSON.stringify(command))); }
+    catch(error) {
+      if(error.code === 'SESSION_CHANGED') return {outcome:'redirect',location:sessionLocation()};
+      throw error;
+    }
+    const generation = JSON.parse(native.appState()).session_generation;
     if (long && !JSON.parse(native.appState()).open) return {outcome:'redirect',location:'/'};
     syncBookKeys();
     if (outcome.outcome === 'done' && outcome.data?.desktop_keys === 'copy-recovery') {
@@ -197,11 +231,13 @@ const calls = {
         void printed;
       }
       catch (error) { outcome.data.print_error = String(error.message || error); }
+      requireGeneration(generation);
       return outcome;
     }
     if (outcome.outcome === 'export') {
       const selected = await dialog.showSaveDialog(win, { defaultPath: outcome.filename, filters: [{ name: 'CSV', extensions: ['csv'] }], properties: ['showOverwriteConfirmation'] });
       if (selected.canceled || !selected.filePath) return { outcome: 'done', data: { saved: false } };
+      requireGeneration(generation);
       output.write(selected.filePath, outcome.contents);
       return { outcome: 'done', data: { saved: true } };
     }
@@ -211,10 +247,11 @@ const calls = {
       const url = guards.signIn(outcome.url, JSON.parse(native.externalOrigins()));
       const location = guards.target({ target: outcome.location });
       await shell.openExternal(url);
+      requireGeneration(generation);
       return { outcome: 'redirect', location };
     }
     if (['invalid', 'page'].includes(outcome.outcome) && command.type === 'SubmitForm') {
-      pending = { path: command.path, html: outcome.html, status: outcome.status || 400 };
+      pending = { path: command.path, html: outcome.html, status: outcome.status || 400, generation };
       return { outcome: 'invalid', reload: command.path };
     }
     return outcome;
@@ -334,7 +371,7 @@ function createWindow() {
   require('./edit-menu.cjs').attach(win, Menu);
   win.once('ready-to-show', () => win.show());
   const state = JSON.parse(native.appState());
-  const companies = state.open ? JSON.parse(native.query(JSON.stringify({type:'Companies'}))) : [];
+  const companies = state.signed_in ? JSON.parse(native.query(JSON.stringify({type:'Companies'}))) : [];
   win.loadURL(`${ORIGIN}${startupHome || (companies.length ? '/c/'+companies[0].id+'/home/' : '/')}`);
 }
 
@@ -343,7 +380,7 @@ app.whenReady().then(() => {
   session.defaultSession.protocol.handle('fb', handle);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'File', submenu: [...printing.menuItems, { type:'separator' }, { id:'lock-books', label:'Lock', enabled:false, accelerator:'CmdOrCtrl+L', click:lockNow }, { type: 'separator' }, { role: 'quit' }] },
-    { label:'Settings', submenu:[{label:'Book protection…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/book-protection/');}}] },
+    { label:'Settings', submenu:[...localAI.menuItems,{type:'separator'},{label:'Multi-factor authentication…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/mfa/');}},{label:'Users…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/users/');}},{label:'Switch user / sign out…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/session/');}},{label:'Book protection…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/book-protection/');}}] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }] },
   ]));

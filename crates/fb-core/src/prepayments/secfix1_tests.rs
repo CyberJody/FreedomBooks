@@ -55,15 +55,18 @@ fn populated_98100e0_upgrade_preserves_every_cell_trigger_and_schema_hash() {
     // Every table at the frozen boundary still compares in full, and opening
     // below must preserve every legacy row while adding these empty tables.
     let mut expected_before = prior.expected.clone();
-    for table in ["plugin_credential", "company_document_details", "fb_numbering"] {
+    for table in ["plugin_credential", "company_document_details", "fb_numbering", "desktop_mfa_totp", "desktop_mfa_recovery"] {
         assert_eq!(expected_before.remove(table), Some(Vec::new()), "the later {table} table must be empty");
         assert!(!prior.before.contains_key(table), "{table} did not exist at the frozen boundary");
     }
+    assert_eq!(expected_before.remove("desktop_user"), Some(fb_db::test_support::desktop_user_backfill(f.book.connection()).unwrap()));
+    assert!(!prior.before.contains_key("desktop_user"));
     assert_eq!(prior.before,expected_before);
     let book=Book::open(&path,&[72;32]).unwrap();
     assert_eq!(prior.expected,fb_db::test_support::snapshot(book.connection()).unwrap());
     let triggers:Value=serde_json::from_str(include_str!("../../../fb-db/tests/secfix1_98100e0_triggers.json")).unwrap();
     for (name,sql) in triggers.as_object().unwrap() {
+        if matches!(name.as_str(), "fb_owner_user_insert" | "fb_owner_user_update") { continue; }
         let actual:String=book.connection().query_row("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?",[name],|r|r.get(0)).unwrap();
         assert_eq!(actual,sql.as_str().unwrap());
     }

@@ -75,6 +75,7 @@ fn upgrade_at(boundary_name: &str) {
         .iter()
         .position(|m| m.0 == boundary_name)
         .unwrap();
+    conn.execute_batch("BEGIN IMMEDIATE").unwrap();
     for (_, sql) in &MIGRATIONS[..boundary] {
         conn.execute_batch(sql).unwrap();
     }
@@ -86,6 +87,7 @@ fn upgrade_at(boundary_name: &str) {
         )
         .unwrap();
     }
+    conn.execute_batch("COMMIT").unwrap();
     let before = test_support::snapshot(&conn).unwrap();
     let schema = schema_hashes(&conn).unwrap();
     let views = ["fb_value_invalid", "fb_json_invalid"].map(|name| {
@@ -104,14 +106,17 @@ fn upgrade_at(boundary_name: &str) {
     }
     assert_eq!(
         after.len(),
-        before.len() + usize::from(boundary_name == "0180_company_documents")
+        before.len() + 3 + usize::from(boundary_name == "0180_company_documents")
     );
     if boundary_name == "0180_company_documents" {
         assert!(after["company_document_details"].is_empty());
     }
+    assert!(after["desktop_mfa_totp"].is_empty());
+    assert!(after["desktop_mfa_recovery"].is_empty());
+    test_support::assert_desktop_user_backfill(&book.conn);
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in schema {
-        if !["view:fb_value_invalid", "view:fb_json_invalid"].contains(&object.as_str()) {
+        if !["view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) {
             assert_eq!(upgraded[&object], hash, "changed prior schema {object}");
         }
     }
@@ -158,8 +163,19 @@ fn upgrade_at(boundary_name: &str) {
             "lost {name} arms: {:?}",
             prior_predicates.difference(&current_predicates).collect::<Vec<_>>()
         );
-        assert_eq!(current.len(), prior.len() + usize::from(
-            name == "fb_value_invalid" || ["0180_company_documents", "0181_company_document_guards"].contains(&boundary_name)));
+        // Named users and the two MFA tables add three value-view arms.
+        // The numbering/document arm below remains boundary-dependent.
+        assert_eq!(
+            current.len(),
+            prior.len()
+                + 3 * usize::from(name == "fb_value_invalid")
+                + usize::from(
+                    name == "fb_value_invalid"
+                        || ["0180_company_documents", "0181_company_document_guards"]
+                            .contains(&boundary_name)
+                ),
+            "unexpected {name} arms after upgrading {boundary_name}"
+        );
     }
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(

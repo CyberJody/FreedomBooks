@@ -5,6 +5,7 @@
 //! a valid one redirects); report filters with random `basis`/`output`/`preset` values never panic
 //! (the `errors.insert(usize::from(basis_error), ..)` in screens/d8.rs is the lead being checked);
 //! and the form-level integer parser `clean_integer` behaves like Django's IntegerField.
+mod support;
 use fb_app::commands::{Command, Outcome, parse_command};
 use fb_app::{App, keys, screens};
 use proptest::prelude::*;
@@ -44,6 +45,7 @@ fn site() -> Site {
     app.today = || chrono::NaiveDate::from_ymd_opt(2026, 11, 2).unwrap();
     let (dir, path) = tmp();
     let c = app.create_book(&path, &keys::new_master_key().unwrap(), "Owner", "Screens Co").unwrap().company_id.to_string();
+    support::sign_in(&mut app);
     let mut accounts = Vec::new();
     for (code, name, t) in [("1000", "Checking", "BANK"), ("1100", "AR", "RECEIVABLE"), ("1200", "UF", "OTHER_CURRENT_ASSET"), ("2000", "AP", "PAYABLE"), ("3000", "Capital", "EQUITY"), ("4000", "Sales", "INCOME"), ("5000", "Supplies", "EXPENSE")] {
         accounts.push(run(&mut app, json!({"type": "SaveAccount", "company_id": c, "code": code, "name": name, "detail_type": t}))["id"].as_str().unwrap().to_owned());

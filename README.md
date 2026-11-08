@@ -2,11 +2,11 @@
 
 FreedomBooks is a desktop accounting application for small businesses, built with Rust, SQLCipher and Electron. Your books stay on your computer. Bank downloads use your own SimpleFIN Bridge account.
 
-## Source preview — November 7, 2026
+## Source preview — November 8, 2026
 
-This is a **code-only preview** of the version being used and tested internally on Linux. It includes the working SimpleFIN connection and transaction-review workflow. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
+This is a **code-only preview** of the version being used and tested internally on Linux. It includes SimpleFIN bank downloads, named desktop users, local AI access through an API and MCP, and optional authenticator-app MFA with QR setup. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
 
-The application source comes from the internally tested `a9a008652c39525a02cd3a0a85a68865840b86be` snapshot. The public repository starts with a source snapshot; private development history, local books, credentials and build artifacts are not published.
+The application source comes from the internally tested `28364702ec4153743f6511d8be6974453e464ef3` snapshot. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
 
 ## Available in the desktop app
 
@@ -17,10 +17,14 @@ The application source comes from the internally tested `a9a008652c39525a02cd3a0
 - Book protection, recovery keys, portable backups and restore.
 - SimpleFIN bank downloads, account mapping with inline account creation, transaction review and rules. **Review transactions** is the first item under Banking.
 - Copying recovery keys and native right-click Cut, Copy and Paste menus.
+- Named users on one desktop, username/password sign-in, roles, company permissions and audit attribution. See [Desktop users](docs/desktop-users.md).
+- Optional authenticator-app MFA: scan a locally generated QR code, confirm a six-digit code and save single-use recovery codes. Manual setup is available as a fallback.
+- Authorized local AI connections through an API and MCP, including reports, invoices, bank categorization and structured journal imports. Connections use the signed-in person's permissions and validated accounting operations. See [Local AI connections](docs/local-ai.md).
+- Keyboard selection, previewed bulk draft edits and reusable rules for transaction review. Applying bulk edits does not post transactions.
 
 Bank access is read-only. Downloaded activity stays in review until you accept it into the books. In SimpleFIN Bridge, use **My Account → Apps → New app connection** to create a separate connection for FreedomBooks; keep your existing bank connections and other apps.
 
-Named desktop users, broader AI access and transaction-review improvements are the next development work. They are not included in this snapshot. The existing optional receipt assistant and email plugins are separate from the SimpleFIN-enabled build below. Payroll is not supported. See the [product backlog](docs/product-backlog.md).
+One person can use the desktop books at a time; simultaneous access from other computers and YubiKey support are deferred. Local AI access covers the documented operation catalogue, not arbitrary database or file access. The optional receipt assistant and email plugins are separate from the SimpleFIN-enabled build below. Payroll is not supported. See the [product backlog](docs/product-backlog.md).
 
 ## Build and run on Linux
 
@@ -39,7 +43,7 @@ npm start --prefix electron
 
 For isolated evaluation, set `FB_DESKTOP_USER_DATA` to a new absolute directory before starting Electron. Never point development or test commands at your real books. The normal Linux profile is under `~/.config/app.freedombooks.FreedomBooks`.
 
-Choose your own password for protection. **The built-in key is public: anyone with a copy of that book file can open it.** Saving a bank connection requires your own book password, asking for it when opening, and OS-backed secret storage. See [Book protection](docs/BOOK-PROTECTION.md).
+Choose your own book password for file protection. **The built-in key is public: anyone with a copy of that book file can open it.** Individual sign-in and MFA do not change that. The secure OS keyring normally opens protected books in the background; an extra book-password prompt is optional. Keep the book password and recovery key for portable backup restore or an unavailable keyring. Bank credentials require password-protected books and OS-backed secret storage. See [Desktop sign-in and book protection](docs/desktop-users.md#book-unlock-and-individual-sign-in).
 
 ## Development and checks
 

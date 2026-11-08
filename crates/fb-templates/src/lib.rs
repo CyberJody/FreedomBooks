@@ -23,6 +23,7 @@ use serde::Serialize;
 
 /// Every template the app can render, by its Django path.
 const TEMPLATES: &[(&str, &str)] = &[
+    ("desktop/users.html", include_str!("../templates/desktop/users.html")),
     ("desktop/restore.html", include_str!("../templates/desktop/restore.html")),
     ("desktop/emergency-kit.html", include_str!("../templates/desktop/emergency-kit.html")),
     ("desktop/recovery.html", include_str!("../templates/desktop/recovery.html")),

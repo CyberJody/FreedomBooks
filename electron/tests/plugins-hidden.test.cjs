@@ -64,9 +64,15 @@ test('the main process keys every plugin surface off the compiled flag', () => {
   assert.match(main, /if \(PLUGINS \|\| BANK_FEEDS\) \{\n {2}const helper = development\.netHelper/);
   assert.match(main, /guards\.command\(payload, \{ plugins: PLUGINS, bankFeeds: BANK_FEEDS \}\)/);
   assert.match(main, /if \(!guards\.pluginAllowed\(url\.pathname, \{plugins:PLUGINS,bankFeeds:BANK_FEEDS\}\)\) return new Response\('Not found', \{ status: 404 \}\);/);
-  // No other network: the main process never loads Node's or Electron's HTTP clients.
+  // Provider traffic stays in fb-net. The opt-in local agent listener is the only HTTP server;
+  // it has no outbound client and is independently covered by adversarial transport tests.
   for (const file of fs.readdirSync(path.join(__dirname, '../main'))) {
     const text = fs.readFileSync(path.join(__dirname, '../main', file), 'utf8');
+    if(file==='ai-transport.cjs') {
+      assert.match(text,/server\.listen\(0,'127\.0\.0\.1',resolve\)/);
+      assert.doesNotMatch(text,/http\.(request|get)\(|\bfetch\(/);
+      continue;
+    }
     assert.doesNotMatch(text, /require\('node:(https?|net|tls|dgram)'\)|require\('(https?|net|tls|dgram)'\)|\bnet\.(fetch|request)\(/, file);
   }
   const build = fs.readFileSync(path.join(__dirname, '../scripts/build-native.cjs'), 'utf8');

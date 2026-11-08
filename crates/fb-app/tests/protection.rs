@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{
     App, Command, Outcome,
     keys::MasterKey,
@@ -30,6 +31,7 @@ fn recovery_copy_requires_authorization_renews_form_token_and_does_not_mark_save
     assert!(matches!(app.run_renderer(command(next.clone())).unwrap(),Outcome::Done {..}));
     app.lock();
     app.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut app);
     assert!(app.run_renderer(command(next)).is_err());
     let token = app.tokens.mint(protection::RECOVERY);
     assert!(matches!(app.run_renderer(command(token)).unwrap(),Outcome::Invalid {..}));
@@ -47,6 +49,7 @@ fn recovery_export_tickets_expire_on_lock_reauthorization_and_acknowledgment() {
     let before_lock = app.recovery_export_ticket().unwrap();
     app.lock();
     app.open_with_secret(&path, PASSWORD).unwrap();
+    support::sign_in(&mut app);
     app.authorize_recovery(PASSWORD).unwrap();
     assert!(app.recovery_saved_export(&before_lock).is_err());
     assert!(!app.protection.as_ref().unwrap().recovery_saved);
@@ -74,6 +77,8 @@ fn setup(root: &Path, own: bool) -> (App, PathBuf) {
         own.then_some(PASSWORD),
     )
     .unwrap();
+    support::sign_in(&mut app);
+    if own { app.authorize_recovery(PASSWORD).unwrap(); }
     (app, path)
 }
 fn backup(app: &mut App) -> PathBuf {
@@ -120,9 +125,10 @@ fn builtin_defaults_open_without_secret_and_use_plain_warning() {
         .html;
     assert!(screen.contains(BUILTIN_WARNING));
     assert!(!screen.to_lowercase().contains("encrypted"));
-    assert!(screen.contains("File › Lock and idle lock do not apply"));
+    assert!(screen.contains("File › Lock, idle lock and switching users still end the individual sign-in session"));
     app.lock();
     app.open_book(&path, &protection::builtin_key()).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(
         app.company_name_for_kit().unwrap(),
         "Synthetic portable books"
@@ -178,6 +184,7 @@ fn both_modes_restore_in_second_install_and_wrong_secrets_create_nothing() {
                 &secret,
             )
             .unwrap();
+            support::sign_in(&mut other);
             assert_ne!(restored, path);
             assert_eq!(
                 other.company_name_for_kit().unwrap(),
@@ -189,6 +196,7 @@ fn both_modes_restore_in_second_install_and_wrong_secrets_create_nothing() {
             other
                 .open_book(&restored, &portable.keys.unlock(&secret).unwrap())
                 .unwrap();
+            support::sign_in(&mut other);
             assert_eq!(
                 other.company_name_for_kit().unwrap(),
                 "Synthetic portable books"
@@ -224,6 +232,7 @@ fn rekey_both_ways_preserves_data_and_receipt_key_and_old_password_stops_working
     assert!(fb_db::Book::open(&path, &own_key).is_err());
     app.lock();
     app.open_book(&path, &protection::builtin_key()).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(
         app.company_name_for_kit().unwrap(),
         "Synthetic portable books"
@@ -232,7 +241,7 @@ fn rekey_both_ways_preserves_data_and_receipt_key_and_old_password_stops_working
 }
 
 #[test]
-fn owner_password_prompt_requires_authentication_keyring_and_no_credentials() {
+fn owner_password_prompt_requires_authentication_and_keyring_with_encrypted_credentials() {
     let d = tempfile::tempdir().unwrap();
     let (mut app, path) = setup(d.path(), true);
     assert!(
@@ -273,12 +282,9 @@ fn owner_password_prompt_requires_authentication_keyring_and_no_credentials() {
         owner_name: open.owner_name,
         staff: open.staff,
     });
-    assert!(
-        app.change_ask_password(PASSWORD, false)
-            .unwrap_err()
-            .to_string()
-            .contains("saved connection credentials")
-    );
+    app.change_ask_password(PASSWORD, false).unwrap();
+    assert!(!Record::read(&path).unwrap().unwrap().ask_password);
+    assert!(app.has_credentials().unwrap(), "saved encrypted connections remain available");
 }
 
 #[test]
@@ -322,8 +328,10 @@ fn old_password_book_keeps_its_key_and_gains_recovery_after_unlock() {
     let key = MasterKey::new([71; 32]);
     app.create_book(&path, &key, "Old owner", "Old synthetic books")
         .unwrap();
+    support::sign_in(&mut app);
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     app.adopt_legacy_keys(PASSWORD).unwrap();
     assert_eq!(*app.master_key().unwrap(), key);
     assert!(app.recovery_authorized);
@@ -332,6 +340,7 @@ fn old_password_book_keeps_its_key_and_gains_recovery_after_unlock() {
     assert!(Record::read(&path).unwrap().unwrap().recovery_saved);
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert!(app.recovery_text().is_err());
     assert!(app.authorize_recovery("wrong").is_err());
     app.authorize_recovery(PASSWORD).unwrap();
@@ -448,6 +457,7 @@ fn portable_restore_reconnects_connections_with_another_installation_key() {
             if own { PASSWORD } else { "" },
         )
         .unwrap();
+        support::sign_in(&mut other);
         let count: i64 = other
             .open_mut()
             .unwrap()
@@ -537,6 +547,7 @@ fn attachments_survive_both_rekeys_and_portable_restore() {
             password.unwrap_or(""),
         )
         .unwrap();
+        support::sign_in(&mut other);
         let store = Store::for_book(&restored, &other.receipt_key().unwrap()).unwrap();
         let o = other.open_mut().unwrap();
         assert_eq!(
@@ -562,6 +573,7 @@ fn restored_ai_account_requires_reconnect_and_local_account_stays_usable() {
     vault.save(&scope,SecretBytes::new(b"Synthetic AI account credential".to_vec())).unwrap();
     drop(vault);
     app.open_book(&path,&key).unwrap();
+    support::sign_in(&mut app);
     let o=app.open_mut().unwrap();
     assert_eq!(fb_core::assistant::connection_for(&mut o.book,o.owner,c).unwrap().unwrap()["status"],"connected");
     let file=backup(&mut app);
@@ -569,6 +581,7 @@ fn restored_ai_account_requires_reconnect_and_local_account_stays_usable() {
     let mut other=app_at(target.path());
     other.device_key=Some(MasterKey::new([94;32]));
     fb_app::screens::backups::restore_from_gate(&mut other,&file,"AI restore",PASSWORD).unwrap();
+    support::sign_in(&mut other);
     let o=other.open_mut().unwrap();
     let row=fb_core::assistant::connection_for(&mut o.book,o.owner,c).unwrap().unwrap();
     assert_eq!(row["status"],"needs_signin");
@@ -585,6 +598,7 @@ fn switch_forms_say_when_older_backups_cannot_be_restored_after_the_change() {
     let key = MasterKey::new([73; 32]);
     app.create_book(&path, &key, "Old owner", "Old synthetic books")
         .unwrap();
+    support::sign_in(&mut app);
     // A book from before recovery keys makes backups with no key envelope.
     let older = backup(&mut app);
     assert!(backups::read_header(&older).unwrap()["book_keys"].is_null());
@@ -632,5 +646,6 @@ fn leftover_temporary_key_files_and_a_published_stage_are_cleared() {
     let record = Record::read(&path).unwrap().unwrap();
     app.open_book(&path, &record.keys.unlock(PASSWORD).unwrap())
         .unwrap();
+    support::sign_in(&mut app);
     assert_eq!(app.company_name_for_kit().unwrap(), "Synthetic portable books");
 }

@@ -7,7 +7,7 @@ use fb_core::{
 };
 
 #[test]
-fn one_owner_is_an_active_staff_audit_actor_and_names_are_validated() {
+fn original_owner_remains_an_audit_actor_and_named_users_can_be_added() {
     let mut book = book("owner");
     assert!(accounts::create_owner(&mut book, "\n").is_err());
     assert!(accounts::create_owner(&mut book, &"x".repeat(151)).is_err());
@@ -26,8 +26,10 @@ fn one_owner_is_an_active_staff_audit_actor_and_names_are_validated() {
         .unwrap();
     assert_eq!(name, "Synthetic Owner");
     assert!(accounts::create_owner(&mut book, "Another").is_err());
-    assert!(users::create_user(&mut book, "Another", false).is_err());
-    assert!(users::set_active(&mut book, id, false).is_err());
+    assert!(users::create_user(&mut book, "Another", false).is_ok());
+    // An unconfigured legacy owner can be disabled; enrolled administrators have the 0185 guards.
+    assert!(users::set_active(&mut book, id, false).is_ok());
+    assert_eq!(book.read(|q| accounts::owner(q)).unwrap(), Some(id));
     assert!(book.check().unwrap().is_empty());
 }
 
@@ -48,10 +50,8 @@ fn owner_identity_matrix_and_parent_protection() {
             format!("INSERT OR REPLACE INTO accounts_owner VALUES(1,'{id}')"),
             format!("UPDATE OR REPLACE accounts_owner SET user_id='{other}'"),
             format!("DELETE FROM fb_user WHERE id='{id}'"),
-            format!("UPDATE fb_user SET is_staff=0 WHERE id='{id}'"),
             format!("UPDATE OR REPLACE fb_user SET id='{other}' WHERE id='{id}'"),
             format!("INSERT OR REPLACE INTO fb_user(id,username) VALUES('{other}','Owner')"),
-            format!("INSERT INTO fb_user(id,username) VALUES('{other}','Other')"),
             format!(
                 "INSERT INTO accounts_owner VALUES(1,'{id}') ON CONFLICT DO UPDATE SET user_id=excluded.user_id"
             ),

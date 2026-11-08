@@ -26,6 +26,9 @@ pub struct Record {
     pub format: u32,
     pub keys: KeyEnvelope,
     pub ask_password: bool,
+    // Read existing records/journals without retaining or acting on this retired marker.
+    #[serde(default, skip_serializing, rename = "desktop_signin_configured")]
+    _retired_signin_marker: Option<bool>,
     pub recovery_saved: bool,
 }
 
@@ -114,7 +117,8 @@ impl Record {
     pub fn new(keys: KeyEnvelope) -> Self {
         Self {
             format: 1,
-            ask_password: keys.mode == Mode::OwnPassword,
+            ask_password: false,
+            _retired_signin_marker: None,
             keys,
             recovery_saved: false,
         }
@@ -309,7 +313,8 @@ impl App {
                 .as_ref()
                 .is_none_or(|r| r.ask_password || !self.os_store_usable)
     }
-    pub fn authenticate_owner(&self, password: &str) -> AppResult<()> {
+    pub fn authenticate_owner(&mut self, password: &str) -> AppResult<()> {
+        self.authorize(None, crate::identity::Permission::Administer)?;
         let record = self
             .protection
             .as_ref()
@@ -333,11 +338,6 @@ impl App {
                 "This computer has no system keyring. Keep asking for your password when opening these books.",
             ));
         }
-        if !ask && self.has_credentials()? {
-            return Err(error(
-                "These books have saved connection credentials. Keep asking for your password, or disconnect those services first.",
-            ));
-        }
         let mut record = self.protection.clone().ok_or(AppError::Locked)?;
         record.ask_password = ask;
         self.save_record_audited(record, "book.password_prompt", serde_json::json!({"ask_password":ask}))
@@ -348,7 +348,8 @@ impl App {
         self.recovery_authorized = true;
         Ok(())
     }
-    pub fn recovery_text(&self) -> AppResult<zeroize::Zeroizing<String>> {
+    pub fn recovery_text(&mut self) -> AppResult<zeroize::Zeroizing<String>> {
+        self.authorize(None, crate::identity::Permission::Administer)?;
         if !self.recovery_authorized {
             return Err(error("Enter your password to show the recovery key."));
         }
@@ -369,7 +370,7 @@ impl App {
         self.recovery_text()?;
         Ok(self.tokens.mint(RECOVERY_EXPORT))
     }
-    pub fn validate_recovery_export(&self, ticket: &str) -> AppResult<()> {
+    pub fn validate_recovery_export(&mut self, ticket: &str) -> AppResult<()> {
         self.recovery_text()?;
         if !self.tokens.valid(ticket, RECOVERY_EXPORT) {
             return Err(error("The recovery export expired. Open the recovery key again."));
@@ -382,6 +383,7 @@ impl App {
         self.recovery_saved()
     }
     fn protection_preflight(&mut self) -> AppResult<fb_db::ProtectionLease> {
+        self.authorize(None, crate::identity::Permission::Administer)?;
         if !self.open_mut()?.staff { return Err(error("Book protection is limited to the owner.")); }
         self.first_company()?.ok_or_else(|| error("No company in these books."))?;
         let lease = self.open_mut()?.book.protection_lease().map_err(error)?;
@@ -610,7 +612,11 @@ impl App {
         } else {
             MasterKey::new(BUILTIN_KEY)
         };
-        let record = Record::new(KeyEnvelope::new(&next, &receipts, new_password).map_err(error)?);
+        let mut record = Record::new(KeyEnvelope::new(&next, &receipts, new_password).map_err(error)?);
+        if old.keys.mode == Mode::OwnPassword && new_password.is_some() {
+            // Rotating the encryption key does not change this computer's sign-in preference.
+            record.ask_password = old.ask_password;
+        }
         let company = self
             .first_company()?
             .ok_or_else(|| error("No company in these books."))?;

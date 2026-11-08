@@ -1,6 +1,7 @@
 //! Migration 0130: every TEXT column of the live schema carries the shared value guard for its class,
 //! at insert, update and open, with exact counts (a later table, e.g. bank feeds at INT-L4b, cannot be missed).
 use super::*;
+use rusqlite::params;
 use std::collections::BTreeMap;
 use validators::Class;
 
@@ -44,13 +45,13 @@ fn every_text_column_has_its_class_guard_at_insert_update_and_open_with_exact_co
             "uuid" => Class::Uuid, "date" => Class::Date, "timestamp" => Class::Timestamp, "text" => Class::Text, other => panic!("{other}"),
         })).collect())
     }).collect();
-    assert_eq!(fixture, live, "regenerate the extension with tests/generate_company_document_guards.py");
+    assert_eq!(fixture, live, "review and update the shared value-guard inventory for the new schema");
     let count = |class: Class| live.values().flat_map(|c| c.values()).filter(|k| **k == class).count();
-    assert_eq!(live.len(), 87);
-    assert_eq!(live.values().map(BTreeMap::len).sum::<usize>(), 590);
-    assert_eq!((count(Class::Uuid), count(Class::Date), count(Class::Timestamp), count(Class::Text)), (309, 26, 24, 231));
+    assert_eq!(live.len(), 90);
+    assert_eq!(live.values().map(BTreeMap::len).sum::<usize>(), 595);
+    assert_eq!((count(Class::Uuid), count(Class::Date), count(Class::Timestamp), count(Class::Text)), (312, 26, 24, 233));
     let guards: Vec<&str> = value_guard_triggers().collect();
-    assert_eq!(guards.len(), 174);
+    assert_eq!(guards.len(), 180);
     let view: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
     for (table, columns) in &live {
         for event in ["insert", "update"] {
@@ -67,6 +68,83 @@ fn every_text_column_has_its_class_guard_at_insert_update_and_open_with_exact_co
         }
     }
     assert!(VIOLATION_QUERIES.iter().any(|(_, q)| *q == "SELECT problem FROM fb_value_invalid"));
+}
+
+#[test]
+fn desktop_user_insert_values_are_checked_before_other_constraints() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut book = Book::create(&dir.path().join("desktop-values.fbbook"), &[64;32]).unwrap();
+    let triggers: Vec<String> = collect(&book.conn, "SELECT name FROM sqlite_schema WHERE type='trigger'", |r| r.get(0)).unwrap();
+    book.conn.execute_batch("PRAGMA foreign_keys=OFF; PRAGMA ignore_check_constraints=ON").unwrap();
+    for (user, role, hash) in [
+        ("not-a-uuid", "bookkeeper", None),
+        ("00000000-0000-7000-8000-000000000101", "bookkeeper\0", None),
+        ("00000000-0000-7000-8000-000000000101", "bookkeeper", Some("$argon2id$v=19$\0")),
+    ] {
+        let tx = book.conn.transaction().unwrap();
+        for name in &triggers { if name != "fb_valid_desktop_user_insert" { tx.execute_batch(&format!("DROP TRIGGER {name}")).unwrap(); } }
+        let error = tx.execute("INSERT INTO desktop_user(user_id,role,password_hash) VALUES(?1,?2,?3)", params![user,role,hash]).unwrap_err();
+        assert_eq!(constraint_of(&error).as_deref(), Some("fb_valid"));
+        assert_eq!(tx.query_row("SELECT count(*) FROM desktop_user", [], |r| r.get::<_,i64>(0)).unwrap(), 0);
+        // Rollback also restores every other guard for the next case.
+        tx.rollback().unwrap();
+    }
+}
+
+#[test]
+fn desktop_value_guard_upgrade_preserves_enrolled_users_and_prior_schema() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("enrolled-0185.fbbook");
+    let key = [65;32];
+    let conn = Connection::open(&path).unwrap();
+    conn.execute_batch(&format!("PRAGMA key=\"x'{}'\"", hex(&key))).unwrap();
+    Book::configure(&conn).unwrap();
+    let boundary = MIGRATIONS.iter().position(|m| m.0 == "0186_desktop_user_value_guards").unwrap();
+    conn.execute_batch("BEGIN IMMEDIATE").unwrap();
+    for (_, sql) in &MIGRATIONS[..boundary] { conn.execute_batch(sql).unwrap(); }
+    let admin = "00000000-0000-7000-8000-000000000101";
+    let reader = "00000000-0000-7000-8000-000000000102";
+    let company = "00000000-0000-7000-8000-000000000103";
+    // Synthetic stored hashes: test preservation, not Argon2 authentication (covered in fb-app).
+    let hash = format!("$argon2id$v=19${}", "synthetic".repeat(10));
+    conn.execute("INSERT INTO fb_user(id,username,is_staff) VALUES(?1,'Administrator',1),(?2,'Reader',0)", params![admin,reader]).unwrap();
+    conn.execute("INSERT INTO ledger_company(id,name,currency) VALUES(?1,'Synthetic named users','USD')", [company]).unwrap();
+    conn.execute("INSERT INTO ledger_company_members(company_id,user_id) VALUES(?1,?2),(?1,?3)", params![company,admin,reader]).unwrap();
+    conn.execute("INSERT INTO desktop_user(user_id,role,password_hash) VALUES(?1,'administrator',?3),(?2,'readonly',?3)", params![admin,reader,hash]).unwrap();
+    conn.execute_batch(&format!("PRAGMA user_version={boundary}; COMMIT")).unwrap();
+    let before = test_support::snapshot(&conn).unwrap();
+    let schema = schema_hashes(&conn).unwrap();
+    let view: String = conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
+    drop(conn);
+    let old = match Book::open_staged(&path,&key).unwrap() { Opened::Behind(old) => old, _ => panic!("expected 0185 book") };
+    let backup = dir.path().join("before-upgrade.fbbook");
+    old.snapshot(&backup,&key).unwrap();
+    let copy = Connection::open(&backup).unwrap();
+    copy.execute_batch(&format!("PRAGMA key=\"x'{}'\"",hex(&key))).unwrap();
+    Book::configure(&copy).unwrap();
+    assert_eq!(test_support::snapshot(&copy).unwrap(), before);
+    assert_eq!(schema_hashes(&copy).unwrap(), schema);
+    let book = old.upgrade().unwrap();
+    let mut expected=before.clone();
+    expected.insert("desktop_mfa_totp".into(),vec![]);
+    expected.insert("desktop_mfa_recovery".into(),vec![]);
+    assert_eq!(test_support::snapshot(&book.conn).unwrap(), expected);
+    let upgraded = schema_hashes(&book.conn).unwrap();
+    for (object, hash) in &schema { if object != "view:fb_value_invalid" { assert_eq!(&upgraded[object],hash,"changed {object}"); } }
+    let added:std::collections::BTreeSet<_>=upgraded.keys().filter(|k|!schema.contains_key(*k)).map(String::as_str).collect();
+    assert_eq!(added,std::collections::BTreeSet::from([
+        "trigger:fb_valid_desktop_user_insert","trigger:fb_valid_desktop_user_update",
+        "table:desktop_mfa_totp","table:desktop_mfa_recovery","trigger:desktop_mfa_totp_identity",
+        "trigger:fb_valid_desktop_mfa_totp_insert","trigger:fb_valid_desktop_mfa_totp_update",
+        "trigger:fb_valid_desktop_mfa_recovery_insert","trigger:fb_valid_desktop_mfa_recovery_update",
+    ]));
+    let new_view: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
+    assert_eq!(new_view.split("\nUNION ALL\nSELECT 'invalid stored value in desktop_user'").next().unwrap(), view.trim_end_matches(';'));
+    assert!(book.check().unwrap().is_empty());
+    drop(book);
+    let reopened = Book::open(&path,&key).unwrap();
+    assert_eq!(test_support::snapshot(&reopened.conn).unwrap(), expected);
+    assert!(reopened.check().unwrap().is_empty());
 }
 
 /// Each class's hole is refused at write by the shared guard alone, and flagged on open when written around it.
@@ -87,7 +165,15 @@ fn each_value_class_is_refused_at_write_and_flagged_on_open() {
             INSERT INTO ledger_journal(id,number,company_id,date,memo,status,created_by_id,created_at) VALUES('{journal}',1,'{company}','2026-01-01','Probe','DRAFT','{user}','{ts}');
             COMMIT; PRAGMA foreign_keys=ON;")).unwrap();
     }
-    let cases: [(&str, &str, String); 9] = [
+    // Unconfigured named users still need the same byte-exact storage boundaries.
+    {
+        let book = Book::open(&path, &key).unwrap();
+        book.conn.execute("INSERT INTO desktop_user(user_id,role) VALUES(?1,'bookkeeper')", [user]).unwrap();
+    }
+    let cases: [(&str, &str, String); 12] = [
+        ("desktop_user", "user_id", format!("'{user}'||char(0)")),
+        ("desktop_user", "role", "'bookkeeper'||char(0)".into()),
+        ("desktop_user", "password_hash", "'$argon2id$v=19$'||printf('%080d',0)||char(0)".into()),
         ("ledger_company", "name", "'Probe'||char(0)||'x'".into()),
         ("ledger_journal", "memo", "'Probe'||char(0)".into()),
         ("ledger_journal", "id", format!("upper('{journal}')")),
@@ -134,7 +220,7 @@ fn each_value_class_is_refused_at_write_and_flagged_on_open() {
         for (name, _) in &triggers {
             conn.execute_batch(&format!("DROP TRIGGER {name}")).unwrap();
         }
-        conn.execute_batch(&format!("UPDATE ledger_company SET name='Probe'; UPDATE ledger_journal SET id='{journal}', company_id='{company}', memo='Probe', date='2026-01-01', created_at='{ts}'")).unwrap();
+        conn.execute_batch(&format!("UPDATE desktop_user SET user_id='{user}',role='bookkeeper',password_hash=NULL; UPDATE ledger_company SET name='Probe'; UPDATE ledger_journal SET id='{journal}', company_id='{company}', memo='Probe', date='2026-01-01', created_at='{ts}'")).unwrap();
         for (_, sql) in &triggers {
             conn.execute_batch(sql).unwrap();
         }

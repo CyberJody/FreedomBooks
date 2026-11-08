@@ -6,6 +6,7 @@ use fb_db::rusqlite::{self, Connection, types::Value};
 
 const TABLES: &[&str] = &[
     "fb_user",
+    "desktop_user",
     "ledger_company",
     "ledger_account",
     "ledger_journal",
@@ -89,6 +90,7 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
     fx.book.write(|w| -> rusqlite::Result<()> {
         w.execute_batch("INSERT INTO fb_seal VALUES('matrix','original'); INSERT INTO fb_seal_due VALUES('matrix','original')")
     }).unwrap();
+    fx.book.write(|w| w.execute("INSERT INTO desktop_user(user_id,role) VALUES(?1,'bookkeeper')", [fx.user.to_db()])).unwrap();
     let actual: Vec<String> = fx.book.connection().prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT GLOB 'sqlite_*' ORDER BY name")
         .unwrap().query_map([], |r| r.get(0)).unwrap().collect::<Result<_, _>>().unwrap();
     let mut expected = TABLES.iter().chain([
@@ -137,6 +139,8 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
         "company_document_details",
         // Populated numbering composite-key/replacement matrix: tests/numbering.rs.
         "fb_numbering",
+        // Mutable self-service MFA enrollment and single-use recovery: fb-app/tests/desktop_mfa.rs.
+        "desktop_mfa_totp", "desktop_mfa_recovery",
     ].iter()).map(|s| s.to_string()).collect::<Vec<_>>();
     expected.sort();
     assert_eq!(

@@ -1,4 +1,5 @@
 //! Real encrypted-book boundaries for the D7a forms, reviews, retries and ordering.
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, keys, screens};
 use serde_json::{Value, json};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -71,6 +72,7 @@ fn fixture() -> Fixture {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     let mut account = |code: &str, detail: &str| {
         run(&mut app,json!({"type":"SaveAccount","company_id":c,"code":code,"name":code,"detail_type":detail}))["id"].as_str().unwrap().to_owned()
     };

@@ -46,11 +46,12 @@ pub fn access(conn: &(impl Query + ?Sized), actor: UserId, company: CompanyId) -
 
 /// `audit()`: one append-only event; `target` is `<model>:<id>`.
 pub fn audit(conn: &Writer<'_>, actor: &User, company: CompanyId, action: &str, target: String, detail: Value) -> FbResult<()> {
+    let event_id = fb_ids::AuditEventId::new().to_db();
     conn.execute(
         "INSERT INTO ledger_auditevent (id, company_id, actor_id, actor_name, occurred_at, action, target, detail)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![
-            fb_ids::AuditEventId::new().to_db(),
+            event_id,
             company.to_db(),
             actor.id.to_db(),
             actor.username,
@@ -60,6 +61,7 @@ pub fn audit(conn: &Writer<'_>, actor: &User, company: CompanyId, action: &str, 
             serde_json::to_string(&detail).expect("json")
         ],
     )?;
+    crate::agent_provenance::record(conn, actor, company, &event_id)?;
     Ok(())
 }
 

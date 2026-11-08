@@ -32,8 +32,16 @@ fn sim_fix_labels() -> impl Iterator<Item = (&'static str, &'static str)> {
     SIM_FIX_ACTION_LABELS.into_iter()
 }
 const DOCUMENT_DETAILS_ACTION: (&str, &str) = ("company.document_details_updated", "Company document details changed");
+const USER_ACTIONS: [(&str, &str); 5] = [
+    ("user.enrolled", "User password set up"),
+    ("user.mfa_changed", "Multi-factor authentication changed"),
+    ("user.mfa_verified", "Multi-factor authentication verified"),
+    ("user.created", "User created"),
+    ("user.changed", "User changed"),
+];
 fn action(code: &str) -> String {
     if code == DOCUMENT_DETAILS_ACTION.0 { return DOCUMENT_DETAILS_ACTION.1.into(); }
+    if let Some((_, label)) = USER_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if code=="numbering.changed" {return "Next document number changed".into();}
     LABELS["ACTION_LABELS"][code]
         .as_str()
@@ -106,6 +114,13 @@ fn target(
     }
     let (model, raw) = value.split_once(':').unwrap_or(("", ""));
     if fb_ids::parse_uuid(raw).is_some() {
+        if model == "user" {
+            // This company owns the audit event. Preserve its recorded name after membership
+            // removal; do not expose a link to book-wide user administration.
+            let name = detail["username"].as_str().map(str::to_owned).or(
+                tx.query_row("SELECT u.username FROM fb_user u JOIN ledger_company_members m ON m.user_id=u.id WHERE u.id=?1 AND m.company_id=?2", params![raw,c.to_db()], |r| r.get::<_,String>(0)).optional()?);
+            return Ok((name.unwrap_or_else(|| "User".into()), None));
+        }
         if model == "company" && raw == c.to_db() {
             return Ok((
                 store::get_company(tx, c)?.name,
@@ -404,6 +419,7 @@ pub(super) fn history(
         .iter()
         .map(|(k, v)| (k.clone(), v.as_str().unwrap().to_owned()))
         .chain(sim_fix_labels().map(|(k, v)| (k.to_owned(), v.to_owned())))
+        .chain(USER_ACTIONS.into_iter().map(|(k, v)| (k.to_owned(), v.to_owned())))
         .chain(std::iter::once((DOCUMENT_DETAILS_ACTION.0.to_owned(), DOCUMENT_DETAILS_ACTION.1.to_owned())))
         .collect();
     labels.sort_by(|a, b| a.1.cmp(&b.1));

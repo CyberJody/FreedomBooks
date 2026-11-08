@@ -1,5 +1,6 @@
 //! The desktop flow without a window: first run -> typed commands -> a ported form posted with its
 //! command token -> post -> the invoice in the list and the A/R register -> lock -> reopen.
+mod support;
 use fb_app::commands::{Command, Outcome, parse_command};
 use fb_app::{App, AppError, keys, screens};
 use serde_json::json;
@@ -36,11 +37,12 @@ fn first_run_invoice_form_post_and_register() {
     let mut app = App::new();
     app.today = || chrono::NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
     let created = app.create_book(&path, &key, "Dana Owner", "Kettle Pond Supply").unwrap();
+    support::sign_in(&mut app);
     let c = created.company_id.to_db();
     assert!(app.create_book(&path, &key, "x", "y").is_err(), "never overwrites a book");
 
     let home = screens::render(&mut app, &format!("/c/{c}/home/")).unwrap();
-    assert!(home.html.contains("Operator: Dana Owner") && home.html.contains("Needs setup"));
+    assert!(home.html.contains("Signed in as Dana Owner") && home.html.contains("Needs setup"));
 
     let acct = |app: &mut App, code: &str, name: &str, t: &str| run(app, json!({"type": "SaveAccount", "company_id": c, "code": code, "name": name, "detail_type": t}))["id"].as_str().unwrap().to_owned();
     let bank = acct(&mut app, "1000", "Checking", "BANK");
@@ -111,9 +113,10 @@ fn first_run_invoice_form_post_and_register() {
     assert!(matches!(screens::render(&mut app, &format!("/c/{c}/home/")), Err(AppError::Locked)));
     assert!(app.open_book(&path, &keys::new_master_key().unwrap()).is_err(), "wrong key refused");
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     assert_eq!(app.first_company().unwrap().unwrap().to_db(), c);
     let home = screens::render(&mut app, &format!("/c/{c}/home/")).unwrap();
-    assert!(home.html.contains("Operator: Dana Owner") && home.html.contains("1000 · Checking"));
+    assert!(home.html.contains("Signed in as Dana Owner") && home.html.contains("1000 · Checking"));
 }
 
 #[test]
@@ -122,12 +125,14 @@ fn form_posts_need_a_live_token_for_that_path() {
     let key = keys::new_master_key().unwrap();
     let mut app = App::new();
     let c = app.create_book(&path, &key, "Owner", "Co").unwrap().company_id.to_db();
+    support::sign_in(&mut app);
     let form = screens::render(&mut app, &format!("/c/{c}/invoices/new/")).unwrap();
     let token = token_of(&form.html);
     let other = Command::SubmitForm { path: format!("/c/{c}/accounts/new/"), token: token.clone(), fields: vec![] };
     assert!(matches!(app.run(other), Err(AppError::Invalid(_))), "token bound to its path");
     app.lock();
     app.open_book(&path, &key).unwrap();
+    support::sign_in(&mut app);
     let after = Command::SubmitForm { path: format!("/c/{c}/invoices/new/"), token, fields: vec![] };
     assert!(matches!(app.run(after), Err(AppError::Invalid(_))), "lock forgets tokens");
 }

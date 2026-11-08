@@ -1,0 +1,91 @@
+{% extends 'ledger/base.html' %}{% block content %}
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
+{% if screen == signin_path %}
+{% if bootstrap %}
+<h1>Set up the owner's sign-in</h1>
+<p>The books are open. Set an individual user password for the existing owner, <strong>{{ bootstrap }}</strong>. Existing companies, balances and history stay with this identity.</p>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="enroll">
+<p><label for="id_password">New user password</label><input id="id_password" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required></p>
+<p><label for="id_password_repeat">Repeat user password</label><input id="id_password_repeat" name="password_repeat" type="password" autocomplete="new-password" required></p>
+<p><label><input type="checkbox" name="confirm_owner" required> I am setting up the existing owner on this desktop.</label></p>
+<button>Set password and sign in</button></form>
+<p>If setup is interrupted, reopen these books and finish here. No default password is created.</p>
+{% elif mfa_pending %}
+<h1>Verify your sign-in</h1>
+<p>Signing in as <strong>{{ mfa_name }}</strong>.</p>
+<p>Enter the current six-digit code from your authenticator app, or one unused recovery code. Your books and AI connections stay unavailable until verification succeeds.</p>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="mfa">
+<p><label for="id_code">Authenticator or recovery code</label><input id="id_code" name="code" autocomplete="one-time-code" maxlength="80" required autofocus></p>
+<button>Verify and sign in</button></form>
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="cancel_mfa"><button>Back to password sign-in</button></form>
+<p>Codes can be used only once. If you just used a code, wait for the next one. This sign-in expires after five minutes.</p>
+{% else %}
+<h1>Sign in to FreedomBooks</h1>
+<p>Choose or enter your user name, then enter your password. One person uses these books at a time on this desktop.</p>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="signin">
+<p><label for="id_username">User name</label><input id="id_username" name="username" value="{{ signin_name }}" list="desktop-user-names" maxlength="150" autocomplete="username" required><datalist id="desktop-user-names">{% for name in signin_names %}<option value="{{ name }}"></option>{% endfor %}</datalist></p>
+<p><label for="id_password">User password</label><input id="id_password" name="password" type="password" maxlength="1024" autocomplete="current-password" required></p>
+<button>Sign in</button></form><p>Forgot your user password? Ask another administrator to set a new one from Users. A book recovery key opens the file; it does not sign you in as a person.</p>
+{% endif %}
+<p class="notice">Your user password signs you in and identifies your work. The separate book password and recovery key protect backups and let you open these books on another computer.</p>
+{% if builtin %}<p>These books use the built-in key. Anyone with a copy of the file can open it. User sign-in does not add password protection to the file.</p>{% endif %}
+{% elif screen == session_path %}
+<h1>Your desktop session</h1><p>Signed in as <strong>{{ user.username }}</strong> ({{ role }}).</p>
+<p><a href="{{ home }}">Continue to your company</a> · <a href="{{ mfa_path }}">Multi-factor authentication</a>{% if admin %} · <a href="{{ users_path }}">Manage users</a> · <a href="/settings/book-protection/">Book protection</a>{% endif %}</p>
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="signout"><button>Sign out / switch user</button></form>
+<p>Signing out clears unsaved forms, reviews and pending actions. The next person must enter their own password. Book encryption lock is a separate File menu action.</p>
+{% elif screen == mfa_path %}
+<h1>Multi-factor authentication</h1>
+<p>Protect sign-in for <strong>{{ user.username }}</strong> with a code from your authenticator app after your password. This setting applies to your user in these books. It does not change book encryption.</p>
+{% if builtin %}<p class="notice">These books use the built-in encryption key. MFA protects application sign-in, but anyone with a copy of the file can still open it. Set your own password in Book protection to protect the stored file.</p>{% endif %}
+<p><strong>Status: {% if mfa_enabled %}Enabled{% else %}Not enabled{% endif %}</strong>{% if mfa_enabled %} · {{ recovery_count }} unused recovery codes{% endif %}</p>
+{% if recovery_codes %}
+<section class="notice"><h2>Save your recovery codes</h2>
+<p>Each code works once, together with your user password, if you lose access to your authenticator. Store these somewhere safe outside these books. Old recovery codes no longer work. These codes disappear when you leave this session or choose “I saved my codes.”</p>
+<textarea id="recovery_codes" rows="10" cols="40" readonly aria-label="Recovery codes" spellcheck="false">{% for code in recovery_codes %}{{ code }}
+{% endfor %}</textarea>
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="saved"><button>I saved my codes</button></form></section>
+{% endif %}
+{% if not mfa_management %}
+<h2>{% if mfa_enabled %}Manage your authenticator{% else %}Set up an authenticator app{% endif %}</h2>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="authorize">
+<p><label for="id_password">Your user password</label><input id="id_password" name="password" type="password" autocomplete="current-password" maxlength="1024" required></p>
+{% if mfa_enabled %}<p><label for="id_code">Current authenticator code or unused recovery code</label><input id="id_code" name="code" autocomplete="one-time-code" maxlength="80" required></p><p>Wait for a new authenticator code if you just used the current one to sign in.</p>{% endif %}
+<button>Continue</button></form>
+{% else %}
+{% if setup_key %}
+<h2>Add FreedomBooks to your authenticator app</h2>
+<ol><li>In your authenticator app, add an account and choose <strong>Scan a QR code</strong>.</li><li>Scan this code with your phone, then enter the six-digit code from the app below.</li></ol>
+{{ setup_qr|safe }}
+<p>MFA is enabled only after you verify a code. Keep this QR code private.</p>
+<details class="mfa-manual"><summary>Can’t scan? Enter a setup key manually</summary>
+<p>Name the account “FreedomBooks — {{ user.username }}” and choose time-based codes (six digits, 30 seconds).</p>
+<p><label for="setup_key">Setup key (keep private)</label><input id="setup_key" value="{{ setup_key }}" readonly size="36" spellcheck="false" autocomplete="off"></p>
+</details>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="confirm"><p><label for="id_code">Six-digit authenticator code</label><input id="id_code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></p><button>Verify and enable MFA</button></form>
+<p>Setup expires after five minutes. A confirmed replacement invalidates the old authenticator and recovery codes.</p>
+{% else %}
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="begin"><button>{% if mfa_enabled %}Replace authenticator{% else %}Set up authenticator{% endif %}</button></form>
+{% endif %}
+{% if mfa_enabled %}
+<h2>Recovery</h2><p>Generate a fresh set if you have used or lost recovery codes. All old codes will stop working.</p>
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="recovery"><button>Generate new recovery codes</button></form>
+<h2>Disable MFA</h2><form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="disable"><p><label><input type="checkbox" name="confirm_disable" required> Allow password-only sign-in for my user.</label></p><button>Disable MFA</button></form>
+{% endif %}
+{% endif %}
+<p>Keep recovery codes separate from your book recovery key. Resetting a user password does not disable MFA. If you lose both your authenticator and all recovery codes, there is no MFA bypass in this version.</p>
+<p><a href="{{ session_path }}">Back to your session</a></p>
+{% else %}
+<h1>Users on this desktop</h1><p>Administrators manage people, company memberships, backups and book protection. Bookkeepers record accounting work in their companies. Read-only users view and print their companies.</p>
+<p>Saving a user signs you out and expires all pending forms and actions. Keep at least one active administrator with a password for every company. Disabled users retain their accounting history.</p>
+<table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Manage</th></tr></thead><tbody>{% for row in users %}<tr><td>{{ row.name }}</td><td>{{ row.role }}</td><td>{% if not row.active %}Disabled{% elif not row.enrolled %}Password needed{% else %}Active{% endif %}</td><td><form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="edit"><input type="hidden" name="user_id" value="{{ row.id }}"><button>Edit user</button></form></td></tr>{% endfor %}</tbody></table>
+<h2>{% if editing.id %}Edit {{ editing.name }}{% else %}Create a named user{% endif %}</h2>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="save"><input type="hidden" name="user_id" value="{{ editing.id }}">
+<p><label for="id_username">User name</label><input id="id_username" name="username" value="{{ editing.name }}" maxlength="150" autocomplete="off" required></p>
+<p><label for="id_role">Role</label><select id="id_role" name="role"><option value="administrator"{% if editing.role == 'administrator' %} selected{% endif %}>Administrator</option><option value="bookkeeper"{% if editing.role == 'bookkeeper' %} selected{% endif %}>Bookkeeper</option><option value="readonly"{% if editing.role == 'readonly' %} selected{% endif %}>Read-only</option></select></p>
+<p><label><input type="checkbox" name="active"{% if editing.active %} checked{% endif %}> Active (uncheck to disable sign-in)</label></p>
+<fieldset><legend>Company membership</legend>{% for company in companies %}<p><label><input type="checkbox" name="company" value="{{ company.id }}"{% if company.id in memberships %} checked{% endif %}> {{ company.name }}</label></p>{% endfor %}</fieldset>
+<p><label for="id_password">{% if editing.id %}New password (leave blank to keep current){% else %}Individual user password{% endif %}</label><input id="id_password" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password"{% if not editing.id %} required{% endif %}></p>
+<p><label for="id_password_repeat">Repeat new password</label><input id="id_password_repeat" name="password_repeat" type="password" autocomplete="new-password"></p>
+<button>Save user and sign out</button> <a href="{{ users_path }}">Create another user</a></form>
+{% endif %}{% endblock %}

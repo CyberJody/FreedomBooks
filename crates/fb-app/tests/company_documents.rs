@@ -1,3 +1,4 @@
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, screens};
 use serde_json::json;
 
@@ -16,6 +17,7 @@ fn company_document_settings_form_validation_tokens_and_escaping() {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     let path = format!("/c/{c}/edit/");
     let html = screens::render(&mut app, &path).unwrap().html;
     assert!(

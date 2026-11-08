@@ -19,6 +19,7 @@ body.shell .titlebar .brand small{color:#e5d9ea;font-size:12px;margin-left:10px}
 body.shell .titlebar-company{font-size:14px;font-weight:650;color:#fff;overflow-wrap:anywhere;min-width:0}
 body.shell .titlebar-sep{margin-right:14px;color:#cdb9d6}
 body.shell .titlebar .operator{margin-left:auto;color:#eadff0;font-size:12px}
+body.shell .titlebar .operator a{color:inherit}
 body.shell .titlebar a:focus-visible{outline-color:#fff}
 
 /* Left icon bar (main navigation) */

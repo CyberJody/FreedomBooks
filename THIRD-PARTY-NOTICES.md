@@ -27,14 +27,14 @@ They are not reproduced here.
 
 ## Summary
 
-* Rust crates: **310** (263 linked into the binary, 47 build-time only: build scripts / proc-macros)
+* Rust crates: **312** (265 linked into the binary, 47 build-time only: build scripts / proc-macros)
   — dependency closure of `fb-node, fb-plugin-openai, fb-plugin-simplefin, fb-plugin-smtp, fb-plugin-gmail, fb-plugin-m365` across all target platforms
 * npm production packages bundled with the app: **0** (the app has no npm runtime dependencies; `electron` and `playwright` are devDependencies — Electron's runtime is covered above)
 
 | License expression | Packages |
 |---|---:|
 | `Apache-2.0 OR MIT` | 195 |
-| `MIT` | 43 |
+| `MIT` | 45 |
 | `Unicode-3.0` | 26 |
 | `Apache-2.0 OR MIT OR Zlib` | 7 |
 | `Apache-2.0` | 5 |
@@ -144,7 +144,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [inout](https://github.com/RustCrypto/utils) | 0.1.4 | crate | linked | Copyright (c) 2022 The RustCrypto Project Developers<br>Copyright (c) 2022 Artyom Pavlov |
 | [ipnet](https://github.com/krisprice/ipnet) | 2.12.2 | crate | linked | Copyright 2017 Juniper Networks, Inc |
 | [itoa](https://github.com/dtolnay/itoa) | 1.0.18 | crate | linked | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
-| [js-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys) | 0.3.107 | crate | linked | Copyright (c) 2014 Alex Crichton |
+| [js-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys) | 0.3.106 | crate | linked | Copyright (c) 2014 Alex Crichton |
 | [libc](https://github.com/rust-lang/libc) | 0.2.191 | crate | linked | Copyright (c) The Rust Project Developers |
 | [log](https://github.com/rust-lang/log) | 0.4.35 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
 | [mime](https://github.com/hyperium/mime) | 0.3.17 | crate | linked | Copyright (c) 2014 Sean McArthur |
@@ -230,12 +230,12 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [uuid](https://github.com/uuid-rs/uuid) | 1.29.0 | crate | linked | Copyright (c) 2014 The Rust Project Developers<br>Copyright (c) 2018 Ashley Mannix, Christopher Armstrong, Dylan DPC, Hunar Roop Kahlon |
 | [vcpkg](https://github.com/mcgoo/vcpkg-rs) | 0.2.15 | crate | build-time | Copyright (c) 2017 Jim McGrath |
 | [version_check](https://github.com/SergioBenitez/version_check) | 0.9.5 | crate | build-time | Copyright (c) 2017-2018 Sergio Benitez |
-| [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen) | 0.2.130 | crate | linked | Copyright (c) 2014 Alex Crichton |
-| [wasm-bindgen-futures](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures) | 0.4.80 | crate | linked | Copyright (c) 2014 Alex Crichton |
-| [wasm-bindgen-macro](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro) | 0.2.130 | crate | proc-macro | Copyright (c) 2014 Alex Crichton |
-| [wasm-bindgen-macro-support](https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support) | 0.2.130 | crate | build-time | Copyright (c) 2014 Alex Crichton |
-| [wasm-bindgen-shared](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared) | 0.2.130 | crate | linked | Copyright (c) 2014 Alex Crichton |
-| [web-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys) | 0.3.107 | crate | linked | Copyright (c) 2014 Alex Crichton |
+| [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen) | 0.2.129 | crate | linked | Copyright (c) 2014 Alex Crichton |
+| [wasm-bindgen-futures](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/futures) | 0.4.79 | crate | linked | Copyright (c) 2014 Alex Crichton |
+| [wasm-bindgen-macro](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro) | 0.2.129 | crate | proc-macro | Copyright (c) 2014 Alex Crichton |
+| [wasm-bindgen-macro-support](https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support) | 0.2.129 | crate | build-time | Copyright (c) 2014 Alex Crichton |
+| [wasm-bindgen-shared](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared) | 0.2.129 | crate | linked | Copyright (c) 2014 Alex Crichton |
+| [web-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/web-sys) | 0.3.106 | crate | linked | Copyright (c) 2014 Alex Crichton |
 | [web-time](https://github.com/daxpedda/web-time) | 1.1.0 | crate | linked | Copyright 2023 dAxpeDDa<br>Copyright (c) 2023 dAxpeDDa |
 | [winapi](https://github.com/retep998/winapi-rs) | 0.3.9 | crate | linked | Copyright (c) 2015-2018 The winapi-rs Developers |
 | [winapi-i686-pc-windows-gnu](https://github.com/retep998/winapi-rs) | 0.4.0 | crate | linked | Copyright (c) Peter Atashian (from package authors; no copyright line in license files) |
@@ -269,6 +269,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [bytes](https://github.com/tokio-rs/bytes) | 1.12.1 | crate | linked | Copyright (c) 2018 Carl Lerche |
 | [cfg_aliases](https://github.com/katharostech/cfg_aliases) | 0.2.2 | crate | build-time | Copyright (c) 2020 Katharos Technology |
 | [convert_case](https://github.com/rutrum/convert-case) | 0.12.0 | crate | build-time | Copyright (c) 2025 rutrum |
+| [data-encoding](https://github.com/ia0/data-encoding) | 2.11.1 | crate | linked | Copyright (c) 2015-2020 Julien Cretin<br>Copyright (c) 2017-2020 Google Inc |
 | [email_address](https://github.com/johnstonskj/rust-email_address.git) | 0.2.9 | crate | linked | Copyright (c) 2019 Simon Johnston |
 | [generic-array](https://github.com/fizyk20/generic-array.git) | 0.14.7 | crate | linked | Copyright (c) 2015 Bartłomiej Kamiński |
 | [http-body](https://github.com/hyperium/http-body) | 1.1.0 | crate | linked | Copyright (c) 2019-2026 Sean McArthur & Hyper Contributors |
@@ -289,6 +290,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [pem](https://github.com/jcreekmore/pem-rs.git) | 3.0.6 | crate | linked | Copyright (c) 2016 Jonathan Creekmore |
 | [phf](https://github.com/rust-phf/rust-phf) | 0.12.1 | crate | linked | Copyright (c) 2014-2022 Steven Fackler, Yuki Okushi |
 | [phf_shared](https://github.com/rust-phf/rust-phf) | 0.12.1 | crate | linked | Copyright (c) 2014-2022 Steven Fackler, Yuki Okushi |
+| [qrcodegen](https://github.com/nayuki/QR-Code-generator) | 1.8.0 | crate | linked | Copyright (c) Project Nayuki. (MIT License) |
 | [rsqlite-vfs](https://github.com/Spxg/sqlite-wasm-rs) | 0.2.0 | crate | linked | (no copyright line found; see the crate's license files) |
 | [rusqlite](https://github.com/rusqlite/rusqlite) | 0.41.1 | crate | linked | Copyright (c) 2014 The rusqlite developers |
 | [rust_decimal](https://github.com/paupino/rust-decimal) | 1.43.0 | crate | linked | Copyright (c) 2016 Paul Mason |

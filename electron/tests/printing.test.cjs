@@ -6,16 +6,16 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 function fixture(route='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/invoices/0195b4a4-55af-719e-96cb-a2f946b067c0/print/', overrides={}) {
-  const state={open:true,url:'fb://app'+route,calls:[],saved:[],cancel:false,afterDialog:null,afterPdf:null};
+  const state={open:true,generation:1,url:'fb://app'+route,calls:[],saved:[],cancel:false,afterDialog:null,afterPdf:null,afterMenu:null};
   const win={isDestroyed:()=>false,loadURL:async target=>{state.url=target;state.calls.push('navigate');},webContents:{
     getURL:()=>state.url,getTitle:()=> 'INV-000001 · Invoice',
-    printToPDF:async options=>{state.calls.push(['pdf',options]);if(state.afterPdf)state.afterPdf();return Buffer.from('%PDF-1.7\n');},
+    printToPDF:async options=>{state.calls.push(['pdf',options]);if(state.afterPdf)await state.afterPdf();return Buffer.from('%PDF-1.7\n');},
     print:(options,cb)=>{state.calls.push(['print',options]);cb(true);},
   }};
-  const native={appState:()=>JSON.stringify({open:state.open}),render:target=>JSON.stringify({status:200,html:target.includes('/print/')||target.includes('output=print')||target==='/settings/emergency-kit/'?'<button id="print-now">':'<h1>Invoice'}),...overrides};
+  const native={appState:()=>JSON.stringify({open:state.open,session_generation:state.generation}),render:target=>JSON.stringify({status:200,html:target.includes('/print/')||target.includes('output=print')||target==='/settings/emergency-kit/'?'<button id="print-now">':'<h1>Invoice'}),...overrides};
   const electron={
-    dialog:{showSaveDialog:async (_win,options)=>{state.calls.push(['dialog',options]);if(state.afterDialog)state.afterDialog();return {canceled:state.cancel,filePath:'/synthetic/invoice.pdf'};},showErrorBox:()=>{}},
-    Menu:{buildFromTemplate:items=>({popup:opts=>{items[1].click();opts.callback();}})},
+    dialog:{showSaveDialog:async (_win,options)=>{state.calls.push(['dialog',options]);if(state.afterDialog)await state.afterDialog();return {canceled:state.cancel,filePath:'/synthetic/invoice.pdf'};},showErrorBox:()=>{}},
+    Menu:{buildFromTemplate:items=>({popup:async opts=>{if(state.afterMenu)await state.afterMenu();items[1].click();opts.callback();}})},
   };
   const output={validate:()=>{},write:(file,pdf)=>state.saved.push({file,pdf,options:{mode:0o600}})};
   const sandbox={URL,module:{exports:{}},require:name=>name==='electron'?electron:require(name.startsWith('.')?path.join(__dirname,'../main',name):name)};
@@ -72,6 +72,23 @@ test('cancelled save and lock/navigation races cannot write PDF output',async()=
     if(variant==='cancel')assert.equal((await controller.perform(win,'pdf')).saved,false);
     else await assert.rejects(controller.perform(win,'pdf'),/Unlock|changed/);
     assert.equal(state.saved.length,0,variant);
+  }
+});
+
+test('a held PDF or chooser cannot survive sign-out and same-URL sign-in',async()=>{
+  for(const phase of ['afterPdf','afterDialog','afterMenu']){
+    const {state,win,controller}=fixture();
+    let release,entered;
+    const ready=new Promise(resolve=>{entered=resolve;});
+    state[phase]=()=>{entered();return new Promise(resolve=>{release=resolve;});};
+    const result=controller.choose(win,new URL(state.url).pathname);
+    await ready;
+    // Same person or another member can return to precisely the same page in a new session.
+    state.generation+=2;
+    release();
+    await assert.rejects(result,/session|user changed/i,phase);
+    assert.equal(state.saved.length,0,phase);
+    if(phase==='afterMenu')assert.equal(state.calls.length,0,'stale menu must not open a chooser');
   }
 });
 

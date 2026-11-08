@@ -1,4 +1,5 @@
 //! The exact differential integration story, opened in the desktop after its second restore.
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 use serde_json::{Value, json};
 
@@ -31,6 +32,7 @@ fn bankfeed_check_and_deposit_reach_restored_desktop_register_screens() {
     let mut app = App::new();
     app.plugins = true;
     app.open_book(&restored, &key).unwrap();
+    support::sign_in(&mut app);
     let company = app.first_company().unwrap().unwrap();
     let account = |app: &mut App, name: &str| {
         app.open_mut().unwrap().book.read(|q| q.query_row(

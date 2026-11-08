@@ -404,6 +404,10 @@ fn populated_l2a_v6_v7_v8_upgrade_preserves_every_row_and_reopens() {
         assert_eq!(upgrade.query_row("PRAGMA user_version", [], |r| r.get::<_,i64>(0)).unwrap(), 9);
         drop(upgrade);
         let book = fb_core::Book::open(&path, &KEY).unwrap();
+        fb_db::test_support::assert_desktop_user_backfill(book.connection());
+        let mut before = before;
+        assert!(before["desktop_user"].is_empty());
+        before.insert("desktop_user".into(), fb_db::test_support::desktop_user_backfill(book.connection()).unwrap());
         assert_eq!(
             dump(book.connection()),
             before,

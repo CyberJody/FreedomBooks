@@ -1,4 +1,5 @@
 //! Real encrypted-book reconciliation boundaries: save/resume, stale tabs, zero difference and undo.
+mod support;
 use fb_app::{App, Command, Outcome, commands::parse_command, keys, screens};
 use serde_json::{Value, json};
 fn run(app: &mut App, v: Value) -> Value {
@@ -60,6 +61,7 @@ fn fixture() -> Fx {
         .unwrap()
         .company_id
         .to_db();
+    support::sign_in(&mut app);
     let mut acc = |code, detail| {
         run(&mut app,json!({"type":"SaveAccount","company_id":c,"code":code,"name":code,"detail_type":detail}))["id"].as_str().unwrap().to_owned()
     };

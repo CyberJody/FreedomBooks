@@ -18,6 +18,9 @@ zeroize = "1"
 [build-dependencies]
 napi-build = "=2.6.0"
 
+[dev-dependencies]
+tempfile = "3"
+
 [features]
 simplefin = ["fb-app/simplefin"]
 # Dev/test builds only: show the plugin surfaces (see fb-app `plugins`).

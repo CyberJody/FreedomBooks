@@ -1,4 +1,5 @@
 //! Sales forms exercise real encrypted books and opaque review capabilities.
+mod support;
 use fb_app::{App, Command, Outcome, keys, screens};
 use fb_core::{CompanyId, services};
 use serde_json::json;
@@ -25,6 +26,7 @@ impl Fixture {
             )
             .unwrap()
             .company_id;
+        support::sign_in(&mut app);
         let o = app.open_mut().unwrap();
         let mut account = |code: &str, kind: &str| {
             let mut v = services::AccountInput::new(code, code);
@@ -568,4 +570,24 @@ fn print_invoice_uses_stored_revision_and_only_current_open_balance_without_writ
     assert!(screens::render(&mut f.app,&format!("/c/{unrelated}/invoices/{invoice}/print/")).is_err());
     assert!(screens::render(&mut f.app,&format!("/c/{}/invoices/{invoice}/revisions/99/print/",f.c)).is_err());
     assert_eq!(f.journal_count(),before);
+}
+
+#[test]
+fn a_review_cannot_be_posted_by_the_next_signed_in_person_even_with_a_fresh_form() {
+    use fb_app::identity::Role;
+    let mut f=Fixture::new();
+    let invoice=f.invoice();
+    let c=CompanyId::parse(&f.c).unwrap();
+    f.app.save_desktop_user(None,"Another bookkeeper",Role::Bookkeeper,true,Some("Synthetic review password"),&[c]).unwrap();
+    support::sign_in(&mut f.app);
+    let html=render(&mut f.app,&format!("/c/{}/invoices/{invoice}/review/?revision=1",f.c));
+    let review_token=field(&html,"review_token");
+    f.app.sign_out();f.app.sign_in("Another bookkeeper","Synthetic review password").unwrap();
+    let post_path=format!("/c/{}/invoices/{invoice}/post/",f.c);
+    // A new form token cannot revive the previous person's review capability.
+    let token=f.app.tokens.mint(&post_path);
+    let outcome=f.app.run(Command::SubmitForm {path:post_path,token,fields:pairs(&[("expected_revision","1"),("review_token",&review_token)])}).unwrap();
+    assert!(matches!(outcome,Outcome::Invalid { html } if html.to_lowercase().contains("review")));
+    let state:String=f.app.open_mut().unwrap().book.read(|q|q.query_row("SELECT state FROM sales_invoicerevision WHERE invoice_id=?1 ORDER BY number DESC LIMIT 1",[invoice],|r|r.get(0))).unwrap();
+    assert_eq!(state,"DRAFT");
 }
