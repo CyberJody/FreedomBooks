@@ -6,12 +6,12 @@ FreedomBooks is a desktop accounting application for small businesses, built wit
 
 This is a **code-only preview** of the version being used and tested internally on Linux. It includes SimpleFIN bank downloads, named desktop users, local AI access through an API and MCP, and optional authenticator-app MFA with QR setup. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
 
-The application source comes from the internally tested `28364702ec4153743f6511d8be6974453e464ef3` snapshot. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
+The application source comes from the internally tested `4caf4c206952dcaf1c6dedeb386c2a85570d3c03` snapshot. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
 
 ## Available in the desktop app
 
 - Company creation with starter accounts, editable business details and document numbering.
-- Customers, vendors, items, estimates, invoices, receipts, bills and payments.
+- Customers, vendors, items, estimates, invoices, receipts, bills and payments. Customer and vendor notes support paragraphs and blank lines.
 - Checks, deposits, transfers, bank registers and reconciliation.
 - Financial reports, audit history, document PDFs and attachments.
 - Book protection, recovery keys, portable backups and restore.
@@ -19,7 +19,7 @@ The application source comes from the internally tested `28364702ec4153743f6511d
 - Copying recovery keys and native right-click Cut, Copy and Paste menus.
 - Named users on one desktop, username/password sign-in, roles, company permissions and audit attribution. See [Desktop users](docs/desktop-users.md).
 - Optional authenticator-app MFA: scan a locally generated QR code, confirm a six-digit code and save single-use recovery codes. Manual setup is available as a fallback.
-- Authorized local AI connections through an API and MCP, including reports, invoices, bank categorization and structured journal imports. Connections use the signed-in person's permissions and validated accounting operations. See [Local AI connections](docs/local-ai.md).
+- Authorized AI assistant connections through a local API and MCP, including reports, invoices, bank categorization and structured journal imports. The model can run locally or in the cloud. Connections use the signed-in person's permissions and validated accounting operations. See [AI assistant connections](docs/local-ai.md).
 - Keyboard selection, previewed bulk draft edits and reusable rules for transaction review. Applying bulk edits does not post transactions.
 
 Bank access is read-only. Downloaded activity stays in review until you accept it into the books. In SimpleFIN Bridge, use **My Account → Apps → New app connection** to create a separate connection for FreedomBooks; keep your existing bank connections and other apps.

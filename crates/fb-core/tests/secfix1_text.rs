@@ -56,3 +56,40 @@ fn existing_stored_text_is_read_without_rewriting() {
     assert_eq!(loaded["display_name"],"Legacy\u{202e}Name");assert_eq!(loaded["billing_address"],"Street\nTown");
     assert_eq!(before,fb_db::test_support::snapshot(f.book.connection()).unwrap());
 }
+
+#[test]
+fn directory_notes_preserve_line_endings_with_atomic_validation_and_audit() {
+    let mut f = Fx::new("multiline-notes");
+    let c = f.company("Synthetic notes company");
+    for model in [Model::Customer, Model::Vendor] {
+        let original = "First line\n\nCafé\t東京 😀\r\nLast line\rFinal line";
+        let row = directory::save_record(&mut f.book, f.user, c, model,
+            &json!({"display_name":"Synthetic contact","notes":original}), None).unwrap();
+        let id = row["id"].as_str().unwrap();
+        assert_eq!(row["notes"], original);
+        let revised = "Revised context\n\nAdditional contact details";
+        let row = directory::save_record(&mut f.book, f.user, c, model,
+            &json!({"notes":revised}), Some(id)).unwrap();
+        assert_eq!(row["notes"], revised);
+        let audit: String = f.book.connection().query_row(
+            "SELECT detail FROM ledger_auditevent WHERE target LIKE '%' || ?1 AND action LIKE '%.updated'",
+            [id], |r| r.get(0)).unwrap();
+        let audit: serde_json::Value = serde_json::from_str(&audit).unwrap();
+        assert_eq!(audit["before"]["notes"], original);
+        assert_eq!(audit["after"]["notes"], revised);
+        let before = fb_db::test_support::snapshot(f.book.connection()).unwrap();
+        for ch in ['\0','\u{7f}','\u{85}','\u{ad}','\u{202a}','\u{202b}','\u{202c}',
+            '\u{202d}','\u{202e}','\u{2066}','\u{2067}','\u{2068}','\u{2069}',
+            '\u{200b}','\u{200c}','\u{200d}','\u{2060}','\u{feff}'] {
+            let invalid = format!("{ch}First\n\nLast{ch}");
+            for record_id in [None, Some(id)] {
+                assert!(directory::save_record(&mut f.book, f.user, c, model,
+                    &json!({"display_name":"Invalid contact","notes":invalid}), record_id).is_err());
+            }
+        }
+        assert!(directory::save_record(&mut f.book, f.user, c, model,
+            &json!({"notes":"é".repeat(4001)}), Some(id)).is_err());
+        assert_eq!(before, fb_db::test_support::snapshot(f.book.connection()).unwrap());
+        assert!(f.book.check().unwrap().is_empty());
+    }
+}

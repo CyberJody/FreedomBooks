@@ -58,11 +58,11 @@ let app,child;
     let connected;
     const finished=new Promise(resolve=>connected=resolve);
     dialog.showMessageBox=async(_window,options)=>{
-      if(options.title==='Connect a local AI')return {response:2};
-      if(options.title==='Local AI connected'){connected();return {response:1};}
+      if(options.title==='Connect an AI assistant')return {response:2};
+      if(options.title==='AI assistant connected'){connected();return {response:1};}
       return {response:0};
     };
-    Menu.getApplicationMenu().items.find(i=>i.label==='Settings').submenu.items.find(i=>i.label==='Connect local AI…').click();
+    Menu.getApplicationMenu().items.find(i=>i.label==='Settings').submenu.items.find(i=>i.label==='Connect an AI assistant…').click();
     await finished;
   });
   const config=await app.evaluate(async({clipboard})=>JSON.parse(await clipboard.readText()));

@@ -71,6 +71,36 @@ fn audit_count(app: &mut App) -> i64 {
 }
 
 #[test]
+fn contact_notes_save_edit_and_render_line_breaks_without_executing_markup() {
+    let (mut app, c) = fixture();
+    for (list, model) in [("customers", Model::Customer), ("vendors", Model::Vendor)] {
+        let notes = "First line\n\n<script>alert(1)</script>\r\nLast line\rFinal line";
+        let path = format!("/c/{c}/lists/{list}/new/");
+        let loc = saved(post(&mut app, &path,
+            &[("display_name", "Synthetic contact"), ("notes", notes)]));
+        assert_eq!(get(&mut app, &c, model, id(&loc))["notes"], notes);
+        let html = screens::render(&mut app, &loc).unwrap().html;
+        assert!(html.contains("First line<br><br>&lt;script&gt;alert(1)&lt;/script&gt;<br>Last line<br>Final line"));
+        assert!(!html.contains("<script>alert(1)</script>"));
+        let edit = format!("{loc}edit/");
+        let html = screens::render(&mut app, &edit).unwrap().html;
+        assert!(html.contains("First line\n\n&lt;script&gt;alert(1)&lt;/script&gt;"));
+        let revised = "First line\n\nUpdated context";
+        saved(post(&mut app, &edit,
+            &[("display_name", "Synthetic contact"), ("notes", revised)]));
+        let before = get(&mut app, &c, model, id(&loc));
+        assert_eq!(before["notes"], revised);
+        let audits = audit_count(&mut app);
+        for invalid in ["\u{85}Hidden\ncontext".to_owned(), "\nBad\u{202e}direction".into(), "é".repeat(4001)] {
+            assert!(matches!(post(&mut app, &edit,
+                &[("display_name", "Synthetic contact"), ("notes", &invalid)]), Outcome::Invalid { .. }));
+            assert_eq!(get(&mut app, &c, model, id(&loc)), before);
+            assert_eq!(audit_count(&mut app), audits);
+        }
+    }
+}
+
+#[test]
 fn legacy_customer_and_item_posts_preserve_omitted_tax_fields() {
     let (mut app, c) = fixture();
     let path = format!("/c/{c}/lists/customers/new/");

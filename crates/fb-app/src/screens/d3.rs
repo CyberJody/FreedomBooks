@@ -753,6 +753,17 @@ fn submit_record(app: &mut App, route: &Route, path: &str, p: Posted<'_>) -> App
                 }
                 value.into()
             }
+            Widget::Textarea { .. } if f.name == "notes" => {
+                let raw = get(p, "notes").unwrap_or("");
+                if let Err(e) = py::clean_multiline_free_text(raw) {
+                    error(&mut errors, "notes", e.message());
+                }
+                let value = py::py_strip(raw);
+                if value.chars().count() > 4000 {
+                    error(&mut errors, "notes", py::max_length_message(4000, value));
+                }
+                value.into()
+            }
             _ => {
                 let max = f
                     .attrs

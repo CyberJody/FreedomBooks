@@ -27,20 +27,20 @@ function create({app,native,dialog,clipboard,safeStorage,root,window,exclusive,b
       if(!match || !JSON.parse(native.appState()).open) throw new Error('Open a company page before connecting an AI.');
       if(!usable())throw new Error('An OS key store is required for AI connections. Unlock your desktop keyring, then try again.');
       const generation=native.aiGeneration();
-      const selected=await dialog.showMessageBox(window(),{type:'question',title:'Connect a local AI',message:'Choose permission for this company',detail:'The connection acts as the signed-in operator in the company currently displayed. Read only permits queries, reports and import previews. Accounting write also permits supported accounting operations, including posting and imports, without a prompt for each call. Lock, sign-out or company change revokes the connection. It expires after eight hours.',buttons:['Cancel','Read only','Accounting write'],defaultId:1,cancelId:0});
+      const selected=await dialog.showMessageBox(window(),{type:'question',title:'Connect an AI assistant',message:'Choose permission for this company',detail:'The AI model can run on this computer or in the cloud. Its client or connector must run on this computer.\n\nThe connection acts as the signed-in operator in the company currently displayed. Read only permits queries, reports and import previews. Accounting write also permits supported accounting operations, including posting and imports, without a prompt for each call. Lock, sign-out or company change revokes the connection. It expires after eight hours.',buttons:['Cancel','Read only','Accounting write'],defaultId:1,cancelId:0});
       if(selected.response===0)return;
       if(busy())throw new Error('Wait for the current operation to finish.');
       if(generation!==native.aiGeneration() || !window()?.webContents.getURL().startsWith(`fb://app/c/${match[1]}/`)) throw new Error('Session changed.');
       const endpoint=await transport.start();
       if(generation!==native.aiGeneration()) throw new Error('Session changed.');
-      grant=JSON.parse(native.aiGrant(match[1],`Local AI ${new Date().toISOString()}`,selected.response===1?'read_only':'accounting_write'));
+      grant=JSON.parse(native.aiGrant(match[1],`AI assistant ${new Date().toISOString()}`,selected.response===1?'read_only':'accounting_write'));
       fs.mkdirSync(directory,{recursive:true,mode:0o700});
       const file=path.join(directory,grant.id+'.sealed');
       const fd=fs.openSync(file,'wx',0o600);
       try {fs.writeFileSync(fd,safeStorage.encryptString(JSON.stringify({endpoint,token:grant.token})));fs.fsyncSync(fd);} finally {fs.closeSync(fd);}
       // Clipboard contains ONLY the launcher command and the OS-sealed file path.
       const text=JSON.stringify(config(file),null,2);
-      const choice=await dialog.showMessageBox(window(),{type:'info',title:'Local AI connected',message:'Add this MCP server to your AI client',detail:text+'\n\nThe app must remain open in this company. Reconnect after a session change. See docs/local-ai.md for local API usage and the operation coverage.',buttons:['Done','Copy MCP configuration'],defaultId:1});
+      const choice=await dialog.showMessageBox(window(),{type:'info',title:'AI assistant connected',message:'Add this MCP connection to your AI client',detail:text+'\n\nUse an AI client or connector running on this computer. Its model can run locally or in the cloud. Keep FreedomBooks open in this company. Reconnect after a session change. See docs/local-ai.md for local API usage and the operation coverage.',buttons:['Done','Copy MCP configuration'],defaultId:1});
       if(choice.response===1)await clipboard.writeText(text);
     } catch(error) {
       if(grant){native.aiRevoke(grant.id);try{fs.unlinkSync(path.join(directory,grant.id+'.sealed'));}catch{}}
@@ -51,9 +51,9 @@ function create({app,native,dialog,clipboard,safeStorage,root,window,exclusive,b
     if(busy() || working)return;
     const grants=JSON.parse(native.aiConnections());
     const text=grants.map(g=>`${g.name}\n${g.id} · ${g.permission}\nCompany ${g.company_id} · Operator ${g.actor_id}`).join('\n\n') || 'No active AI connections.';
-    const choice=await dialog.showMessageBox(window(),{type:'info',title:'Local AI connections',message:`${grants.length} active connection(s)`,detail:text,buttons:['Done','Revoke all and stop local API'],defaultId:0,cancelId:0});
+    const choice=await dialog.showMessageBox(window(),{type:'info',title:'AI assistant connections',message:`${grants.length} active connection(s)`,detail:text,buttons:['Done','Revoke all and stop local API'],defaultId:0,cancelId:0});
     if(choice.response===1 && !busy()){native.aiInvalidate();removeFiles();await transport.stop();}
   }
-  return {connect,manage,stop:()=>transport.stop(),menuItems:[{label:'Connect local AI…',click:()=>void connect()},{label:'Manage/revoke local AI…',click:()=>void manage()}]};
+  return {connect,manage,stop:()=>transport.stop(),menuItems:[{label:'Connect an AI assistant…',click:()=>void connect()},{label:'Manage AI connections…',click:()=>void manage()}]};
 }
 module.exports={create};

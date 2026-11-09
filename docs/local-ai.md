@@ -1,12 +1,12 @@
-# Local AI connections
+# AI assistant connections
 
-FreedomBooks can expose its accounting operations to an AI running on the same computer. No provider account is required. This feature is independent of the optional receipt-reader/online assistant plugins.
+FreedomBooks can give an AI assistant access to the company you have open. The AI model can run on your computer or in the cloud; its client or connector must run on the same computer as FreedomBooks. This connection is separate from the optional receipt-reader/online assistant plugins.
 
-Sign in with your individual user password and open the company you want the AI to work in. Choose **Settings → Connect local AI…** and select **Read only** or **Accounting write**. The connection can never exceed your own role or company access: read-only users cannot grant accounting write. Accounting write permits normal supported writes, posting, reversals and import application without a human prompt for each operation. Core validation, mapping review, request keys, revisions, account eligibility and company checks still apply.
+Sign in with your individual user password and open the company you want the AI to work in. Choose **Settings → Connect an AI assistant…** and select **Read only** or **Accounting write**. The connection can never exceed your own role or company access: read-only users cannot grant accounting write. Accounting write permits normal supported writes, posting, reversals and import application without a human prompt for each operation. Core validation, mapping review, request keys, revisions, account eligibility and company checks still apply.
 
 The native dialog supplies an MCP server configuration and a **Copy MCP configuration** button. Paste that configuration into your MCP client's server settings. It contains the FreedomBooks launcher and the path to an OS-sealed connection file; it contains no token. Restart the MCP connection in that client. The desktop must remain open on this company. Linux needs a usable OS key store, such as an unlocked libsecret keyring; the `basic_text` backend is refused.
 
-**Settings → Manage/revoke local AI…** lists active connection IDs, actors, companies and permissions. **Revoke all and stop local API** removes saved connection files, revokes all authority and stops the listener. Locking, closing the book, changing company or signing out invalidates connections. They also expire after eight hours. Connect again to obtain a fresh configuration. Connections never silently regain authority after unlock or restart. Sealed files from older sessions may remain, but their credentials are unusable.
+**Settings → Manage AI connections…** lists active connection IDs, actors, companies and permissions. **Revoke all and stop local API** removes saved connection files, revokes all authority and stops the listener. Locking, closing the book, changing company or signing out invalidates connections. They also expire after eight hours. Connect again to obtain a fresh configuration. Connections never silently regain authority after unlock or restart. Sealed files from older sessions may remain, but their credentials are unusable.
 
 ## MCP and local API
 

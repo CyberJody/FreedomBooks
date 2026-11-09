@@ -346,6 +346,15 @@ pub fn clean_free_text(text: &str) -> crate::FbResult<()> {
     Ok(())
 }
 
+/// Notes may contain line endings; all other control/format restrictions still apply.
+/// Validate before trimming so invisible characters at the edges cannot be discarded unnoticed.
+pub fn clean_multiline_free_text(text: &str) -> crate::FbResult<()> {
+    for line in text.split(['\r', '\n']) {
+        clean_free_text(line)?;
+    }
+    Ok(())
+}
+
 /// An unchanged stored field is carried evidence, not newly typed input.
 pub fn clean_changed_free_text(text: &str, previous: Option<&str>) -> crate::FbResult<()> {
     if previous != Some(text) { clean_free_text(text)?; }

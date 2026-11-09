@@ -14,9 +14,9 @@ function fixture({usable=true,changeSession=false}={}) {
   const messages=[];
   const dialog={showMessageBox:async(_win,options)=>{
     messages.push(options);
-    if(options.title==='Connect a local AI') {questions++;if(changeSession)generation='2';return {response:2};}
-    if(options.title==='Local AI connected')return {response:1};
-    if(options.title==='Local AI connections')return {response:1};
+    if(options.title==='Connect an AI assistant') {questions++;if(changeSession)generation='2';return {response:2};}
+    if(options.title==='AI assistant connected')return {response:1};
+    if(options.title==='AI assistant connections')return {response:1};
     return {response:0};
   }};
   const native={appState:()=>'{"open":true}',aiGeneration:()=>generation,

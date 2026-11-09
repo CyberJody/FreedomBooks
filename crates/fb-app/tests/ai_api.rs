@@ -22,6 +22,27 @@ fn bad(app: &mut App, token: &str, name: &str, args: Value) {
 }
 
 #[test]
+fn directory_api_round_trips_multiline_notes_and_keeps_control_rejections_atomic() {
+    let mut f = Fixture::new();
+    let grant = f.app.ai_grant(f.company, "Synthetic notes agent", Permission::AccountingWrite).unwrap();
+    let token = grant["token"].as_str().unwrap();
+    let mut values = json!({"kind":"customer","display_name":"Synthetic multiline customer",
+        "business_name":"","contact_name":"","email":"","phone":"","billing_address":"",
+        "notes":"First context\n\nSecond context\r\nFinal context"});
+    let saved = call(&mut f.app, token, "command_SaveDirectoryRecord", json!({"values":values}));
+    let id = saved["data"]["id"].as_str().unwrap();
+    let directory = call(&mut f.app, token, "app_Directory", json!({"kind":"customer"}));
+    assert!(directory.to_string().contains("First context\\n\\nSecond context\\r\\nFinal context"));
+    values["notes"] = json!("Updated context\n\nUseful details");
+    let updated = call(&mut f.app, token, "command_SaveDirectoryRecord", json!({"record_id":id,"values":values}));
+    assert_eq!(updated["data"]["notes"], values["notes"]);
+    let audits = f.count("ledger_auditevent");
+    values["notes"] = json!("Context\n\u{202e}Hidden direction");
+    bad(&mut f.app, token, "command_SaveDirectoryRecord", json!({"record_id":id,"values":values}));
+    assert_eq!(f.count("ledger_auditevent"), audits);
+}
+
+#[test]
 fn catalogue_is_exact_scoped_and_dispatches_invoice_feed_import_and_reports() {
     let mut f = Fixture::new();
     let grant = f

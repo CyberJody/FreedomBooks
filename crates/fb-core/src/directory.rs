@@ -157,7 +157,14 @@ pub fn save_record_tx(
         for (f, v) in data {
             if ["code", "description", "display_name", "business_name", "contact_name", "email", "phone", "billing_address", "notes", "exemption_number"].contains(&f.as_str())
                 && let Some(raw) = v.as_str() {
-                py::clean_changed_free_text(raw, before.as_ref().and_then(|b| b[f].as_str()))?;
+                let previous = before.as_ref().and_then(|b| b[f].as_str());
+                if f == "notes" {
+                    if previous != Some(raw) {
+                        py::clean_multiline_free_text(raw)?;
+                    }
+                } else {
+                    py::clean_changed_free_text(raw, previous)?;
+                }
             }
             obj[f] = match f.as_str() {
                 "sale_rate" | "purchase_cost" => {
