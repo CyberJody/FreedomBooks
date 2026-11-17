@@ -389,7 +389,7 @@ pub(super) fn render(
         "detail" => records::detail(app, r, p),
         "refund_detail" => records::refund_detail(app, r),
         "new" | "apply" | "invoice_apply" | "refund" => Ok((
-            forms::page(app, r, path, p, None, &Errors::new(), &[], None)?,
+            forms::page(app, r, path, p, None, &Errors::new(), &[], None, &[])?,
             200,
         )),
         "void" | "unapply" | "refund_void" => Ok((
@@ -443,7 +443,7 @@ pub(super) fn register_sources(
             "deposit_id",
         ),
     ] {
-        let mut st=tx.prepare(&format!("SELECT j.id,d.id,d.data,i.number FROM ledger_journal j JOIN documents_documentidentity i ON i.id=j.source_id JOIN {table} d ON d.identity_id=i.id WHERE j.company_id=? AND i.kind=?"))?;
+        let mut st=tx.prepare(&format!("SELECT j.id,d.id,d.data,i.number FROM ledger_journal j JOIN documents_displayidentity i ON i.id=j.source_id JOIN {table} d ON d.identity_id=i.id WHERE j.company_id=? AND i.kind=?"))?;
         for row in st.query_map([c.to_db(), kind.into()], |r| {
             Ok((
                 r.get::<_, String>(0)?,
@@ -457,7 +457,7 @@ pub(super) fn register_sources(
                 .map_err(|_| FbError::validation("Invalid stored source."))?;
             let mut party = s(&d["customer_snapshot"], "display_name").to_owned();
             if !parent.is_empty() {
-                let parent_number:String=tx.query_row(&format!("SELECT i.number FROM {parent} p JOIN documents_documentidentity i ON i.id=p.identity_id WHERE p.id=?"),[s(&d,field)],|r|r.get(0))?;
+                let parent_number:String=tx.query_row(&format!("SELECT i.number FROM {parent} p JOIN documents_displayidentity i ON i.id=p.identity_id WHERE p.id=?"),[s(&d,field)],|r|r.get(0))?;
                 party = format!(
                     "to {party} ({} {parent_number}{})",
                     if kind == "RFD" {
@@ -486,7 +486,7 @@ pub(super) fn register_sources(
             );
         }
     }
-    let mut st=tx.prepare("SELECT j.id,a.deposit_id,i.number,json_extract(r.data,'$.customer_snapshot.display_name'),di.number,ii.number FROM ledger_journal j JOIN documents_documentidentity i ON i.id=j.source_id JOIN prepayments_depositapplication a ON a.identity_id=i.id JOIN sales_receipt r ON r.id=a.deposit_id JOIN documents_documentidentity di ON di.id=r.identity_id JOIN sales_invoice inv ON inv.id=a.invoice_id JOIN documents_documentidentity ii ON ii.id=inv.identity_id WHERE j.company_id=?")?;
+    let mut st=tx.prepare("SELECT j.id,a.deposit_id,i.number,json_extract(r.data,'$.customer_snapshot.display_name'),di.number,ii.number FROM ledger_journal j JOIN documents_displayidentity i ON i.id=j.source_id JOIN prepayments_depositapplication a ON a.identity_id=i.id JOIN sales_receipt r ON r.id=a.deposit_id JOIN documents_displayidentity di ON di.id=r.identity_id JOIN sales_invoice inv ON inv.id=a.invoice_id JOIN documents_displayidentity ii ON ii.id=inv.identity_id WHERE j.company_id=?")?;
     for row in st.query_map([c.to_db()], |r| {
         Ok((
             r.get::<_, String>(0)?,

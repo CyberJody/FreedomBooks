@@ -81,7 +81,7 @@ mod tests {
         fs::create_dir(dir.path().join("backups")).unwrap();
         let data=super::super::create_backup(&book,&[42;32],&BackupOptions{
             output:&dir.path().join("backups/source.fbbackup"),work_root:&dir.path().join("work"),
-            receipts_root:None,verify_receipt:None,label:"test",app_version:"test",created_at:"2026-10-30T12:00:00Z",passphrase:None,keep:None,
+            receipts_root:None,verify_receipt:None,label:"test",app_version:"test",created_at:"2026-10-30T12:00:00Z",passphrase:None,keep:None,allow_incomplete:false,
         }).unwrap().manifest;
         let raw=serde_json::to_vec(&data).unwrap();
         let mut tar=tar::Builder::new(Vec::new());let mut h=tar::Header::new_ustar();

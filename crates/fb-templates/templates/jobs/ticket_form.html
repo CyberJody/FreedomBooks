@@ -1,0 +1,10 @@
+{% extends 'jobs/base.html' %}
+{% block crumb %}{% if ticket %}{{ crumb('Edit ' ~ ticket.number) }}{% else %}{{ crumb('New job ticket') }}{% endif %}{% endblock %}
+{% block jobs_content %}
+<div class="heading"><h1>{% if ticket %}Edit ticket {{ ticket.number }}{% else %}New job ticket{% endif %}</h1></div>
+<form method="post" id="job-ticket-form" class="jobs-form" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{% for hidden in form.hidden_fields %}{{ hidden.widget|safe }}{% endfor %}
+{% for name in ['customer','title','description','opened_date','due_date'] %}<div class="field field-{{ name }}">{{ form.f[name].label_tag|safe }}{{ form.f[name].widget|safe }}{{ form.f[name].errors|safe }}{% if form.f[name].help_text %}<p class="helptext" id="{{ form.f[name].id_for_label }}_helptext">{{ form.f[name].help_text }}</p>{% endif %}</div>{% endfor %}
+{% if ticket %}<p class="helptext">A ticket stays with its customer. The ticket number is {{ ticket.number }}.</p>{% else %}<p class="helptext">The ticket gets the next number (JT-…). It is a work record: nothing posts to your books until you invoice it.</p>{% endif %}
+<p class="form-actions"><button type="submit">{% if ticket %}Save ticket{% else %}Open ticket{% endif %}</button> <a href="{% if ticket %}{{ url('jobs:detail', company.pk, ticket.id) }}{% else %}{{ url('jobs:list', company.pk) }}{% endif %}">Cancel</a></p>
+</form>
+{% endblock %}

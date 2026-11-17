@@ -1,7 +1,7 @@
 # Desktop key architecture — KEYS-R1
 
 This tracked design updates the key, backup and first-run sections (§5.2, §5.5,
-§6–7) of the project design/ARCHITECTURE.md for Jody’s 2026-11-04 decision.
+§6–7) of the project design/ARCHITECTURE.md for the owner’s 2026-11-04 decision.
 The accounting schema, core isolation rule and Electron §8 boundary are unchanged.
 
 ## One file format; two protection modes
@@ -96,4 +96,4 @@ permission and routing assertions live in fb-app/tests/protection.rs and
 electron/scripts/smoke-keys.cjs, with 1440×1000 screenshots and PDF/text checks.
 The existing Backups screen keeps its narrow comparison rules plus the exact
 legacy setup link and “Protection” column heading; changed security text still
-must differ. See crates/fb-screendiff/NORMALIZATION.md.
+must differ.

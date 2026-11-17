@@ -27,10 +27,23 @@ pub const FORMAT: &str = "freedombooks-backup";
 pub const FORMAT_VERSION: u64 = 4;
 pub type Result<T> = std::result::Result<T, BackupError>;
 #[derive(Debug)]
-pub struct BackupError(String);
+pub struct BackupError(String, Vec<Absent>, Option<&'static str>);
 impl BackupError {
     pub fn refused(message: impl Into<String>) -> Self {
-        Self(message.into())
+        Self(message.into(), Vec::new(), None)
+    }
+    /// A receipt verifier's verdict on one attachment file: [`DAMAGED`] or [`NO_KEY`]. Any other verifier
+    /// error is about this computer, not the file, and stops a backup.
+    pub fn receipt(message: impl Into<String>, problem: &'static str) -> Self {
+        Self(message.into(), Vec::new(), Some(problem))
+    }
+    /// The attachment files that stopped a complete backup. Empty for every other refusal.
+    pub fn absent(&self) -> &[Absent] {
+        &self.1
+    }
+    /// For a verifier's verdict on a file: [`DAMAGED`] or [`NO_KEY`].
+    pub fn problem(&self) -> Option<&'static str> {
+        self.2
     }
 }
 impl std::fmt::Display for BackupError {
@@ -42,27 +55,27 @@ impl std::error::Error for BackupError {}
 #[cfg(unix)]
 impl From<rustix::io::Errno> for BackupError {
     fn from(e: rustix::io::Errno) -> Self {
-        Self(format!("Backup path refused: {e}"))
+        Self(format!("Backup path refused: {e}"), Vec::new(), None)
     }
 }
 impl From<std::io::Error> for BackupError {
     fn from(e: std::io::Error) -> Self {
-        Self(format!("Backup I/O failed: {e}"))
+        Self(format!("Backup I/O failed: {e}"), Vec::new(), None)
     }
 }
 impl From<fb_db::DbError> for BackupError {
     fn from(e: fb_db::DbError) -> Self {
-        Self(format!("Book verification failed: {e}"))
+        Self(format!("Book verification failed: {e}"), Vec::new(), None)
     }
 }
 impl From<fb_db::rusqlite::Error> for BackupError {
     fn from(e: fb_db::rusqlite::Error) -> Self {
-        Self(format!("Manifest query failed: {e}"))
+        Self(format!("Manifest query failed: {e}"), Vec::new(), None)
     }
 }
 impl From<serde_json::Error> for BackupError {
     fn from(_: serde_json::Error) -> Self {
-        Self("Malformed backup manifest.".into())
+        Self("Malformed backup manifest.".into(), Vec::new(), None)
     }
 }
 
@@ -76,9 +89,14 @@ pub struct ReceiptRef {
     pub plain_sha256: String,
     pub original_sha256: String,
     pub content_type: String,
+    /// The attachment row's own wrap of the file key.
     pub wrapped_key: String,
     pub wrap_nonce: String,
     pub nonce: String,
+    /// Further wraps recorded in the book (table rows and historical audit candidates). Absent
+    /// from the manifest when there are none, exactly as before such wraps existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rewraps: Vec<crate::attachments::storage::Wrap>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -88,6 +106,24 @@ pub struct Receipt {
     pub sha256: String,
     pub owners: Vec<ReceiptRef>,
 }
+/// An attachment whose file was not in the backup when it was made: its row is in the book, its file is
+/// not. `problem` is [`MISSING`] (no file), [`DAMAGED`] (wrong size, not a regular file, or content that
+/// fails authentication under a key that opens its wrap) or [`NO_KEY`] (no key the book holds opens any
+/// wrap of its key: the file may be intact, the key is what is missing). `name` and `document` are for
+/// people: the file's name and its owner ("Invoice INV-0003", "Journal entry J000004").
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct Absent {
+    pub owner: ReceiptRef,
+    pub name: String,
+    pub document: String,
+    pub removed: bool,
+    pub problem: String,
+}
+pub const MISSING: &str = "missing";
+pub const DAMAGED: &str = "damaged";
+pub const NO_KEY: &str = "no key";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
@@ -101,6 +137,16 @@ pub struct Manifest {
     pub contents: manifest::Contents,
     pub attachments: Vec<Receipt>,
     pub not_included: Vec<String>,
+    /// Non-empty only for an incomplete backup (see [`BackupOptions::allow_incomplete`]). A complete
+    /// backup's manifest has no such key, exactly as before.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub absent: Vec<Absent>,
+}
+impl Manifest {
+    /// A backup holds every attachment file its book refers to.
+    pub fn complete(&self) -> bool {
+        self.absent.is_empty()
+    }
 }
 
 /// Supplied by the attachment module. It must authenticate the staged ciphertext
@@ -108,22 +154,37 @@ pub struct Manifest {
 pub type ReceiptVerifier<'a> = dyn Fn(&ReceiptRef, &Path) -> Result<()> + 'a;
 /// The attachment module's [`ReceiptVerifier`] (L4-BACKUPS integration request 1), for
 /// `BackupOptions`, `RestoreOptions` and `verify_backup_with_receipts`: each staged ciphertext is
-/// authenticated against its owning row's immutable snapshot under the book's master key, without the live book.
+/// authenticated against its owning row's immutable snapshot under the book's receipt key, without the live book.
 pub fn attachment_receipt_verifier(key: &Key) -> impl Fn(&ReceiptRef, &Path) -> Result<()> + '_ {
+    attachment_receipt_verifier_with(key, None)
+}
+
+/// [`attachment_receipt_verifier`] that also accepts a file key wrapped under the book's master key
+/// (files attached through the desktop chooser before the receipt-key fix). Contents are checked in full
+/// either way; a file that fails under both keys is damaged.
+pub fn attachment_receipt_verifier_with<'a>(receipt_key: &'a Key, master_key: Option<&'a Key>) -> impl Fn(&ReceiptRef, &Path) -> Result<()> + 'a {
+    use crate::attachments::storage::{self, ReadError};
     move |r, staged| {
-        let refused = || BackupError::refused("A receipt file does not match its attachment record.");
-        let company = crate::CompanyId::parse(&r.company).ok_or_else(refused)?;
-        let stored = crate::attachments::storage::Stored {
+        let damaged = || BackupError::receipt("A receipt file does not match its attachment record.", DAMAGED);
+        let company = crate::CompanyId::parse(&r.company).ok_or_else(damaged)?;
+        let stored = storage::Stored {
             stored_name: r.stored_name.clone(),
             content_type: r.content_type.clone(),
-            size: i64::try_from(r.plain_bytes).map_err(|_| refused())?,
+            size: i64::try_from(r.plain_bytes).map_err(|_| damaged())?,
             sha256: r.plain_sha256.clone(),
             original_sha256: r.original_sha256.clone(),
             wrapped_key: r.wrapped_key.clone(),
             wrap_nonce: r.wrap_nonce.clone(),
             nonce: r.nonce.clone(),
+            rewraps: r.rewraps.clone(),
         };
-        crate::attachments::storage::verify_staged(key, company, &stored, staged).map_err(|_| refused())
+        let keys: Vec<&Key> = std::iter::once(receipt_key).chain(master_key).collect();
+        match storage::verify_staged_checked(&keys, company, &stored, staged) {
+            Ok(()) => Ok(()),
+            Err(ReadError::NoKey) => Err(BackupError::receipt("No key these books hold opens a receipt file.", NO_KEY)),
+            Err(ReadError::System(e)) => Err(BackupError::refused(format!("A receipt file could not be read ({e})."))),
+            Err(_) => Err(damaged()),
+        }
     }
 }
 
@@ -147,6 +208,11 @@ pub struct BackupOptions<'a> {
     pub created_at: &'a str,
     pub passphrase: Option<&'a str>,
     pub keep: Option<usize>,
+    /// Make the backup even when attachment files are missing or damaged: the book and every authentic
+    /// attachment file go in, and the others are listed in the manifest (`Manifest::absent`) and flagged
+    /// in the header (`"incomplete": true`). An incomplete backup never prunes older backups. When false,
+    /// such a backup is refused and the error lists the files (`BackupError::absent`).
+    pub allow_incomplete: bool,
 }
 pub struct RestoreOptions<'a> {
     pub verify_receipt: Option<&'a ReceiptVerifier<'a>>,
@@ -265,9 +331,8 @@ fn receipt_refs(q: &(impl Query + ?Sized)) -> Result<Vec<ReceiptRef>> {
     if has == 0 {
         return Ok(Vec::new());
     }
-    Ok(q.prepare(
-        "SELECT id,company_id,stored_name,size,sha256,original_sha256,content_type,wrapped_key,wrap_nonce,nonce FROM attachments_attachment ORDER BY id",
-    )?
+    let sql = "SELECT id,company_id,stored_name,size,sha256,original_sha256,content_type,wrapped_key,wrap_nonce,nonce FROM attachments_attachment ORDER BY id";
+    let mut refs: Vec<ReceiptRef> = q.prepare(sql)?
     .query_map([], |r| {
         Ok(ReceiptRef {
             id: r.get(0)?,
@@ -281,9 +346,51 @@ fn receipt_refs(q: &(impl Query + ?Sized)) -> Result<Vec<ReceiptRef>> {
             wrapped_key: r.get(7)?,
             wrap_nonce: r.get(8)?,
             nonce: r.get(9)?,
+            rewraps: Vec::new(),
         })
     })?
-    .collect::<std::result::Result<_, _>>()?)
+    .collect::<std::result::Result<_, _>>()?;
+    // Every further wrap of each file's key travels with each row that shares the file, so verification
+    // can try them all. Creation and restore read the same snapshot the same way.
+    let mut wraps: BTreeMap<(String, String), Vec<crate::attachments::storage::Wrap>> = BTreeMap::new();
+    for r in &mut refs {
+        let company = crate::CompanyId::parse(&r.company).ok_or_else(|| BackupError::refused("Invalid attachment manifest reference."))?;
+        let entry = match wraps.entry((r.company.clone(), r.stored_name.clone())) {
+            std::collections::btree_map::Entry::Occupied(e) => e.into_mut(),
+            std::collections::btree_map::Entry::Vacant(e) => e.insert(
+                crate::attachments::recorded_wraps(q, company, &r.stored_name)
+                    .map_err(|e| BackupError::refused(format!("Manifest query failed: {e}")))?,
+            ),
+        };
+        r.rewraps = entry.clone();
+    }
+    Ok(refs)
+}
+/// Who owns each attachment, for people: the original file name, its document ("Invoice INV-0003") and
+/// whether it was removed. Best effort: an older or unusual layout yields no labels, never an error.
+fn receipt_labels(q: &(impl Query + ?Sized)) -> BTreeMap<String, (String, String, bool)> {
+    let read = || -> std::result::Result<BTreeMap<String, (String, String, bool)>, fb_db::rusqlite::Error> {
+        q.prepare(
+            "SELECT a.id, a.original_name, a.deleted, CASE WHEN a.journal_id IS NOT NULL THEN 'JOURNAL' ELSE d.kind END, o.number
+             FROM attachments_attachment a LEFT JOIN documents_documentidentity d ON d.id=a.document_id
+             LEFT JOIN attachment_owner_details o ON o.id=a.id",
+        )?
+        .query_map([], |r| {
+            let kind: Option<String> = r.get(3)?;
+            let number: Option<String> = r.get(4)?;
+            let word = match kind.as_deref() {
+                Some("EST") => "Estimate", Some("INV") => "Invoice", Some("RCP") => "Payment received",
+                Some("SR") => "Sales receipt", Some("BILL") => "Bill", Some("BPAY") => "Bill payment",
+                Some("DEP") => "Deposit", Some("CHK") => "Check", Some("TRF") => "Transfer",
+                Some("CM") => "Credit memo", Some("RFD") => "Credit refund", Some("CDP") => "Customer deposit",
+                Some("CDR") => "Customer deposit refund", Some("JOURNAL") => "Journal entry", _ => "Document",
+            };
+            let document = match number.filter(|n| !n.is_empty()) { Some(n) => format!("{word} {n}"), None => word.to_owned() };
+            Ok((r.get::<_, String>(0)?, (r.get::<_, String>(1)?, document, r.get::<_, i64>(2)? != 0)))
+        })?
+        .collect()
+    };
+    read().unwrap_or_default()
 }
 fn validate_ref(row: &ReceiptRef) -> Result<()> {
     if uuid::Uuid::parse_str(&row.id).is_err()
@@ -300,6 +407,8 @@ fn validate_ref(row: &ReceiptRef) -> Result<()> {
         || !hex_valid(&row.wrapped_key, 96)
         || !hex_valid(&row.wrap_nonce, 24)
         || !hex_valid(&row.nonce, 14)
+        || row.rewraps.len() > 1000
+        || row.rewraps.iter().any(|w| !hex_valid(&w.wrapped_key, 96) || !hex_valid(&w.wrap_nonce, 24))
     {
         return Err(BackupError::refused(
             "Invalid attachment manifest reference.",
@@ -370,6 +479,113 @@ fn publish(source: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Copy one stored file into the work folder and authenticate it for every row that refers to it.
+/// `Ok(Some(problem))` when the file itself is missing ([`MISSING`]), is not the attached file
+/// ([`DAMAGED`]: not a regular file, wrong size, or content failing authentication) or opens under no key
+/// these books hold ([`NO_KEY`]): the backup can go on without it. `Err` for anything else, such as a
+/// permission error, too many open files, a disk error or a full disk: that says nothing about the file
+/// and stops the backup, naming the cause.
+fn stage_receipt(root: Option<&Path>, rows: &[ReceiptRef], staged: &Path, verifier: &ReceiptVerifier<'_>) -> Result<Option<&'static str>> {
+    let Some(root) = root else { return Ok(Some(MISSING)) };
+    let row = &rows[0];
+    // The folder itself must be a plain path (no link along the way), as before.
+    let source = paths::resolve(root)?.join(&row.stored_name);
+    let stopped = |e: std::io::Error| BackupError::refused(format!("the attached file {} could not be read ({e}). Nothing was backed up. Check that FreedomBooks can read the book's “receipts” folder, then try again.", row.stored_name));
+    match fs::symlink_metadata(&source) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Some(MISSING)),
+        Err(e) => return Err(stopped(e)),
+        // A link, folder or device in the file's place: what is there is not the attached file.
+        Ok(m) if !m.file_type().is_file() => return Ok(Some(DAMAGED)),
+        Ok(_) => {}
+    }
+    let expected = row
+        .plain_bytes
+        .checked_add(16 * row.plain_bytes.div_ceil(crypto::CHUNK as u64))
+        .ok_or_else(|| BackupError::refused("Receipt size overflow."))?;
+    // Never follow a link put in the file's place after the check above.
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags((rustix::fs::OFlags::NOFOLLOW | rustix::fs::OFlags::NONBLOCK).bits() as i32);
+    }
+    let mut src = match options.open(&source) {
+        Ok(f) => f,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Some(MISSING)),
+        #[cfg(unix)]
+        Err(e) if e.raw_os_error() == Some(rustix::io::Errno::LOOP.raw_os_error()) => return Ok(Some(DAMAGED)),
+        Err(e) => return Err(stopped(e)),
+    };
+    let meta = src.metadata().map_err(stopped)?;
+    if !meta.is_file() {
+        return Ok(Some(DAMAGED));
+    }
+    if meta.len() != expected {
+        return Ok(Some(DAMAGED));
+    }
+    let mut dst = paths::new_file(staged)?;
+    let mut buf = vec![0; 65536];
+    let mut copied = 0u64;
+    loop {
+        let n = match src.read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(stopped(e)),
+        };
+        copied += n as u64;
+        if copied > expected {
+            return Ok(Some(DAMAGED));
+        }
+        dst.write_all(&buf[..n])?;
+    }
+    dst.sync_all()?;
+    drop(dst);
+    if copied != expected {
+        return Ok(Some(DAMAGED));
+    }
+    for r in rows {
+        if let Err(e) = verifier(r, staged) {
+            return match e.problem() {
+                Some(problem) => Ok(Some(problem)),
+                None => Err(e),
+            };
+        }
+    }
+    Ok(None)
+}
+
+/// Plain words for the owner: which files, and what to do.
+pub fn incomplete_message(absent: &[Absent], folder_missing: bool) -> String {
+    let label = |a: &Absent| {
+        let problem = if a.problem == NO_KEY { "no key opens it" } else { a.problem.as_str() };
+        format!("“{}” on {}{} ({problem})", a.name, a.document, if a.removed { ", already removed" } else { "" })
+    };
+    let files = absent.iter().map(label).collect::<Vec<_>>().join("; ");
+    let count = absent.len();
+    let keyless = absent.iter().filter(|a| a.problem == NO_KEY).count();
+    let one = |n: usize| n == 1;
+    let them = if one(count) { "it" } else { "them" };
+    let older = format!("An older backup may still have {them}: restore that backup as a new book to get {them} back.");
+    let key_file = "That happens when the books' key file (the “.keys.json” file next to the book file) was replaced or lost: copy it back from wherever these books came from, or restore a recent backup as a new book.";
+    let records = "Your accounting records are not affected.";
+    if folder_missing {
+        let what = if one(count) { "1 attached file is".to_owned() } else { format!("{count} attached files are") };
+        return format!("{what} missing or damaged in this book's attachment folder: {files}. The “receipts” folder that should sit next to the book file is missing. If these books were copied from somewhere else, copy that folder too, then back up again.");
+    }
+    if keyless == 0 {
+        let what = if one(count) { "1 attached file is".to_owned() } else { format!("{count} attached files are") };
+        return format!("{what} missing or damaged in this book's attachment folder: {files}. {older} {records}");
+    }
+    let what = if one(count) { "1 attached file".to_owned() } else { format!("{count} attached files") };
+    if keyless == count {
+        let (they, is) = if one(count) { ("It", "is") } else { ("They", "are") };
+        return format!("{what} could not be backed up because none of the keys these books hold opens {them}: {files}. {they} {is} still in the attachment folder, unchanged. {key_file} {records}");
+    }
+    format!("{what} could not be backed up: {files}. A file marked missing or damaged is gone from, or changed in, this book's attachment folder; an older backup may still have it. A file marked “no key opens it” is still in the attachment folder, unchanged, but none of the keys these books hold opens it. {key_file} {records}")
+}
+
 pub fn create_backup(book: &Book, key: &Key, options: &BackupOptions<'_>) -> Result<BackupResult> {
     create_with_keys(book, key, options, None)
 }
@@ -431,54 +647,49 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     paths::require_space(parent, estimate)?;
     let snap = work.path().join("book.fbbook");
     book.snapshot(&snap, key)?;
-    let (contents, refs) = Book::inspect_snapshot(&snap, key, |q| -> Result<_> {
-        Ok((manifest::contents(q)?, receipt_refs(q)?))
+    let (contents, refs, labels) = Book::inspect_snapshot(&snap, key, |q| -> Result<_> {
+        Ok((manifest::contents(q)?, receipt_refs(q)?, receipt_labels(q)))
     })?;
     let mut receipts: BTreeMap<String, Receipt> = BTreeMap::new();
+    let mut absent: Vec<Absent> = Vec::new();
     if !refs.is_empty() {
-        let root = options.receipts_root.ok_or_else(|| {
-            BackupError::refused("A receipts folder is required for this backup.")
-        })?;
         let verifier = options.verify_receipt.ok_or_else(|| {
             BackupError::refused(
                 "The attachment module must authenticate receipt files before backup.",
             )
         })?;
         fs::create_dir(work.path().join("receipts"))?;
+        // Rows sharing one stored file are authenticated together: the file goes in only when every row
+        // that refers to it authenticates it.
+        let mut files: BTreeMap<String, Vec<ReceiptRef>> = BTreeMap::new();
         for row in refs {
             validate_ref(&row)?;
-            let entry = format!("receipts/{}", row.stored_name);
-            if let Some(existing) = receipts.get_mut(&entry) {
-                verifier(&row, &work.path().join(&entry))?;
-                existing.owners.push(row);
-                continue;
-            }
-            let source = root.join(&row.stored_name);
+            files.entry(row.stored_name.clone()).or_default().push(row);
+        }
+        for (stored, rows) in files {
+            let entry = format!("receipts/{stored}");
             let staged = work.path().join(&entry);
-            let mut src = paths::regular(&source)?;
-            let mut dst = paths::new_file(&staged)?;
-            let expected = row
-                .plain_bytes
-                .checked_add(16 * row.plain_bytes.div_ceil(crypto::CHUNK as u64))
-                .ok_or_else(|| BackupError::refused("Receipt size overflow."))?;
-            if src.metadata()?.len() != expected {
-                return Err(BackupError::refused(
-                    "Receipt file size does not match its owning row.",
-                ));
+            match stage_receipt(options.receipts_root, &rows, &staged, verifier)? {
+                None => {
+                    let (bytes, sha256) = hash_file(&staged)?;
+                    receipts.insert(entry.clone(), Receipt { entry, bytes, sha256, owners: rows });
+                }
+                Some(problem) => {
+                    if staged.try_exists()? {
+                        fs::remove_file(&staged)?;
+                    }
+                    for row in rows {
+                        let (name, document, removed) = labels.get(&row.id).cloned().unwrap_or_else(|| ("attachment".into(), "Document".into(), false));
+                        absent.push(Absent { owner: row, name, document, removed, problem: problem.into() });
+                    }
+                }
             }
-            std::io::copy(&mut src, &mut dst)?;
-            dst.sync_all()?;
-            verifier(&row, &staged)?;
-            let (bytes, sha256) = hash_file(&staged)?;
-            receipts.insert(
-                entry.clone(),
-                Receipt {
-                    entry,
-                    bytes,
-                    sha256,
-                    owners: vec![row],
-                },
-            );
+        }
+        absent.sort_by(|a, b| a.owner.id.cmp(&b.owner.id));
+        if !absent.is_empty() && !options.allow_incomplete {
+            let mut e = BackupError::refused(incomplete_message(&absent, options.receipts_root.is_none()));
+            e.1 = absent;
+            return Err(e);
         }
     }
     // Inspection may enable WAL but does not modify data. Closing it leaves a
@@ -491,7 +702,7 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     let version = if envelope.is_some() { FORMAT_VERSION } else { 3 };
     let data = Manifest { format: FORMAT.into(), format_version: version, created_at: options.created_at.into(), app_version: options.app_version.into(),
         migrations: book.migrations().iter().map(|(n, _)| (*n).into()).collect(), book_bytes, book_sha256, contents, attachments: receipts.into_values().collect(),
-        not_included: vec!["OS key store, connection-sealing key, local app settings, environment files, and unwrapped passwords or recovery keys.".into()] };
+        not_included: vec!["OS key store, connection-sealing key, local app settings, environment files, and unwrapped passwords or recovery keys.".into()], absent };
     let inner = work.path().join("payload.tar");
     if options.passphrase.is_some() {
         payload(&inner, work.path(), &data)?;
@@ -507,6 +718,11 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     }
     if options.passphrase.is_none() {
         header["manifest_nonce"] = json!(manifest::new_nonce());
+    }
+    // Public and authenticated (the header is the manifest's associated data): the Backups list can say
+    // "incomplete" without opening the backup, and a restore checks it against the manifest.
+    if !data.complete() {
+        header["incomplete"] = json!(true);
     }
     if let Some(envelope) = envelope {
         header["book_keys"] = serde_json::to_value(envelope)?;
@@ -540,7 +756,8 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     }
     tar.into_inner()?.sync_all()?;
     publish(partial.path(), &target)?;
-    let pruned = if let Some(keep) = options.keep {
+    // An incomplete backup never replaces or prunes anything.
+    let pruned = if let Some(keep) = options.keep.filter(|_| data.complete()) {
         retention::prune(
             parent,
             &retention::safe_db_label(options.label),
@@ -658,6 +875,16 @@ fn validate_manifest(data: &Manifest) -> Result<()> {
             }
         }
     }
+    for a in &data.absent {
+        validate_ref(&a.owner)?;
+        if !matches!(a.problem.as_str(), MISSING | DAMAGED | NO_KEY)
+            || a.name.is_empty() || a.name.len() > 1024 || a.document.is_empty() || a.document.len() > 1024
+            || entries.contains(&format!("receipts/{}", a.owner.stored_name))
+            || !owners.insert(&a.owner.id)
+        {
+            return Err(BackupError::refused("Invalid list of missing attachments."));
+        }
+    }
     Ok(())
 }
 
@@ -724,6 +951,9 @@ fn unpack(
     let raw = fs::read(work.join("manifest.json"))?;
     let data: Manifest = serde_json::from_value(parse_json(&raw)?)?;
     validate_manifest(&data)?;
+    if !(header.get("incomplete").is_none() && data.complete() || header["incomplete"] == true && !data.complete()) {
+        return Err(BackupError::refused("The backup's incomplete flag does not match its manifest."));
+    }
     restore_limits::budget(&data)?;
     let inner_path = work.join("payload.tar");
     extract(if encrypted { &inner_path } else { path }, work, !encrypted, Some(&data))?;
@@ -748,11 +978,27 @@ fn unpack(
             ));
         }
     }
-    let (actual, refs, version, installed) =
+    let (actual, refs, legacy_refs, version, installed) =
         Book::inspect_snapshot_with_history(&work.join("book.fbbook"), key, |q, history| -> Result<_> {
+            let refs = receipt_refs(q)?;
+            // The first attachment-backup implementation replaced the own-wrap fields with the newest
+            // audit wrap, without a rewraps array. Only an authenticated pre-table history admits that
+            // exact projection; all owner metadata and every other manifest field still compare exactly.
+            let legacy = if history.iter().any(|(name, _)| *name == "0197_attachment_key_wraps") { None } else {
+                let mut old = refs.clone();
+                for row in &mut old {
+                    if let Some(wrap) = crate::attachments::legacy_wraps(q, &row.stored_name).map_err(|e| BackupError::refused(e.to_string()))?.into_iter().next() {
+                        row.wrapped_key = wrap.wrapped_key;
+                        row.wrap_nonce = wrap.wrap_nonce;
+                    }
+                    row.rewraps.clear();
+                }
+                Some(old)
+            };
             Ok((
                 manifest::contents(q)?,
-                receipt_refs(q)?,
+                refs,
+                legacy,
                 q.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))?,
                 history.iter().map(|(name,_)| (*name).to_owned()).collect::<Vec<_>>(),
             ))
@@ -761,9 +1007,10 @@ fn unpack(
         .attachments
         .iter()
         .flat_map(|r| r.owners.clone())
+        .chain(data.absent.iter().map(|a| a.owner.clone()))
         .collect();
     listed.sort_by(|a, b| a.id.cmp(&b.id));
-    if actual != data.contents || refs != listed || version != data.migrations.len() as i64 || installed != data.migrations {
+    if actual != data.contents || (refs != listed && legacy_refs.as_ref() != Some(&listed)) || version != data.migrations.len() as i64 || installed != data.migrations {
         return Err(BackupError::refused(
             "The restored database does NOT match the backup manifest. Nothing was restored.",
         ));
@@ -996,6 +1243,8 @@ pub fn verify_backup_with_options(
             .ok_or_else(|| BackupError::refused("Attachment size overflow."))?;
         let summary = json!({
             "verified_at":chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            "backup_created_at":data.created_at,
+            "company_tags":data.contents.companies.iter().map(|c| retention::company_tag(key, &c.id)).collect::<Result<Vec<_>>>()?,
             "file":path.file_name().and_then(|n|n.to_str()),
             "encrypted":header["encrypted"],
             "companies":data.contents.companies.len(),
@@ -1005,6 +1254,8 @@ pub fn verify_backup_with_options(
             "lifecycle":lifecycle,
             "attachments":data.attachments.len(),
             "attachment_bytes":attachment_bytes,
+            "complete":data.complete(),
+            "missing_attachments":data.absent.len(),
         });
         retention::record_verified_matching(path, &fingerprint, summary)?;
     }

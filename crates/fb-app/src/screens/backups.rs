@@ -22,6 +22,7 @@ enum Waiting {
     Copy { company: CompanyId, file: PathBuf },
     /// J-ATTACH: an attachments add POST; the native file chooser shares this one-dialog ticket.
     Attach(super::d9::attachments::Pick),
+    Rules { company: CompanyId },
 }
 
 /// What the host knows: the app data folder, the open book and (while unlocked) a copy of its key.
@@ -35,9 +36,58 @@ pub struct Host {
     pub(crate) restore_pending: Option<(CompanyId, String, PathBuf)>,
     viewing: Option<String>,
     ticket: Option<(String, std::time::Instant, Waiting)>,
+    pub(crate) rule_import: Option<super::d9::rule_import::Preview>,
+    /// After "Create backup" stopped on missing or damaged attachment files: the page offers to back up
+    /// without them.
+    incomplete_offer: bool,
+}
+
+/// The per-person half of [`Host`]: what one signed-in person's Backups pages are in the middle of.
+/// The session host keeps one per session and swaps it in for that session's requests; the folder, the
+/// open book, its key copy and the "viewing a restored copy" banner stay shared.
+#[derive(Default)]
+pub(crate) struct Personal {
+    messages: Vec<(&'static str, String, Option<String>)>,
+    restored: Option<(String, PathBuf, MasterKey)>,
+    restore_pending: Option<(CompanyId, String, PathBuf)>,
+    ticket: Option<(String, std::time::Instant, Waiting)>,
+    rule_import: Option<super::d9::rule_import::Preview>,
+    incomplete_offer: bool,
 }
 
 impl Host {
+    /// Exchange the per-person state with `other` (swap in before a session's request, back after).
+    /// Both patterns list every field (no `..`), so a new `Host` field does not compile until it is
+    /// classified as per person (swapped) or shared.
+    pub(crate) fn exchange_personal(&mut self, other: &mut Personal) {
+        use std::mem::swap;
+        let Host {
+            root: _,    // shared: the host's app data folder
+            book: _,    // shared: the open book's path
+            key: _,     // shared: the open book's key copy
+            viewing: _, // shared: "viewing a restored copy" describes the book open for everyone
+            messages,
+            restored,
+            restore_pending,
+            ticket,
+            rule_import,
+            incomplete_offer,
+        } = self;
+        let Personal {
+            messages: p_messages,
+            restored: p_restored,
+            restore_pending: p_restore_pending,
+            ticket: p_ticket,
+            rule_import: p_rule_import,
+            incomplete_offer: p_incomplete_offer,
+        } = other;
+        swap(messages, p_messages);
+        swap(restored, p_restored);
+        swap(restore_pending, p_restore_pending);
+        swap(ticket, p_ticket);
+        swap(rule_import, p_rule_import);
+        swap(incomplete_offer, p_incomplete_offer);
+    }
     /// The app data folder (Electron userData). Books live in `books/`, backups default to `backups/`.
     pub fn configure(&mut self, root: &Path) -> AppResult<()> {
         if !root.is_absolute() {
@@ -51,25 +101,38 @@ impl Host {
         self.key = Some(MasterKey::new(**key));
     }
     pub(crate) fn invalidate_identity(&mut self) {
+        self.incomplete_offer = false;
         self.messages.clear();
         self.restored = None;
         self.restore_pending = None;
         self.ticket = None;
+        self.rule_import = None;
     }
     pub(crate) fn locked(&mut self) {
         self.book = None;
         self.key = None;
+        self.incomplete_offer = false;
         self.messages.clear();
         self.restored = None;
         self.restore_pending = None;
         self.viewing = None;
         self.ticket = None;
+        self.rule_import = None;
     }
     /// The banner text while a restored book (not the main one) is open.
     pub fn viewing_restored(&self) -> Option<&str> {
         self.viewing.as_deref()
     }
-    pub(crate) fn root(&self) -> AppResult<&Path> {
+    /// Whether the open book is a restored copy (named) or the books in use (None). The shell decides,
+    /// because it knows which book opens at startup; a copy keeps the name it was restored under.
+    pub(crate) fn set_viewing(&mut self, name: Option<String>) {
+        if self.book.is_none() { return; }
+        match name {
+            None => self.viewing = None,
+            Some(name) => { if self.viewing.is_none() { self.viewing = Some(name); } }
+        }
+    }
+    pub fn root(&self) -> AppResult<&Path> {
         self.root.as_deref().ok_or_else(|| AppError::Invalid("Backups are not set up in this window.".into()))
     }
     pub(crate) fn books(&self) -> AppResult<PathBuf> {
@@ -111,6 +174,7 @@ impl Host {
         }
         Ok(out)
     }
+    pub(crate) fn pick_rules(&mut self, company:CompanyId)->AppResult<String> {self.mint(Waiting::Rules{company})}
     fn mint(&mut self, waiting: Waiting) -> AppResult<String> {
         let ticket = crate::keys::to_hex(&crate::keys::random_bytes::<32>().map_err(|e| AppError::Invalid(e.to_string()))?);
         self.ticket = Some((ticket.clone(), std::time::Instant::now(), waiting));
@@ -141,7 +205,7 @@ fn sidecar(p: &Path, suffix: &str) -> PathBuf {
     PathBuf::from(s)
 }
 
-fn fs_read_small(p: &Path) -> Option<String> {
+pub(super) fn fs_read_small(p: &Path) -> Option<String> {
     let meta = std::fs::symlink_metadata(p).ok()?;
     (meta.is_file() && meta.len() < 64 * 1024).then(|| std::fs::read_to_string(p).ok()).flatten()
 }
@@ -260,8 +324,10 @@ fn row(path: &Path) -> Value {
     let header = core::read_header(path).ok();
     let readable = header.is_some();
     let encrypted = header.is_some_and(|h| h["book_keys"]["mode"] != "built-in" && (h["database"] == "SQLCipher" || h["encrypted"] == true));
+    let incomplete = core::read_header(path).is_ok_and(|h| h["incomplete"] == true);
     json!({"name": name, "size": size, "created": created_iso(&name), "encrypted": encrypted, "readable": readable,
-           "verified_at": verified_at, "needs_migrate": note["needs_migrate"] == true})
+           "verified_at": verified_at, "needs_migrate": note["needs_migrate"] == true, "incomplete": incomplete,
+           "missing_attachments": note["missing_attachments"].as_u64().unwrap_or(0)})
 }
 
 fn book_bytes(host: &Host) -> AppResult<u64> {
@@ -283,7 +349,16 @@ fn status(host: &Host) -> AppResult<Value> {
     let directory = host.folder()?;
     let files = retention::backup_files(&directory, None).map_err(|e| AppError::Invalid(e.to_string()))?;
     let rows: Vec<Value> = files.iter().take(PAGE_ROWS).map(|p| row(p)).collect();
-    let verified = rows.iter().find(|r| !r["verified_at"].is_null()).cloned();
+    // "Last verified" is the newest verified COMPLETE backup. A verified incomplete backup that is newer
+    // is named beside it, as incomplete, and never stands in for it.
+    let mut verified = None;
+    let mut newer_incomplete = None;
+    for (index, path) in files.iter().enumerate() {
+        let item = rows.get(index).cloned().unwrap_or_else(|| row(path));
+        if item["verified_at"].is_null() { continue; }
+        if item["incomplete"] != true { verified = Some(item); break; }
+        if newer_incomplete.is_none() { newer_incomplete = Some(item); }
+    }
     let meta = std::fs::symlink_metadata(&directory).ok().filter(|m| m.is_dir());
     let mode = meta.as_ref().and_then(mode_of);
     let writable = meta.as_ref().is_none_or(|m| !m.permissions().readonly());
@@ -291,7 +366,7 @@ fn status(host: &Host) -> AppResult<Value> {
         "directory": directory.display().to_string(), "exists": meta.is_some(), "writable": writable,
         "rows": rows, "count": files.len(), "more": files.len() > PAGE_ROWS,
         "total_bytes": files.iter().map(|p| std::fs::metadata(p).map(|m| m.len()).unwrap_or(0)).sum::<u64>(),
-        "last": rows.first(), "last_verified": verified, "db_bytes": book_bytes(host)?, "web_allowed": true,
+        "last": rows.first(), "last_verified": verified, "newer_incomplete": newer_incomplete, "db_bytes": book_bytes(host)?, "web_allowed": true,
         "folder_open": mode.is_some_and(|m| m & 0o077 != 0), "folder_mode": mode.map(|m| format!("{m:04o}")).unwrap_or_default(),
     }))
 }
@@ -314,6 +389,7 @@ pub(super) fn render(app: &mut App, route: &Route, params: &[(String, String)], 
     let created = get(params, "created").unwrap_or("");
     let shown = vm["rows"].as_array().is_some_and(|rows| rows.iter().any(|r| r["name"] == created));
     put(&mut vm, "created", if shown { created } else { "" });
+    put(&mut vm, "incomplete_offer", std::mem::take(&mut app.backups.incomplete_offer));
     let messages: Vec<Value> = app.backups.messages.drain(..).map(|(level, text, detail)| json!({"level_tag": level, "text": text, "detail": detail})).collect();
     put(&mut vm, "messages", messages);
     put(&mut vm, "restored", app.backups.restored.as_ref().map(|r| r.0.clone()));
@@ -323,6 +399,7 @@ pub(super) fn render(app: &mut App, route: &Route, params: &[(String, String)], 
     put(&mut vm, "recovery_unsaved", app.protection.as_ref().is_some_and(|r| !app.builtin() && !r.recovery_saved));
     let create = url("backups:create", &[&c.to_db()]);
     put(&mut vm, "csrf_token", token(app, &create));
+    put(&mut vm, "incomplete_token", token(app, &create));
     put(&mut vm, "folder_token", token(app, path));
     put(&mut vm, "restore_token", token(app, path));
     put(&mut vm, "open_token", token(app, path));
@@ -349,10 +426,18 @@ pub(super) fn submit(app: &mut App, route: &Route, fields: &[(String, String)]) 
     let c = company(app, route)?;
     match route.name.as_str() {
         "backups:create" => {
-            match back_up(app, c) {
-                Ok(name) => Ok(page(c, Some(&name))),
-                Err(message) => {
-                    app.backups.say("error", format!("Backup not created: {message}"));
+            // A routine backup stops on missing or damaged attachment files so the owner can put them
+            // back first; the page then offers the incomplete backup ("incomplete" = 1) as the way forward.
+            let allow_incomplete = get(fields, "incomplete") == Some("1");
+            match back_up(app, c, allow_incomplete) {
+                Ok(done) => Ok(page(c, Some(&done.name))),
+                Err(failure) => {
+                    if failure.absent.is_empty() {
+                        app.backups.say("error", format!("Backup not created: {}", failure.message));
+                    } else {
+                        app.backups.say("error", format!("Backup not created: {} You can still back up everything else now; that backup is marked incomplete and lists what it is missing.", failure.message));
+                        app.backups.incomplete_offer = true;
+                    }
                     Ok(page(c, None))
                 }
             }
@@ -454,43 +539,96 @@ fn audit(app: &mut App, c: CompanyId, action: &str, name: &str, detail: Value) -
     Ok(core::audit::record(&mut open.book, open.owner, c, action, name, detail)?)
 }
 
-/// `backups.views.create`, then `verify_backup` on the written file (recorded beside it).
+/// The safety backup before a protection change: `backups.views.create`, then `verify_backup` on the written
+/// file (recorded beside it). Missing or damaged attachment files do not block the change: the backup is
+/// made without them, marked incomplete, and the files are named in a notice on the next page.
 pub(crate) fn verified_backup(app: &mut App, c: CompanyId) -> AppResult<PathBuf> {
-    let name = back_up(app, c).map_err(AppError::Invalid)?;
-    let file = app.backups.folder()?.join(name);
+    let done = back_up(app, c, true).map_err(|f| AppError::Invalid(f.message))?;
+    let file = app.backups.folder()?.join(&done.name);
     if !retention::verified_note(&file) { return Err(AppError::Invalid("The safety backup did not verify. Password protection was not changed.".into())); }
+    if !done.absent.is_empty() {
+        app.upgrade_notice = Some(format!("The safety backup made before this change is incomplete. {}", core::incomplete_message(&done.absent, done.folder_missing)));
+    }
     Ok(file)
 }
 
-fn back_up(app: &mut App, c: CompanyId) -> Result<String, String> {
+pub(crate) struct BackedUp {
+    pub(crate) name: String,
+    pub(crate) absent: Vec<core::Absent>,
+    pub(crate) folder_missing: bool,
+}
+#[derive(Debug)]
+pub(crate) struct NotBackedUp {
+    pub(crate) message: String,
+    pub(crate) absent: Vec<core::Absent>,
+}
+impl From<String> for NotBackedUp {
+    fn from(message: String) -> Self {
+        Self { message, absent: Vec::new() }
+    }
+}
+
+/// Give every attachment key still wrapped only under the master key (files attached before the
+/// receipt-key fix) a further wrap under the receipt key, in one audited transaction. Runs before every
+/// backup (so backups hold the receipt-key wraps), and the protection change runs it again itself, just
+/// before the master key changes, and checks that nothing is left (`protection::change_protection`).
+pub(crate) fn rewrap_attachments(app: &mut App, receipt_key: &MasterKey) -> Result<(), String> {
+    let master = MasterKey::new(**app.master_key().map_err(|e| e.to_string())?);
+    let open = app.open_mut().map_err(|e| e.to_string())?;
+    fb_core::attachments::rewrap_legacy(&mut open.book, open.owner, receipt_key, &master)
+        .map(|_| ())
+        .map_err(|e| format!("the attachment keys could not be updated ({e})."))
+}
+
+fn back_up(app: &mut App, c: CompanyId, allow_incomplete: bool) -> Result<BackedUp, NotBackedUp> {
     let receipt_key = app.receipt_key().map_err(|e| e.to_string())?;
+    // Test builds only: a backup that skips its own re-wrap, to prove the protection change does not
+    // depend on it.
+    if !crate::protection::fault("backup-skip-rewrap") {
+        rewrap_attachments(app, &receipt_key)?;
+    }
     let envelope = app.protection.as_ref().map(|r| r.keys.clone());
     let own = !app.builtin();
     let (book, key) = app.backups.open_book().map_err(|e| e.to_string())?;
     let (book, key) = (book.to_owned(), MasterKey::new(**key));
-    let open = app.open.as_ref().ok_or("The books are locked.")?;
-    let result = write_copy(&app.backups, &open.book, &book, &key, &receipt_key, envelope.as_ref(), None)?;
+    let open = app.open.as_ref().ok_or_else(|| "The books are locked.".to_owned())?;
+    let folder_missing = !parent(&book).join("receipts").is_dir();
+    let result = write_copy(&app.backups, &open.book, &book, &key, &receipt_key, envelope.as_ref(), None, allow_incomplete)?;
+    crate::protection::checkpoint("backup-written");
     let name = result.path.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_owned();
     let bytes = std::fs::metadata(&result.path).map(|m| m.len()).unwrap_or(0);
-    let detail = json!({"file": name, "bytes": bytes, "encrypted": own, "book_sha256": result.manifest.book_sha256,
+    let absent = result.manifest.absent.clone();
+    let mut detail = json!({"file": name, "bytes": bytes, "encrypted": own, "book_sha256": result.manifest.book_sha256,
                         "companies": result.manifest.contents.companies.len(), "attachments": result.manifest.attachments.len()});
-    audit(app, c, "backup.create", &name, detail).map_err(|e| e.to_string())?;
-    app.backups.say("success", format!("Backup created: {name} ({bytes} bytes)."));
-    match verify_copy(&app.backups, &result.path, &key, &receipt_key) {
-        Ok(_) => app.backups.say("success", "Verified: the backup opens and matches these books."),
-        Err(e) => return Err(format!("The backup was written but did not verify: {e} Make another backup before relying on it.")),
+    if !absent.is_empty() {
+        detail["incomplete"] = json!(true);
+        detail["missing_attachments"] = json!(absent.iter().map(|a| a.owner.id.clone()).collect::<Vec<_>>());
     }
-    Ok(name)
+    audit(app, c, "backup.create", &name, detail).map_err(|e| e.to_string())?;
+    if absent.is_empty() {
+        app.backups.say("success", format!("Backup created: {name} ({bytes} bytes)."));
+    } else {
+        app.backups.say("warning", format!("Incomplete backup created: {name} ({bytes} bytes). Your accounting records and every other attached file are in it, but {}",
+            core::incomplete_message(&absent, folder_missing)));
+    }
+    match verify_copy(&app.backups, &result.path, &key, &receipt_key) {
+        Ok(_) if absent.is_empty() => app.backups.say("success", "Verified: the backup opens and matches these books."),
+        Ok(_) => app.backups.say("success", "Verified: the backup opens and matches these books, apart from the attached files listed above."),
+        Err(e) => return Err(format!("The backup was written but did not verify: {e} Make another backup before relying on it.").into()),
+    }
+    Ok(BackedUp { name, absent, folder_missing })
 }
 
+
 /// Write a backup of `source` into the backup folder, named after the book (plus `suffix`).
+#[allow(clippy::too_many_arguments)]
 fn write_copy(host: &Host, source: &dyn fb_db::SnapshotSource, book: &Path, key: &MasterKey, receipt_key: &MasterKey,
-              envelope: Option<&core::portable::KeyEnvelope>, suffix: Option<&str>) -> Result<core::BackupResult, String> {
+              envelope: Option<&core::portable::KeyEnvelope>, suffix: Option<&str>, allow_incomplete: bool) -> Result<core::BackupResult, NotBackedUp> {
     let folder = host.folder().map_err(|e| e.to_string())?;
     let work = host.work().map_err(|e| e.to_string())?;
     let books = host.books().map_err(|e| e.to_string())?;
     if let Some(reason) = folder_refusal(&folder, &[books, parent(book).to_owned(), work.clone()]) {
-        return Err(reason.replacen("backups cannot go inside", "the backup folder is inside", 1).replacen("this folder contains", "the backup folder contains", 1));
+        return Err(reason.replacen("backups cannot go inside", "the backup folder is inside", 1).replacen("this folder contains", "the backup folder contains", 1).into());
     }
     private_dir(&folder).map_err(|e| format!("the backup folder could not be prepared ({e})."))?;
     private_dir(&work).map_err(|e| format!("the work folder could not be prepared ({e})."))?;
@@ -508,26 +646,32 @@ fn write_copy(host: &Host, source: &dyn fb_db::SnapshotSource, book: &Path, key:
     }
     let receipts = parent(book).join("receipts");
     let receipts = receipts.is_dir().then_some(receipts);
-    let verifier = core::attachment_receipt_verifier(receipt_key);
+    let verifier = core::attachment_receipt_verifier_with(receipt_key, Some(key));
     let options = BackupOptions {
         output: &output, work_root: &work, receipts_root: receipts.as_deref(), verify_receipt: Some(&verifier),
-        label: &label, app_version: env!("CARGO_PKG_VERSION"), created_at: &created_at, passphrase: None, keep: None,
+        label: &label, app_version: &fb_diag::record_label(), created_at: &created_at, passphrase: None, keep: None,
+        allow_incomplete,
     };
-    core::create_backup_from(source, key, &options, envelope).map_err(|e| e.to_string())
+    core::create_backup_from(source, key, &options, envelope).map_err(|e| NotBackedUp { message: e.to_string(), absent: e.absent().to_vec() })
 }
 
-/// `verify_backup` on a written file; success is recorded beside it.
+/// `verify_backup` on a written file; success is recorded beside it. Files attached before the
+/// receipt-key fix may still have their key wrapped under the master key: both keys are accepted.
 fn verify_copy(host: &Host, file: &Path, key: &MasterKey, receipt_key: &MasterKey) -> Result<(), String> {
     let work = host.work().map_err(|e| e.to_string())?;
-    let verifier = core::attachment_receipt_verifier(receipt_key);
+    let verifier = core::attachment_receipt_verifier_with(receipt_key, Some(key));
     core::verify_backup_with_receipts(file, key, &work, None, true, Some(&verifier)).map(|_| ()).map_err(|e| e.to_string())
 }
 
 /// The copy made before an upgrade: a normal backup of the not-yet-migrated book, in the backup
-/// folder, verified before anything changes. A copy that fails verification is removed.
+/// folder, verified before anything changes. A copy that fails verification is removed. Missing or
+/// damaged attachment files do not stop the upgrade (refusing to open the books would be worse): the
+/// copy is made without them, marked incomplete, and the returned note names them.
 pub(crate) fn verified_copy(host: &Host, source: &fb_db::Unmigrated, book: &Path, key: &MasterKey, receipt_key: &MasterKey,
-                            envelope: Option<&core::portable::KeyEnvelope>, suffix: &str) -> Result<PathBuf, String> {
-    let result = write_copy(host, source, book, key, receipt_key, envelope, Some(suffix))?;
+                            envelope: Option<&core::portable::KeyEnvelope>, suffix: &str) -> Result<(PathBuf, Option<String>), String> {
+    let folder_missing = !parent(book).join("receipts").is_dir();
+    let result = write_copy(host, source, book, key, receipt_key, envelope, Some(suffix), true).map_err(|f| f.message)?;
+    let note = (!result.manifest.absent.is_empty()).then(|| format!("That copy is incomplete. {}", core::incomplete_message(&result.manifest.absent, folder_missing)));
     crate::protection::checkpoint("upgrade-copy-written");
     let verified = if crate::protection::fault("upgrade-verify") { Err("the copy did not match these books.".into()) }
         else { verify_copy(host, &result.path, key, receipt_key) };
@@ -536,7 +680,7 @@ pub(crate) fn verified_copy(host: &Host, source: &fb_db::Unmigrated, book: &Path
         let _ = std::fs::remove_file(&result.path);
         return Err(format!("the copy did not verify ({e})"));
     }
-    Ok(result.path)
+    Ok((result.path, note))
 }
 
 /// The main process hands back the path the user picked (empty when the dialog was cancelled).
@@ -553,10 +697,14 @@ pub fn dialog_result(app: &mut App, ticket: &str, chosen: &str) -> AppResult<Out
         return Err(AppError::Invalid("Choose a file or folder on this computer.".into()));
     }
     match waiting {
+        Waiting::Rules{company} => super::d9::rule_import::picked(app,company,chosen.as_deref()),
         Waiting::Attach(pick) => {
+            // New files are wrapped under the receipt key, which every backup, verification and restore
+            // uses and which survives password changes. The master key only reads older files.
+            let receipt_key = app.receipt_key()?;
             let (book, key) = app.backups.open_book()?;
             let (book, key) = (book.to_owned(), MasterKey::new(**key));
-            super::d9::attachments::picked(app, pick, chosen.as_deref(), &book, &key)
+            super::d9::attachments::picked(app, pick, chosen.as_deref(), &book, &receipt_key, &key)
         }
         Waiting::Folder { company } => {
             if let Some(folder) = chosen {
@@ -575,7 +723,10 @@ pub fn dialog_result(app: &mut App, ticket: &str, chosen: &str) -> AppResult<Out
                     return Ok(Outcome::Redirect { location: "/settings/restore-backup/".into() });
                 }
                 match restore(app, &file, &name) {
-                    Ok(()) => app.backups.say("success", format!("Restored “{name}” from {} into a new book. Your open book was not changed.", file.file_name().and_then(|n| n.to_str()).unwrap_or("the backup"))),
+                    Ok(absent) => {
+                        app.backups.say("success", format!("Restored “{name}” from {} into a new book. Your open book was not changed.", file.file_name().and_then(|n| n.to_str()).unwrap_or("the backup")));
+                        if let Some(note) = restored_without(&absent) { app.backups.say("warning", note); }
+                    }
                     Err(e) => app.backups.refuse_restore(e),
                 }
             }
@@ -651,8 +802,19 @@ fn plain(e: core::BackupError) -> Refusal {
 
 /// Restore `file` into a NEW book `<data>/books/restored-<name>/restored-<name>.fbbook` with its own
 /// receipts folder. The backup is verified first, so a bad file is refused before anything is created.
-fn restore(app: &mut App, file: &Path, name: &str) -> Result<(), Refusal> {
+/// Returns the attached files an incomplete backup did not hold.
+fn restore(app: &mut App, file: &Path, name: &str) -> Result<Vec<core::Absent>, Refusal> {
     restore_with_secret(app, file, name, "")
+}
+
+/// After restoring an incomplete backup: which attached files the restored book does not have.
+pub(crate) fn restored_without(absent: &[core::Absent]) -> Option<String> {
+    if absent.is_empty() {
+        return None;
+    }
+    let files = absent.iter().map(|a| format!("“{}” on {}{}", a.name, a.document, if a.removed { " (already removed)" } else { "" })).collect::<Vec<_>>().join("; ");
+    let (what, them) = if absent.len() == 1 { ("1 attached file was".to_owned(), "it") } else { (format!("{} attached files were", absent.len()), "them") };
+    Some(format!("That backup was incomplete: {what} not in it, so the restored book lists {them} but does not have the file: {files}. Your current books, or an older backup, may still have {them}."))
 }
 
 /// Backups without a key envelope (made before recovery keys) open only with the book's current key,
@@ -672,12 +834,13 @@ pub(crate) fn archive_keys(file: &Path) -> AppResult<Option<core::portable::KeyE
 
 pub(crate) fn finish_portable_restore(app: &mut App, secret: &str) -> AppResult<Outcome> {
     let (company, name, file) = app.backups.restore_pending.clone().ok_or_else(|| AppError::Invalid("Choose a backup to restore first.".into()))?;
-    restore_with_secret(app, &file, &name, secret).map_err(|e| AppError::Invalid(e.to_string()))?;
+    let absent = restore_with_secret(app, &file, &name, secret).map_err(|e| AppError::Invalid(e.to_string()))?;
+    if let Some(note) = restored_without(&absent) { app.backups.say("warning", note); }
     app.backups.restore_pending = None;
     Ok(page(company, None))
 }
 
-fn restore_with_secret(app: &mut App, file: &Path, name: &str, secret: &str) -> Result<(), Refusal> {
+fn restore_with_secret(app: &mut App, file: &Path, name: &str, secret: &str) -> Result<Vec<core::Absent>, Refusal> {
     let (_, slug) = book_name(name).map_err(|e| e.to_string())?;
     let host = &app.backups;
     let (_, current) = host.open_book().map_err(|e| e.to_string())?;
@@ -693,18 +856,25 @@ fn restore_with_secret(app: &mut App, file: &Path, name: &str, secret: &str) -> 
     // The name was free when the dialog opened; a crash residue that appeared since is cleared the same way.
     name_free(&dir, name).map_err(|e| e.to_string())?;
     let target = dir.join(format!("{slug}.fbbook"));
-    let record = envelope.map(crate::protection::Record::new).or_else(|| {
+    let root = host.root().map_err(|e| e.to_string())?.to_owned();
+    let record = envelope.map(|envelope| {
+        // The copy asks for its password exactly when the book it came from does (else it asks).
+        let ask = crate::books::inherited_ask(&root, &envelope, app.protection.as_ref());
+        let mut record = crate::protection::Record::new(envelope);
+        record.ask_password = ask;
+        record
+    }).or_else(|| {
         // A pre-portable backup shares this installation's legacy master and receipt key.
-        // Reuse its already-authorized portable wraps when they match that older layout.
+        // Reuse its already-authorized portable wraps (and its prompt setting) when they match that older layout.
         app.protection.as_ref().filter(|r| r.keys.receipts(&key).is_ok_and(|k| *k == *key)).cloned().map(|mut r| {
-            r.ask_password = false;
             r.recovery_saved = false;
             r
         })
     });
-    restore_into_with_record(file, &key, &receipt_key, &work, &target, &protected, record.as_ref())?;
+    let absent = restore_into_with_record(file, &key, &receipt_key, &work, &target, &protected, record.as_ref())?;
+    crate::books::note_restored(&target, name, file);
     app.backups.restored = Some((name.to_owned(), target, key));
-    Ok(())
+    Ok(absent)
 }
 
 /// The restore itself, for any target: core refusals (existing file, protected overlap) stay in force.
@@ -715,11 +885,13 @@ fn restore_into(file: &Path, key: &MasterKey, work: &Path, target: &Path, protec
 
 #[cfg(test)]
 fn restore_into_with_receipts(file: &Path, key: &MasterKey, receipts: &MasterKey, work: &Path, target: &Path, protected: &[PathBuf]) -> Result<(), Refusal> {
-    restore_into_with_record(file, key, receipts, work, target, protected, None)
+    restore_into_with_record(file, key, receipts, work, target, protected, None).map(|_| ())
 }
 
-fn restore_into_with_record(file: &Path, key: &MasterKey, receipts: &MasterKey, work: &Path, target: &Path, protected: &[PathBuf], record: Option<&crate::protection::Record>) -> Result<(), Refusal> {
-    let verifier = core::attachment_receipt_verifier(receipts);
+/// Returns the attached files an incomplete backup did not hold (empty for a complete backup).
+fn restore_into_with_record(file: &Path, key: &MasterKey, receipts: &MasterKey, work: &Path, target: &Path, protected: &[PathBuf], record: Option<&crate::protection::Record>) -> Result<Vec<core::Absent>, Refusal> {
+    // The backup's own master key also reads files attached before the receipt-key fix.
+    let verifier = core::attachment_receipt_verifier_with(receipts, Some(key));
     private_dir(work).map_err(|e| e.to_string())?;
     if !file.is_file() {
         return Err("choose a backup file.".to_owned().into());
@@ -735,12 +907,13 @@ fn restore_into_with_record(file: &Path, key: &MasterKey, receipts: &MasterKey, 
         std::fs::create_dir(&dir).and_then(|()| private_dir(&dir)).map_err(|e| e.to_string())?;
     }
     if let Some(record) = record { record.save(target).map_err(|e| e.to_string())?; }
+    crate::protection::checkpoint("restore-record-saved");
     let result = core::restore_backup(file, key, &RestoreOptions {
         verify_receipt: Some(&verifier), target, receipts_target: Some(&dir.join("receipts")), work_root: work,
         protected, passphrase: None, require_encrypted: false,
     });
     match result {
-        Ok(_) => Ok(()),
+        Ok(done) => Ok(done.manifest.absent),
         Err(e) => {
             // The key record was written first; a folder made here goes with it, so the name is free again.
             if made {
@@ -775,10 +948,19 @@ pub fn restore_from_gate(app: &mut App, file: &Path, name: &str, secret: &str) -
     name_free(&dir, name)?;
     let target = dir.join(format!("{slug}.fbbook"));
     let protected = vec![books.join("default.fbbook"), books.join("receipts"), app.backups.folder()?, app.backups.work()?];
-    let record = crate::protection::Record::new(envelope);
-    restore_into_with_record(file, &key, &receipts, &app.backups.work()?, &target, &protected, Some(&record)).map_err(crate::protection::error)?;
+    // The copy inherits the source book's "ask for the book password" setting, asking when unknown.
+    let ask = crate::books::inherited_ask(app.backups.root()?, &envelope, None);
+    let mut record = crate::protection::Record::new(envelope);
+    record.ask_password = ask;
+    let absent = restore_into_with_record(file, &key, &receipts, &app.backups.work()?, &target, &protected, Some(&record)).map_err(crate::protection::error)?;
+    crate::books::note_restored(&target, name, file);
     app.open_book(&target, &key)?;
+    crate::protection::checkpoint("restore-opened");
     app.backups.viewing = Some(name.to_owned());
+    // Shown once on the next page (opening the book resets the notice, so it is set after).
+    if let Some(note) = restored_without(&absent) {
+        app.upgrade_notice = Some(match app.upgrade_notice.take() { Some(upgraded) => format!("{upgraded} {note}"), None => note });
+    }
     Ok(target)
 }
 
@@ -813,7 +995,7 @@ mod tests {
         app.create_book(&live, &key, "Owner", "Scratch Co").unwrap();
         app.enroll_owner("Synthetic backup unit password").unwrap();
         let c = app.first_company().unwrap().unwrap();
-        let name = back_up(&mut app, c).unwrap();
+        let name = back_up(&mut app, c, false).map_err(|f| f.message).unwrap().name;
         let file = app.backups.folder().unwrap().join(&name);
         assert!(retention::verified_note(&file), "the backup is verified as it is made");
         let work = app.backups.work().unwrap();
@@ -908,7 +1090,7 @@ mod tests {
         app.create_book(&d.path().join("books/default.fbbook"), &key, "Owner", "Scratch Co").unwrap();
         app.enroll_owner("Synthetic backup unit password").unwrap();
         let c = app.first_company().unwrap().unwrap();
-        let name = back_up(&mut app, c).unwrap();
+        let name = back_up(&mut app, c, false).map_err(|f| f.message).unwrap().name;
         let file = app.backups.folder().unwrap().join(name);
         app.backups.messages.clear();
         (d, app, c, key, file)

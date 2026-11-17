@@ -32,3 +32,7 @@ body.shell .message-detail{display:block;margin-top:4px;font-size:12px;color:#6b
 body.shell .backup-busy{margin:0 0 14px}
 body.shell main[aria-busy=true] button:disabled{opacity:.55;cursor:progress}
 body.shell main[aria-busy=true] table.backup-files a[aria-disabled=true]{pointer-events:none;color:#8d8492}
+/* An incomplete backup (attached files missing or damaged when it was made), and the offer to make one. */
+body.shell .badge.badge-warning{background:#fbf1ea;color:#6b3a24;border-color:#e3bfa9}
+body.shell .backup-incomplete{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px 12px;border-left:3px solid #bd7657;background:#fbf1ea}
+body.shell .backup-incomplete p{margin:0;color:#6b3a24;font-size:13px}

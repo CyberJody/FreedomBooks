@@ -154,6 +154,9 @@ pub fn date(value: Value, format: Option<String>) -> Result<String, Error> {
     };
     match format.as_deref().unwrap_or("Y-m-d") {
         "Y-m-d" => Ok(day.to_owned()),
+        "m/d/Y" => chrono::NaiveDate::parse_from_str(day, "%Y-%m-%d")
+            .map(|date| date.format("%m/%d/%Y").to_string())
+            .map_err(|_| Error::new(ErrorKind::InvalidOperation, "Invalid invoice date")),
         "Y-m-d H:i" => Ok(format!("{day} {}", text.get(11..16).unwrap_or("00:00"))),
         "Y-m-d H:i:s" | "Y-m-d H:i:s T" => {
             let time=text.get(11..19).unwrap_or("00:00:00");
@@ -291,6 +294,11 @@ pub fn icon(name: String, size: Option<Value>, css: Option<String>, small: Optio
     )))
 }
 
+/// A page's own last breadcrumb segment, for `{% block crumb %}{{ crumb("Invoice 1042") }}{% endblock %}`.
+pub fn crumb(label: String) -> Value {
+    Value::from_safe_string(format!(r#"<li><span aria-current="page">{}</span></li>"#, escape(&label)))
+}
+
 pub fn icon_url(name: String) -> String {
     static_url(format!("ui/icons/{name}.svg"))
 }
@@ -344,5 +352,7 @@ mod tests {
         assert_eq!(date(Value::from(()), Some("Y-m-d".into())).unwrap(), "");
         assert!(date(Value::from("2026-10-01"), Some("N j, Y".into())).is_err());
         assert!(date(Value::from("é"), None).is_err());
+        assert_eq!(date(Value::from("2026-11-08"), Some("m/d/Y".into())).unwrap(), "11/08/2026");
+        assert!(date(Value::from("2026-02-30"), Some("m/d/Y".into())).is_err());
     }
 }

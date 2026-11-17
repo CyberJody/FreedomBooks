@@ -1,4 +1,5 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('desktop/keys.css') }}">{% endblock %}{% block content %}
+{% if first_run and not kit %}<p class="eyebrow">Step 3 of 3 · Save your recovery key</p>{% endif %}
 <h1>{% if kit %}FreedomBooks Emergency Kit{% else %}Your recovery key{% endif %}</h1>
 {% if errors %}<section class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</section>{% endif %}
 {% if authorized %}

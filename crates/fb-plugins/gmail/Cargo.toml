@@ -4,6 +4,9 @@ edition.workspace = true
 version.workspace = true
 publish.workspace = true
 
+[features]
+test-support = ["fb-plugin-api/test-support"]
+
 [dependencies]
 fb-plugin-api = { path = "../../fb-plugin-api" }
 base64 = "0.22.1"

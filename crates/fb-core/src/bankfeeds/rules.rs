@@ -14,8 +14,9 @@ pub struct Rule {
     pub account_id: String,
     pub payee_name: String,
     pub active: bool,
+    pub policy: Option<qbo::Policy>,
 }
-const RULE_COLS: &str = "id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active";
+const RULE_COLS: &str = "id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active,(SELECT data FROM bankfeeds_rule_policy WHERE rule_id=bankfeeds_rule.id)";
 fn rule_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Rule> {
     Ok(Rule {
         id: r.get(0)?,
@@ -29,6 +30,7 @@ fn rule_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Rule> {
         account_id: r.get(8)?,
         payee_name: r.get(9)?,
         active: r.get(10)?,
+        policy: r.get::<_,Option<String>>(11)?.map(|s|fb_db::parse_unique_json(&s).and_then(serde_json::from_value).map_err(|e|fb_db::rusqlite::Error::FromSqlConversionFailure(11,fb_db::rusqlite::types::Type::Text,Box::new(e)))).transpose()?,
     })
 }
 fn rules_where(q: &(impl Query + ?Sized), co: CompanyId, extra: &str) -> FbResult<Vec<Rule>> {
@@ -60,6 +62,7 @@ pub fn rule_for<'r>(rules: &'r [Rule], item: &Item) -> Option<&'r Rule> {
     let text = text::py_lower(&item.description);
     let amount = i128::from(item.amount).abs();
     rules.iter().find(|rule| {
+        if let Some(policy)=&rule.policy { return rule.active && policy.matches(item); }
         rule.active
             && text.contains(&text::py_lower(&rule.match_text))
             && !(rule.sign == "IN" && !item.money_in())
@@ -103,6 +106,7 @@ pub fn save_rule(book: &mut Book, actor: UserId, co: CompanyId, values: &Value, 
             tx.query_row(&format!("SELECT {RULE_COLS} FROM bankfeeds_rule WHERE company_id=?1 AND id=?2"),params![co.to_db(),key],rule_row)
                 .optional()
         }).transpose()?.flatten();
+        if previous.as_ref().is_some_and(|r|r.policy.is_some()) {return Err(err("Imported conditions are retained. Use the rules list to test or disable this rule; import a revised source rule to change its conditions."));}
         let name = py::input_text(&get("name"), 120, true, previous.as_ref().map(|r|r.name.as_str()))?;
         let match_text = py::input_text(&get("match_text"), 200, true, previous.as_ref().map(|r|r.match_text.as_str()))?;
         let payee_name = py::input_text(values.get("payee_name").unwrap_or(&json!("")), 120, false, previous.as_ref().map(|r|r.payee_name.as_str()))?;
@@ -203,11 +207,35 @@ pub fn set_rule_active(book: &mut Book, actor: UserId, co: CompanyId, rule_id: &
             .optional()?
             .ok_or_else(|| err("Choose a rule of this company."))?;
         let active = truthy(active);
+        if active && let Some(p)=&rule.policy {qbo::validate_policy(tx,co,p,&rule.account_id)?;}
         if rule.active == active {
             return Ok(rule);
         }
         w.execute("UPDATE bankfeeds_rule SET active=?2,updated_at=?3 WHERE id=?1", params![rule_id, active, py::now_utc()])?;
         w.audit(&user, co, "bankfeed.rule_edited", format!("bankfeedrule:{rule_id}"), json!({"active":active}))?;
         Ok(Rule { active, ..rule })
+    })
+}
+
+/// Turn off automatic posting without changing matching, category or active state.
+/// The database permits only this one-way policy edit. The original import remains audited.
+pub fn turn_off_imported_auto_post(book: &mut Book, actor: UserId, co: CompanyId, rule_id: Option<&str>, secrets: &SecretSet) -> FbResult<usize> {
+    command(book, secrets, |w| {
+        let user = services::access(w.tx, actor, co)?;
+        let rules = rules_where(w.tx, co, "")?;
+        if let Some(id) = rule_id
+            && !rules.iter().any(|r| r.id == id && r.policy.is_some()) {
+                return Err(err("Choose an imported rule of this company."));
+        }
+        let mut changed = 0;
+        for rule in rules.into_iter().filter(|r| rule_id.is_none_or(|id| r.id == id)) {
+            let Some(_) = rule.policy.filter(|p| p.auto_post) else { continue };
+            w.execute("UPDATE bankfeeds_rule_policy SET data=json_set(data,'$.auto_post',json('false')) WHERE rule_id=?1 AND company_id=?2", params![rule.id, co.to_db()])?;
+            w.execute("UPDATE bankfeeds_rule SET updated_at=?2 WHERE id=?1", params![rule.id, py::now_utc()])?;
+            w.execute("DELETE FROM bankfeeds_auto_queue WHERE rule_id=?1", params![rule.id])?;
+            w.audit(&user, co, "bankfeed.rule_auto_post_disabled", format!("bankfeedrule:{}", rule.id), json!({"auto_post":false,"active":rule.active,"suggestions_retained":true}))?;
+            changed += 1;
+        }
+        Ok(changed)
     })
 }

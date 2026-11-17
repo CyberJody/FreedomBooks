@@ -14,6 +14,7 @@ use fb_db::{
 
 type Errors = HashMap<String, Vec<String>>;
 mod company_documents;
+mod invoice_preferences;
 const REQUIRED: &str = "This field is required.";
 const CHOICE: &str = "Select a valid choice. That choice is not one of the available choices.";
 
@@ -46,6 +47,8 @@ pub(super) fn ordinals(
 fn ctx(app: &mut App, route: &Route) -> AppResult<Value> {
     let c = if route.args.contains_key("company_id") {
         Some(arg_company(route)?)
+    } else if route.name == "report_problem" {
+        frame_company(app)
     } else {
         None
     };
@@ -264,7 +267,9 @@ pub(super) fn render(
         "report_problem" => {
             let mut vm = ctx(app, route)?;
             vm["issue_url"] = json!(crate::session::ISSUE_URL);
-            vm["about"] = json!({"version": app.host.version, "os": app.host.os});
+            vm["about"] = json!({"version": app.host.version, "os": app.host.os, "build": fb_diag::build::details()});
+            // CRASHLOG: where the problem log is (home folder as ~), or nothing when this copy has none.
+            vm["problem_log"] = json!(fb_diag::log::dir().map(|d| fb_diag::scrub::shown_path(&d)));
             Ok((draw(app, "ledger/report_problem.html", &vm)?, 200))
         }
         _ => Err(AppError::NotFound(path.into())),
@@ -334,7 +339,7 @@ fn simple_form_numbering(
                     row["error"]=json!(message);
                     row["entered"]=json!(get(fields,"next_number").unwrap_or(""));
                 }
-                if !app.messages.is_empty() {put(&mut vm,"numbering_message",std::mem::take(&mut app.messages).join(" "));}
+                put(&mut vm,"invoice_notices",std::mem::take(&mut app.messages));
                 put(&mut vm,"numbering_has_bank",rows.as_array().unwrap().iter().any(|r|r["kind"]=="CHECK"));
                 put(&mut vm,"numbering",rows);
                 put(
@@ -344,6 +349,7 @@ fn simple_form_numbering(
                 );
             }
             let document_fields = if editing {
+                invoice_preferences::fields(app, arg_company(route)?, &mut vm, posted)?;
                 company_documents::fields(app, arg_company(route)?, &mut vm, posted)?
             } else { Vec::new() };
             (
@@ -494,8 +500,17 @@ fn simple_form_numbering(
                         .filter_map(|v| v.as_str().map(str::to_owned))
                         .collect()
                 });
+            // Bank-type accounts are bank accounts without being chosen here; this list adds
+            // other asset accounts used the same way (petty cash, for example).
+            let automatic = accounts
+                .iter()
+                .filter(|a| a.active && a.postable && a.kind == Kind::Asset && a.detail_type == DetailType::Bank)
+                .filter(|a| setup["banks"].as_array().unwrap().contains(&json!(a.id.to_db())))
+                .map(|a| a.label())
+                .collect::<Vec<_>>();
             let choices = accounts
                 .iter()
+                .filter(|a| a.detail_type != DetailType::Bank)
                 .filter(|a| {
                     (a.active && a.postable && a.kind == Kind::Asset)
                         || setup["banks"]
@@ -518,7 +533,15 @@ fn simple_form_numbering(
                     )
                 })
                 .collect();
-            fields.push(Field::new("banks","Designated bank accounts",Widget::MultipleSelect{choices,selected}).attr("size","5").help("Select all bank accounts to designate. Control/Command-click to select multiple or clear a selection."));
+            let any_bank_type = accounts.iter().any(|a| a.active && a.postable && a.kind == Kind::Asset && a.detail_type == DetailType::Bank);
+            let automatic = if !automatic.is_empty() {
+                format!("Every active account of type Bank is a bank account: {}.", automatic.join(", "))
+            } else if any_bank_type {
+                "Saving this page makes every active account of type Bank a bank account.".to_owned()
+            } else {
+                "No account of type Bank yet: add one in the chart of accounts.".to_owned()
+            };
+            fields.push(Field::new("banks","Other accounts used as bank accounts",Widget::MultipleSelect{choices,selected}).attr("size","5").help(format!("{automatic} Choose other asset accounts you also pay from or deposit to, such as petty cash. Control/Command-click to select more than one or clear a selection.")));
             ("Accounting setup", fields)
         }
         _ => return Err(AppError::NotFound(path.into())),
@@ -859,9 +882,9 @@ fn setup_start(app: &mut App, route: &Route) -> AppResult<String> {
             "tax",
             false,
             "Say whether this company charges sales tax.",
-            "salestax:settings",
+            "salestax:setup",
             None,
-            "Open sales tax settings",
+            "Set up sales tax",
         ),
         (
             "Customers (optional)",
@@ -908,6 +931,7 @@ fn setup_start(app: &mut App, route: &Route) -> AppResult<String> {
         "done_token",
         token(app, &url("setup_done", &[&c.to_db()])),
     );
+    super::d3::tax_setup_context(app,c,&mut vm)?;
     draw(app, "ledger/setup_start.html", &vm)
 }
 
@@ -964,9 +988,9 @@ fn journal_list(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<(
         .book
         .read(|tx| store::get_company(tx, c))?
         .first_run_open;
-    if first {
-        return Ok((url("setup_start", &[&c.to_db()]), 302));
-    }
+    // A new company's checklist is a reminder on the journal list, not a detour: the sidebar's links
+    // always open the page they name.
+    vm["setup_pending"] = json!(first);
     let q = clean_text(params, "q", 120, false, true, &mut errors);
     let start = clean_date(params, "start", false, &mut errors);
     let end = clean_date(params, "end", false, &mut errors);
@@ -1372,9 +1396,16 @@ fn submit_simple(
                         data["revision"]
                     ));
                 }
+                // Saving the company profile stays in Settings, or returns to the setup checklist while
+                // it is still open.
+                let first_run = route.name == "company_edit"
+                    && CompanyId::parse(&c).is_some_and(|id| {
+                        app.open_mut().ok().and_then(|o| o.book.read(|tx| store::get_company(tx, id)).ok()).is_some_and(|row| row.first_run_open)
+                    });
                 let name = match route.name.as_str() {
                     "company_new" => "setup_start",
-                    "company_edit" => "company",
+                    "company_edit" if first_run => "setup_start",
+                    "company_edit" => "company_edit",
                     "documents:setup" => "documents:setup",
                     _ => "accounts",
                 };

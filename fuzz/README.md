@@ -44,4 +44,4 @@ hanging and memory-blowing inputs; a crash is reproduced with
 `cargo fuzz run <target> artifacts/<target>/<file>`.
 
 `rerun.sh` repeats the targets whose harness assertions were narrowed after a first finding.
-Run times and results of the audit run are in `../FUZZ-AUDIT-REPORT.md`.
+Run times and results of the audit run were kept with the internal audit report.

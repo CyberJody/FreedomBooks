@@ -85,7 +85,7 @@ fn dump(conn: &Connection) -> BTreeMap<String, Vec<Vec<Value>>> {
         .into_iter()
         .map(|table| {
             let mut stmt = conn
-                .prepare(&format!("SELECT * FROM {table} ORDER BY 1,2"))
+                .prepare(&fb_db::test_support::select_all_ordered(conn, &table).unwrap())
                 .unwrap();
             let width = stmt.column_count();
             let rows = stmt
@@ -142,6 +142,8 @@ fn every_l2a_primary_key_and_ownership_identity_is_permanent() {
     let actual = conn.prepare("SELECT name FROM sqlite_master WHERE type='table' AND (name GLOB 'directory_*' OR name GLOB 'salestax_*' OR name GLOB 'documents_*') ORDER BY name").unwrap()
         .query_map([], |r| r.get::<_, String>(0)).unwrap().collect::<Result<Vec<_>, _>>().unwrap();
     let mut expected = TABLES.to_vec();
+    // The later payment lane has dedicated immutable-row attacks in salestax_payments_tests.rs.
+    expected.extend(["salestax_payment", "salestax_paymentvoid"]);
     expected.sort();
     assert_eq!(
         actual, expected,

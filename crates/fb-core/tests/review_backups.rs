@@ -25,6 +25,7 @@ fn opts<'a>(
         created_at: at,
         passphrase: None,
         keep,
+        allow_incomplete: false,
     }
 }
 

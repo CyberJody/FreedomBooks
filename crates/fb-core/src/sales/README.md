@@ -75,25 +75,14 @@ remains a control account after Accounting setup changes.
   Comparer mutation tests prove sales differences are actually failures. Native tests check
   the recorded receipt/sale audit payload shapes separately.
 
-## Integration requests / later ownership
+## Estimates and upgrades
 
-1. The core startup request is resolved: Book open registers/checks sales automatically.
-   `REBASE.md` records the hardened-core adoption and executable verification map.
-2. Banking owns actual deposit membership and must install its raw-SQL reversal/live-deposit
-   and release-date guards when its tables arrive. Sales service hooks already read the
-   Python-shaped banking tables when present; no banking tables are created here.
-3. Credits/prepayments own their settlement and release-date triggers. Sales services read
-   their Python-shaped live applications when present. Later module integration must verify
-   combined over-settlement, void dependency and release-date backstops, not just isolated tests.
-4. Customer deposits are in `prepayments/`; no CDP receive/apply/refund implementation is
-   included. Its future migration must extend the shared Receipt kind/completeness protocol.
-5. D4 adds non-posting estimates, immutable state transitions and accepted-estimate conversion
-   in `estimates.rs`, with migration 0131 (after main's 0130), shared guards in 0132,
-   and `sales-estimates-d4` differential coverage. Main's migration prefix is frozen;
-   `tools/verify_desktop_upgrade.py` proves real d14de5e books upgrade to the same
-   schema as a fresh desktop book.
-   `review_receipt_form` projects the frozen receipt/cash-sale review without changing the existing
-   review/record services. Aging/as-of statement reports belong to the reports wave.
+D4 adds non-posting estimates, immutable state transitions and accepted-estimate conversion
+in `estimates.rs`, with migration 0131 and shared guards in 0132. Book open registers and
+checks sales automatically. The retained-fixture upgrade tests (for example
+`crates/fb-core/tests/bills_jobs_upgrade.rs`) check that books written by earlier builds
+upgrade and reopen. `review_receipt_form` projects the frozen receipt/cash-sale review
+without changing the existing review/record services.
 
 ## Copied oddities and deliberate safety differences
 
@@ -108,5 +97,3 @@ remains a control account after Accounting setup changes.
   delete/reinsert cannot rewrite protected history. These close the known reference holes.
 - UUIDv7 replaces serial IDs; signed Django strings become opaque in-process review objects;
   SQLite's lack of deferred triggers/transaction IDs requires obligations and seals.
-
-Local-only, test data only. No preview server or screenshots: this is backend work.

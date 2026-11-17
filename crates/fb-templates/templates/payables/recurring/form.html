@@ -1,0 +1,15 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('payables/bills/base.css') }}"><script src="{{ static('payables/recurring.js') }}" defer></script>{% endblock %}
+{% block content %}<h1>{% if template %}Edit recurring bill{% else %}New recurring bill{% endif %}</h1>
+<p>Each bill uses these lines and the vendor's current details. Monthly dates 29–31 clamp to the month's last day; February 29 yearly dates use February 28 in other years. Terms add calendar days to each bill date. The first bill date can be at most 24 months in the past; enter older bills as ordinary bills.</p>
+<p>Drafts are the default. Automatic posting records the bill in your ledger without a separate review. Bills that cannot be saved remain pending. If automatic posting fails validation, the bill stays a draft and a message explains why.</p>
+{% if template.next_index %}<p>Start date and frequency cannot change after the first period is recorded. Changes to lines, terms and posting apply to future bills only.</p>{% endif %}
+<form method="post" action="{{ form_action }}" id="recurring-editor" novalidate>{{ csrf_token|safe }}{% if confirmation %}<section data-recurring-save-confirmation role="alert">
+{% if confirmation.source_warning %}<h2>Confirm possible duplicate source period</h2><p data-recurring-source-warning>The first recurring bill date, <strong>{{ confirmation.source_warning.first_date }}</strong>, is less than one full period after the source bill date, <strong>{{ confirmation.source_warning.source_date }}</strong>. This might duplicate the source bill's period. Confirm only if both bills are intended.</p>{% endif %}
+{% if confirmation.count %}<h2>Confirm {{ confirmation.count }} pending bill{% if confirmation.count != 1 %}s{% endif %}</h2><p>Saving will create {{ confirmation.count }} bill{% if confirmation.count != 1 %}s{% endif %} on these dates. {% if confirmation.auto_post %}<strong>They will post automatically.</strong>{% else %}They will be saved as drafts for review.{% endif %}</p>{% include 'payables/recurring/date-summary.html' %}{% endif %}
+<p>No template changes or bills have been saved yet. Review the dates before confirming.</p></section><input type="hidden" name="confirmation" value="{{ confirmation_json }}">{% endif %}<section class="estimate-header" aria-label="Recurring bill details">{{ form.as_p|safe }}</section>
+<h2>Bill lines</h2><input type="hidden" name="lines-TOTAL_FORMS" value="{{ count }}" id="recurring-line-count">
+<div id="recurring-lines">{% for line in lines %}<fieldset class="estimate-line"><legend>Line {{ loop.index }}</legend>{{ line.as_p|safe }}</fieldset>{% endfor %}</div>
+<template id="recurring-empty-line"><fieldset class="estimate-line"><legend>New line</legend>{{ empty_line.as_p|safe }}</fieldset></template>
+<p><button type="button" id="recurring-add-line" class="secondary">Add line</button></p>
+<button type="submit">{% if confirmation %}Confirm and save recurring bill{% else %}Save recurring bill{% endif %}</button> <a href="{{ url('recurring:list', company.pk) }}">Cancel</a></form>{% endblock %}

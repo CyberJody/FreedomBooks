@@ -709,6 +709,8 @@ fn bulk_drafts_preserve_match_receipt_and_transfer_through_acceptance() {
         fields =
             serde_json::from_str(&std::fs::read_to_string(dir.join("submission.json")).unwrap())
                 .unwrap();
+        // The page script asks for an in-place reply; this check reads the whole re-rendered page.
+        fields.retain(|(k, _)| k != "inline");
     }
     assert_eq!(
         f.count("SELECT count(*) FROM ledger_journal WHERE status='POSTED'"),

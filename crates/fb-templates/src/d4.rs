@@ -48,6 +48,13 @@ pub fn register(env: &mut Environment<'_>) {
             .to_owned()
     });
     env.add_filter("stringformat", |v: Value, _format: String| v.to_string());
+    // "Nov 9, 2026": dates people read on invoices and payments. Anything else passes through.
+    env.add_filter("short_date", |v: Value| {
+        let s = if v.is_none() || v.is_undefined() { String::new() } else { v.to_string() };
+        chrono::NaiveDate::parse_from_str(s.get(..10).unwrap_or(""), "%Y-%m-%d")
+            .map(|d| d.format("%b %-d, %Y").to_string())
+            .unwrap_or(s)
+    });
     env.add_filter("has_balance", |v: Value, name: String| {
         v.get_attr(&name).is_ok_and(|v| !v.is_undefined())
     });

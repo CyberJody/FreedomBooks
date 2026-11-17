@@ -8,6 +8,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// A verification note's company binding, without exposing company identifiers or keys.
+/// A changed master key requires a fresh verified backup before Home can count it.
+pub fn company_tag(key: &fb_db::Key, company: &str) -> Result<String> {
+    let mut tag = [0u8; 32];
+    hkdf::Hkdf::<Sha256>::new(Some(company.as_bytes()), key)
+        .expand(b"FreedomBooks verified backup company v1", &mut tag)
+        .map_err(|_| BackupError::refused("Backup status binding failed."))?;
+    Ok(tag.iter().map(|b| format!("{b:02x}")).collect())
+}
+
 pub fn safe_db_label(name: &str) -> String {
     if !name.is_empty()
         && name.len() <= 63
@@ -200,12 +210,21 @@ fn remove_regular(path: &Path) -> Result<bool> {
     }
 }
 
+/// Whether a backup is complete: it is not flagged incomplete (missing attachment files). The flag is in
+/// the public header, which the manifest authenticates. A file whose header cannot be read is not
+/// flagged, so retention errs on the side of keeping it.
+pub fn complete(path: &Path) -> bool {
+    !super::read_header(path).is_ok_and(|h| h["incomplete"] == true)
+}
+
+/// Remove this label's backups beyond the newest `keep`, never `protect` and never the newest verified
+/// complete backup (an incomplete one, however new, does not stand in for it).
 pub fn prune(dir: &Path, label: &str, keep: usize, protect: Option<&Path>) -> Result<Vec<PathBuf>> {
     if keep == 0 {
         return Err(BackupError::refused("--keep must be at least 1."));
     }
     let mine = backup_files(dir, Some(label))?;
-    let verified = mine.iter().find(|p| verified_note(p));
+    let verified = mine.iter().find(|p| verified_note(p) && complete(p));
     let mut removed = Vec::new();
     for path in mine.iter().skip(keep) {
         if protect.is_some_and(|p| same_file(path, p))

@@ -41,28 +41,39 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
     const shot = name => page.screenshot({path:path.join(fixtures, name+'.png'), fullPage:false});
     let passes = 0;
     const pass = message => console.log(`PASS ${++passes}: ${message}`);
-    const ready = () => page.waitForSelector('#review-tools:not([hidden])');
+    const ready = () => page.waitForSelector('tr[data-review-row] .combo-input');
+    // Category search: type into the search box beside a hidden select, then Enter.
+    const pickCategory = async (select, text) => {
+      const input = select.locator('xpath=..').locator('.combo-input');
+      await input.fill(text);
+      await page.keyboard.press('Enter');
+    };
     try {
       await ready();
       assert.equal(await page.locator('input[name=sel]').count(), 7);
       assert.equal(await page.isDisabled('#bulk-apply'), true);
       // Arrow and range navigation stays on row checkboxes.
       const picks = page.locator('input[name=sel]');
+      const rowAt = n => page.locator('tr[data-review-row]').nth(n);
       await picks.nth(0).focus();
       await page.keyboard.press('Shift+ArrowDown');
       assert.equal(await page.locator('input[name=sel]:checked').count(), 2);
-      assert.equal(await picks.nth(1).evaluate(el => el === document.activeElement), true);
+      assert.equal(await rowAt(1).evaluate(el => el === document.activeElement), true);
+      await page.keyboard.press('j');
+      assert.equal(await rowAt(2).evaluate(el => el === document.activeElement), true);
+      await page.keyboard.press('k');
       await page.keyboard.press('ArrowDown');
-      assert.equal(await picks.nth(2).evaluate(el => el === document.activeElement), true);
       await page.keyboard.press('Space');
       assert.equal(await picks.nth(2).isChecked(), true);
+      assert.equal(await page.isVisible('#review-bulk'), true, 'the selection bar appears with a selection');
       await page.keyboard.press('Control+a');
       assert.equal(await page.locator('input[name=sel]:checked').count(), 7);
       await page.click('#review-clear');
+      assert.equal(await page.isHidden('#review-bulk'), true);
       await picks.nth(0).click();
       await picks.nth(3).click({modifiers:['Shift']});
       assert.equal(await page.locator('input[name=sel]:checked').count(), 4);
-      pass('keyboard movement, Shift range, Space, Ctrl+A and Shift+click select only this page');
+      pass('row keys (arrows, J/K), Shift range, Space, Ctrl+A and Shift+click select only this page; the bar follows the selection');
 
       await page.click('#review-clear');
       await field('OFFICE debit','payee').fill('Keep my text');
@@ -79,10 +90,11 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       pass('text selection and native select arrows keep their normal shortcuts');
 
       await page.check('#review-all');
-      await page.selectOption('#bulk-category', ids.expense);
+      await pickCategory(page.locator('#bulk-category'), 'office');
       await page.check('#bulk-set-payee');
       await page.fill('#bulk-payee','Group vendor');
-      assert.match(await page.textContent('#bulk-summary'), /5 drafts will change; 2 skipped; 7 selected/);
+      assert.match(await page.textContent('#bulk-summary'), /5 will change, 2 skipped/);
+      assert.match(await page.textContent('#review-count'), /7 selected/);
       assert.match(await page.textContent('#bulk-changes'), /Still pending/);
       assert.match(await page.textContent('#bulk-changes'), /Map to an active/);
       await shot('01-bulk-preview');
@@ -94,7 +106,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       assert.equal(await page.evaluate(() => window.reviewSubmits), 0);
       await page.click('#bulk-apply');
       assert.equal(await page.evaluate(() => window.reviewSubmits), 0);
-      assert.match(await page.textContent('#bulk-result'), /5 review drafts updated; 2 skipped. Nothing posted/);
+      assert.match(await page.textContent('#bulk-result'), /5 drafts updated; 2 skipped. Nothing recorded yet/);
       for (const name of ['OFFICE debit','OFFICE refund','OFFICE card charge','OFFICE card refund','OTHER transfer']) {
         assert.equal(await field(name,'account').inputValue(), ids.expense);
         assert.equal(await field(name,'payee').inputValue(), 'Group vendor');
@@ -105,7 +117,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       pass('preview and apply handle mixed bank/card directions, skip pending/unmapped and never submit');
 
       await page.selectOption('#bulk-rule',ids.rule);
-      assert.match(await page.textContent('#bulk-summary'), /2 drafts will change; 5 skipped; 7 selected/);
+      assert.match(await page.textContent('#bulk-summary'), /2 will change, 5 skipped/);
       await page.click('#bulk-apply');
       assert.equal(await field('OFFICE debit','payee').inputValue(),'Office vendor');
       assert.equal(await field('OFFICE card charge','payee').inputValue(),'Office vendor');
@@ -114,7 +126,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       pass('reusable rule follows Rust text/sign/amount matches and leaves other selected rows intact');
 
       await page.selectOption('#bulk-rule','');
-      await page.selectOption('#bulk-category',ids.bank);
+      await page.locator('#bulk-category').evaluate((s, v) => { s.append(new Option('Mapped bank', v)); s.value = v; s.dispatchEvent(new Event('change', {bubbles:true})); }, ids.bank);
       assert.match(await page.textContent('#bulk-changes'), /mapped account itself/);
       await page.click('#review-clear');
       assert.equal(await page.isDisabled('#bulk-apply'),true);
@@ -130,7 +142,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       pass('filter changes warn before discarding edited drafts and clear selection');
 
       await field('OFFICE debit','payee').fill('Reviewed payee');
-      await field('OFFICE debit','account').selectOption(ids.expense);
+      await pickCategory(field('OFFICE debit','account'), 'office');
       page.once('dialog', dialog => dialog.accept());
       await row('OFFICE debit').locator('[data-create-rule]').click();
       await page.waitForURL(/\/rules\/new\//);
@@ -144,7 +156,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       await page.goto('fb://app/failed');await ready();
       const failed = page.locator('.row-error');
       assert.equal(await failed.locator('input[name=sel]').isChecked(),true);
-      assert.equal(await failed.locator('input[name=sel]').evaluate(el => el === document.activeElement),true);
+      assert.equal(await failed.evaluate(el => el === document.activeElement),true);
       assert.match(await failed.locator('.row-error-text').textContent(), /Map /);
       assert.equal(await field('OFFICE card charge','payee').inputValue(),'Edited OFFICE card charge');
       assert.equal(await page.inputValue('#id_q'),'OFFICE');
@@ -159,7 +171,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       const matchLine = await matching.locator('select[name^=line_]').inputValue();
       await matching.locator('input[name=sel]').check();
       assert.equal(await page.inputValue('#bulk-kind'),'AUTO');
-      await page.selectOption('#bulk-category',{label:'500 · Office supplies'});
+      await pickCategory(page.locator('#bulk-category'), '500');
       assert.equal(await page.isDisabled('#bulk-apply'),true);
       assert.equal(await matching.locator('select[name^=line_]').inputValue(),matchLine);
       assert.equal(await matching.locator('select[name^=kind_]').inputValue(),'MATCH');

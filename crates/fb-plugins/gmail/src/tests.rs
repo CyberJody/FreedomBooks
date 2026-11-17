@@ -1,12 +1,14 @@
 use super::*;
 #[path = "failure_tests.rs"]
 mod failure_tests;
+#[path = "invoice_delivery_tests.rs"]
+mod invoice_delivery_tests;
 use base64::engine::general_purpose::STANDARD;
 use fb_plugin_testkit::*;
 use std::{
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
     thread,
     time::Duration,
@@ -122,6 +124,7 @@ impl Harness {
             .credentials()
             .save(
                 Tokens {
+                    scope: SEND_SCOPE,
                     client_id: CLIENT.into(),
                     from_address: "sender@example.test".into(),
                     access: SecretString::from(ACCESS),
@@ -161,6 +164,7 @@ fn sender(server: &FakeServer) -> GmailSender {
         token: server.url("/token"),
         revoke: server.url("/revoke"),
         send: server.url("/send"),
+        drafts: server.url("/drafts"),
     };
     sender
 }
@@ -214,9 +218,11 @@ fn manifest_registers_only_send_and_has_no_read_scope() {
     entry.document_sender = Some(sender);
     let mut registry = PluginRegistry::new();
     registry.register(entry).unwrap();
-    assert!(registry
-        .connected(&test_scope("gmail"), Slot::DocumentSender)
-        .is_err());
+    assert!(
+        registry
+            .connected(&test_scope("gmail"), Slot::DocumentSender)
+            .is_err()
+    );
     registry
         .set_company_states(vec![CompanyPluginState {
             company_id: test_scope("gmail").company_id,
@@ -226,9 +232,11 @@ fn manifest_registers_only_send_and_has_no_read_scope() {
             status: ConnectionStatus::Connected,
         }])
         .unwrap();
-    assert!(registry
-        .connected(&test_scope("gmail"), Slot::DocumentSender)
-        .is_ok());
+    assert!(
+        registry
+            .connected(&test_scope("gmail"), Slot::DocumentSender)
+            .is_ok()
+    );
 }
 
 #[test]
@@ -740,16 +748,19 @@ fn http_redirect_timeout_and_response_caps_are_enforced() {
             0 => FakeResponse::new(302, "").header("Location", "https://evil.example.test"),
             1 => {
                 let mut r = FakeResponse::new(200, r#"{"id":"abc123"}"#);
-                r.delay = Duration::from_millis(200);
+                r.delay = Duration::from_secs(3);
                 r
             }
             _ => FakeResponse::new(200, vec![b'x'; 1024]),
         })
         .unwrap();
+        // The slow reply outlasts its deadline by seconds; the redirect and the oversized reply never
+        // wait, so their deadline is only a bound, kept long so a loaded machine cannot time out first.
+        let timeout = if mode == 1 { Duration::from_millis(500) } else { Duration::from_secs(20) };
         let http = PluginHttp::new(
             HttpPolicy::loopback_for_tests(server.address().port())
                 .unwrap()
-                .with_limits(Duration::from_millis(80), 20 * 1024 * 1024, 128)
+                .with_limits(timeout, 20 * 1024 * 1024, 128)
                 .unwrap(),
         );
         let h = Harness::new(http);

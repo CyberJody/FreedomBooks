@@ -1,4 +1,4 @@
-<!doctype html>
+{% if doc.kind == 'invoice' %}{% include 'sales/print/invoice.html' %}{% else %}<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <title>{{ doc.number }} · {{ doc.title|title }} · {{ doc.company.name }}</title>
 <link rel="stylesheet" href="{{ static('sales/print.css') }}">
@@ -42,3 +42,4 @@
 <p class="screen-note">Letter size, portrait. "Page X of Y"{% if stamp %} and the {{ stamp }} footer{% endif %} print in the bottom margin of every page.</p>
 <script src="{{ static('sales/print.js') }}" defer></script>
 </body></html>
+{% endif %}

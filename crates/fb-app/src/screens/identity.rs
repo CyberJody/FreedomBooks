@@ -52,9 +52,10 @@ pub(super) fn render(
         });
     }
     let mut vm = if path == SIGN_IN {
-        json!({"company":null,"user":{"username":"","is_authenticated":false},"nav":nav::build(None,&Current::default(),false,0).map_err(AppError::Render)?,"plugins":false,"bankfeeds":false,"fb_local_preview":false,"fb_banner":""})
+        json!({"company":null,"user":{"username":"","is_authenticated":false},"nav":nav::build(None,&Current::default(),&nav::Viewer::default()).map_err(AppError::Render)?,"plugins":false,"bankfeeds":false,"fb_local_preview":false,"fb_banner":""})
     } else {
-        serde_json::to_value(shell(app, None, &Current::default())?)
+        let company = frame_company(app);
+        serde_json::to_value(shell(app, company, &Current { route: nav::desktop_route(path).unwrap_or(""), kind: None })?)
             .map_err(crate::protection::error)?
     };
     vm["errors"] = json!(errors);
@@ -67,6 +68,11 @@ pub(super) fn render(
     vm["builtin"] = json!(app.builtin());
     if path == SIGN_IN {
         vm["bootstrap"] = json!(app.bootstrap_owner()?.map(|(_, name)| name));
+        // First run: the owner who just named these books needs no "existing owner" confirmation.
+        vm["first_run"] = json!(app.first_run_owner);
+        let own_password = app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::OwnPassword);
+        vm["setup_steps"] = json!(if own_password { 3 } else { 2 });
+        vm["unlocked"] = json!(own_password);
         vm["mfa_pending"] = json!(app.mfa_pending());
         vm["mfa_name"] = json!(app.identity.mfa.pending.as_ref().filter(|_| app.mfa_pending()).map(|p| p.name.as_str()));
         // Names only: choose a local sign-in identity without exposing company data or authority.
@@ -144,7 +150,7 @@ pub(super) fn submit(app: &mut App, path: &str, fields: Posted<'_>) -> AppResult
         .transpose()?;
     let result = (|| match (path, action) {
         (SIGN_IN, "enroll") => {
-            if get(fields, "confirm_owner") != Some("on") {
+            if !app.first_run_owner && get(fields, "confirm_owner") != Some("on") {
                 return Err(AppError::Invalid(
                     "Confirm that you are setting up the existing owner on this desktop.".into(),
                 ));

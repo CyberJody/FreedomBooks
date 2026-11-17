@@ -27,14 +27,14 @@ They are not reproduced here.
 
 ## Summary
 
-* Rust crates: **312** (265 linked into the binary, 47 build-time only: build scripts / proc-macros)
-  — dependency closure of `fb-node, fb-plugin-openai, fb-plugin-simplefin, fb-plugin-smtp, fb-plugin-gmail, fb-plugin-m365` across all target platforms
+* Rust crates: **329** (279 linked into the binary, 50 build-time only: build scripts / proc-macros)
+  — dependency closure of `fb-node, fb-remote, fb-net, fb-plugin-openai, fb-plugin-simplefin, fb-plugin-smtp, fb-plugin-gmail, fb-plugin-m365` across all target platforms
 * npm production packages bundled with the app: **0** (the app has no npm runtime dependencies; `electron` and `playwright` are devDependencies — Electron's runtime is covered above)
 
 | License expression | Packages |
 |---|---:|
-| `Apache-2.0 OR MIT` | 195 |
-| `MIT` | 45 |
+| `Apache-2.0 OR MIT` | 208 |
+| `MIT` | 49 |
 | `Unicode-3.0` | 26 |
 | `Apache-2.0 OR MIT OR Zlib` | 7 |
 | `Apache-2.0` | 5 |
@@ -72,12 +72,16 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [android_system_properties](https://github.com/nical/android_system_properties) | 0.1.6 | crate | linked | Copyright 2016 Nicolas Silva<br>Copyright (c) 2013 Nicolas Silva |
 | [argon2](https://github.com/RustCrypto/password-hashes/tree/master/argon2) | 0.5.3 | crate | linked | Copyright (c) 2021-2024 The RustCrypto Project Developers |
 | [arrayvec](https://github.com/bluss/arrayvec) | 0.7.8 | crate | linked | Copyright (c) Ulrik Sverdrup "bluss" 2015-2023 |
+| [asn1-rs](https://github.com/rusticata/asn1-rs.git) | 0.7.2 | crate | linked | Copyright (c) 2017 Pierre Chifflier |
+| [asn1-rs-derive](https://github.com/rusticata/asn1-rs.git) | 0.6.0 | crate | proc-macro | Copyright (c) 2017 Pierre Chifflier |
+| [asn1-rs-impl](https://github.com/rusticata/asn1-rs.git) | 0.2.0 | crate | proc-macro | Copyright (c) Pierre Chifflier (from package authors; no copyright line in license files) |
 | [async-trait](https://github.com/dtolnay/async-trait) | 0.1.92 | crate | proc-macro | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
 | [atomic-waker](https://github.com/smol-rs/atomic-waker) | 1.1.2 | crate | linked | Copyright (c) 2016 Alex Crichton<br>Copyright (c) 2017 The Tokio Authors |
 | [autocfg](https://github.com/cuviper/autocfg) | 1.5.1 | crate | build-time | Copyright (c) 2018 Josh Stone |
 | [base64](https://github.com/marshallpierce/rust-base64) | 0.22.1 | crate | linked | Copyright (c) 2015 Alice Maz |
 | [base64](https://github.com/marshallpierce/rust-base64) | 0.23.1 | crate | linked | Copyright (c) 2025 Alice Maz, Marshall Pierce |
 | [base64ct](https://github.com/RustCrypto/formats) | 1.8.3 | crate | linked | Copyright (c) 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com)<br>Copyright (c) 2021-2025 The RustCrypto Project Developers |
+| [bit-vec](https://github.com/contain-rs/bit-vec) | 0.9.1 | crate | linked | Copyright (c) 2023 The Rust Project Developers |
 | [bitflags](https://github.com/bitflags/bitflags) | 2.13.2 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
 | [blake2](https://github.com/RustCrypto/hashes) | 0.10.6 | crate | linked | Copyright (c) 2015-2016 The blake2-rfc Developers, Cesar Barros<br>Copyright (c) 2017 Artyom Pavlov |
 | [block-buffer](https://github.com/RustCrypto/utils) | 0.10.4 | crate | linked | Copyright (c) 2018-2019 The RustCrypto Project Developers |
@@ -98,6 +102,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [crypto-common](https://github.com/RustCrypto/traits) | 0.1.7 | crate | linked | Copyright (c) 2021 RustCrypto Developers |
 | [ctor](https://github.com/mmastrac/linktime) | 1.0.13 | crate | linked | Copyright (c) Matt Mastracci (from package authors; no copyright line in license files) |
 | [ctr](https://github.com/RustCrypto/block-modes) | 0.9.2 | crate | linked | Copyright (c) 2018-2022 RustCrypto Developers<br>Copyright (c) 2018 Artyom Pavlov |
+| [der-parser](https://github.com/rusticata/der-parser.git) | 10.0.0 | crate | linked | Copyright (c) 2017 Pierre Chifflier |
 | [deranged](https://github.com/jhpratt/deranged) | 0.5.9 | crate | linked | Copyright 2024 Jacob Pratt et al<br>Copyright (c) 2024 Jacob Pratt et al |
 | [digest](https://github.com/RustCrypto/traits) | 0.10.7 | crate | linked | Copyright (c) 2017 Artyom Pavlov |
 | [displaydoc](https://github.com/yaahc/displaydoc) | 0.2.7 | crate | proc-macro | Copyright (c) Jane Lusby (from package authors; no copyright line in license files) |
@@ -112,6 +117,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [filetime](https://github.com/alexcrichton/filetime) | 0.2.29 | crate | linked | Copyright (c) 2014 Alex Crichton |
 | [find-msvc-tools](https://github.com/rust-lang/cc-rs) | 0.1.15 | crate | build-time | Copyright (c) 2014 Alex Crichton |
 | [flate2](https://github.com/rust-lang/flate2-rs) | 1.1.10 | crate | linked | Copyright (c) 2014-2026 Alex Crichton |
+| [fnv](https://github.com/servo/rust-fnv) | 1.0.7 | crate | linked | Copyright (c) 2017 Contributors |
 | [form_urlencoded](https://github.com/servo/rust-url) | 1.2.2 | crate | linked | Copyright (c) 2013-2016 The rust-url developers |
 | [fs2](https://github.com/danburkert/fs2-rs) | 0.4.3 | crate | linked | Copyright (c) 2015 The Rust Project Developers |
 | [futures](https://github.com/rust-lang/futures-rs) | 0.3.34 | crate | linked | Copyright (c) 2016 Alex Crichton<br>Copyright (c) 2017 The Tokio Authors |
@@ -145,14 +151,17 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [ipnet](https://github.com/krisprice/ipnet) | 2.12.2 | crate | linked | Copyright 2017 Juniper Networks, Inc |
 | [itoa](https://github.com/dtolnay/itoa) | 1.0.18 | crate | linked | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
 | [js-sys](https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys) | 0.3.106 | crate | linked | Copyright (c) 2014 Alex Crichton |
+| [lazy_static](https://github.com/rust-lang-nursery/lazy-static.rs) | 1.5.1 | crate | linked | Copyright (c) Marvin Löbel (from package authors; no copyright line in license files) |
 | [libc](https://github.com/rust-lang/libc) | 0.2.191 | crate | linked | Copyright (c) The Rust Project Developers |
 | [log](https://github.com/rust-lang/log) | 0.4.35 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
 | [mime](https://github.com/hyperium/mime) | 0.3.17 | crate | linked | Copyright (c) 2014 Sean McArthur |
+| [minimal-lexical](https://github.com/Alexhuszagh/minimal-lexical) | 0.2.1 | crate | linked | Copyright (c) 2009 The Go Authors. All rights reserved |
 | [nohash-hasher](https://github.com/paritytech/nohash-hasher) | 0.2.0 | crate | linked | Copyright 2018 Parity Technologies (UK) Ltd |
 | [num-bigint](https://github.com/rust-num/num-bigint) | 0.4.8 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
 | [num-conv](https://github.com/jhpratt/num-conv) | 0.2.2 | crate | linked | Copyright (c) Jacob Pratt |
 | [num-integer](https://github.com/rust-num/num-integer) | 0.1.47 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
 | [num-traits](https://github.com/rust-num/num-traits) | 0.2.19 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
+| [oid-registry](https://github.com/rusticata/oid-registry.git) | 0.8.1 | crate | linked | Copyright (c) 2017 Pierre Chifflier |
 | [once_cell](https://github.com/matklad/once_cell) | 1.21.4 | crate | linked | Copyright (c) Aleksey Kladov (from package authors; no copyright line in license files) |
 | [opaque-debug](https://github.com/RustCrypto/utils) | 0.3.1 | crate | linked | Copyright (c) 2018-2024 The RustCrypto Project Developers |
 | [openssl-src](https://github.com/alexcrichton/openssl-src-rs) | 300.6.1+3.6.3 | crate | build-time; vendored C linked into binary | Copyright (c) 2014 Alex Crichton |
@@ -182,6 +191,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [rand_core](https://github.com/rust-random/rand) | 0.6.4 | crate | linked | Copyright 2018 Developers of the Rand project<br>Copyright (c) 2014 The Rust Project Developers |
 | [rand_core](https://github.com/rust-random/rand) | 0.9.5 | crate | linked | Copyright 2018 Developers of the Rand project<br>Copyright (c) 2014 The Rust Project Developers |
 | [rand_pcg](https://github.com/rust-random/rngs) | 0.10.2 | crate | linked | Copyright (c) 2014-2017 Melissa O'Neill and PCG Project contributors<br>Copyright 2018 Developers of the Rand project |
+| [rcgen](https://github.com/rustls/rcgen) | 0.14.10 | crate | linked | Copyright (c) 2019-2026 est31 &lt;MTest31@outlook.com&gt; and contributors |
 | [ref-cast](https://github.com/dtolnay/ref-cast) | 1.0.27 | crate | linked | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
 | [ref-cast-impl](https://github.com/dtolnay/ref-cast) | 1.0.27 | crate | proc-macro | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
 | [regex](https://github.com/rust-lang/regex) | 1.13.1 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
@@ -189,6 +199,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [regex-syntax](https://github.com/rust-lang/regex) | 0.8.11 | crate | linked | Copyright (c) 2014 The Rust Project Developers |
 | [reqwest](https://github.com/seanmonstar/reqwest) | 0.12.28 | crate | linked | Copyright 2016 Sean McArthur<br>Copyright (c) 2016-2025 Sean McArthur |
 | [rustc-hash](https://github.com/rust-lang/rustc-hash) | 2.1.3 | crate | linked | Copyright (c) The Rust Project Developers (from package authors; no copyright line in license files) |
+| [rusticata-macros](https://github.com/rusticata/rusticata-macros.git) | 4.1.0 | crate | linked | Copyright (c) 2017 Pierre Chifflier |
 | [rustls-pki-types](https://github.com/rustls/pki-types) | 1.15.1 | crate | linked | Copyright 2023 Dirkjan Ochtman<br>Copyright (c) 2023 Dirkjan Ochtman &lt;dirkjan@ochtman.nl&gt; |
 | [rustversion](https://github.com/dtolnay/rustversion) | 1.0.23 | crate | proc-macro | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
 | [salsa20](https://github.com/RustCrypto/stream-ciphers) | 0.10.2 | crate | linked | Copyright (c) 2019 Eric McCorkle |
@@ -258,7 +269,9 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [windows_x86_64_gnullvm](https://github.com/microsoft/windows-rs) | 0.52.6 | crate | linked | Copyright (c) Microsoft Corporation |
 | [windows_x86_64_msvc](https://github.com/microsoft/windows-rs) | 0.52.6 | crate | linked | Copyright (c) Microsoft Corporation |
 | [write16](https://github.com/hsivonen/write16) | 1.0.0 | crate | linked | (no copyright line found; see the crate's license files) |
+| [x509-parser](https://github.com/rusticata/x509-parser.git) | 0.18.1 | crate | linked | Copyright (c) 2017 Pierre Chifflier |
 | [xattr](https://github.com/Stebalien/xattr) | 1.7.0 | crate | linked | Copyright (c) 2015 Steven Allen |
+| [yasna](https://github.com/qnighy/yasna.rs) | 0.6.0 | crate | linked | Copyright (c) 2016 Masaki Hara |
 | [zeroize](https://github.com/RustCrypto/utils) | 1.9.1 | crate | linked | Copyright (c) 2018-2026 The RustCrypto Project Developers |
 | [zeroize_derive](https://github.com/RustCrypto/utils) | 1.5.0 | crate | proc-macro | Copyright (c) 2019-2026 The RustCrypto Project Developers |
 
@@ -267,6 +280,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | Package | Version | Type | Usage | Copyright |
 |---|---|---|---|---|
 | [bytes](https://github.com/tokio-rs/bytes) | 1.12.1 | crate | linked | Copyright (c) 2018 Carl Lerche |
+| [cfb](https://github.com/mdsteele/rust-cfb) | 0.14.0 | crate | linked | Copyright (c) 2017 Matthew D. Steele |
 | [cfg_aliases](https://github.com/katharostech/cfg_aliases) | 0.2.2 | crate | build-time | Copyright (c) 2020 Katharos Technology |
 | [convert_case](https://github.com/rutrum/convert-case) | 0.12.0 | crate | build-time | Copyright (c) 2025 rutrum |
 | [data-encoding](https://github.com/ia0/data-encoding) | 2.11.1 | crate | linked | Copyright (c) 2015-2020 Julien Cretin<br>Copyright (c) 2017-2020 Google Inc |
@@ -285,9 +299,11 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [napi-derive](https://github.com/napi-rs/napi-rs) | 3.7.0 | crate | proc-macro | Copyright (c) LongYinan, Forehalo (from package authors; no copyright line in license files) |
 | [napi-derive-backend](https://github.com/napi-rs/napi-rs) | 7.0.0 | crate | build-time | (no copyright line found; see the crate's license files) |
 | [napi-sys](https://github.com/napi-rs/napi-rs) | 3.4.1 | crate | linked | Copyright (c) LongYinan (from package authors; no copyright line in license files) |
+| [nom](https://github.com/Geal/nom) | 7.1.3 | crate | linked | Copyright (c) 2014-2019 Geoffroy Couprie |
 | [nom](https://github.com/rust-bakery/nom) | 8.0.0 | crate | linked | Copyright (c) 2014-2019 Geoffroy Couprie |
 | [openssl-sys](https://github.com/rust-openssl/rust-openssl) | 0.9.118 | crate | linked | Copyright (c) 2014 Alex Crichton |
 | [pem](https://github.com/jcreekmore/pem-rs.git) | 3.0.6 | crate | linked | Copyright (c) 2016 Jonathan Creekmore |
+| [pem](https://github.com/jcreekmore/pem-rs.git) | 4.0.0 | crate | linked | Copyright (c) 2016 Jonathan Creekmore |
 | [phf](https://github.com/rust-phf/rust-phf) | 0.12.1 | crate | linked | Copyright (c) 2014-2022 Steven Fackler, Yuki Okushi |
 | [phf_shared](https://github.com/rust-phf/rust-phf) | 0.12.1 | crate | linked | Copyright (c) 2014-2022 Steven Fackler, Yuki Okushi |
 | [qrcodegen](https://github.com/nayuki/QR-Code-generator) | 1.8.0 | crate | linked | Copyright (c) Project Nayuki. (MIT License) |
@@ -299,6 +315,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [simd-adler32](https://github.com/mcountryman/simd-adler32) | 0.3.10 | crate | linked | Copyright (c) [2021] [Marvin Countryman] |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.12 | crate | linked | Copyright (c) 2019 Carl Lerche |
 | [sqlite-wasm-rs](https://github.com/Spxg/sqlite-wasm-rs) | 0.6.2 | crate | linked | Copyright (c) 2024 Spxg |
+| [synstructure](https://github.com/mystor/synstructure) | 0.13.2 | crate | build-time | Copyright 2016 Nika Layzell |
 | [synstructure](https://github.com/mystor/synstructure) | 0.14.0 | crate | build-time | Copyright 2016 Nika Layzell |
 | [tokio](https://github.com/tokio-rs/tokio) | 1.54.1 | crate | linked | Copyright (c) Tokio Contributors |
 | [tower](https://github.com/tower-rs/tower) | 0.5.3 | crate | linked | Copyright (c) 2019 Tower Contributors |

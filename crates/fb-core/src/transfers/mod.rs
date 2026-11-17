@@ -1,4 +1,4 @@
-//! Record-only transfers between two designated bank accounts.
+//! Transfers between two bank accounts.
 use crate::checks::support::*;
 use crate::{AccountId, Book, CompanyId, FbResult, Money, UserId, documents, py, services};
 use fb_db::{Query, Writer};
@@ -42,7 +42,7 @@ fn prepare(tx: &Writer<'_>, actor: UserId, co: CompanyId, d: &Value) -> FbResult
     for a in [&from, &to] {
         if let Some(role) = documents::control_role(tx, co, a.id)? {
             return Err(err(&(documents::control_message(a, &role)
-                + " Transfers move money between designated banks only.")));
+                + " Transfers move money between bank accounts only.")));
         }
     }
     let setup = documents::setup_snapshot(tx, co)?;
@@ -55,7 +55,7 @@ fn prepare(tx: &Writer<'_>, actor: UserId, co: CompanyId, d: &Value) -> FbResult
                 .is_some_and(|v| v.contains(&json!(a.id.to_db())))
         {
             return Err(err(&format!(
-                "{} · {} is not an active designated bank account (Accounting setup). Transfers move money between two designated banks.",
+                "{} · {} is not an active bank account. Transfers move money between two bank accounts.",
                 a.code, a.name
             )));
         }
@@ -176,7 +176,18 @@ pub fn void_transfer(
     dt: &Value,
     reason: &Value,
 ) -> FbResult<Value> {
-    write(book, |tx| {
+    write(book, |tx| void_transfer_tx(tx, actor, co, tid, expected, dt, reason))
+}
+/// [`void_transfer`] inside a caller's writer (bank-feed Undo).
+pub fn void_transfer_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    co: CompanyId,
+    tid: &str,
+    expected: Option<i64>,
+    dt: &Value,
+    reason: &Value,
+) -> FbResult<Value> {
         let u = services::access(tx, actor, co)?;
         let t = rows(
             tx,
@@ -219,7 +230,6 @@ pub fn void_transfer(
             json!({"number":identity["number"],"reason":reason,"date":dt,"journal_id":j.id.to_db()}),
         )?;
         Ok(v)
-    })
 }
 fn seal_journal(tx: &Writer<'_>, jid: &str) -> FbResult<()> {
     tx.execute("INSERT INTO fb_seal VALUES('transfer_journal',?)", [jid])?;

@@ -14,7 +14,7 @@ const ACCESS: &str = "https://HiddenUser12345678:HiddenPassword12345678@fixture.
 const DAMAGED: &str = "https://DamagedUser12345678:DamagedPassword12345678@fixture.test/access";
 
 /// The words and addresses of a plugin surface; none may appear on a core page of a release build.
-const SURFACE: [&str; 9] = ["/bank-feeds/", "/ai/", "/auth/openai", "Bank feeds", "AI assistant", "ChatGPT", "Read with AI", "read-with-ai", "start-from-receipt"];
+const SURFACE: [&str; 11] = ["/bank-feeds/", "/ai/", "/auth/openai", "Bank feeds", "AI assistant", "AI access", "Review transactions", "ChatGPT", "Read with AI", "read-with-ai", "start-from-receipt"];
 
 fn field(html: &str, name: &str) -> String {
     html.split_once(&format!("name=\"{name}\" value=\"")).unwrap().1.split('"').next().unwrap().into()
@@ -94,9 +94,12 @@ fn the_default_build_is_the_release_build_with_plugins_hidden() {
 fn simplefin_can_be_enabled_without_ai_or_receipt_actions() {
     let mut b = books(false);
     b.app.simplefin = true;
+    // Bank feeds: Review transactions in the sidebar, the feeds and rules under Settings; no AI entry.
     let home = screens::render(&mut b.app, &format!("/c/{}/home/", b.c)).unwrap().html;
-    assert!(home.contains("Bank feeds"));
-    assert!(!home.contains("AI assistant"));
+    assert!(home.contains("Review transactions"));
+    assert!(!home.contains("AI assistant") && !home.contains("AI access"));
+    let settings = screens::render(&mut b.app, &format!("/c/{}/settings/", b.c)).unwrap().html;
+    assert!(settings.contains("Bank feeds and rules") && !settings.contains("AI access"));
     for page in ["bank-feeds/", "bank-feeds/connect/"] {
         let html = screens::render(&mut b.app, &format!("/c/{}/{page}", b.c)).unwrap().html;
         assert!(!html.contains("manage.py"));
@@ -132,18 +135,23 @@ fn core_pages_show_no_plugin_surface_in_a_release_build() {
     let mut b = books(false);
     let c = b.c.clone();
     let pages = ["/".to_owned(), format!("/c/{c}/home/"), format!("/c/{c}/accounts/"), format!("/c/{c}/bills/"), format!("/c/{c}/bills/new/"),
-        format!("/c/{c}/bills/{}/", b.bill), format!("/c/{c}/backups/"), format!("/c/{c}/edit/"), "/help/report/".to_owned()];
+        format!("/c/{c}/bills/{}/", b.bill), format!("/c/{c}/backups/"), format!("/c/{c}/edit/"), format!("/c/{c}/settings/"), "/help/report/".to_owned()];
     for path in &pages {
         let html = screens::render(&mut b.app, path).unwrap().html;
         for word in SURFACE {
             assert!(!html.contains(word), "{path}: {word}");
         }
     }
-    // A plugins build keeps Django's nav, footer and the bill's Read with AI section.
+    // A plugins build shows Review transactions in the sidebar, bank feeds and AI access under Settings,
+    // and the bill's Read with AI section.
     b.app.plugins = true;
     let home = screens::render(&mut b.app, &format!("/c/{c}/home/")).unwrap().html;
-    for word in ["Bank feeds", "AI assistant", "/bank-feeds/", "/ai/"] {
+    for word in ["Review transactions", "/bank-feeds/review/"] {
         assert!(home.contains(word), "plugins build home: {word}");
+    }
+    let settings = screens::render(&mut b.app, &format!("/c/{c}/settings/")).unwrap().html;
+    for word in ["Bank feeds and rules", "AI access", "/bank-feeds/", "/ai/"] {
+        assert!(settings.contains(word), "plugins build settings: {word}");
     }
     assert!(screens::render(&mut b.app, &format!("/c/{c}/bills/{}/", b.bill)).unwrap().html.contains(r#"id="read-with-ai""#));
 }

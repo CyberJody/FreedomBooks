@@ -550,7 +550,6 @@ fn refund_bank_eligibility_matches_services_for_all_asset_detail_types() {
     let mut f = Fixture::new();
     let m = f.memo();
     let key = m["id"].as_str().unwrap();
-    let mut revision = 1;
     for (index, detail) in crate::model::DetailType::ALL.into_iter().enumerate() {
         let a = services::save_account(
             &mut f.book,
@@ -564,8 +563,9 @@ fn refund_bank_eligibility_matches_services_for_all_asset_detail_types() {
         if detail.kind().as_str() != "ASSET" {
             continue;
         }
-        documents::save_setup(&mut f.book,f.actor,f.company,&json!({"receivables":f.ar.to_db(),"collected_tax":f.tax.to_db(),"banks":[a.id.to_db()]}),Some(revision)).unwrap();
-        revision += 1;
+        // Saving a Bank-type account already lists it (and bumps the setup revision).
+        let revision = f.book.read(|q| documents::setup_snapshot(q, f.company)).unwrap()["revision"].as_i64();
+        documents::save_setup(&mut f.book,f.actor,f.company,&json!({"receivables":f.ar.to_db(),"collected_tax":f.tax.to_db(),"banks":[a.id.to_db()]}),revision).unwrap();
         let mut p = f.refund_input("0.01");
         p["bank_id"] = json!(a.id.to_db());
         p["check_number"] = json!("");

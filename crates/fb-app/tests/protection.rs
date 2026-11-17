@@ -353,7 +353,7 @@ fn setup_and_invalid_password_pages_keep_warning_and_explicit_opt_in() {
     for errors in [vec![], vec!["The two passwords differ.".to_owned()]] {
         let html = fb_app::screens::render_gate(&app, "setup", false, "", &errors).unwrap();
         assert!(html.contains(BUILTIN_WARNING));
-        assert!(html.contains("Protect these books with my own password"));
+        assert!(html.contains("Protect these books with my own book password"));
         let checkbox = html
             .split("id=\"id_protect\"")
             .next()
@@ -648,4 +648,68 @@ fn leftover_temporary_key_files_and_a_published_stage_are_cleared() {
         .unwrap();
     support::sign_in(&mut app);
     assert_eq!(app.company_name_for_kit().unwrap(), "Synthetic portable books");
+}
+
+#[test]
+fn the_recovery_key_alone_can_set_a_new_book_password() {
+    let d = tempfile::tempdir().unwrap();
+    let (mut app, path) = setup(d.path(), true);
+    let recovery = app.recovery_text().unwrap().to_string();
+    app.lock();
+    // The owner has only the Emergency Kit: it opens the books ...
+    app.open_with_secret(&path, &recovery).unwrap();
+    support::sign_in(&mut app);
+    // ... and, through the Book protection form, sets a new book password.
+    let form = protection::SETTINGS.to_owned();
+    let submit = |app: &mut App, fields: Vec<(&str, &str)>| {
+        let token = app.tokens.mint(&form);
+        app.run_renderer(Command::SubmitForm { path: form.clone(), token, fields: fields.into_iter().map(|(k, v)| (k.to_owned(), v.to_owned())).collect() }).unwrap()
+    };
+    let refused = submit(&mut app, vec![("action", "add"), ("current_password", "not the password"), ("new_password", "Synthetic new book password"), ("repeat_password", "Synthetic new book password")]);
+    let Outcome::Invalid { html, .. } = refused else { panic!("a wrong secret must be refused") };
+    assert!(html.contains("That book password or recovery key does not unlock these books."), "{html}");
+    let html = fb_app::screens::render(&mut app, protection::SETTINGS).unwrap().html;
+    assert!(html.contains("Current book password or recovery key") && html.contains("Set new book password"), "{html}");
+    // Removing protection still needs the password itself.
+    assert!(app.change_protection(&recovery, None).is_err());
+    let done = submit(&mut app, vec![("action", "add"), ("current_password", &recovery), ("new_password", "Synthetic new book password"), ("repeat_password", "Synthetic new book password")]);
+    assert!(matches!(done, Outcome::Redirect { ref location } if location == protection::RECOVERY), "{done:?}");
+    let fresh = app.recovery_text().unwrap().to_string();
+    assert_ne!(fresh, recovery, "a new password comes with a new recovery key to save");
+    app.lock();
+    assert!(app.open_with_secret(&path, PASSWORD).is_err(), "the forgotten password no longer opens the books");
+    assert!(app.open_with_secret(&path, &recovery).is_err(), "the old recovery key no longer opens them");
+    app.open_with_secret(&path, "Synthetic new book password").unwrap();
+    app.lock();
+    app.open_with_secret(&path, &fresh).unwrap();
+    // The audit history says what authorized the change: here the recovery key, not the password.
+    support::sign_in(&mut app);
+    let details: Vec<String> = app.open_mut().unwrap().book.read(|q| q.prepare(
+        "SELECT detail FROM ledger_auditevent WHERE action='book.protection_changed' ORDER BY occurred_at")?
+        .query_map([], |r| r.get(0))?.collect::<Result<_, _>>()).unwrap();
+    let last: serde_json::Value = serde_json::from_str(details.last().unwrap()).unwrap();
+    assert_eq!(last["authorized_by"], "recovery_key", "{details:?}");
+    assert_eq!(last["mode"], "own-password");
+}
+
+#[test]
+fn protection_changes_record_what_authorized_them() {
+    let d = tempfile::tempdir().unwrap();
+    let (mut app, _path) = setup(d.path(), false);
+    // Built-in key to a password: there is no book secret yet, so the administrator's sign-in.
+    app.change_protection("", Some(PASSWORD)).unwrap();
+    // A new password, proved with the current one.
+    app.change_protection(PASSWORD, Some("Synthetic second password")).unwrap();
+    // Removing it again needs the password itself.
+    app.change_protection("Synthetic second password", None).unwrap();
+    let details: Vec<String> = app.open_mut().unwrap().book.read(|q| q.prepare(
+        "SELECT detail FROM ledger_auditevent WHERE action='book.protection_changed'")?
+        .query_map([], |r| r.get(0))?.collect::<Result<_, _>>()).unwrap();
+    let mut details: Vec<serde_json::Value> = details.iter().map(|d| serde_json::from_str(d).unwrap()).collect();
+    details.sort_by_key(|d| d.to_string());
+    assert_eq!(details, vec![
+        serde_json::json!({"mode":"built-in","authorized_by":"book_password"}),
+        serde_json::json!({"mode":"own-password","authorized_by":"book_password"}),
+        serde_json::json!({"mode":"own-password","authorized_by":"sign_in"}),
+    ]);
 }

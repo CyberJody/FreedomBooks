@@ -26,6 +26,7 @@ pub fn parse_unique_json_as<T: serde::de::DeserializeOwned>(raw: &str) -> serde_
 pub const STORED_JSON_COLUMNS: &[(&str, &str)] = &[
     ("assistant_connection", "model_choices"),
     ("assistant_reading", "result"),
+    ("bankfeeds_rule_policy", "data"),
     ("banking_deposit", "data"),
     ("banking_depositreversal", "data"),
     ("banking_reconciliation", "data"),
@@ -43,6 +44,7 @@ pub const STORED_JSON_COLUMNS: &[(&str, &str)] = &[
     ("credits_creditrefund", "data"),
     ("credits_creditrefundvoid", "data"),
     ("credits_creditunapplication", "data"),
+    ("invoice_preferences", "data"),
     ("ledger_auditevent", "detail"),
     ("payables_billline", "account_snapshot"),
     ("payables_billline", "item_snapshot"),
@@ -50,12 +52,14 @@ pub const STORED_JSON_COLUMNS: &[(&str, &str)] = &[
     ("payables_billpayment", "vendor_snapshot"),
     ("payables_billrevision", "company_snapshot"),
     ("payables_billrevision", "vendor_snapshot"),
+    ("payables_recurring", "data"),
     ("prepayments_depositapplication", "data"),
     ("prepayments_depositrefund", "data"),
     ("prepayments_depositrefundvoid", "data"),
     ("prepayments_depositunapplication", "data"),
     ("sales_estimateline", "data"),
     ("sales_estimaterevision", "data"),
+    ("sales_importinvoice", "data"),
     ("sales_invoiceline", "data"),
     ("sales_invoicerevision", "data"),
     ("sales_receipt", "data"),
@@ -122,6 +126,9 @@ pub(crate) fn register(conn: &Connection) -> rusqlite::Result<()> {
         Ok(ctx
             .get::<Option<String>>(0)?
             .is_some_and(|raw| parse_unique_json(&raw).is_ok()))
+    })?;
+    conn.create_scalar_function("fb_invoice_preferences_valid", 1, flags, |ctx| {
+        Ok(ctx.get::<Option<String>>(0)?.is_some_and(|raw| crate::invoice_preferences::valid(&raw)))
     })?;
     conn.create_scalar_function("fb_company_document_valid", 1, flags, |ctx| {
         Ok(ctx.get::<Option<String>>(0)?.is_some_and(|raw| crate::company_document_data::valid(&raw)))

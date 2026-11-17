@@ -20,9 +20,9 @@ module.exports=async ({page,company,ids,shot,pass})=>{
   await page.fill('#id_date','2026-10-31');await page.fill('#id_due_date','2026-11-30');
   await page.selectOption('#id_lines-0-item',ids.item);
   await page.fill('#id_memo','Synthetic numbered invoice');
-  await page.selectOption('#id_lines-0-income_account',ids.income);
+  if (await page.locator('select#id_lines-0-income_account').count()) await page.selectOption('#id_lines-0-income_account',ids.income);
   await page.fill('#id_lines-0-quantity','1');await page.fill('#id_lines-0-rate','25.00');
-  await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save invoice',exact:true}).click()]);
+  await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save draft',exact:true}).click()]);
   assert.match(await page.locator('main h1').textContent(),/INV-008100/);
   await shot(page,'numbers-02-next-invoice');
   await go('/edit/');
@@ -41,14 +41,14 @@ module.exports=async ({page,company,ids,shot,pass})=>{
   await page.locator('input[name="payee_kind"][value="OTHER"]').check();await page.fill('#id_payee_name','Synthetic number test');
   await page.fill('#id_date','2026-10-31');await page.fill('#id_memo','Numbering smoke');
   await page.selectOption('#id_lines-0-account',ids.expense);await page.fill('#id_lines-0-rate','5.00');
-  await Promise.all([page.waitForURL(/checks\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save check',exact:true}).click()]);
+  await Promise.all([page.waitForURL(/checks\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save draft',exact:true}).click()]);
   assert.match(await page.locator('main h1').textContent(),/9100/);
   await go('/edit/');assert.match(await row('CHECK').textContent(),/9101/);
   await go('/checks/');
   await page.locator('tbody tr').filter({hasText:'9100'}).getByRole('link').first().click();
   await page.getByRole('link',{name:'Edit check',exact:true}).click();
   await page.locator('#id_check_number').fill('9101');
-  await Promise.all([page.waitForURL(/checks\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save check',exact:true}).click()]);
+  await Promise.all([page.waitForURL(/checks\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save draft',exact:true}).click()]);
   await go('/edit/');assert.match(await row('CHECK').textContent(),/9102/);
   await go('/history/');assert.match(await page.locator('main').textContent(),/Next document number changed/);
   await shot(page,'numbers-04-audit');

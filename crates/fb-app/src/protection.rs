@@ -175,6 +175,9 @@ pub fn clean_leftovers(book: &Path) -> AppResult<()> {
 
 /// Fault points exist only in explicitly built test binaries, never release packages.
 pub fn checkpoint(_name: &str) {
+    // CRASHLOG tests (feature `panic-test`): a panic at this point, to prove the bridge's recovery.
+    #[cfg(feature = "panic-test")]
+    fb_db::test_panic::point(_name);
     #[cfg(feature = "key-test-hooks")]
     if std::env::var("FB_KEY_STOP_AT").ok().as_deref() == Some(_name) {
         if let Ok(path) = std::env::var("FB_KEY_STOP_MARKER") {
@@ -189,10 +192,11 @@ pub fn checkpoint(_name: &str) {
     }
 }
 
-/// A failure injected at `name` (FB_KEY_FAIL_AT), only in explicitly built test binaries.
+/// A failure injected at `name` (FB_KEY_FAIL_AT, one name or several separated by commas), only in
+/// explicitly built test binaries.
 pub fn fault(_name: &str) -> bool {
     #[cfg(feature = "key-test-hooks")]
-    if std::env::var("FB_KEY_FAIL_AT").ok().as_deref() == Some(_name) {
+    if std::env::var("FB_KEY_FAIL_AT").is_ok_and(|v| v.split(',').any(|n| n == _name)) {
         return true;
     }
     false
@@ -263,6 +267,8 @@ impl App {
             fs::remove_dir_all(stage).map_err(error)?;
             self.open_book(path, &master)?;
             self.recovery_authorized = password.is_some();
+            // A brand-new book has exactly one owner, the person who just named it.
+            self.first_run_owner = true;
             Ok(created)
         })();
         if result.is_err() {
@@ -285,6 +291,8 @@ impl App {
         if self.protection.is_some() {
             return Ok(());
         }
+        // The new record makes the book's own key its receipt key: never when that strands attachments.
+        self.refuse_adopting_keys()?;
         let (path, key) = self.backups.open_book()?;
         let record = Record::new(KeyEnvelope::new(key, key, Some(password)).map_err(error)?);
         record.save(path)?;
@@ -323,6 +331,21 @@ impl App {
             .keys
             .verify_password(password, self.backups.open_book()?.1)
             .map_err(|_| error("That password does not unlock these books."))
+    }
+    /// The book password or the recovery key from the Emergency Kit. Either proves the owner holds
+    /// these books' secret, so either may authorize setting a new book password.
+    /// Returns which one it was (`book_password` or `recovery_key`), for the audit history.
+    pub fn authenticate_owner_secret(&mut self, secret: &str) -> AppResult<&'static str> {
+        self.authorize(None, crate::identity::Permission::Administer)?;
+        let record = self
+            .protection
+            .as_ref()
+            .ok_or_else(|| error("Set up recovery for these books first."))?;
+        let open = self.backups.open_book()?.1;
+        match record.keys.unlock(secret) {
+            Ok(key) if *key == **open => Ok(if record.keys.verify_password(secret, open).is_ok() { "book_password" } else { "recovery_key" }),
+            _ => Err(error("That book password or recovery key does not unlock these books.")),
+        }
     }
     pub fn has_credentials(&mut self) -> AppResult<bool> {
         Ok(self.open_mut()?.book.read(|q| {
@@ -426,7 +449,9 @@ impl App {
         let old = self.protection.clone().ok_or(AppError::Locked)?;
         let (path, key) = self.backups.open_book()?;
         let (path, key) = (path.to_owned(), MasterKey::new(**key));
-        let result = (|| {
+        // A panic part-way unwinds through here too: the books are closed before the reservation
+        // goes, exactly as for an error, and the panic then carries on to the bridge's catch.
+        let attempt = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let snapshot = sidecar(&path, ".rekey-before");
             let marker = sidecar(&path, ".rekey.json");
             if present(&marker)? || present(&snapshot)? {
@@ -441,7 +466,15 @@ impl App {
             change(self, &path)?;
             checkpoint("protection-audit-written");
             journal.finish(&path)
-        })();
+        }));
+        let result = match attempt {
+            Ok(result) => result,
+            Err(panic) => {
+                self.lock();
+                drop(lease);
+                std::panic::resume_unwind(panic);
+            }
+        };
         if result.is_err() { self.lock(); }
         drop(lease);
         result.map_err(|e| error(format!("These books were closed after an incomplete protection change. Restart FreedomBooks to recover them before continuing. {e}")))
@@ -478,14 +511,34 @@ impl RekeyJournal {
         cleanup_committed(path)
     }
 }
+/// The SQLite sidecars a copy into the snapshot can leave when it is interrupted (the online backup keeps
+/// a rollback journal open while it copies). They belong to the snapshot alone and are never used to roll
+/// back, but a later snapshot refuses to start beside them. Returns whether any was removed.
+fn remove_snapshot_sidecars(snapshot: &Path) -> AppResult<bool> {
+    let mut removed = false;
+    for suffix in ["-journal", "-wal", "-shm"] {
+        let side = sidecar(snapshot, suffix);
+        match fs::symlink_metadata(&side) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(error(e)),
+            Ok(m) if !m.is_file() => return Err(error("A protection snapshot sidecar is not a regular file.")),
+            Ok(_) => {}
+        }
+        fs::remove_file(side).map_err(error)?;
+        removed = true;
+    }
+    Ok(removed)
+}
+
 fn cleanup_committed(path: &Path) -> AppResult<()> {
     let snapshot = sidecar(path, ".rekey-before");
     cleanup_fault("snapshot-remove")?;
-    match fs::remove_file(snapshot) {
+    match fs::remove_file(&snapshot) {
         Ok(()) => (),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
         Err(e) => return Err(error(e)),
     }
+    remove_snapshot_sidecars(&snapshot)?;
     let parent = path.parent().ok_or_else(|| error("Missing book folder."))?;
     cleanup_fault("snapshot-sync")?;
     sync_dir(parent)?;
@@ -500,6 +553,11 @@ fn cleanup_fault(stage: &str) -> AppResult<()> {
         return Err(error("Injected protection journal failure."));
     }
     Ok(())
+}
+
+/// Whether anything (file, folder or link) is at `path`.
+pub fn present_path(path: &Path) -> AppResult<bool> {
+    present(path)
 }
 
 fn present(path: &Path) -> AppResult<bool> {
@@ -545,12 +603,17 @@ fn recover_rekey_guarded(path: &Path, guard: &fb_db::MaintenanceGuard) -> AppRes
         // A snapshot can be left by failed preparation. No live mutation begins until the
         // prepared journal has been synced. Under this maintenance guard its absence proves
         // that this unreferenced preparation copy cannot be used for a later rollback.
+        // A kill during that copy also leaves the snapshot's own rollback journal; it goes with it.
         let snapshot = sidecar(path, ".rekey-before");
-        if !present(&snapshot)? { return Ok(false); }
-        if !fs::symlink_metadata(&snapshot).map_err(error)?.is_file() {
-            return Err(error("The protection snapshot is not a regular file."));
+        let had_snapshot = present(&snapshot)?;
+        if had_snapshot {
+            if !fs::symlink_metadata(&snapshot).map_err(error)?.is_file() {
+                return Err(error("The protection snapshot is not a regular file."));
+            }
+            fs::remove_file(&snapshot).map_err(error)?;
         }
-        fs::remove_file(snapshot).map_err(error)?;
+        let had_sidecars = remove_snapshot_sidecars(&snapshot)?;
+        if !had_snapshot && !had_sidecars { return Ok(false); }
         sync_dir(path.parent().ok_or_else(|| error("Missing book folder."))?)?;
         return Ok(true);
     }
@@ -598,9 +661,18 @@ impl App {
             .protection
             .clone()
             .ok_or_else(|| error("Set up recovery for these books first."))?;
-        if old.keys.mode == Mode::OwnPassword {
-            self.authenticate_owner(current)?;
-        }
+        // What proved the owner may change it, recorded with the change: a built-in-key book has
+        // no secret, so the administrator's sign-in is what authorized it.
+        let authorized_by = if old.keys.mode == Mode::OwnPassword {
+            if new_password.is_some() {
+                self.authenticate_owner_secret(current)?
+            } else {
+                self.authenticate_owner(current)?;
+                "book_password"
+            }
+        } else {
+            "sign_in"
+        };
         if new_password.is_none() && self.has_credentials()? {
             return Err(error(
                 "Disconnect the saved bank-feed and AI connections before removing your password.",
@@ -623,7 +695,16 @@ impl App {
         // This returns only after opening and checking the complete archive and all receipts.
         crate::screens::backups::verified_backup(self, company)?;
         checkpoint("rekey-backup-verified");
+        // The master key is about to change. Attachment keys wrapped only under it move to the receipt key
+        // here, whatever the safety backup did, and the change stops if any is left.
+        if !fault("rekey-skip-rewrap") {
+            crate::screens::backups::rewrap_attachments(self, &receipts)
+                .map_err(|e| error(format!("Password protection was not changed: {e} Nothing was changed.")))?;
+        }
+        self.attachments_survive_rekey(&receipts)?;
         self.with_protection_change(lease, |app, path| {
+            // And at the very point of change, under the same lease.
+            app.attachments_survive_rekey(&receipts)?;
             app.open_mut()?.book.rekey(&next).map_err(error)?;
             checkpoint("rekey-pages-written");
             record.save(path)?;
@@ -631,10 +712,24 @@ impl App {
             // Keep the same live connection and both OS guards through the final audit.
             app.backups.opened(path, &next);
             app.protection = Some(record.clone());
-            app.audit_protection("book.protection_changed", serde_json::json!({"mode":record.keys.mode}))
+            app.audit_protection("book.protection_changed", serde_json::json!({"mode":record.keys.mode,"authorized_by":authorized_by}))
         })?;
         self.recovery_authorized = new_password.is_some();
         Ok(())
+    }
+}
+
+impl App {
+    /// No attachment may be readable only under the outgoing master key: after the change that key is gone.
+    fn attachments_survive_rekey(&mut self, receipts: &MasterKey) -> AppResult<()> {
+        let master = MasterKey::new(**self.master_key()?);
+        let left = self.open_mut()?.book.read(|q| fb_core::attachments::master_only(q, receipts, &master))?;
+        if left.is_empty() {
+            return Ok(());
+        }
+        let names = left.iter().flat_map(|f| f.attachments.iter().map(|(_, name)| format!("“{name}”"))).collect::<Vec<_>>().join(", ");
+        Err(error(format!("Password protection was not changed: {} attached file{} ({names}) can still be opened only with the key these books use now, and changing it would make {} unreadable. Nothing was changed. Make sure you are a member of every company in these books, then try again.",
+            left.len(), if left.len() == 1 { "" } else { "s" }, if left.len() == 1 { "it" } else { "them" })))
     }
 }
 
@@ -653,6 +748,8 @@ impl App {
         Ok(self.backups.open_book()?.1)
     }
     pub fn adopt_builtin_keys(&mut self) -> AppResult<()> {
+        // The new record makes the book's own key its receipt key: never when that strands attachments.
+        self.refuse_adopting_keys()?;
         let (path, key) = self.backups.open_book()?;
         let record = Record::new(KeyEnvelope::new(key, key, None).map_err(error)?);
         record.save(path)?;

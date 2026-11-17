@@ -14,6 +14,7 @@ mod d8;
 mod printing;
 mod d3_text;
 mod d4;
+pub mod invoice_email;
 pub mod forms;
 pub mod nav;
 pub mod vm;
@@ -23,11 +24,30 @@ use serde::Serialize;
 
 /// Every template the app can render, by its Django path.
 const TEMPLATES: &[(&str, &str)] = &[
+    ("payables/recurring/list.html", include_str!("../templates/payables/recurring/list.html")),
+    ("payables/recurring/confirm.html", include_str!("../templates/payables/recurring/confirm.html")),
+    ("payables/recurring/date-summary.html", include_str!("../templates/payables/recurring/date-summary.html")),
+    ("payables/recurring/form.html", include_str!("../templates/payables/recurring/form.html")),
+    ("payables/recurring/detail.html", include_str!("../templates/payables/recurring/detail.html")),
+
+    ("bankfeeds/rule_import.html", include_str!("../templates/bankfeeds/rule_import.html")),
+    ("bankfeeds/rule_test.html", include_str!("../templates/bankfeeds/rule_test.html")),
+    ("sales/editor_header.html", include_str!("../templates/sales/editor_header.html")),
+    ("sales/customer_estimates.html", include_str!("../templates/sales/customer_estimates.html")),
+    ("sales/customer_actions.html", include_str!("../templates/sales/customer_actions.html")),
+    ("sales/customer_activity.html", include_str!("../templates/sales/customer_activity.html")),
+    ("ledger/stripe_connection.html", include_str!("../templates/ledger/stripe_connection.html")),
+    ("sales/stripe.html", include_str!("../templates/sales/stripe.html")),
+    ("sales/print/invoice.html", include_str!("../templates/sales/print/invoice.html")),
+    ("sales/email/card.html", include_str!("../templates/sales/email/card.html")),
+    ("ledger/google_email.html", include_str!("../templates/ledger/google_email.html")),
+    ("sales/email/preview.html", include_str!("../templates/sales/email/preview.html")),
     ("desktop/users.html", include_str!("../templates/desktop/users.html")),
     ("desktop/restore.html", include_str!("../templates/desktop/restore.html")),
     ("desktop/emergency-kit.html", include_str!("../templates/desktop/emergency-kit.html")),
     ("desktop/recovery.html", include_str!("../templates/desktop/recovery.html")),
     ("desktop/protection.html", include_str!("../templates/desktop/protection.html")),
+    ("desktop/restored-book.html", include_str!("../templates/desktop/restored-book.html")),
 
     ("ledger/numbering.html", include_str!("../templates/ledger/numbering.html")),
     ("sales/print/document.html", include_str!("../templates/sales/print/document.html")),
@@ -89,7 +109,7 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("ledger/reports/balance_sheet_body.html", include_str!("../templates/ledger/reports/balance_sheet_body.html")),
     ("ledger/reports/general_ledger.html", include_str!("../templates/ledger/reports/general_ledger.html")),
     ("ledger/reports/general_ledger_body.html", include_str!("../templates/ledger/reports/general_ledger_body.html")),
-    // D9 bank feeds (tools/d9_hand_fixes.py).
+    // D9 bank feeds.
     ("bankfeeds/list.html", include_str!("../templates/bankfeeds/list.html")),
     ("bankfeeds/connect.html", include_str!("../templates/bankfeeds/connect.html")),
     ("bankfeeds/forget.html", include_str!("../templates/bankfeeds/forget.html")),
@@ -97,6 +117,8 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("bankfeeds/rules.html", include_str!("../templates/bankfeeds/rules.html")),
     ("bankfeeds/rule_form.html", include_str!("../templates/bankfeeds/rule_form.html")),
     ("bankfeeds/review.html", include_str!("../templates/bankfeeds/review.html")),
+    ("bankfeeds/review_row.html", include_str!("../templates/bankfeeds/review_row.html")),
+    ("bankfeeds/review_status.html", include_str!("../templates/bankfeeds/review_status.html")),
     ("backups/page.html", include_str!("../templates/backups/page.html")),
     ("assistant/page.html", include_str!("../templates/assistant/page.html")),
 
@@ -142,8 +164,12 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("directory/base.html", include_str!("../templates/directory/base.html")),
     ("directory/list.html", include_str!("../templates/directory/list.html")),
     ("directory/detail.html", include_str!("../templates/directory/detail.html")),
+    ("directory/vendor_detail.html", include_str!("../templates/directory/vendor_detail.html")),
+    ("directory/vendor_list.html", include_str!("../templates/directory/vendor_list.html")),
     ("directory/form.html", include_str!("../templates/directory/form.html")),
     ("directory/status_error.html", include_str!("../templates/directory/status_error.html")),
+    ("salestax/setup.html", include_str!("../templates/salestax/setup.html")),
+    ("salestax/setup_fields.html", include_str!("../templates/salestax/setup_fields.html")),
     ("salestax/base.html", include_str!("../templates/salestax/base.html")),
     ("salestax/settings.html", include_str!("../templates/salestax/settings.html")),
     ("salestax/list.html", include_str!("../templates/salestax/list.html")),
@@ -151,6 +177,17 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("salestax/members.html", include_str!("../templates/salestax/members.html")),
     ("salestax/bulk_step.html", include_str!("../templates/salestax/bulk_step.html")),
     ("salestax/status_error.html", include_str!("../templates/salestax/status_error.html")),
+    ("salestax/owed.html", include_str!("../templates/salestax/owed.html")),
+    ("salestax/payment_form.html", include_str!("../templates/salestax/payment_form.html")),
+    ("salestax/payment_detail.html", include_str!("../templates/salestax/payment_detail.html")),
+    ("salestax/payment_void.html", include_str!("../templates/salestax/payment_void.html")),
+    ("jobs/base.html", include_str!("../templates/jobs/base.html")),
+    ("jobs/list.html", include_str!("../templates/jobs/list.html")),
+    ("jobs/ticket_form.html", include_str!("../templates/jobs/ticket_form.html")),
+    ("jobs/detail.html", include_str!("../templates/jobs/detail.html")),
+    ("jobs/invoice.html", include_str!("../templates/jobs/invoice.html")),
+    ("jobs/time_list.html", include_str!("../templates/jobs/time_list.html")),
+    ("jobs/time_form.html", include_str!("../templates/jobs/time_form.html")),
     ("reminders/page.html", include_str!("../templates/reminders/page.html")),
     ("backups/page.html", include_str!("../templates/backups/page.html")),
 
@@ -173,6 +210,11 @@ const TEMPLATES: &[(&str, &str)] = &[
 
     ("ledger/base.html", include_str!("../templates/ledger/base.html")),
     ("ledger/nav.html", include_str!("../templates/ledger/nav.html")),
+    ("ledger/tabs.html", include_str!("../templates/ledger/tabs.html")),
+    ("ledger/settings.html", include_str!("../templates/ledger/settings.html")),
+    ("ledger/expenses.html", include_str!("../templates/ledger/expenses.html")),
+    ("ledger/find.html", include_str!("../templates/ledger/find.html")),
+    ("ledger/reports/index.html", include_str!("../templates/ledger/reports/index.html")),
     ("ledger/pager.html", include_str!("../templates/ledger/pager.html")),
     ("ledger/company_home.html", include_str!("../templates/ledger/company_home.html")),
     ("ledger/accounts.html", include_str!("../templates/ledger/accounts.html")),
@@ -248,6 +290,7 @@ impl Screens {
         env.add_function("static", django::static_url);
         env.add_function("icon", django::icon);
         env.add_function("icon_url", django::icon_url);
+        env.add_function("crumb", django::crumb);
         Screens { env }
     }
 

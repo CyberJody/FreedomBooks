@@ -10,6 +10,8 @@
     "test": "node --test tests/*.test.cjs",
     "smoke": "node scripts/smoke-secfix1.cjs",
     "smoke:legacy": "node scripts/smoke.cjs",
+    "smoke:recurring-bills": "node scripts/smoke-recurring-bills.cjs",
+    "smoke:expenses": "node scripts/smoke-expenses.cjs",
     "smoke:backups": "node scripts/smoke-backups.cjs",
     "smoke:attach": "node scripts/smoke-attach.cjs",
     "package": "node ../packaging/package.cjs",

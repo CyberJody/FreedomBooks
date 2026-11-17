@@ -2,7 +2,6 @@
 
 {% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/history.css') }}">{% endblock %}
 {% block content %}
-<p class="eyebrow">{{ company.name }}</p>
 <h1>Audit history</h1>
 <p class="audit-zone">Times shown in {{ time_zone }}.</p>
 <form class="filters audit-filters" method="get" aria-label="Filter audit history">

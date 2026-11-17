@@ -76,6 +76,7 @@ fn detail(
     let unavailable =
         attempted.filter(|s| STATES.iter().any(|(v, _)| v == s) && !choices.contains(s));
     put(&mut vm, "unavailable_state", unavailable);
+    put(&mut vm, "can_accept", choices.contains(&"ACCEPTED"));
     put(
         &mut vm,
         "transitions",
@@ -120,15 +121,16 @@ pub(super) fn render(
     path: &str,
 ) -> AppResult<(String, u16)> {
     match r.name.as_str() {
-        "sales:new" => doc_forms::page(
+        "sales:new" => doc_forms::page_for(
             app,
             r,
             path,
-            KindForm::Estimate,
+            doc_forms::KindForm::Estimate,
             None,
             None,
             &Errors::new(),
             &[],
+            get(p, "customer"),
         ),
         "sales:edit" => {
             let root = load(app, r)?;
@@ -196,16 +198,16 @@ fn listing(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> 
     }
     let start = clean_date(p, "start", false, &mut e);
     let end = clean_date(p, "end", false, &mut e);
-    let mut customer_choices = vec![("".into(), "Choose…".into())];
+    let mut customer_choices = vec![("".into(), "All customers".into())];
     customer_choices.extend(ch);
-    let mut states = vec![("".into(), "All states".into())];
+    let mut states = vec![("".into(), "All estimates".into())];
     states.extend(STATES.iter().map(|(a, b)| (a.to_string(), b.to_string())));
     let fields = decorate(
         vec![
-            Field::new("q", "Search number / customer / memo", Widget::Text)
+            Field::new("q", "Number, customer or message", Widget::Text)
                 .attr("maxlength", "120")
                 .value(get(p, "q").unwrap_or("")),
-            Field::new("state", "State", Widget::Select { choices: states }).value(state),
+            Field::new("state", "Status", Widget::Select { choices: states }).value(state),
             Field::new(
                 "customer",
                 "Customer",
@@ -214,9 +216,9 @@ fn listing(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> 
                 },
             )
             .value(customer),
-            Field::new("start", "Start", Widget::Date)
+            Field::new("start", "From", Widget::Date)
                 .value_opt(get(p, "start").filter(|s| !s.is_empty()).map(str::to_owned)),
-            Field::new("end", "End", Widget::Date)
+            Field::new("end", "To", Widget::Date)
                 .value_opt(get(p, "end").filter(|s| !s.is_empty()).map(str::to_owned)),
         ],
         &e,
@@ -241,6 +243,16 @@ fn listing(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> 
                 .iter()
                 .any(|s| s.to_lowercase().contains(&q.to_lowercase())))
     });
+    let today=(app.today)().to_string();
+    // An accepted estimate's next step is its invoice; one already invoiced links to that invoice.
+    let invoiced: HashMap<String, String> = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let mut st = tx.prepare("SELECT x.estimate_id,x.invoice_id FROM sales_estimateconversion x JOIN sales_estimate e ON e.id=x.estimate_id WHERE e.company_id=?1")?;
+        Ok(st.query_map([c.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?.collect::<Result<_, _>>()?)
+    })?;
+    for row in &mut rows {
+        row["expired"]=json!(row["expiry"].as_str().is_some_and(|d| !d.is_empty() && d<today.as_str()) && matches!(row["state"].as_str(), Some("DRAFT"|"SENT")));
+        row["invoice_id"] = json!(row["estimate_id"].as_str().and_then(|id| invoiced.get(id)));
+    }
     put(&mut vm, "page", Page::of(&rows, 25, get(p, "page")));
     put(&mut vm, "filter_form", forms::bind(&fields, &[]));
     put(

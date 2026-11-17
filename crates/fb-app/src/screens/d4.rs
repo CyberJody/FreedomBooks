@@ -284,7 +284,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
 }
 fn identity(tx: &(impl Query + ?Sized), id: &str) -> Result<Value, FbError> {
     Ok(tx.query_row(
-        "SELECT id,number FROM documents_documentidentity WHERE id=?1",
+        "SELECT d.id,coalesce(h.source_number,d.number) FROM documents_documentidentity d LEFT JOIN sales_invoice i ON i.identity_id=d.id LEFT JOIN sales_importinvoice h ON h.invoice_id=i.id AND h.company_id=d.company_id WHERE d.id=?1",
         [id],
         |r| Ok(json!({"pk":r.get::<_,String>(0)?,"number":r.get::<_,String>(1)?})),
     )?)
@@ -335,7 +335,7 @@ fn reversal_fields(
         Field::new("expected_revision", "Expected revision", Widget::Hidden)
             .required()
             .value_opt(v("expected_revision", revision.to_string())),
-        Field::new("date", "Reversal date", Widget::Date)
+        Field::new("date", "Void date", Widget::Date)
             .required()
             .value_opt(v("date", today.to_string())),
         Field::new("reason", "Reason", Widget::Textarea { cols: 40, rows: 2 })

@@ -37,7 +37,11 @@ impl<'a> Visit<'a> for Calls {
             let allowed = matches!((self.path.as_str(), self.function.as_str(), method.as_str()),
                 ("crates/fb-app/src/identity.rs", "enroll_owner" | "save_desktop_user", "write" | "execute")
                 | ("crates/fb-app/src/session.rs", "create_book_with_chart", "write" | "execute")
-                | ("crates/fb-app/src/ai/import.rs", "run", "write"));
+                | ("crates/fb-app/src/ai/import.rs", "run", "write")
+                // Makes a restored copy the working books: one Book::write that records the audit event.
+                | ("crates/fb-app/src/books.rs", "audit_made_main", "write")
+                // "Host these books": one Book::write of the single remote_host record (no accounting rows).
+                | ("crates/fb-app/src/hosting.rs", "save_host_record", "write" | "execute"));
             assert!(allowed || !["connection", "transaction", "transaction_with_behavior", "execute", "execute_batch", "write"].contains(&method.as_str()), "{}:{}: unreviewed desktop writer: {method}", self.path, self.function);
         }
         visit::visit_expr_method_call(self, item);
@@ -49,7 +53,9 @@ fn scan(root: &Path, dir: &Path, inventory: &mut BTreeMap<String, BTreeMap<Strin
         if path.is_dir() { scan(root, &path, inventory); }
         else if path.extension().is_some_and(|s| s == "rs") {
             let relative = path.strip_prefix(root).unwrap().to_str().unwrap();
-            if relative.contains("/tests") { continue; }
+            // fb-node's panic-test feature module is compiled only for tests and deliberately
+            // uses raw SQL to simulate damaged books. It is outside the product writer surface.
+            if relative.contains("/tests") || relative.ends_with("/panic_tests.rs") { continue; }
             let ast = syn::parse_file(&std::fs::read_to_string(&path).unwrap()).unwrap();
             let mut calls = Calls { path: relative.to_owned(), desktop: relative.starts_with("crates/fb-app/") || relative.starts_with("crates/fb-node/"), ..Default::default() };
             calls.visit_file(&ast);
@@ -61,6 +67,9 @@ fn scan(root: &Path, dir: &Path, inventory: &mut BTreeMap<String, BTreeMap<Strin
 #[test]
 fn every_core_and_desktop_write_path_is_in_the_central_mask_inventory() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let node = std::fs::read_to_string(root.join("crates/fb-node/src/lib.rs")).unwrap();
+    assert!(node.contains("#[cfg(all(test, feature = \"panic-test\"))]\nmod panic_tests;"),
+        "the skipped panic-test SQL must remain test-only");
     let mut actual = BTreeMap::new();
     for crate_name in ["fb-core", "fb-app", "fb-node"] { scan(root, &root.join("crates").join(crate_name).join("src"), &mut actual); }
     // The host's opaque envelope store is a typed fb-db API. Pin its SQL too;

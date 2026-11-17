@@ -4,8 +4,7 @@
 # Every license in `licenses.allow` below has been reviewed as compatible with
 # distributing the combined binary under AGPL-3.0-or-later (permissive /
 # public-domain-equivalent licenses whose only obligations are notice
-# preservation, which THIRD-PARTY-NOTICES.md satisfies). See
-# LICENSE-AUDIT-2026-11.md for the reasoning behind each entry.
+# preservation, which THIRD-PARTY-NOTICES.md satisfies).
 #
 # Run:  cargo deny check licenses advisories bans sources
 

@@ -218,7 +218,9 @@ fn rich_outcomes_distinguish_refusal_from_lost_final_data_response() {
     ] {
         let server = FakeSmtp::start(Security::ImplicitTls, behavior);
         let (mut sender, h) = fake_sender(&server, Security::ImplicitTls);
-        sender.config.timeout = Duration::from_millis(160);
+        // The fake stalls its final reply for 450 ms, so that case needs a deadline below it. A refusal
+        // never waits: its deadline is only a bound, kept long so a loaded machine cannot time out first.
+        sender.config.timeout = if uncertain { Duration::from_millis(160) } else { Duration::from_secs(20) };
         let result = sender.send_outcome(&h.cx, document());
         if uncertain {
             assert!(matches!(

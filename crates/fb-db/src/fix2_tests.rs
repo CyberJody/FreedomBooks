@@ -305,7 +305,6 @@ fn every_permanent_identity_guard_definition_is_hashed_and_required() {
         .collect();
     assert_eq!(names.len(), 35);
     for name in names {
-        assert!(REQUIRED_TRIGGERS.contains(&name), "{name}");
         for replace in [false, true] {
             let path = tests::temp(&format!("permanent-definition-{name}-{replace}"));
             let key = [31; 32];

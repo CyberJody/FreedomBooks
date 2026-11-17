@@ -19,6 +19,7 @@ const MODEL_CHOICE: &str =
 mod activity;
 mod reminders;
 mod tax;
+mod vendors;
 
 pub(super) fn is_route(name: &str) -> bool {
     name.starts_with("directory:")
@@ -36,6 +37,9 @@ pub(crate) fn is_d3_command(c: &Command) -> bool {
             | Command::SetTaxItemActive { .. }
             | Command::FinishTaxBulkStep { .. }
             | Command::SaveReminderSettings { .. }
+            | Command::ReviewSalesTaxPayment { .. }
+            | Command::RecordSalesTaxPayment { .. }
+            | Command::VoidSalesTaxPayment { .. }
     )
 }
 fn model(kind: DirectoryKind) -> Model {
@@ -46,6 +50,9 @@ fn model(kind: DirectoryKind) -> Model {
     }
 }
 pub(crate) fn run_d3_command(app: &mut App, cmd: Command) -> AppResult<Outcome> {
+    if matches!(cmd, Command::ReviewSalesTaxPayment { .. } | Command::RecordSalesTaxPayment { .. } | Command::VoidSalesTaxPayment { .. }) {
+        return tax::run_payment_command(app, cmd);
+    }
     let open = app.open_mut()?;
     let actor = open.owner;
     let book = &mut open.book;
@@ -428,6 +435,10 @@ fn listing(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<(Strin
             })
             .collect())
     })?;
+    if m == Model::Vendor {
+        vendors::annotate_list(app, c, &mut rows, get(params, "sort").unwrap_or(""))?;
+        put(&mut vm, "sort", get(params, "sort").filter(|s| ["balance", "overdue"].contains(s)).unwrap_or(""));
+    }
     // directory::list already uses the frozen model's name/code + creation ordering.
     let page = Page::of(&rows, 25, get(params, "page"));
     rows.clear();
@@ -455,7 +466,7 @@ fn listing(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<(Strin
         },
     );
     Ok((
-        draw(app, "directory/list.html", &vm)?,
+        draw(app, if m == Model::Vendor { "directory/vendor_list.html" } else { "directory/list.html" }, &vm)?,
         if errors.is_empty() { 200 } else { 400 },
     ))
 }
@@ -522,11 +533,11 @@ fn account_options(
 }
 fn fields_for(app: &mut App, c: CompanyId, m: Model) -> AppResult<Vec<Field>> {
     let mut f = if m == Model::Item {
-        vec![Field::new("code","Item code / name",Widget::Text).required().attr("maxlength","120").help("Required; unique within this company, ignoring case and outer spaces, including archived items."),
-        Field::new("description","Description",Widget::Textarea{cols:40,rows:3}).attr("maxlength","2000"),
-        Field::new("kind","Type",Widget::Select{choices:choices(&[("SERVICE","Service"),("NONSTOCK","Non-stock")])}).required(),
-        Field::new("sale_rate","Default sale rate",Widget::Text).required().attr("inputmode","decimal").attr("maxlength","100").help("Company currency; nonnegative, up to 99999999999999.99. Rounded half-up to 2 places; zero is allowed."),
-        Field::new("purchase_cost","Default purchase cost",Widget::Text).attr("inputmode","decimal").attr("maxlength","100").help("Optional; same nonnegative limit and rounding as sale rate. Blank means no default, not zero.")]
+        vec![Field::new("kind","Type",Widget::Select{choices:choices(&[("SERVICE","Service"),("NONSTOCK","Product (no stock tracking)")])}).required(),
+        Field::new("code","Name",Widget::Text).required().attr("maxlength","120").help("Each item needs its own name."),
+        Field::new("description","Description",Widget::Textarea{cols:40,rows:3}).attr("maxlength","2000").help("Fills the description when you pick this item on a sale."),
+        Field::new("sale_rate","Sales price or rate",Widget::Text).required().attr("inputmode","decimal").attr("maxlength","100"),
+        Field::new("purchase_cost","Purchase cost",Widget::Text).attr("inputmode","decimal").attr("maxlength","100").help("Optional.")]
     } else {
         contact_fields()
     };
@@ -590,11 +601,11 @@ fn fields_for(app: &mut App, c: CompanyId, m: Model) -> AppResult<Vec<Field>> {
             let (label, help) = match name {
                 "income_account" => (
                     "Income account",
-                    "Optional active posting account in this company. Defaults do not post transactions.",
+                    "Where sales of this item are recorded. Needed for items you sell.",
                 ),
                 "expense_account" => (
                     "Expense account",
-                    "Optional active posting account in this company. Defaults do not post transactions.",
+                    "Where purchases of this item are recorded. Optional.",
                 ),
                 _ => (
                     "Default expense account",
@@ -606,7 +617,7 @@ fn fields_for(app: &mut App, c: CompanyId, m: Model) -> AppResult<Vec<Field>> {
         if m == Model::Vendor {
             f.push(Field::new("default_terms","Default payment terms",Widget::Select{choices:choices(&[("","No default"),("0","Due on receipt"),("15","Net 15"),("30","Net 30"),("60","Net 60")])}).help("Fills the due date on a new bill (bill date plus these terms). You can change it."));
         } else {
-            f.push(Field::new("taxable","Taxable",Widget::Checkbox{checked:false}).help("Default tax flag for new sales lines. New services start unticked, non-stock items ticked."));
+            f.push(Field::new("taxable","Taxable",Widget::Checkbox{checked:false}).help("New sales lines with this item start as taxable."));
             f.push(Field::new("taxable_shown", "Taxable shown", Widget::Hidden).value("1"));
         }
     }
@@ -785,6 +796,16 @@ fn submit_record(app: &mut App, route: &Route, path: &str, p: Posted<'_>) -> App
     }
     // Django's per-field validation precedes form.clean. Tax compatibility markers distinguish
     // a deliberately cleared value from a page opened before these fields existed.
+    // An item you sell needs the income account its sales post to; the core asks for it only when
+    // an invoice is posted. An item you only buy (an expense account and no sales price) may
+    // leave it blank. Applies when the form showed the field (older posts without it are unchanged).
+    if m == Model::Item && get(p, "income_account").is_some() && data["income_account"] == "" && !errors.contains_key("income_account") && !errors.contains_key("sale_rate") {
+        let rate = data["sale_rate"].as_str().unwrap_or("").trim();
+        let priced = !rate.trim_start_matches('0').trim_start_matches('.').trim_start_matches('0').is_empty();
+        if priced || data["expense_account"] == "" {
+            error(&mut errors, "income_account", "Choose the income account this item's sales are recorded in. An item you only buy can leave it blank if it has an expense account and no sales price.");
+        }
+    }
     if m == Model::Customer
         && get(p, "tax_status").is_some()
         && data["tax_status"] == ""
@@ -971,6 +992,14 @@ fn detail(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<String> {
             ),
         ),
     );
+    if m == Model::Vendor {
+        vendors::detail(app, c, r["id"].as_str().unwrap(), p, &mut vm)?;
+        return draw(app, "directory/vendor_detail.html", &vm);
+    }
     activity::build(app, c, m, r["id"].as_str().unwrap(), p, &mut vm)?;
     draw(app, "directory/detail.html", &vm)
+}
+
+pub(super) fn tax_setup_context(app: &mut App, c: CompanyId, vm: &mut Value) -> AppResult<()> {
+    tax::setup_context(app,c,vm,None,&Errors::new())
 }

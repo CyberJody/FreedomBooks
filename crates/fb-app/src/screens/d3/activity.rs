@@ -24,7 +24,7 @@ fn number(tx: &(impl Query + ?Sized), table: &str, key: &str) -> Result<Value, F
         ]
         .contains(&table)
     );
-    Ok(tx.query_row(&format!("SELECT i.number FROM {table} d JOIN documents_documentidentity i ON i.id=d.identity_id WHERE d.id=?1"),[key],|r|r.get::<_,String>(0)).map(|s|json!({"number":s}))?)
+    Ok(tx.query_row(&format!("SELECT i.number FROM {table} d JOIN documents_displayidentity i ON i.id=d.identity_id WHERE d.id=?1"),[key],|r|r.get::<_,String>(0)).map(|s|json!({"number":s}))?)
 }
 fn total<'a>(mut rows: impl Iterator<Item = &'a Value>, field: &str) -> AppResult<i128> {
     rows.try_fold(0i128, |sum, r| {
@@ -60,131 +60,7 @@ pub(super) fn build(
     }
     let actor = app.open_mut()?.owner;
     if m == Model::Customer {
-        let data = fb_core::sales::customer_activity(&mut app.open_mut()?.book, actor, c, id)?;
-        let mut invoices = data["invoices"].as_array().unwrap().clone();
-        for r in &mut invoices {
-            r["invoice"] = json!({"identity":app.open_mut()?.book.read(|tx|number(tx,"sales_invoice",r["invoice_id"].as_str().unwrap()))?});
-        }
-        // Django's queryset contains current InvoiceRevision rows: -pk means revision order.
-        for row in &mut invoices {
-            row["current_revision_id"] = json!(app.open_mut()?.book.read(|tx| tx.query_row(
-                "SELECT r.id FROM sales_invoicerevision r JOIN sales_invoice i ON i.id=r.invoice_id AND i.revision=r.number WHERE i.id=?1",
-                [row["invoice_id"].as_str().unwrap()], |r| r.get::<_,String>(0)))?);
-        }
-        newest(&mut invoices, "date", "current_revision_id");
-        page(vm, "customer_invoices", &invoices, p, "invoices_page");
-        let mut receipts = data["receipts"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|r| r["kind"] == "RCP" || r["kind"] == "SR")
-            .cloned()
-            .collect::<Vec<_>>();
-        for r in &mut receipts {
-            r["pk"] = r["id"].clone();
-            r["identity"] = app
-                .open_mut()?
-                .book
-                .read(|tx| number(tx, "sales_receipt", r["id"].as_str().unwrap()))?;
-            r["reversed"] = json!(!r["reversal"].is_null());
-        }
-        newest(&mut receipts, "date", "id");
-        page(
-            vm,
-            "customer_receipts",
-            &receipts
-                .iter()
-                .filter(|r| r["kind"] == "RCP")
-                .cloned()
-                .collect::<Vec<_>>(),
-            p,
-            "receipts_page",
-        );
-        page(
-            vm,
-            "customer_sales_receipts",
-            &receipts
-                .iter()
-                .filter(|r| r["kind"] == "SR")
-                .cloned()
-                .collect::<Vec<_>>(),
-            p,
-            "sales_receipts_page",
-        );
-        let mut memos = fb_core::credits::memo_balances(&mut app.open_mut()?.book, actor, c)?
-            .into_iter()
-            .filter(|r| r["customer_id"] == id)
-            .collect::<Vec<_>>();
-        let available = total(memos.iter(), "available")?;
-        let open = total(
-            invoices.iter().filter(|r| r["state"] == "OPEN"),
-            "outstanding",
-        )?;
-        for r in &mut memos {
-            let memo = fb_core::credits::get_credit_memo(
-                &mut app.open_mut()?.book,
-                actor,
-                c,
-                r["id"].as_str().unwrap(),
-            )?;
-            r["date"] = memo["date"].clone();
-            r["pk"] = r["id"].clone();
-            r["identity"] = app
-                .open_mut()?
-                .book
-                .read(|tx| number(tx, "credits_creditmemo", r["id"].as_str().unwrap()))?;
-            r["state_label"] = json!(state(r["credit_state"].as_str().unwrap(), false));
-        }
-        newest(&mut memos, "date", "id");
-        put(
-            vm,
-            "customer_credit_memos",
-            memos.into_iter().take(10).collect::<Vec<_>>(),
-        );
-        put(vm, "customer_open_total", cash(open));
-        put(vm, "customer_available_credit", cash(available));
-        put(
-            vm,
-            "customer_net_balance",
-            cash(
-                open.checked_sub(available)
-                    .ok_or_else(|| AppError::Invalid("Activity total overflow.".into()))?,
-            ),
-        );
-        let mut deposits =
-            fb_core::prepayments::deposit_balances(&mut app.open_mut()?.book, actor, c)?
-                .into_iter()
-                .filter(|r| r["customer_id"] == id)
-                .collect::<Vec<_>>();
-        put(
-            vm,
-            "customer_unapplied_deposits",
-            cash(total(deposits.iter(), "remaining")?),
-        );
-        for r in &mut deposits {
-            r["pk"] = r["id"].clone();
-            r["identity"] = app
-                .open_mut()?
-                .book
-                .read(|tx| number(tx, "sales_receipt", r["id"].as_str().unwrap()))?;
-            r["state_label"] = json!(state(r["deposit_state"].as_str().unwrap(), true));
-        }
-        newest(&mut deposits, "date", "id");
-        put(
-            vm,
-            "customer_deposits",
-            deposits.into_iter().take(10).collect::<Vec<_>>(),
-        );
-        let (lines,refunds)=app.open_mut()?.book.read(|tx|->Result<_,FbError>{
-            let mut st=tx.prepare("SELECT l.amount,a.date,a.credit_memo_id,l.invoice_id,NOT EXISTS(SELECT 1 FROM credits_creditunapplication u WHERE u.application_id=a.id) FROM credits_creditapplicationline l JOIN credits_creditapplication a ON a.id=l.application_id JOIN credits_creditmemo m ON m.id=a.credit_memo_id WHERE a.company_id=?1 AND m.customer_id=?2 ORDER BY a.date DESC,l.id DESC LIMIT 10")?;
-            let raw=st.query_map(params![c.to_db(),id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,bool>(4)?)))?.collect::<Result<Vec<_>,_>>()?;
-            let mut lines=vec![];for (amount,date,memo,invoice,live) in raw{lines.push(json!({"amount":cash(i128::from(amount)),"application":{"date":date,"credit_memo_id":memo,"credit_memo":{"identity":number(tx,"credits_creditmemo",&memo)?},"live":live},"invoice_id":invoice,"invoice":{"identity":number(tx,"sales_invoice",&invoice)?}}));}
-            let mut st=tx.prepare("SELECT r.id,r.date,r.amount,r.credit_memo_id,EXISTS(SELECT 1 FROM credits_creditrefundvoid v WHERE v.refund_id=r.id) FROM credits_creditrefund r WHERE r.company_id=?1 AND r.customer_id=?2 ORDER BY r.date DESC,r.id DESC LIMIT 10")?;
-            let raw=st.query_map(params![c.to_db(),id],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,i64>(2)?,r.get::<_,String>(3)?,r.get::<_,bool>(4)?)))?.collect::<Result<Vec<_>,_>>()?;
-            let mut refunds=vec![];for (id,date,amount,memo,voided) in raw{refunds.push(json!({"pk":id,"date":date,"amount":cash(i128::from(amount)),"credit_memo_id":memo,"credit_memo":{"identity":number(tx,"credits_creditmemo",&memo)?},"identity":number(tx,"credits_creditrefund",&id)?,"voided":voided}));}Ok((lines,refunds))
-        })?;
-        put(vm, "customer_credit_lines", lines);
-        put(vm, "customer_refunds", refunds);
+        customer(app, c, id, p, vm)?;
     } else {
         let mut bills = fb_core::payables::current_bills(&mut app.open_mut()?.book, actor, c)?
             .into_iter()
@@ -234,5 +110,110 @@ pub(super) fn build(
         newest(&mut checks, "date", "id");
         page(vm, "vendor_checks", &checks, p, "checks_page");
     }
+    Ok(())
+}
+
+/// The kinds of transaction the customer page lists, as (filter value, label).
+const CUSTOMER_TYPES: &[(&str, &str)] = &[
+    ("invoices", "Invoices"),
+    ("payments", "Payments received"),
+    ("sales_receipts", "Sales receipts"),
+    ("estimates", "Estimates"),
+    ("credits", "Credit memos"),
+    ("deposits", "Customer deposits"),
+    ("refunds", "Refunds"),
+];
+/// One row of the customer's combined transaction list.
+#[allow(clippy::too_many_arguments)]
+fn row(kind: &str, label: &str, date: &Value, number: &Value, route: &str, target: &Value, status: &str, amount: &Value, open: Value) -> Value {
+    json!({"kind":kind,"type":label,"date":date,"number":number,"route":route,"target":target,"status":status,"amount":amount,"open":open})
+}
+/// The customer page: what they owe at a glance, and every document with them in one list.
+fn customer(app: &mut App, c: CompanyId, id: &str, p: Posted<'_>, vm: &mut Value) -> AppResult<()> {
+    let actor = app.open_mut()?.owner;
+    let today = (app.today)().to_string();
+    let mut rows = vec![];
+    let data = fb_core::sales::customer_activity(&mut app.open_mut()?.book, actor, c, id)?;
+    let invoices = data["invoices"].as_array().unwrap().clone();
+    let mut overdue = 0i128;
+    for r in &invoices {
+        let number = app.open_mut()?.book.read(|tx| number(tx, "sales_invoice", r["invoice_id"].as_str().unwrap()))?;
+        let late = r["state"] == "OPEN" && money(&r["outstanding"]) > 0 && r["due_date"].as_str().is_some_and(|d| d < today.as_str());
+        if late {
+            overdue = overdue.checked_add(money(&r["outstanding"])).ok_or_else(|| AppError::Invalid("Activity total overflow.".into()))?;
+        }
+        let status = match (r["state"].as_str().unwrap_or(""), r["payment_state"].as_str().unwrap_or("")) {
+            ("DRAFT", _) => "Draft",
+            ("VOID", _) => "Voided",
+            (_, "PAID") => "Paid",
+            (_, "PARTIAL") if late => "Partly paid · Overdue",
+            (_, "PARTIAL") => "Partly paid",
+            _ if late => "Overdue",
+            _ => "Open",
+        };
+        rows.push(row("invoices", "Invoice", &r["date"], &number["number"], "invoices:detail", &r["invoice_id"], status, &r["total"], r["outstanding"].clone()));
+    }
+    for r in data["receipts"].as_array().unwrap() {
+        let (kind, label, route) = match r["kind"].as_str() {
+            Some("RCP") => ("payments", "Payment", "receipts:detail"),
+            Some("SR") => ("sales_receipts", "Sales receipt", "sales_receipts:detail"),
+            _ => continue,
+        };
+        let number = app.open_mut()?.book.read(|tx| number(tx, "sales_receipt", r["id"].as_str().unwrap()))?;
+        rows.push(row(kind, label, &r["date"], &number["number"], route, &r["id"], if r["reversal"].is_null() { "Recorded" } else { "Voided" }, &r["amount"], Value::Null));
+    }
+    let estimates = app.open_mut()?.book.read(|q| -> Result<Vec<Value>, FbError> {
+        let mut st = q.prepare("SELECT e.id,i.number,r.data FROM sales_estimate e JOIN sales_estimaterevision r ON r.estimate_id=e.id AND r.number=e.revision JOIN documents_displayidentity i ON i.id=e.identity_id WHERE e.company_id=?1 AND json_extract(r.data,'$.customer_id')=?2")?;
+        let raw = st.query_map(params![c.to_db(), id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?.collect::<Result<Vec<_>, _>>()?;
+        raw.into_iter().map(|(id, number, data)| {
+            let v: Value = fb_db::parse_unique_json_as(&data).map_err(|_| FbError::validation("Invalid stored estimate."))?;
+            Ok(json!({"id":id,"number":number,"date":v["date"],"state":v["state"],"total":v["total"]}))
+        }).collect()
+    })?;
+    for e in &estimates {
+        let status = match e["state"].as_str().unwrap_or("") {
+            "DRAFT" => "Draft",
+            "ACCEPTED" => "Accepted",
+            "DECLINED" => "Declined",
+            "CANCELLED" => "Cancelled",
+            "CONVERTED" => "Converted",
+            s => s,
+        };
+        rows.push(row("estimates", "Estimate", &e["date"], &e["number"], "sales:detail", &e["id"], status, &e["total"], Value::Null));
+    }
+    let memos = fb_core::credits::memo_balances(&mut app.open_mut()?.book, actor, c)?
+        .into_iter()
+        .filter(|r| r["customer_id"] == id)
+        .collect::<Vec<_>>();
+    let available = total(memos.iter(), "available")?;
+    for r in &memos {
+        let memo = fb_core::credits::get_credit_memo(&mut app.open_mut()?.book, actor, c, r["id"].as_str().unwrap())?;
+        let number = app.open_mut()?.book.read(|tx| number(tx, "credits_creditmemo", r["id"].as_str().unwrap()))?;
+        rows.push(row("credits", "Credit memo", &memo["date"], &number["number"], "credits:detail", &r["id"], state(r["credit_state"].as_str().unwrap(), false), &r["total"], r["available"].clone()));
+    }
+    let deposits = fb_core::prepayments::deposit_balances(&mut app.open_mut()?.book, actor, c)?
+        .into_iter()
+        .filter(|r| r["customer_id"] == id)
+        .collect::<Vec<_>>();
+    let held = total(deposits.iter(), "remaining")?;
+    for r in &deposits {
+        let number = app.open_mut()?.book.read(|tx| number(tx, "sales_receipt", r["id"].as_str().unwrap()))?;
+        rows.push(row("deposits", "Customer deposit", &r["date"], &number["number"], "prepayments:detail", &r["id"], state(r["deposit_state"].as_str().unwrap(), true), &r["amount"], r["remaining"].clone()));
+    }
+    let refunds = app.open_mut()?.book.read(|tx| -> Result<Vec<Value>, FbError> {
+        let mut st = tx.prepare("SELECT r.id,r.date,r.amount,EXISTS(SELECT 1 FROM credits_creditrefundvoid v WHERE v.refund_id=r.id) FROM credits_creditrefund r WHERE r.company_id=?1 AND r.customer_id=?2")?;
+        let raw = st.query_map(params![c.to_db(), id], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)?, r.get::<_, bool>(3)?)))?.collect::<Result<Vec<_>, _>>()?;
+        raw.into_iter().map(|(id, date, amount, voided)| Ok(row("refunds", "Refund", &json!(date), &number(tx, "credits_creditrefund", &id)?["number"], "credits:refund_detail", &json!(id), if voided { "Voided" } else { "Recorded" }, &json!(cash(i128::from(amount))), Value::Null))).collect()
+    })?;
+    rows.extend(refunds);
+    let open = total(invoices.iter().filter(|r| r["state"] == "OPEN"), "outstanding")?;
+    put(vm, "customer_balance", json!({"open":cash(open),"overdue":cash(overdue),"credits":cash(available),"deposits":cash(held)}));
+    // Newest first; the type filter narrows the one list.
+    rows.sort_by(|a, b| b["date"].as_str().cmp(&a["date"].as_str()).then(b["number"].as_str().cmp(&a["number"].as_str())));
+    let kind = get(p, "type").filter(|k| CUSTOMER_TYPES.iter().any(|(v, _)| v == k)).unwrap_or("");
+    let shown = rows.into_iter().filter(|r| kind.is_empty() || r["kind"] == kind).collect::<Vec<_>>();
+    put(vm, "activity_types", CUSTOMER_TYPES.iter().map(|(v, l)| json!([v, l])).collect::<Vec<_>>());
+    put(vm, "activity_type", kind);
+    page(vm, "activity", &shown, p, "page");
     Ok(())
 }

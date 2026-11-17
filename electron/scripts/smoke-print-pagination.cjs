@@ -12,13 +12,13 @@ module.exports=async({app,page,company,ids,shot,pass})=>{
   await page.selectOption('#id_tax_mode','NONE');
   while(Number(await page.inputValue('#id_lines-TOTAL_FORMS'))<40)await page.click('#add-line');
   for(let i=0;i<40;i++){
+    await page.selectOption(`#id_lines-${i}-item`,ids.item);
     await page.fill(`#id_lines-${i}-description`,`Line ${String(i+1).padStart(2,'0')}: Synthetic invoice service with additional work details that wrap across several lines to verify page boundaries and repeated column headings.`);
     await page.fill(`#id_lines-${i}-quantity`,'1');await page.fill(`#id_lines-${i}-rate`,'25.00');
-    await page.selectOption(`#id_lines-${i}-income_account`,ids.income);
   }
-  await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Save invoice")')]);
-  await page.getByRole('link',{name:'Print / Save as PDF',exact:true}).first().click();await page.waitForURL(/\/print\/$/);
-  const number=(await page.locator('.meta-box td').last().innerText()).trim();
+  await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Save draft")')]);
+  await page.getByRole('link',{name:'Print or PDF',exact:true}).first().click();await page.waitForURL(/\/print\/$/);
+  const number=(await page.locator('#print-document-number').innerText()).trim();
   assert.equal(await page.textContent('#print-total'),'1,000.00');
   await shot(page,'print-live-invoice-multipage');
   fs.rmSync(file,{force:true});
@@ -35,6 +35,7 @@ module.exports=async({app,page,company,ids,shot,pass})=>{
     const text=spawnSync('pdftotext',['-layout',file,'-'],{encoding:'utf8'});assert.equal(text.status,0,text.stderr);
     assert.ok(text.stdout.includes(number));assert.match(text.stdout,/Total USD\s+1,000\.00/);
     assert.equal((text.stdout.match(/Line \d{2}:/g)||[]).length,40);
+    require('./assert-print-pagination.cjs')(file,['Line','40:']);
     for(let i=1;i<=pages;i++)assert.ok(text.stdout.includes(`Page ${i} of ${pages}`),`footer on page ${i}`);
     fs.writeFileSync(path.join(out,'invoice-multipage.txt'),text.stdout);
     fs.writeFileSync(path.join(out,'invoice-multipage-pdfinfo.txt'),info.stdout);

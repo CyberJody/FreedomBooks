@@ -108,21 +108,15 @@ fn bank_choices(
     extra: Option<&str>,
 ) -> AppResult<Vec<(String, String)>> {
     let banks = banks(app, c, &extra.into_iter().collect::<Vec<_>>())?;
-    let ord = app
-        .open_mut()?
-        .book
-        .read(|tx| super::super::d2::ordinals(tx, c, "ledger_account"))?;
+    // Account codes are unique in a company, so "code · name" names a bank account.
     Ok(banks
         .iter()
         .map(|a| {
-            let id = a.id.to_db();
             (
-                id.clone(),
+                a.id.to_db(),
                 format!(
-                    "{} · {} · #{}{}",
-                    a.code,
-                    a.name,
-                    ord[&id],
+                    "{}{}",
+                    a.label(),
                     if a.active && a.postable && a.kind == Kind::Asset {
                         ""
                     } else {
@@ -139,15 +133,15 @@ fn header_fields(app: &mut App, c: CompanyId, current: Option<&Value>) -> AppRes
         Field::new("expected_revision","Expected revision",Widget::Hidden).required(),
         select("bank","Bank account","Choose…",bank_choices(app,c,current.map(|r|s(r,"bank_id")))?,true),
         Field::new("date","Date",Widget::Date).required(),
-        Field::new("check_number","Check number (No.)",Widget::Text).help("Next number on this bank. Write checks, bill payments by check, and refund checks share one number sequence. A voided number can be used again. Print later leaves this blank until you assign the number used."),
-        Field::new("print_later","Print later (leave the number blank until set)",Widget::Checkbox{checked:false}),
-        Field::new("payee_kind","Pay to the order of",Widget::Radio{choices:vec![("VENDOR".into(),"Vendor".into()),("OTHER".into(),"Other payee (name only)".into())]}).required(),
-        select("vendor","Vendor payee","Choose…",contacts(app,c,true,current.map(|r|s(r,"vendor_id")),"confirm")?,false),
-        Field::new("payee_name","Other payee name (when not a vendor)",Widget::Text),
-        Field::new("address","Address (printed on the check)",Widget::Textarea{cols:40,rows:3}),
-        Field::new("memo","Memo",Widget::Textarea{cols:40,rows:2}),
+        Field::new("check_number","Check no.",Widget::Text).help("Checks, bill payments by check and refunds share this bank account's numbers."),
+        Field::new("print_later","Print later (no number yet)",Widget::Checkbox{checked:false}),
+        Field::new("payee_kind","Pay to",Widget::Radio{choices:vec![("VENDOR".into(),"A vendor".into()),("OTHER".into(),"Someone else (name only)".into())]}).required(),
+        select("vendor","Vendor","Choose a vendor",contacts(app,c,true,current.map(|r|s(r,"vendor_id")),"confirm")?,false),
+        Field::new("payee_name","Payee name",Widget::Text),
+        Field::new("address","Address",Widget::Textarea{cols:40,rows:3}),
+        Field::new("memo","Memo",Widget::Textarea{cols:40,rows:1}),
         Field::new("refresh_payee","Update vendor name and address from the vendor list",Widget::Checkbox{checked:false}),
-        Field::new("keep_archived","Keep archived vendor details on this check",Widget::Checkbox{checked:false}),
+        Field::new("keep_archived","Keep this archived vendor on the check",Widget::Checkbox{checked:false}),
     ])
 }
 struct Choices {
@@ -177,7 +171,7 @@ fn line_fields(ch: &Choices, prefix: &str, keep: Option<&str>, tab: &str) -> Vec
             .then(a.code.cmp(&b.code))
             .then(a.id.to_db().cmp(&b.id.to_db()))
     });
-    let mut groups = vec![(String::new(), vec![(String::new(), "Choose…".into())])];
+    let mut groups = vec![(String::new(), vec![(String::new(), "Choose an account".into())])];
     let mut unavailable = vec![];
     for a in accounts {
         let id = a.id.to_db();
@@ -197,18 +191,14 @@ fn line_fields(ch: &Choices, prefix: &str, keep: Option<&str>, tab: &str) -> Vec
     vec![
         Field::new("tab", "Tab", Widget::Hidden),
         Field::new("origin_position", "Origin position", Widget::Hidden),
-        Field::new(
-            "account",
-            "Account (required to record)",
-            Widget::GroupedSelect { groups },
-        ),
-        select("item", "Item", "Choose…", ch.items.clone(), false),
+        Field::new("account", "Account", Widget::GroupedSelect { groups }).attr("data-picker", "account"),
+        select("item", "Item", "No item", ch.items.clone(), false),
         Field::new(
             "description",
-            "Memo / description",
+            "Description",
             Widget::Textarea { cols: 40, rows: 1 },
         ),
-        Field::new("quantity", "Quantity", Widget::Text).value("1"),
+        Field::new("quantity", "Quantity", Widget::Text).value("1").attr("inputmode", "decimal"),
         Field::new(
             "rate",
             if tab == "ITEM" {
@@ -217,7 +207,8 @@ fn line_fields(ch: &Choices, prefix: &str, keep: Option<&str>, tab: &str) -> Vec
                 "Amount"
             },
             Widget::Text,
-        ),
+        )
+        .attr("inputmode", "decimal"),
         Field::new(
             "refresh_item",
             "Update item details from the item list",
@@ -256,6 +247,7 @@ fn form(
     p: Option<Posted<'_>>,
     e: &Errors,
     nf: &[String],
+    extra: &Value,
 ) -> AppResult<String> {
     let c = arg_company(r)?;
     let b = r
@@ -299,7 +291,10 @@ fn form(
             i["item"] = l["item_id"].clone();
             initials.push(i);
         }
-    } else if let Some(bank) = bs.first() {
+    } else if let Some(bank) = super::super::d6::default_bank(app, c, &bs, "SELECT bank_id FROM checks_check WHERE company_id=? ORDER BY id DESC LIMIT 1")?
+        .and_then(|id| bs.iter().find(|a| a.id.to_db() == id))
+    {
+        // The only bank account, or the one the last check used.
         let actor = app.open_mut()?.owner;
         init["bank"] = json!(bank.id.to_db());
         init["check_number"] = json!(checks::next_number(
@@ -309,14 +304,56 @@ fn form(
             bank.id
         )?);
     }
+    // `?vendor=<id>` from the vendor page preselects an active vendor on a new check; the page then
+    // applies its defaults (address, first line's account) as if it had been chosen. Ignored otherwise.
+    let preset = extra["preset_vendor"].as_str().unwrap_or("").to_owned();
+    let preset = b.is_none()
+        && p.is_none()
+        && !preset.is_empty()
+        && matches!(&fs[7].widget, Widget::Select { choices } if choices.iter().any(|(id, _)| *id == preset));
+    if preset {
+        init["vendor"] = extra["preset_vendor"].clone();
+        init["payee_kind"] = json!("VENDOR");
+    }
     let initial_count = initials.len();
-    initials.extend([json!({"tab":"EXPENSE"}), json!({"tab":"ITEM"})]);
+    // One blank line to start; the page adds another as the last one is used.
+    initials.push(json!({"tab":"EXPENSE"}));
     let ch = choices(app, c, current.as_ref())?;
     let mut vm = ctx(app, r)?;
     if let Some(b) = b {
         put(&mut vm, "current", rev_vm(b["current"].clone()));
         put(&mut vm, "check", b);
     }
+    put(&mut vm, "vendor_preset", preset);
+    // Snapshot checkboxes appear only when they decide something: "keep archived" when the saved
+    // vendor or a saved line's item is archived now; "update from the list" when the saved
+    // snapshot differs from the current, active record.
+    let saved_lines = current
+        .as_ref()
+        .and_then(|r| r["lines"].as_array().cloned())
+        .unwrap_or_default();
+    let (vendor_flags, item_flags) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let vendor = match &current {
+            Some(r) => snapshot_flags(tx, c, Model::Vendor, s(r, "vendor_id"), &r["payee_snapshot"], PARTY_KEYS)?,
+            None => (false, false),
+        };
+        let mut items = std::collections::BTreeMap::new();
+        for l in &saved_lines {
+            items.insert(
+                l["position"].as_i64().unwrap_or(0),
+                snapshot_flags(tx, c, Model::Item, s(l, "item_id"), &l["item_snapshot"], ITEM_KEYS)?,
+            );
+        }
+        Ok((vendor, items))
+    })?;
+    let sticky = |name: &str| p.is_some_and(|p| checked(p, name)) || e.contains_key(name);
+    put(
+        &mut vm,
+        "vendor_flags",
+        json!({"keep":vendor_flags.0 || sticky("keep_archived"),"refresh":vendor_flags.1 || sticky("refresh_payee")}),
+    );
+    let mut line_flags = vec![];
+    let mut items_open = false;
     let mut forms = vec![];
     let mut expense = vec![];
     let mut item = vec![];
@@ -338,6 +375,16 @@ fn form(
             .and_then(|p| get(p, &format!("{pref}-account")))
             .or_else(|| init["account"].as_str());
         let row = bind_fields(line_fields(&ch, &pref, keep, tab), p, init, e, true);
+        let origin = p
+            .map(|p| get(p, &format!("{pref}-origin_position")).unwrap_or("").to_owned())
+            .unwrap_or_else(|| init["origin_position"].as_i64().map(|n| n.to_string()).unwrap_or_default());
+        let saved = origin.parse::<i64>().ok().and_then(|n| item_flags.get(&n)).copied().unwrap_or((false, false));
+        let line_sticky = |name: &str| {
+            let key = format!("{pref}-{name}");
+            p.is_some_and(|p| checked(p, &key)) || e.contains_key(&key)
+        };
+        line_flags.push(json!({"keep":saved.0 || line_sticky("keep_archived"),"refresh":saved.1 || line_sticky("refresh_item")}));
+        items_open |= tab == "ITEM";
         if tab == "ITEM" {
             item.push(row.clone());
         } else {
@@ -357,8 +404,16 @@ fn form(
         guidance(app, c, py::py_strip(selected))?,
     );
     put(&mut vm, "form", bound);
+    put(&mut vm, "form_action", path);
+    put(&mut vm, "line_flags", line_flags);
+    put(&mut vm, "items_open", items_open);
     put(&mut vm, "expense_lines", expense);
     put(&mut vm, "item_lines", item);
+    if let Some(extra) = extra.as_object() {
+        for (k, v) in extra {
+            put(&mut vm, k, v);
+        }
+    }
     put(
         &mut vm,
         "formset",
@@ -648,7 +703,10 @@ pub(super) fn render(
 ) -> AppResult<(String, u16)> {
     match r.name.as_str() {
         "checks:list" => listing(app, r, p),
-        "checks:new" | "checks:edit" => Ok((form(app, r, path, None, &Errors::new(), &[])?, 200)),
+        "checks:new" | "checks:edit" => {
+            let extra = json!({"preset_vendor":get(p, "vendor").unwrap_or("")});
+            Ok((form(app, r, path, None, &Errors::new(), &[], &extra)?, 200))
+        }
         "checks:detail" => Ok((detail(app, r, p)?, 200)),
         "checks:number" | "checks:void" => {
             Ok((action_form(app, r, path, None, &Errors::new())?, 200))
@@ -803,15 +861,9 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
                     .map(|k| (k.into(), v.clone()))
             })
             .collect::<Vec<_>>();
-        let initial_tab = if i == stored {
-            "EXPENSE"
-        } else if i == stored + 1 {
-            "ITEM"
-        } else {
-            ""
-        };
+        // A new line counts once something is entered on it. Its tab only follows the item
+        // (an item makes it an Items line), so a blank line is unused whichever tab it carries.
         let changed = i < stored
-            || get(&row, "tab").unwrap_or("") != initial_tab
             || super::super::d2::extra_row_changed(
                 &row,
                 &[("description", ""), ("quantity", "1"), ("rate", "")],
@@ -845,6 +897,9 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         let description = clean_text(&row, "description", 1000, false, true, &mut le);
         let quantity = clean_text(&row, "quantity", 40, false, true, &mut le);
         let rate = clean_text(&row, "rate", 40, true, true, &mut le);
+        if le.get("rate").is_some_and(|m| m.iter().any(|m| m == "This field is required.")) {
+            le.insert("rate".into(), vec!["Enter an amount for this line.".into()]);
+        }
         for (k, v) in [("quantity", &quantity), ("rate", &rate)] {
             if !le.contains_key(k) && (!v.is_empty() || k == "rate") {
                 let result = if k == "quantity" {
@@ -915,12 +970,110 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             }),
             &mut e,
         )? {
+            if get(p, "editor_action") == Some("record") {
+                return record_saved(app, c, &d, get(p, "shown_entries").unwrap_or(""), rev + 1);
+            }
             return Ok(Outcome::Redirect {
                 location: url("checks:detail", &[&c.to_db(), s(&d, "id")]),
             });
         }
     }
     Ok(Outcome::Invalid {
-        html: form(app, r, path, Some(p), &e, &nf)?,
+        html: form(app, r, path, Some(p), &e, &nf, &Value::Null)?,
     })
+}
+/// "Save and record" after the draft is saved. It records only when the server's own review
+/// produces exactly the entries the page showed (`shown_entries`, see `entries_signature`), so
+/// what posts is what the user saw. Otherwise the saved draft opens for editing with the reason,
+/// and the entries the books would post are shown beside it.
+fn record_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: i64) -> AppResult<Outcome> {
+    let id = s(saved, "id").to_owned();
+    let detail = url("checks:detail", &[&c.to_db(), &id]);
+    if saved["state"] != "DRAFT" {
+        // The same request was already saved and recorded (a repeated submit): show the check.
+        return Ok(Outcome::Redirect { location: detail });
+    }
+    let revision = saved["revision"].as_i64().unwrap_or(0);
+    let mut extra = json!({"show_entries":true});
+    // `fresh` is the revision this very save produced. A re-sent copy of an older page can come
+    // back with a draft edited since (same request key and fields): never post that one.
+    let changed = revision != fresh;
+    match app.run(Command::ReviewCheck {
+        company_id: c.to_db(),
+        check_id: id.clone(),
+        expected_revision: revision,
+    }) {
+        Ok(Outcome::Done { data }) => {
+            let entries = data["entries"].as_array().cloned().unwrap_or_default();
+            if super::super::d6::entries_signature(&entries) == shown && !changed {
+                let mut e = Errors::new();
+                if result_error(
+                    app.run(Command::RecordCheck {
+                        company_id: c.to_db(),
+                        check_id: id.clone(),
+                        expected_revision: revision,
+                        review_token: s(&data, "token").into(),
+                    }),
+                    &mut e,
+                )?
+                .is_some()
+                {
+                    return Ok(Outcome::Redirect { location: detail });
+                }
+                extra["post_notice"] = json!(format!(
+                    "Saved as a draft, not recorded: {}",
+                    nonfield(&e, "__all__").join(" ")
+                ));
+            } else if changed {
+                extra["post_notice"] = json!(
+                    "Not recorded: this draft was changed after that page was shown. Check it and choose Save and record again."
+                );
+            } else {
+                extra["post_notice"] = json!(
+                    "Saved as a draft, not recorded. The entries changed since the page was shown: check them and choose Save and record again."
+                );
+            }
+            extra["review"] = json!({"mapping":data["mapping"],"entries":entries});
+        }
+        Err(AppError::Core(FbError::Validation(messages))) => {
+            extra["post_notice"] = json!(format!("Saved as a draft, not recorded: {}", messages.join(" ")));
+        }
+        Err(other) => return Err(other),
+        Ok(_) => unreachable!(),
+    }
+    let edit = url("checks:edit", &[&c.to_db(), &id]);
+    let route = Route {
+        name: "checks:edit".into(),
+        args: [("company_id".to_owned(), c.to_db()), ("check_id".to_owned(), id)].into(),
+    };
+    Ok(Outcome::Invalid {
+        html: form(app, &route, &edit, None, &Errors::new(), &[], &extra)?,
+    })
+}
+const PARTY_KEYS: &[&str] = &["display_name", "business_name", "contact_name", "billing_address", "email", "phone"];
+const ITEM_KEYS: &[&str] = &["code", "description", "kind", "purchase_cost"];
+fn object(v: &Value) -> Value {
+    match v {
+        Value::String(t) => serde_json::from_str(t).unwrap_or(Value::Null),
+        other => other.clone(),
+    }
+}
+/// (archived now, active and its saved snapshot differs from the record).
+fn snapshot_flags(
+    tx: &(impl fb_db::Query + ?Sized),
+    c: CompanyId,
+    model: Model,
+    id: &str,
+    saved: &Value,
+    keys: &[&str],
+) -> Result<(bool, bool), FbError> {
+    if id.is_empty() {
+        return Ok((false, false));
+    }
+    let Ok(record) = directory::get(tx, c, model, id) else {
+        return Ok((false, false));
+    };
+    let saved = object(saved);
+    let archived = record["active"] != true;
+    Ok((archived, !archived && keys.iter().any(|k| saved[*k] != record[*k])))
 }

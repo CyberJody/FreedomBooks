@@ -12,7 +12,8 @@ use fb_db::rusqlite::{OptionalExtension, params};
 pub(super) mod assistant;
 pub(super) mod attachments;
 mod review;
-use review::{run_review_post, review_page};
+pub(crate) mod rule_import;
+use review::{review_fragments, review_page, run_review_post};
 const ASSISTANT: [&str; 8] = ["assistant:page", "assistant:openai_start", "assistant:notice", "assistant:model", "assistant:models_refresh", "assistant:disconnect", "assistant:key", "assistant:read_attachments"];
 type Errors = HashMap<String, Vec<String>>;
 const REQUIRED: &str = "This field is required.";
@@ -124,9 +125,19 @@ fn list_page(app: &mut App, r: &Route, path: &str, notice: Option<(String, bool)
     let c = arg_company(r)?;
     let mut vm = base(app, r, path)?;
     let (mut connections, pending, rules) = app.open_mut()?.book.read(|tx| overview(tx, c))?;
+    let gaps = app.open_mut()?.book.read(|tx| bf::sync_gaps(tx, c))?;
+    let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
+    let clock = app.open_mut()?.book.read(|tx| bf::clock_warning(tx, c, &now))?;
+    put(&mut vm, "clock_warning", clock.map(|w| json!({"recorded": w.recorded, "now": w.now})));
     for conn in &mut connections {
         let sync = format!("/c/{}/bank-feeds/{}/sync/", c.to_db(), conn["pk"].as_str().unwrap_or(""));
         conn["sync_token"] = json!(token(app, &sync));
+        // Dates a sync could not reach back to, until the user says they compared them with the statement.
+        let mine: Vec<Value> = gaps.iter().filter(|g| conn["pk"] == g.connection_id.as_str()).map(|g| json!({"from": g.from, "to": g.to})).collect();
+        if !mine.is_empty() {
+            conn["gaps"] = json!(mine);
+            conn["gap_token"] = json!(token(app, &sync));
+        }
     }
     put(&mut vm, "connections", connections);
     put(&mut vm, "pending", pending);
@@ -285,7 +296,21 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
     let mut errors = vec![];
     if e.is_empty() {
         match bf::save_mappings(&mut app.open_mut()?.book, owner, c, &conn_id, &wanted, &bf::SecretSet::none()) {
-            Ok(()) => return Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) }),
+            Ok(()) => {
+                // A replacement connection's first download is staged before it is mapped: say now how many
+                // of its transactions are already in the books, so none is recorded twice.
+                let recorded = app.open_mut()?.book.read(|tx| bf::already_recorded_count(tx, c))?;
+                if recorded > 0 {
+                    app.messages.push(format!(
+                        "{recorded} downloaded {} already recorded from an earlier bank connection. Review transactions shows {} as “Already recorded”; link {} to the existing entries instead of recording {} again.",
+                        if recorded == 1 { "transaction looks" } else { "transactions look" },
+                        if recorded == 1 { "it" } else { "them" },
+                        if recorded == 1 { "it" } else { "them" },
+                        if recorded == 1 { "it" } else { "them" }
+                    ));
+                }
+                return Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) });
+            }
             Err(err) => errors.push(messages(err)?),
         }
     }
@@ -314,27 +339,46 @@ fn rules_page(app: &mut App, r: &Route, path: &str, error_text: Option<String>) 
     let c = arg_company(r)?;
     let owner = actor(app)?;
     let mut vm = base(app, r, path)?;
+    if app.backups.rule_import.as_ref().is_some_and(|p|p.company==c && p.at.elapsed().as_secs()>=1800) {
+        app.backups.rule_import=None;app.messages.push("The import preview expired. Choose the file again.".into());
+    }
+    if app.backups.rule_import.as_ref().is_some_and(|p|p.company==c) {return rule_import::page(app,r,path,error_text);}
     let rules = bf::all_rules(&mut app.open_mut()?.book, owner, c)?;
     let rows = app.open_mut()?.book.read(|tx| -> Result<Vec<Value>, FbError> {
         rules
             .iter()
             .map(|rule| {
                 let a = AccountId::parse(&rule.account_id).map(|id| store::account(tx, id)).transpose()?.flatten();
-                Ok(json!({"pk": rule.id, "name": rule.name, "match_text": rule.match_text, "sign_display": sign_display(&rule.sign),
+                let scope=match &rule.policy {Some(p) if p.scope!="ALL"=>bf::feed(tx,&p.scope)?.map(|f|f.label()).unwrap_or_else(||"Unavailable feed".into()),_=>"All accounts".into()};
+                Ok(json!({"pk": rule.id, "name": rule.name, "match_text": rule.match_text, "sign_display": sign_display(&rule.sign), "scope_label":scope,
                     "amount_min": rule.amount_min.map(cents), "amount_max": rule.amount_max.map(cents),
                     "account": {"code": a.as_ref().map(|a| a.code.clone()), "name": a.as_ref().map(|a| a.name.clone())},
-                    "payee_name": rule.payee_name, "active": rule.active}))
+                    "payee_name": rule.payee_name, "active": rule.active, "policy":rule.policy, "auto_post":rule.policy.as_ref().is_some_and(|p|p.auto_post)}))
             })
             .collect()
     })?;
     put(&mut vm, "rules", rows);
+    put(&mut vm, "has_auto_post", rules.iter().any(|r|r.policy.as_ref().is_some_and(|p|p.auto_post)));
+    put(&mut vm, "rule_notices", std::mem::take(&mut app.messages));
     put(&mut vm, "error", error_text);
     draw(app, "bankfeeds/rules.html", &vm)
 }
 fn submit_rules(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
+    if get(p,"import_action").is_some() {return rule_import::submit(app,r,path,p);}
+    if let Some(id)=get(p,"test_rule") {return rule_import::test(app,r,path,id);}
     let c = arg_company(r)?;
     let owner = actor(app)?;
     let present = |k: &str| get(p, k).filter(|v| !v.is_empty());
+    if let Some(id) = present("auto_post_off") {
+        let result = bf::turn_off_imported_auto_post(&mut app.open_mut()?.book, owner, c, (id != "ALL").then_some(id), &bf::SecretSet::none());
+        return match result {
+            Ok(count) => {
+                app.messages.push(format!("Auto-post turned off for {count} imported rules. Active rules still suggest categories; transactions require review."));
+                Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/rules/", c.to_db()) })
+            }
+            Err(e) => Ok(Outcome::Invalid { html: rules_page(app, r, path, Some(messages(e)?))? }),
+        };
+    }
     let none = bf::SecretSet::none();
     let book = &mut app.open_mut()?.book;
     let result = if let Some(v) = present("move_up").or(present("move_down")) {
@@ -498,6 +542,12 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             crate::plugins::bankfeed_forget(app, c, conn["pk"].as_str().unwrap_or(""))?;
             Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) })
         }
+        "bankfeeds:sync" if get(p, "action") == Some("gap_reviewed") => {
+            let conn = connection(app, r)?;
+            let owner = actor(app)?;
+            bf::review_sync_gap(&mut app.open_mut()?.book, owner, c, conn["pk"].as_str().unwrap_or(""), &bf::SecretSet::none())?;
+            Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) })
+        }
         "bankfeeds:sync" => {
             let conn = connection(app, r)?;
             let label = conn["label"].as_str().unwrap_or("").to_owned();
@@ -513,6 +563,9 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         "bankfeeds:rule_new" | "bankfeeds:rule_edit" => submit_rule(app, r, path, p),
         "bankfeeds:review" => {
             let post = run_review_post(app, c, p)?;
+            if get(p, "inline") == Some("1") {
+                return review_fragments(app, r, path, p, post);
+            }
             let filters: Vec<(String, String)> = ["status", "account", "q", "page"].into_iter()
                 .filter_map(|key| get(p, &format!("review_{key}")).map(|v| (key.to_owned(), v.to_owned()))).collect();
             let full = format!("{path}?{}", urlencode(&filters));

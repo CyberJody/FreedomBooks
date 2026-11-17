@@ -19,11 +19,12 @@ struct Fixture {
     bank: AccountId,
     undeposited: AccountId,
     tax: AccountId,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fixture {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!("fb-sales-{}.fbbook", new_id()));
-        let mut book = Book::create(&path, &[13; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("sales");
+        let mut book = file.book(&[13; 32]);
         let actor = users::create_user(&mut book, "Sales tester", false).unwrap();
         let company = services::create_company(&mut book, actor, "Synthetic sales", "USD", false)
             .unwrap()
@@ -53,6 +54,7 @@ impl Fixture {
             .to_string();
         initialize(&book).unwrap();
         Self {
+            _file: file,
             book,
             actor,
             company,
@@ -251,3 +253,9 @@ mod more;
 
 #[path = "final_tests.rs"]
 mod final_checks;
+
+#[path = "invoice_adjustments_tests.rs"]
+mod invoice_adjustments;
+
+#[path = "historical_tests.rs"]
+mod historical_import;

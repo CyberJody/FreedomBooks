@@ -1,0 +1,16 @@
+[package]
+name = "fb-host"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Remote access in the book process: the session-API backend (fb-app's SharedHost) behind the remote dispatcher. Links no network or TLS stack."
+
+[dependencies]
+fb-app = { path = "../fb-app" }
+fb-remote-proto = { path = "../fb-remote-proto" }
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[dev-dependencies]
+fb-templates = { path = "../fb-templates" }
+fb-core = { path = "../fb-core" }
+tempfile = "3"

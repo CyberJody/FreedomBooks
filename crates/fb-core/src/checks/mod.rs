@@ -15,7 +15,7 @@ pub use numbering::{
     next_number, number_text, record_bill_payment, refuse_conflict, review_bill_payment,
 };
 mod lifecycle;
-pub use lifecycle::{assign_number, record_check, record_check_tx, review_check, review_check_tx, void_check};
+pub use lifecycle::{assign_number, record_check, record_check_tx, review_check, review_check_tx, void_check, void_check_tx};
 #[cfg(test)]
 mod tests;
 
@@ -353,7 +353,7 @@ fn save_inner(tx: &Writer<'_>, actor: UserId, co: CompanyId, p: &Value) -> FbRes
             .is_some_and(|a| a.contains(&json!(bank_id)))
     {
         return Err(err(
-            "Choose a designated bank account (Accounting setup) that is an active postable asset account.",
+            "Choose an active bank account in this company.",
         ));
     }
     for (v, l) in prepared.iter().zip(&normalized) {

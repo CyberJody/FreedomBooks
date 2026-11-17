@@ -18,6 +18,8 @@ mod sales;
 mod legacy;
 #[cfg(test)]
 mod release_integration_tests;
+#[cfg(test)]
+mod retained_lane_tests;
 #[cfg(feature = "test-support")]
 pub mod test_support;
 mod credits;
@@ -43,10 +45,91 @@ mod banking_functions;
 pub mod banking_evidence;
 pub mod json_evidence;
 pub mod company_document_data;
+pub mod invoice_preferences;
 pub mod bankfeeds_text;
 pub mod credential_mask;
 pub mod plugin_credentials;
 pub use json_evidence::{parse_unique_json, parse_unique_json_as};
+
+#[cfg(all(feature = "panic-test", not(debug_assertions)))]
+compile_error!("`panic-test` is for test builds only and is refused in optimized (release) builds.");
+
+/// Test builds only (feature `panic-test`): make the next [`Book::write`] panic after its callback
+/// ran and before COMMIT, the next [`Book::read`] panic inside its transaction, or the next write
+/// report an error after its COMMIT. One shot each; armed process-wide so worker threads see it.
+#[cfg(feature = "panic-test")]
+pub mod test_panic {
+    use std::sync::atomic::{AtomicU8, Ordering};
+    pub const BEFORE_COMMIT: u8 = 1;
+    pub const DURING_READ: u8 = 2;
+    pub const ERROR_AFTER_COMMIT: u8 = 4;
+    /// Make the `nth` write from now (1 = the next) report an error after its callback succeeded
+    /// and before COMMIT, so it rolls back: a failure inside one step of a request, or between
+    /// two steps when the earlier one committed.
+    pub fn fail_write_before_commit(nth: u32) {
+        FAIL_WRITE.store(nth, Ordering::SeqCst);
+    }
+    static FAIL_WRITE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    pub(crate) fn write_fails() -> bool {
+        FAIL_WRITE.try_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n > 0).then(|| n - 1)) == Ok(1)
+    }
+    /// Make the `nth` write from now commit and then report an error (saved, but the request fails).
+    pub fn fail_write_after_commit(nth: u32) {
+        FAIL_AFTER.store(nth, Ordering::SeqCst);
+    }
+    static FAIL_AFTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    pub(crate) fn committed_write_fails() -> bool {
+        FAIL_AFTER.try_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n > 0).then(|| n - 1)) == Ok(1)
+    }
+    static ARMED: AtomicU8 = AtomicU8::new(0);
+    pub fn arm(point: u8) {
+        ARMED.fetch_or(point, Ordering::SeqCst);
+    }
+    pub fn disarm() {
+        ARMED.store(0, Ordering::SeqCst);
+        FAIL_WRITE.store(0, Ordering::SeqCst);
+        FAIL_AFTER.store(0, Ordering::SeqCst);
+        NAMED.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clear();
+    }
+
+    static NAMED: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+    /// Arm a named point (one shot): [`point`] with that name panics the next time it runs.
+    pub fn arm_point(name: &str) {
+        NAMED.lock().unwrap_or_else(std::sync::PoisonError::into_inner).push(name.to_owned());
+    }
+
+    /// A named place in a long operation (a migration, a protection change, a backup, a restore)
+    /// where a test can make the code panic, with book-like text in the panic's message.
+    pub fn point(name: &str) {
+        let hit = {
+            let mut named = NAMED.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+            match named.iter().position(|n| n == name) {
+                Some(i) => {
+                    named.remove(i);
+                    true
+                }
+                None => false,
+            }
+        };
+        if hit {
+            panic!("injected test panic at {name}: Synthetic Alice 1234.56 hunter2");
+        }
+    }
+    pub(crate) fn take(point: u8) -> bool {
+        ARMED.fetch_and(!point, Ordering::SeqCst) & point != 0
+    }
+    pub(crate) fn fire(point: u8) {
+        if take(point) {
+            // Shaped like a real failure on stored data: the value after the colon is book content
+            // that the problem log must never record.
+            let stored: Result<(), String> = Err("Synthetic Alice owes 1234.56; password hunter2-synthetic".into());
+            if let Err(value) = stored {
+                panic!("injected test panic inside the book transaction: {value}");
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod core_int_tests;
@@ -57,9 +140,13 @@ mod value_guard_tests;
 #[cfg(test)]
 mod reviewed_inventory_tests;
 #[cfg(test)]
+mod schema_integrity_tests;
+#[cfg(test)]
 mod desktop_upgrade_tests;
 #[cfg(test)]
 mod open_tests;
+#[cfg(test)]
+mod remote_host_upgrade_tests;
 
 /// Numbered migrations; `PRAGMA user_version` records how many are applied.
 pub const MIGRATIONS: &[(&str, &str)] = &[
@@ -137,529 +224,36 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ("0185_desktop_users", include_str!("../sql/0185_desktop_users.sql")),
     ("0186_desktop_user_value_guards", include_str!("../sql/0186_desktop_user_value_guards.sql")),
     ("0187_desktop_mfa", include_str!("../sql/0187_desktop_mfa.sql")),
+    ("0188_invoice_preferences", include_str!("../sql/0188_invoice_preferences.sql")),
+    ("0189_invoice_email", include_str!("../sql/0189_invoice_email.sql")),
+    ("0190_invoice_stripe", include_str!("../sql/0190_invoice_stripe.sql")),
+    ("0191_bank_rule_import", include_str!("../sql/0191_bank_rule_import.sql")),
+    ("0192_bank_rule_autopost_off", include_str!("../sql/0192_bank_rule_autopost_off.sql")),
+    ("0193_invoice_adjustments", include_str!("../sql/0193_invoice_adjustments.sql")),
+    ("0194_invoice_history", include_str!("../sql/0194_invoice_history.sql")),
+    ("0195_invoice_import", include_str!("../sql/0195_invoice_import.sql")),
+    ("0196_bankfeeds_review_safety", include_str!("../sql/0196_bankfeeds_review_safety.sql")),
+    ("0197_attachment_key_wraps", include_str!("../sql/0197_attachment_key_wraps.sql")),
+    ("0198_legacy_attachment_key_wraps", include_str!("../sql/0198_legacy_attachment_key_wraps.sql")),
+    ("0199_legacy_attachment_lookup", include_str!("../sql/0199_legacy_attachment_lookup.sql")),
+    ("0200_bank_accounts_by_type", include_str!("../sql/0196_bank_accounts_by_type.sql")),
+    ("0201_salestax_payments", include_str!("../sql/0200_salestax_payments.sql")),
+    ("0202_combined_value_guards", include_str!("../sql/0202_combined_value_guards.sql")),
+    ("0203_salestax_payment_evidence", include_str!("../sql/0203_salestax_payment_evidence.sql")),
+    ("0204_recurring_bills", include_str!("../sql/0204_recurring_bills.sql")),
+    ("0205_job_tickets", include_str!("../sql/0205_job_tickets.sql")),
+    ("0206_remote_host", include_str!("../sql/0206_remote_host.sql")),
 ];
-
-/// Every trigger the schema must carry. A book missing one was altered outside the core and is refused.
-pub const REQUIRED_TRIGGERS: &[&str] = &[
-    "company_documents_data_insert",
-    "company_documents_data_update",
-    "fb_json_company_document_details_insert",
-    "fb_json_company_document_details_update",
-    "company_documents_identity_insert",
-    "company_documents_identity_update",
-    "company_documents_identity_delete",
-    "fb_numbering_insert", "fb_numbering_update", "fb_numbering_delete",
-    "fb_numbering_bank_identity", "fb_numbering_bank_delete",
-    "pp_customerdeposit_estimate_scope",
-    "fb_estimate_due_insert",
-    "fb_json_sales_estimateline_insert",
-    "fb_json_sales_estimateline_update",
-    "fb_json_sales_estimaterevision_insert",
-    "fb_json_sales_estimaterevision_update",
-    "fb_json_estimate_seal",
-    "fb_estimate_key_sales_estimate",
-    "fb_estimate_key_sales_estimaterevision",
-    "fb_estimate_key_sales_estimateline",
-    "fb_estimate_key_sales_estimateconversion",
-    "fb_estimate_root_insert",
-    "fb_estimate_root_update",
-    "fb_estimate_root_due_insert",
-    "fb_estimate_root_due_update",
-    "fb_estimate_revision_insert",
-    "fb_estimate_revision_due",
-    "fb_estimate_line_insert",
-    "fb_estimate_seal",
-    "fb_estimate_conversion_insert",
-    "fb_sales_estimate_delete",
-    "fb_sales_estimaterevision_update",
-    "fb_sales_estimaterevision_delete",
-    "fb_sales_estimateline_update",
-    "fb_sales_estimateline_delete",
-    "fb_sales_estimateconversion_update",
-    "fb_sales_estimateconversion_delete",
-    "fb_estimate_seal_update",
-    "fb_estimate_seal_delete",
-    "fb_estimate_seal_due_update",
-    "fb_estimate_seal_due_delete",
-    "fb_estimate_parent_directory_customer_delete",
-    "fb_estimate_parent_directory_customer_update",
-    "fb_estimate_parent_directory_item_delete",
-    "fb_estimate_parent_directory_item_update",
-    "fb_estimate_parent_ledger_account_delete",
-    "fb_estimate_parent_ledger_account_update",
-    "fb_estimate_parent_fb_user_delete",
-    "fb_estimate_parent_fb_user_update",
-    "fb_sales_receipt_snapshot",
-    "desktop_user_identity", "desktop_user_kept", "desktop_user_password_kept",
-    "desktop_user_last_admin", "desktop_user_last_active", "desktop_user_last_member",
-    "fb_owner_insert", "fb_owner_update", "fb_owner_delete",
-    "fb_owner_user_insert", "fb_owner_user_update", "fb_owner_user_delete",
-    "attachment_text_insert",
-    "attachment_text_update",
-    "attachment_guard_insert",
-    "attachment_primary_key_permanent",
-    "attachment_guard_update",
-    "attachment_guard_delete",
-    "attachment_added_due",
-    "attachment_removed_due",
-    "attachment_audit_seal",
-    "attachment_snapshot_insert",
-    "attachment_snapshot_remove",
-    "attachment_document_id_kept",
-    "attachment_journal_id_kept",
-    "attachment_company_id_kept",
-    "attachment_operator_kept",
-
-    "fb_assistant_reading_complete_pending",
-    "fb_assistant_model_insert", "fb_assistant_model_update",
-    "fb_json_assistant_connection_insert", "fb_json_assistant_connection_update", "fb_json_assistant_reading_insert", "fb_json_assistant_reading_update",
-    "fb_assistant_connection_insert", "fb_assistant_connection_update", "fb_assistant_connection_delete",
-    "fb_assistant_reading_insert", "fb_assistant_reading_update", "fb_assistant_reading_delete",
-    "fb_assistant_user_delete", "fb_assistant_company_delete", "fb_assistant_bill_delete",
-    "fb_bankfeeds_connection_insert",
-    "fb_bankfeeds_connection_update",
-    "fb_bankfeeds_connection_id",
-    "fb_bankfeeds_connection_delete",
-    "fb_bankfeeds_account_insert",
-    "fb_bankfeeds_account_update",
-    "fb_bankfeeds_account_id",
-    "fb_bankfeeds_account_delete",
-    "fb_bankfeeds_transaction_insert",
-    "fb_bankfeeds_transaction_count",
-    "fb_bankfeeds_counter_update",
-    "fb_bankfeeds_counter_insert",
-    "fb_bankfeeds_counter_delete",
-    "fb_bankfeeds_transaction_update",
-    "fb_bankfeeds_transaction_id",
-    "fb_bankfeeds_transaction_delete",
-    "fb_bankfeeds_rule_insert",
-    "fb_bankfeeds_rule_update",
-    "fb_bankfeeds_rule_id",
-    "fb_bankfeeds_rule_delete",
-    "fb_bankfeeds_account_kept",
-    "fb_bankfeeds_account_moved",
-    "fb_bankfeeds_user_kept",
-    "fb_bankfeeds_company_kept",
-    "fb_bankfeeds_journal_kept",
-    "fb_bankfeeds_line_kept",
-    "fb_bankfeeds_connection_text_insert",
-    "fb_bankfeeds_connection_text_update",
-    "fb_bankfeeds_account_text_insert",
-    "fb_bankfeeds_account_text_update",
-    "fb_bankfeeds_transaction_text_insert",
-    "fb_bankfeeds_transaction_text_update",
-    "fb_bankfeeds_rule_text_insert",
-    "fb_bankfeeds_rule_text_update",
-    "fb_bankfeeds_retired_insert",
-    "fb_bankfeeds_retired_update",
-    "fb_bankfeeds_retired_delete",
-    "fb_bankfeeds_transaction_withdrawn",
-    "fb_bankfeeds_transaction_identity",
-    "fb_bankfeeds_transaction_eligible",
-    "fb_bankfeeds_account_activation",
-    "fb_bankfeeds_identity_secret_insert",
-    "fb_bankfeeds_identity_secret_update",
-    "fb_bankfeeds_identity_secret_delete",
-    "fb_json_banking_deposit_insert",
-    "fb_json_banking_deposit_update",
-    "fb_json_banking_depositreversal_insert",
-    "fb_json_banking_depositreversal_update",
-    "fb_json_banking_reconciliation_insert",
-    "fb_json_banking_reconciliation_update",
-    "fb_json_checks_checkline_insert",
-    "fb_json_checks_checkline_update",
-    "fb_json_checks_checkrevision_insert",
-    "fb_json_checks_checkrevision_update",
-    "fb_json_credits_creditapplication_insert",
-    "fb_json_credits_creditapplication_update",
-    "fb_json_credits_creditapplicationline_insert",
-    "fb_json_credits_creditapplicationline_update",
-    "fb_json_credits_creditmemo_insert",
-    "fb_json_credits_creditmemo_update",
-    "fb_json_credits_creditmemoline_insert",
-    "fb_json_credits_creditmemoline_update",
-    "fb_json_credits_creditmemovoid_insert",
-    "fb_json_credits_creditmemovoid_update",
-    "fb_json_credits_creditrefund_insert",
-    "fb_json_credits_creditrefund_update",
-    "fb_json_credits_creditrefundvoid_insert",
-    "fb_json_credits_creditrefundvoid_update",
-    "fb_json_credits_creditunapplication_insert",
-    "fb_json_credits_creditunapplication_update",
-    "fb_json_ledger_auditevent_insert",
-    "fb_json_ledger_auditevent_update",
-    "fb_json_payables_billline_insert",
-    "fb_json_payables_billline_update",
-    "fb_json_payables_billpayment_insert",
-    "fb_json_payables_billpayment_update",
-    "fb_json_payables_billrevision_insert",
-    "fb_json_payables_billrevision_update",
-    "fb_json_prepayments_depositapplication_insert",
-    "fb_json_prepayments_depositapplication_update",
-    "fb_json_prepayments_depositrefund_insert",
-    "fb_json_prepayments_depositrefund_update",
-    "fb_json_prepayments_depositrefundvoid_insert",
-    "fb_json_prepayments_depositrefundvoid_update",
-    "fb_json_prepayments_depositunapplication_insert",
-    "fb_json_prepayments_depositunapplication_update",
-    "fb_json_sales_invoiceline_insert",
-    "fb_json_sales_invoiceline_update",
-    "fb_json_sales_invoicerevision_insert",
-    "fb_json_sales_invoicerevision_update",
-    "fb_json_sales_receipt_insert",
-    "fb_json_sales_receipt_update",
-    "fb_json_sales_receiptreversal_insert",
-    "fb_json_sales_receiptreversal_update",
-    "fb_json_sales_salesreceipt_insert",
-    "fb_json_sales_salesreceipt_update",
-    "fb_json_sales_salesreceiptline_insert",
-    "fb_json_sales_salesreceiptline_update",
-    "fb_json_transfers_transfer_insert",
-    "fb_json_transfers_transfer_update",
-    "fb_json_fb_seal_seal",
-    "fb_json_sales_seal_seal",
-    "fb_json_credits_seal_seal",
-    "fb_json_prepayments_seal_seal",
-    "fb_json_banking_seal_seal",
-
-    "fb_number_credits_refund_insert",
-    "fb_sales_receipt_destination",
-    "fb_invoice_shared_settlements",
-    "fb_number_checks_check_insert",
-    "fb_number_checks_check_update",
-    "fb_number_payables_billpayment_insert",
-
-    "fb_checks_line_origin_insert",
-    "fb_checks_revision_snapshot_insert",
-    "fb_checks_line_snapshot_insert",
-    "fb_checks_transfer_snapshot_insert",
-    "fb_checks_number_insert",
-    "fb_checks_number_update",
-    "fb_checks_evidence_seal",
-    "fb_checks_transfer_evidence_seal",
-
-    "fb_checks_check_existing_parent",
-    "fb_checks_check_update_existing_parent",
-    "fb_checks_checkrevision_existing_parent",
-    "fb_transfers_transfer_existing_parent",
-    "fb_transfers_transfervoid_existing_parent",
-
-    "fb_check_insert",
-    "fb_check_update",
-    "fb_check_due_insert",
-    "fb_check_due_update",
-    "fb_check_revision_insert",
-    "fb_check_line_insert",
-    "fb_check_seal",
-    "fb_check_payment_insert",
-    "fb_check_payment_update",
-    "fb_checks_payment_collision",
-    "fb_transfer_insert",
-    "fb_transfer_void_insert",
-    "fb_checks_journal_due",
-    "fb_transfer_journal_due",
-    "fb_checks_journal_seal",
-    "fb_transfer_journal_seal",
-    "fb_checks_late_reference",
-    "fb_checks_check_primary_key",
-    "fb_checks_check_delete",
-    "fb_checks_checkrevision_primary_key",
-    "fb_checks_checkrevision_update",
-    "fb_checks_checkrevision_delete",
-    "fb_checks_checkline_primary_key",
-    "fb_checks_checkline_update",
-    "fb_checks_checkline_delete",
-    "fb_transfers_transfer_primary_key",
-    "fb_transfers_transfer_update",
-    "fb_transfers_transfer_delete",
-    "fb_transfers_transfervoid_primary_key",
-    "fb_transfers_transfervoid_update",
-    "fb_transfers_transfervoid_delete",
-    "fb_checks_ledger_account_kept",
-    "fb_checks_ledger_account_insert",
-    "fb_checks_ledger_account_update",
-    "fb_checks_directory_vendor_kept",
-    "fb_checks_directory_vendor_insert",
-    "fb_checks_directory_vendor_update",
-    "fb_checks_directory_item_kept",
-    "fb_checks_directory_item_insert",
-    "fb_checks_directory_item_update",
-    "fb_checks_documents_documentidentity_kept",
-    "fb_checks_documents_documentidentity_insert",
-    "fb_checks_documents_documentidentity_update",
-    "fb_checks_ledger_journal_kept",
-    "fb_checks_ledger_journal_insert",
-    "fb_checks_ledger_journal_update",
-    "fb_checks_fb_user_kept",
-    "fb_checks_fb_user_insert",
-    "fb_checks_fb_user_update",
-    "pp_customerdeposit_collision",
-    "pp_customerdeposit_update",
-    "pp_customerdeposit_delete",
-    "pp_depositapplication_collision",
-    "pp_depositapplication_update",
-    "pp_depositapplication_delete",
-    "pp_depositrefund_collision",
-    "pp_depositrefund_update",
-    "pp_depositrefund_delete",
-    "pp_depositunapplication_collision",
-    "pp_depositunapplication_update",
-    "pp_depositunapplication_delete",
-    "pp_depositrefundvoid_collision",
-    "pp_depositrefundvoid_update",
-    "pp_depositrefundvoid_delete",
-    "pp_prepayments_seal_collision",
-    "pp_prepayments_seal_update",
-    "pp_prepayments_seal_delete",
-    "pp_prepayments_due_collision",
-    "pp_prepayments_due_update",
-    "pp_prepayments_due_delete",
-    "pp_detail",
-    "pp_receipt_complete",
-    "pp_application_scope",
-    "pp_refund_scope",
-    "pp_payment_number",
-    "pp_allocation_bound",
-    "pp_deposit_reversal",
-    "pp_invoice_void",
-    "pp_depositunapplication_link",
-    "pp_depositrefundvoid_link",
-    "pp_depositapplication_fields",
-    "pp_depositrefund_fields",
-    "pp_journal_due",
-    "pp_journal_seal",
-    "pp_late_reference",
-    "fb_credits_memo_designations",
-    "fb_credits_snapshot_seal",
-    "fb_credits_seal_insert",
-    "fb_credits_seal_due_insert",
-    "fb_credits_creditmemo_update",
-    "fb_credits_creditmemo_delete",
-    "fb_credits_creditmemoline_update",
-    "fb_credits_creditmemoline_delete",
-    "fb_credits_creditmemovoid_update",
-    "fb_credits_creditmemovoid_delete",
-    "fb_credits_creditapplication_update",
-    "fb_credits_creditapplication_delete",
-    "fb_credits_creditapplicationline_update",
-    "fb_credits_creditapplicationline_delete",
-    "fb_credits_creditunapplication_update",
-    "fb_credits_creditunapplication_delete",
-    "fb_credits_creditrefund_update",
-    "fb_credits_creditrefund_delete",
-    "fb_credits_creditrefundvoid_update",
-    "fb_credits_creditrefundvoid_delete",
-    "fb_credits_seal_update",
-    "fb_credits_seal_delete",
-    "fb_credits_seal_due_update",
-    "fb_credits_seal_due_delete",
-    "fb_credits_creditmemo_insert",
-    "fb_credits_creditmemoline_insert",
-    "fb_credits_creditmemovoid_insert",
-    "fb_credits_creditapplication_insert",
-    "fb_credits_creditapplicationline_insert",
-    "fb_credits_creditunapplication_insert",
-    "fb_credits_creditrefund_insert",
-    "fb_credits_creditrefundvoid_insert",
-    "fb_credits_creditmemo_due",
-    "fb_credits_creditmemovoid_due",
-    "fb_credits_creditapplication_due",
-    "fb_credits_creditunapplication_due",
-    "fb_credits_creditrefund_due",
-    "fb_credits_creditrefundvoid_due",
-    "fb_credits_memo_scope",
-    "fb_credits_line_scope",
-    "fb_credits_application_scope",
-    "fb_credits_application_target",
-    "fb_credits_application_bound",
-    "fb_credits_receipt_bound",
-    "fb_credits_use_application",
-    "fb_credits_use_refund",
-    "fb_credits_unapplication_scope",
-    "fb_credits_refund_scope",
-    "fb_credits_payment_number",
-    "fb_credits_memo_void_scope",
-    "fb_credits_refund_void_scope",
-    "fb_credits_invoice_void",
-    "fb_credits_journal_due",
-    "fb_credits_late_reference",
-    "fb_credits_seal_memo",
-    "fb_credits_seal_memo_void",
-    "fb_credits_seal_application",
-    "fb_credits_seal_unapplication",
-    "fb_credits_seal_refund",
-    "fb_credits_seal_refund_void",
-    "fb_credits_seal_journal",
-    "fb_credits_tax_scope",
-    "fb_banking_actor_insert",
-    "fb_banking_actor_primary_key_permanent",
-    "fb_banking_actor_update",
-    "fb_banking_actor_delete",
-    "fb_banking_actor_user_kept",
-    "fb_banking_actor_seal",
-
-    "fb_banking_all_cleared_recorded", "fb_banking_rec_request_key", "fb_banking_rec_transition_fields",
-    "fb_banking_charges_fixed", "fb_banking_charges_seal", "fb_banking_account_kept", "fb_banking_user_kept",
-    "fb_banking_deposit_scope",
-    "fb_banking_deposit_due",
-    "fb_banking_line_scope",
-    "fb_banking_reversal_scope",
-    "fb_banking_receipt_live_deposit",
-    "fb_banking_reversal_cleared",
-    "fb_banking_journal_due",
-    "fb_banking_late_reference",
-    "fb_banking_rec_insert",
-    "fb_banking_rec_fields_insert",
-    "fb_banking_rec_update",
-    "fb_banking_rec_due_insert",
-    "fb_banking_rec_due_update",
-    "fb_banking_rec_line_scope",
-    "fb_banking_rec_line_due",
-    "fb_banking_status_insert",
-    "fb_banking_status_update",
-    "fb_banking_seal_check",
-    "fb_banking_deposit_collision_insert",
-    "fb_banking_deposit_primary_key_permanent",
-    "fb_banking_deposit_immutable_update",
-    "fb_banking_deposit_kept",
-    "fb_banking_depositline_collision_insert",
-    "fb_banking_depositline_primary_key_permanent",
-    "fb_banking_depositline_immutable_update",
-    "fb_banking_depositline_kept",
-    "fb_banking_depositreversal_collision_insert",
-    "fb_banking_depositreversal_primary_key_permanent",
-    "fb_banking_depositreversal_immutable_update",
-    "fb_banking_depositreversal_kept",
-    "fb_banking_reconciliation_collision_insert",
-    "fb_banking_reconciliation_primary_key_permanent",
-    "fb_banking_reconciliation_collision_update",
-    "fb_banking_reconciliation_kept",
-    "fb_banking_banklinestatus_collision_insert",
-    "fb_banking_banklinestatus_primary_key_permanent",
-    "fb_banking_banklinestatus_collision_update",
-    "fb_banking_banklinestatus_kept",
-    "fb_banking_reconciliationline_collision_insert",
-    "fb_banking_reconciliationline_primary_key_permanent",
-    "fb_banking_reconciliationline_immutable_update",
-    "fb_banking_reconciliationline_kept",
-    "fb_banking_seal_collision_insert",
-    "fb_banking_seal_primary_key_permanent",
-    "fb_banking_seal_immutable_update",
-    "fb_banking_seal_kept",
-    "fb_banking_seal_due_collision_insert",
-    "fb_banking_seal_due_primary_key_permanent",
-    "fb_banking_seal_due_immutable_update",
-    "fb_banking_seal_due_kept",
-    "fb_banking_one_open",
-
-    "fb_sales_draft_customer_eligible",
-    "fb_payables_line_origin_insert", "fb_payables_billline_snapshot_shape", "fb_payables_billrevision_snapshot_shape", "fb_payables_billpayment_snapshot_shape",
-    "fb_payables_draft_vendor_eligible",
-    "fb_payables_draft_item_eligible",
-    "fb_l2_revision_documents_accountingsetup_insert",
-    "fb_l2_revision_documents_accountingsetup_update",
-    "fb_l2_revision_salestax_taxitem_insert",
-    "fb_l2_revision_salestax_taxitem_update",
-    "fb_l2_revision_salestax_salestaxsettings_insert",
-    "fb_l2_revision_salestax_salestaxsettings_update",
-    "fb_l2_directory_customer_primary_key_permanent",
-    "fb_l2_directory_vendor_primary_key_permanent",
-    "fb_l2_directory_item_primary_key_permanent",
-    "fb_l2_salestax_taxitem_primary_key_permanent",
-    "fb_l2_salestax_taxgroupmember_primary_key_permanent",
-    "fb_l2_salestax_salestaxsettings_primary_key_permanent",
-    "fb_l2_documents_documentsequence_primary_key_permanent",
-    "fb_l2_documents_documentidentity_primary_key_permanent",
-    "fb_l2_documents_documentaccount_primary_key_permanent",
-    "fb_l2_documents_accountingsetup_primary_key_permanent",
-    "fb_l2_documents_designatedbank_primary_key_permanent",
-    "fb_l2_directory_customer_ownership_permanent",
-    "fb_l2_directory_vendor_ownership_permanent",
-    "fb_l2_directory_item_ownership_permanent",
-    "fb_l2_salestax_taxitem_ownership_permanent",
-    "fb_l2_salestax_taxgroupmember_ownership_permanent",
-    "fb_l2_salestax_salestaxsettings_ownership_permanent",
-    "fb_l2_documents_documentsequence_ownership_permanent",
-    "fb_l2_documents_documentidentity_ownership_permanent",
-    "fb_l2_documents_documentaccount_ownership_permanent",
-    "fb_l2_documents_accountingsetup_ownership_permanent",
-    "fb_l2_documents_designatedbank_ownership_permanent",
-    "fb_l2_ledger_journal_ownership_permanent",
-    "fb_user_primary_key_permanent",
-    "ledger_company_primary_key_permanent",
-    "ledger_account_primary_key_permanent",
-    "ledger_journal_primary_key_permanent",
-    "ledger_journalline_primary_key_permanent",
-    "ledger_auditevent_primary_key_permanent",
-    "ledger_company_members_primary_key_permanent",
-    "fb_seal_primary_key_permanent",
-    "fb_seal_due_primary_key_permanent",
-    "fb_account_company_permanent",
-    "fb_line_journal_permanent",
-    "fb_journal_origin_permanent",
-    "fb_payables_bill_permanent_id", "fb_payables_billrevision_permanent_id", "fb_payables_billline_permanent_id", "fb_payables_billpayment_permanent_id", "fb_payables_paymentallocation_permanent_id", "fb_payables_paymentreversal_permanent_id", "fb_payables_draft_line_eligible",
-    "fb_allocation_insert", "fb_bill_delete", "fb_bill_due_insert", "fb_bill_due_update", "fb_bill_insert", "fb_bill_line_calculation", "fb_bill_line_insert", "fb_bill_revision_insert", "fb_bill_seal", "fb_bill_update", "fb_bill_update_collision", "fb_payables_billline_delete", "fb_payables_billline_update", "fb_payables_billpayment_delete", "fb_payables_billpayment_update", "fb_payables_billrevision_delete", "fb_payables_billrevision_update", "fb_payables_directory_item_kept", "fb_payables_directory_item_replace", "fb_payables_directory_item_scope", "fb_payables_directory_vendor_kept", "fb_payables_directory_vendor_replace", "fb_payables_directory_vendor_scope", "fb_payables_documentaccount_replace", "fb_payables_documents_documentidentity_kept", "fb_payables_documents_documentidentity_replace", "fb_payables_fb_seal_due_replace", "fb_payables_fb_seal_replace", "fb_payables_journal_due", "fb_payables_journal_line_replace", "fb_payables_journal_seal", "fb_payables_late_reference", "fb_payables_ledger_account_kept", "fb_payables_ledger_account_replace", "fb_payables_ledger_account_scope", "fb_payables_ledger_journal_kept", "fb_payables_ledger_journal_replace", "fb_payables_line_parent", "fb_payables_paymentallocation_delete", "fb_payables_paymentallocation_update", "fb_payables_paymentreversal_delete", "fb_payables_paymentreversal_update", "fb_payables_post_eligibility", "fb_payment_due", "fb_payment_insert", "fb_payment_reversal_insert", "fb_payment_seal",
-    "fb_company_guard_delete", "fb_account_guard_delete", "fb_audit_guard_insert",
-    "fb_user_guard_update", "fb_members_guard_update",
-    "fb_user_guard_insert", "fb_user_guard_delete", "fb_seal_guard_insert", "fb_seal_due_guard_insert",
-    "fb_source_journal_insert", "fb_source_journal_update", "fb_journal_control_account", "fb_account_configured_company",
-    "fb_salestax_item_delete",
-    "fb_salestax_item_identity",
-    "fb_salestax_item_agency_insert",
-    "fb_salestax_member_insert",
-    "fb_salestax_settings_default_insert",
-    "fb_salestax_item_agency_update",
-    "fb_salestax_member_update",
-    "fb_salestax_settings_default_update",
-    "fb_salestax_settings_delete",
-    "fb_salestax_settings_company",
-    "fb_document_sequence_delete",
-    "fb_document_sequence_update",
-    "fb_document_identity_update",
-    "fb_document_identity_delete",
-    "fb_document_account_update",
-    "fb_document_account_delete",
-    "fb_document_identity_insert",
-    "fb_document_account_insert",
-    "fb_account_document_reference",
-    "fb_company_document_currency",
-
-    "fb_seal_frozen",
-    "fb_seal_kept",
-    "fb_seal_due_frozen",
-    "fb_seal_due_kept",
-    "fb_company_guard_insert",
-    "fb_company_guard_update",
-    "fb_account_guard_insert",
-    "fb_account_guard_update",
-    "fb_account_fill_type_insert",
-    "fb_account_fill_type_update",
-    "fb_audit_no_update",
-    "fb_audit_no_delete",
-    "fb_journal_guard_insert",
-    "fb_journal_guard_update",
-    "fb_journal_guard_delete",
-    "fb_line_guard_insert",
-    "fb_line_guard_update",
-    "fb_line_guard_delete",
-];
-
-pub const REQUIRED_INDEXES: &[&str] = &[
-    "fb_checks_line_origin","journal_original_per_source","item_code_ci_per_company", "salestax_item_name_ci_per_company", "journal_entry_number_per_company", "journal_request_key_per_company"];
-
-/// The shared value guards of 0130 (one BEFORE INSERT and one BEFORE UPDATE per table with TEXT columns),
-/// required like [`REQUIRED_TRIGGERS`]; named from the migration itself so the two cannot drift.
-pub fn value_guard_triggers() -> impl Iterator<Item = &'static str> {
-    [include_str!("../sql/0130_shared_validators.sql"), include_str!("../sql/0132_estimate_validators.sql"), include_str!("../sql/0137_bankfeeds_reconnect.sql"), include_str!("../sql/0161_credential_validators.sql"), include_str!("../sql/0162_numbering.sql"), include_str!("../sql/0181_company_document_guards.sql"), include_str!("../sql/0186_desktop_user_value_guards.sql"), include_str!("../sql/0187_desktop_mfa.sql")]
-        .into_iter().flat_map(str::lines)
-        .filter_map(|line| line.strip_prefix("CREATE TRIGGER "))
-        .filter_map(|rest| rest.split(' ').next())
-        .filter(|name| name.starts_with("fb_valid_"))
-}
 
 /// Violation queries run on every open: each returns rows only when the books break a ledger rule
 /// that a connection without the core's pragmas (or with triggers dropped) could have slipped in.
 pub const VIOLATION_QUERIES: &[(&str, &str)] = &[
+    ("invalid recurring bills", "SELECT id FROM payables_recurring_invalid"),
+    ("invalid bank rule policy", "SELECT id FROM bankfeeds_policy_invalid"),
+    ("invalid bank-feed links or bank changes", "SELECT id FROM bankfeeds_safety_invalid"),
+    ("invalid Stripe invoice evidence", "SELECT id FROM invoice_stripe_invalid"),
+    ("invalid invoice email history", "SELECT id FROM invoice_email_invalid"),
+    ("invalid invoice preferences", "SELECT company_id FROM invoice_preferences_invalid"),
     ("invalid estimate conversion copy", include_str!("estimates_conversion_integrity.sql")),
     ("invalid estimate states", "SELECT r.id FROM sales_estimaterevision r LEFT JOIN sales_estimaterevision p ON p.estimate_id=r.estimate_id AND p.number=r.number-1 JOIN sales_estimate e ON e.id=r.estimate_id WHERE NOT fb_estimate_transition_ok(coalesce(p.state,''),r.state,json_extract(r.data,'$.action'),json_extract(r.data,'$.reason')) OR json_extract(r.data,'$.company_snapshot.id') IS NOT e.company_id OR json_extract(r.data,'$.id') IS NOT r.id OR json_extract(r.data,'$.number') IS NOT r.number OR json_extract(r.data,'$.customer_id') IS NOT r.customer_id OR json_extract(r.data,'$.date') IS NOT r.date OR json_extract(r.data,'$.expiry') IS NOT r.expiry OR json_extract(r.data,'$.state') IS NOT r.state"),
     ("invalid estimate evidence", "SELECT e.id FROM sales_estimate e WHERE NOT EXISTS(SELECT 1 FROM sales_estimaterevision r JOIN estimate_seal s ON s.kind='revision' AND s.doc_id=r.id WHERE r.estimate_id=e.id AND r.number=e.revision) UNION ALL SELECT r.id FROM sales_estimaterevision r WHERE NOT fb_sales_header_ok('invoice',r.data) OR NOT fb_sales_document_ok(json_set(r.data,'$.state','DRAFT'),(SELECT json_group_array(json(l.data)) FROM (SELECT data FROM sales_estimateline WHERE revision_id=r.id ORDER BY position) l),r.total)"),
@@ -668,8 +262,13 @@ pub const VIOLATION_QUERIES: &[(&str, &str)] = &[
     ("invalid stored text, identifier, date or timestamp", "SELECT problem FROM fb_value_invalid"),
     ("invalid numbering settings", "SELECT company_id FROM fb_numbering_invalid"),
     ("invalid attachment evidence", "SELECT id FROM attachment_invalid UNION ALL SELECT id FROM attachment_audit_invalid UNION ALL SELECT id FROM attachment_text_invalid"),
+    ("invalid attachment key wraps", "SELECT problem FROM attachment_keywrap_invalid"),
     ("invalid assistant evidence", "SELECT id FROM assistant_invalid"),
     ("invalid assistant model selection", "SELECT id FROM assistant_selection_invalid"),
+    ("invalid sales tax payments", "SELECT id FROM salestax_payment_invalid"),
+    ("invalid job tickets or time entries", "SELECT id FROM jobs_invalid"),
+    ("invalid imported invoice evidence", "SELECT problem FROM sales_import_violations"),
+    ("incomplete imported invoice evidence", "SELECT problem FROM sales_import_completion_violations"),
     ("ambiguous stored JSON", "SELECT problem FROM fb_json_invalid"),
     ("duplicate live shared check number", "SELECT company_id||':'||bank_id||':'||number FROM fb_check_number_live GROUP BY company_id,bank_id,number HAVING count(*)>1"),
     ("invalid checks/transfers evidence", include_str!("checks_violations.sql")),
@@ -854,6 +453,12 @@ impl Unmigrated {
         if !problems.is_empty() { return Err(DbError::Integrity(problems)); }
         Ok(())
     }
+    /// Read the authenticated older book without migrating it. The same read-only transaction and
+    /// callback authorizer as a current book prevent any writes during application preflight.
+    pub fn read<T, E>(&mut self, f: impl FnOnce(&Reader<'_>) -> Result<T, E>) -> Result<T, E>
+    where E: From<rusqlite::Error> {
+        self.book.read(f)
+    }
     /// Run the pending migrations and the open-time checks.
     pub fn upgrade(self) -> Result<Book, DbError> {
         let mut book = self.book;
@@ -889,7 +494,18 @@ pub struct Book {
     owner_empty_command: Arc<AtomicU8>,
     pending_credential_masks: std::collections::BTreeSet<String>,
     retained_text_guards: BTreeMap<String, TextGuard>,
+    /// Write transactions this connection has committed. The bridge compares it around a failed
+    /// request, so a retry is offered only when nothing was saved.
+    commits: u64,
+    /// This connection's identity in the process (see [`Book::connection_id`]).
+    connection: u64,
     retained_text_state: RetainedState,
+}
+
+/// A process-unique number for each connection, so commit counts are only compared within one.
+pub(crate) fn next_connection() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    NEXT.fetch_add(1, Ordering::Relaxed)
 }
 
 // Last Book field: the live guard outlives conn and every retained text policy. Private snapshot
@@ -1170,7 +786,7 @@ impl Book {
         let mode = callback_mode.clone();
         conn.authorizer(Some(move |ctx: AuthContext<'_>| authorize(ctx, mode.load(Ordering::Relaxed))))?;
         let owner_empty_command = register_owner_command(&conn)?;
-        Ok(Book { conn, callback_mode, owner_empty_command, pending_credential_masks: Default::default(), retained_text_guards: BTreeMap::new(), retained_text_state: RetainedState { text: BTreeMap::new(), _process_lock: Some(guard) } })
+        Ok(Book { conn, callback_mode, owner_empty_command, pending_credential_masks: Default::default(), retained_text_guards: BTreeMap::new(), commits: 0, connection: next_connection(), retained_text_state: RetainedState { text: BTreeMap::new(), _process_lock: Some(guard) } })
     }
 
     fn finish_open(&mut self) -> Result<(), DbError> {
@@ -1203,6 +819,7 @@ impl Book {
         sales::register(conn)?;
         credits::register(conn)?;
         payables_functions::register(conn)?;
+        dates::register(conn)?;
         check_numbers::register(conn)?;
         checks_snapshots::register(conn)?;
         prepayments::register(conn)?;
@@ -1235,6 +852,8 @@ impl Book {
             let tx = self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
             tx.execute_batch(sql)?;
             tx.execute_batch(&format!("PRAGMA user_version = {}", index + 1))?;
+            #[cfg(feature = "panic-test")]
+            test_panic::point("migration");
             tx.commit()?;
         }
         Ok(())
@@ -1251,16 +870,8 @@ impl Book {
             Ok(format!("{} row {:?} -> {}", r.get::<_, String>(0)?, r.get::<_, Option<i64>>(1)?, r.get::<_, String>(2)?))
         })?;
         problems.extend(fk.into_iter().map(|f| format!("foreign_key_check: {f}")));
-        for name in REQUIRED_TRIGGERS.iter().copied().chain(value_guard_triggers()) {
-            if !self.has_object("trigger", name)? {
-                problems.push(format!("missing guard trigger {name}"));
-            }
-        }
-        for name in REQUIRED_INDEXES {
-            if !self.has_object("index", name)? {
-                problems.push(format!("missing unique index {name}"));
-            }
-        }
+        // Every table, index, trigger and view must be exactly what the migrations create: a missing,
+        // altered or extra object is a problem. There is no separate list of required names to keep.
         problems.extend(schema_problems(&self.conn, MIGRATIONS.len())?);
         for (label, sql) in VIOLATION_QUERIES {
             let rows: Vec<String> = collect(&self.conn, sql, |r| r.get(0))?;
@@ -1271,10 +882,6 @@ impl Book {
         problems.extend(sales::check(&self.conn)?);
         problems.extend(credits::check(&self.conn)?);
         Ok(problems)
-    }
-
-    fn has_object(&self, kind: &str, name: &str) -> Result<bool, DbError> {
-        Ok(self.conn.query_row("SELECT count(*) FROM sqlite_master WHERE type = ?1 AND name = ?2", [kind, name], |r| r.get::<_, i64>(0))? == 1)
     }
 
     /// Retain a final TEXT policy for the lifetime of this open book. Every future Writer inherits
@@ -1349,12 +956,52 @@ impl Book {
         let owner_scope = CallbackScope::enter(&self.owner_empty_command, u8::from(empty));
         let scope = CallbackScope::enter(&self.callback_mode, 1);
         let value = f(&writer);
+        #[cfg(feature = "panic-test")]
+        test_panic::fire(test_panic::BEFORE_COMMIT);
         drop(owner_scope);
         drop(scope); // Restore library-only transaction control even on callback Err.
         let value = value?;
+        #[cfg(feature = "panic-test")]
+        if test_panic::write_fails() {
+            return Err(rusqlite::Error::InvalidQuery.into());
+        }
         verify_write_pragmas(&writer.tx)?;
         writer.tx.commit()?;
+        self.commits = self.commits.wrapping_add(1);
+        #[cfg(feature = "panic-test")]
+        if test_panic::take(test_panic::ERROR_AFTER_COMMIT) || test_panic::committed_write_fails() {
+            return Err(rusqlite::Error::InvalidQuery.into());
+        }
         Ok(value)
+    }
+
+    /// How many write transactions this connection has committed (see the field).
+    pub fn commits(&self) -> u64 {
+        self.commits
+    }
+
+    /// This connection's identity in the process: two `Book`s never share one, so a commit count
+    /// read before a request is only compared with one read from the same connection after it.
+    pub fn connection_id(&self) -> u64 {
+        self.connection
+    }
+
+    /// After the bridge caught a panic: whether this connection is back in its idle state, with no
+    /// transaction open, no callback scope left set and the required PRAGMAs in place. Unwinding
+    /// out of [`Book::write`] or [`Book::read`] rolls the transaction back and resets every scope
+    /// through their `Drop` guards; this checks that it did. The reason is a fixed phrase.
+    pub fn idle_after_unwind(&self) -> Result<(), &'static str> {
+        if !self.conn.is_autocommit() {
+            return Err("a transaction is still open");
+        }
+        if self.callback_mode.load(Ordering::Relaxed) != 0 || self.owner_empty_command.load(Ordering::Relaxed) != 0 {
+            return Err("a callback scope is still set");
+        }
+        let query_only: i64 = self.conn.query_row("PRAGMA query_only", [], |r| r.get(0)).map_err(|_| "the connection does not answer")?;
+        if query_only != 0 {
+            return Err("the connection is still read-only");
+        }
+        verify_write_pragmas(&self.conn).map_err(|_| "a required PRAGMA changed")
     }
 
     /// Run `f` inside one read transaction: every statement sees the same snapshot (WAL), like the
@@ -1371,6 +1018,8 @@ impl Book {
             let reset = QueryOnlyReset(&tx);
             let scope = CallbackScope::enter(&self.callback_mode, 2);
             let value = f(&Reader { conn: &tx });
+            #[cfg(feature = "panic-test")]
+            test_panic::fire(test_panic::DURING_READ);
             drop(scope);
             drop(reset);
             let value = value?;
@@ -1683,6 +1332,7 @@ fn expected_schema(version: usize) -> Result<&'static SchemaHashes, DbError> {
             let build = || -> rusqlite::Result<Vec<SchemaHashes>> {
                 let conn = Connection::open_in_memory()?;
                 payables_functions::register(&conn)?;
+                dates::register(&conn)?;
                 check_numbers::register(&conn)?;
                 checks_snapshots::register(&conn)?;
                 prepayments::register(&conn)?;
@@ -1951,3 +1601,14 @@ mod tests {
 
 #[cfg(test)]
 mod company_documents_upgrade_tests;
+#[cfg(test)]
+mod invoice_preferences_tests;
+
+/// Canonical bounded fingerprint for retained invoice source evidence.
+pub use sales::historical::evidence_digest as invoice_import_digest;
+#[cfg(test)]
+mod salestax_payments_upgrade_tests;
+#[cfg(test)]
+mod recurring_upgrade_tests;
+#[cfg(test)]
+mod job_tickets_upgrade_tests;

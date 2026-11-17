@@ -1,0 +1,10 @@
+{% if tax_setup_readonly %}<p>Sales tax collection is {% if tax_charged %}on{% else %}off{% endif %}. A bookkeeper or administrator can change sales tax setup.</p>{% else %}<link rel="stylesheet" href="{{ static('salestax/setup.css') }}"><script src="{{ static('salestax/setup.js') }}" defer></script>
+<section class="tax-setup-card"><h2>Sales tax</h2><p>Set the default for new invoices, estimates and sales receipts.</p>
+<form method="post" action="{{ url('salestax:setup', company.pk) }}" data-tax-setup novalidate>{{ tax_setup_token|safe }}{{ tax_setup_form.f.expected_revision.widget|safe }}{{ tax_setup_form.non_field_errors|safe }}
+<div class="document-field">{{ tax_setup_form.f.charge_tax.label_tag|safe }}{{ tax_setup_form.f.charge_tax.widget|safe }}{{ tax_setup_form.f.charge_tax.errors|safe }}</div>
+<div data-collect-tax>
+<div class="document-field">{{ tax_setup_form.f.default_item.label_tag|safe }}{{ tax_setup_form.f.default_item.widget|safe }}{{ tax_setup_form.f.default_item.errors|safe }}</div>
+<div class="tax-setup-fields" data-new-tax-rate>{% for name in ['name','rate','authority_name'] %}<div class="document-field">{{ tax_setup_form.f[name].label_tag|safe }}{{ tax_setup_form.f[name].widget|safe }}{{ tax_setup_form.f[name].errors|safe }}<p class="helptext">{{ tax_setup_form.f[name].help_text }}</p></div>{% endfor %}<p class="helptext">Enter the authority here; you do not need to create a vendor first. FreedomBooks adds it as a vendor so you can record the sales tax you pay it.</p></div>
+</div><p class="helptext">Saved invoices keep their original tax. Item and customer exemptions stay as set. <a href="{{ url('salestax:settings',company.pk) }}">Reporting schedule and advanced settings</a></p>
+<div class="actions"><button type="submit">Save sales tax setup</button><a href="{{ url('setup_start', company.pk) }}">Finish later</a></div></form></section>
+{% endif %}

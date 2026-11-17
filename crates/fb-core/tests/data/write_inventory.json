@@ -5,10 +5,20 @@
   "crates/fb-app/src/ai/operations.rs": {
     "execute:prepare": 1
   },
+  "crates/fb-app/src/books.rs": {
+    "audit_made_main:prepare": 1,
+    "audit_made_main:write": 1,
+    "make_open_book_main:prepare": 1
+  },
   "crates/fb-app/src/credentials.rs": {
     "migrate_legacy_envelopes:prepare": 1,
+    "release_bankfeeds_unavailable:prepare": 1,
     "restore_ai_credentials:prepare": 1,
     "restore_bankfeeds:prepare": 1
+  },
+  "crates/fb-app/src/hosting.rs": {
+    "save_host_record:execute": 1,
+    "save_host_record:write": 1
   },
   "crates/fb-app/src/identity.rs": {
     "bootstrap_owner:prepare": 1,
@@ -19,8 +29,10 @@
     "save_desktop_user:prepare": 1,
     "save_desktop_user:write": 1
   },
+  "crates/fb-app/src/recurring_bills.rs": {
+    "desktop_tick:prepare": 1
+  },
   "crates/fb-app/src/screens.rs": {
-    "home:prepare": 1,
     "invoice_meta:prepare": 1,
     "paid_on:prepare": 1,
     "register:prepare": 1,
@@ -39,7 +51,11 @@
     "detail:prepare": 1
   },
   "crates/fb-app/src/screens/d3/activity.rs": {
-    "build:prepare": 3
+    "build:prepare": 1,
+    "customer:prepare": 2
+  },
+  "crates/fb-app/src/screens/d3/vendors.rs": {
+    "detail:prepare": 1
   },
   "crates/fb-app/src/screens/d4.rs": {
     "references:prepare": 1
@@ -49,7 +65,7 @@
     "retry_document:prepare": 1
   },
   "crates/fb-app/src/screens/d4/estimates.rs": {
-    "listing:prepare": 1,
+    "listing:prepare": 2,
     "load:prepare": 1,
     "render:prepare": 1
   },
@@ -69,6 +85,9 @@
   "crates/fb-app/src/screens/d6.rs": {
     "rows:prepare": 1
   },
+  "crates/fb-app/src/screens/d7b.rs": {
+    "bank_register:prepare": 1
+  },
   "crates/fb-app/src/screens/d8.rs": {
     "export_report:prepare": 1,
     "sources:prepare": 1
@@ -78,11 +97,17 @@
     "overview:prepare": 1
   },
   "crates/fb-app/src/screens/d9/review.rs": {
+    "recent_categories:prepare": 1,
+    "retired_copies:prepare": 1,
     "review_page:prepare": 3,
     "run_review_post:prepare": 1
   },
+  "crates/fb-app/src/screens/d9/rule_import.rs": {
+    "page:prepare": 4,
+    "test:prepare": 1
+  },
   "crates/fb-app/src/screens/identity.rs": {
-    "render:prepare": 3
+    "render:prepare": 4
   },
   "crates/fb-app/src/session.rs": {
     "create_book_with_chart:execute": 1,
@@ -140,9 +165,15 @@
     "adopt:write": 1,
     "insert_tx:atomic": 1,
     "insert_tx:execute": 2,
+    "legacy_wraps:prepare": 1,
+    "recorded_wraps:prepare": 1,
     "remove:write": 1,
     "remove_tx:atomic": 1,
     "remove_tx:execute": 2,
+    "rewrap_legacy:atomic": 1,
+    "rewrap_legacy:execute": 1,
+    "rewrap_legacy:prepare": 1,
+    "rewrap_legacy:write": 1,
     "rows:prepare": 1
   },
   "crates/fb-core/src/backups/audit.rs": {
@@ -152,6 +183,7 @@
     "contents:prepare": 5
   },
   "crates/fb-core/src/backups/mod.rs": {
+    "receipt_labels:prepare": 1,
     "receipt_refs:prepare": 1
   },
   "crates/fb-core/src/backups/paths.rs": {
@@ -162,14 +194,21 @@
     "audit_event:write": 1
   },
   "crates/fb-core/src/bankfeeds/accept.rs": {
+    "back_to_review:execute": 3,
     "decide:execute": 1,
     "ignore:execute": 1,
-    "return_to_review:execute": 1
+    "link_existing:execute": 2
+  },
+  "crates/fb-core/src/bankfeeds/automatic.rs": {
+    "auto_post:execute": 4,
+    "enqueue:execute": 1,
+    "pending_automatic:prepare": 1
   },
   "crates/fb-core/src/bankfeeds/credentials.rs": {
     "flag:execute": 1
   },
   "crates/fb-core/src/bankfeeds/mod.rs": {
+    "already_recorded_count:prepare": 1,
     "command:atomic": 1,
     "command:write": 1,
     "connect:execute": 1,
@@ -178,21 +217,35 @@
     "items:prepare": 1,
     "map_account_tx:execute": 2,
     "match_candidates:prepare": 1,
-    "receipt_candidates:prepare": 1
+    "receipt_candidates:prepare": 1,
+    "reconnect_labels:prepare": 1,
+    "stale_decisions:prepare": 1
+  },
+  "crates/fb-core/src/bankfeeds/qbo.rs": {
+    "import_rules:execute": 2
   },
   "crates/fb-core/src/bankfeeds/rules.rs": {
     "move_rule:execute": 1,
     "rules_where:prepare": 1,
     "save_rule:execute": 2,
-    "set_rule_active:execute": 1
+    "set_rule_active:execute": 1,
+    "turn_off_imported_auto_post:execute": 3
   },
   "crates/fb-core/src/bankfeeds/staging.rs": {
+    "bank_change:execute": 3,
+    "bank_changes:prepare": 1,
+    "candidate_last_good:prepare": 1,
+    "clock_warning:prepare": 1,
     "identity_of:prepare": 1,
     "identity_secret:execute": 1,
+    "keep_recorded:execute": 1,
+    "last_complete_sync:prepare": 1,
     "record_sync_failure:execute": 1,
+    "replaced:prepare": 1,
     "stage_bank_transactions:prepare": 1,
-    "store_pull:execute": 4,
-    "store_pull:prepare": 1,
+    "store_pull_mode:execute": 4,
+    "store_pull_mode:prepare": 1,
+    "sync_gaps:prepare": 1,
     "upsert:execute": 2
   },
   "crates/fb-core/src/bankfeeds/write.rs": {
@@ -205,7 +258,7 @@
   "crates/fb-core/src/banking/deposits.rs": {
     "record_deposit_tx:atomic": 1,
     "record_deposit_tx:execute": 2,
-    "reverse_deposit:execute": 1,
+    "reverse_deposit_tx:execute": 1,
     "review_deposit_tx:atomic": 1
   },
   "crates/fb-core/src/banking/mod.rs": {
@@ -227,7 +280,8 @@
   "crates/fb-core/src/banking/register.rs": {
     "build_normalized:prepare": 2,
     "register_accounts:prepare": 1,
-    "source_metadata:prepare": 7
+    "register_balances:prepare": 2,
+    "source_metadata:prepare": 8
   },
   "crates/fb-core/src/banking/review_boundaries.rs": {
     "corrupt:execute": 1,
@@ -261,8 +315,8 @@
     "write:write": 1
   },
   "crates/fb-core/src/company_documents.rs": {
-    "save:execute": 2,
-    "save:write": 1
+    "save_with_preferences:execute": 2,
+    "save_with_preferences:write": 1
   },
   "crates/fb-core/src/credits/applications.rs": {
     "apply_credit:execute": 2,
@@ -302,18 +356,95 @@
   },
   "crates/fb-core/src/documents.rs": {
     "atomic_primitive:atomic": 1,
+    "automatic_banks:prepare": 1,
     "create_identity:execute": 3,
     "save_setup:write": 1,
     "save_setup_tx:execute": 3,
     "setup_record:prepare": 1,
     "snapshot_source_accounts:execute": 1,
-    "source_accounts:prepare": 1
+    "source_accounts:prepare": 1,
+    "sync_bank_accounts_tx:execute": 3
+  },
+  "crates/fb-core/src/find.rs": {
+    "find:prepare": 1,
+    "settle:prepare": 1
   },
   "crates/fb-core/src/first_run.rs": {
     "apply_proposal:write": 1,
     "dismiss_first_run:write": 1,
     "fill_setup:write": 1,
     "slice:prepare": 1
+  },
+  "crates/fb-core/src/home.rs": {
+    "recent:prepare": 1
+  },
+  "crates/fb-core/src/invoice_email.rs": {
+    "begin_connection:execute": 2,
+    "begin_connection:write": 1,
+    "finish:execute": 1,
+    "finish:write": 1,
+    "history:prepare": 1,
+    "mark_submitting:execute": 1,
+    "mark_submitting:write": 1,
+    "prepare:execute": 1,
+    "prepare:write": 1,
+    "resolve_interrupted:execute": 1,
+    "resolve_interrupted:write": 1,
+    "set_connection_state:execute": 1,
+    "set_connection_state:write": 1
+  },
+  "crates/fb-core/src/invoice_preferences.rs": {
+    "save_tx:execute": 2
+  },
+  "crates/fb-core/src/invoice_stripe.rs": {
+    "connect:execute": 2,
+    "connect:write": 1,
+    "disconnect:execute": 1,
+    "disconnect:write": 1,
+    "finish_link:execute": 1,
+    "finish_link:write": 1,
+    "mark_deactivated:execute": 1,
+    "mark_deactivated:write": 1,
+    "mark_reactivated:execute": 1,
+    "mark_reactivated:write": 1,
+    "post_payment:atomic": 1,
+    "post_payment:execute": 1,
+    "post_payment:write": 1,
+    "prepare_link:execute": 1,
+    "prepare_link:write": 1,
+    "rows:prepare": 1,
+    "stage_page:atomic": 1,
+    "stage_page:execute": 4,
+    "stage_page:write": 1
+  },
+  "crates/fb-core/src/jobs.rs": {
+    "delete_entry:atomic": 1,
+    "delete_entry:execute": 1,
+    "delete_entry:write": 1,
+    "entries:prepare": 1,
+    "follow_invoice_edit:execute": 1,
+    "follow_invoice_edit:prepare": 1,
+    "invoice_ticket:atomic": 1,
+    "invoice_ticket:write": 1,
+    "invoice_ticket_tx:execute": 3,
+    "move_entry:atomic": 1,
+    "move_entry:execute": 1,
+    "move_entry:write": 1,
+    "save_entry:atomic": 1,
+    "save_entry:write": 1,
+    "save_entry_tx:execute": 2,
+    "save_ticket:atomic": 1,
+    "save_ticket:write": 1,
+    "save_ticket_tx:execute": 2,
+    "set_ticket_status:atomic": 1,
+    "set_ticket_status:execute": 1,
+    "set_ticket_status:write": 1,
+    "ticket:prepare": 1,
+    "tickets:prepare": 1,
+    "workers:prepare": 1
+  },
+  "crates/fb-core/src/jobs_tests.rs": {
+    "audit_actions:prepare": 1
   },
   "crates/fb-core/src/numbering.rs": {
     "check_next:prepare": 1,
@@ -338,7 +469,7 @@
   "crates/fb-core/src/payables/mod.rs": {
     "append:execute": 1,
     "insert:execute": 1,
-    "post_bill:execute": 1,
+    "post_bill_tx:execute": 1,
     "rows:prepare": 1,
     "save_bill_inner:execute": 1,
     "save_bill_tx:atomic": 1,
@@ -348,7 +479,13 @@
     "write:write": 1
   },
   "crates/fb-core/src/payables/payments.rs": {
-    "record_payment:execute": 1
+    "record_payment_tx:execute": 1
+  },
+  "crates/fb-core/src/payables/recurring.rs": {
+    "control:execute": 3,
+    "generate_one:atomic": 1,
+    "generate_one:execute": 2,
+    "save:execute": 2
   },
   "crates/fb-core/src/prepayments/guard_tests.rs": {
     "raw_deposit:execute": 1,
@@ -395,11 +532,16 @@
     "save_estimate:execute": 2,
     "transition_estimate:execute": 1
   },
+  "crates/fb-core/src/sales/historical.rs": {
+    "apply_one:execute": 3,
+    "presentation:prepare": 1,
+    "run:write": 1
+  },
   "crates/fb-core/src/sales/invoices.rs": {
     "append:execute": 2,
-    "post_invoice:execute": 1,
-    "save_invoice:execute": 2,
-    "void_invoice:execute": 1
+    "post_invoice_tx:execute": 1,
+    "save_invoice_tx:execute": 2,
+    "void_invoice_tx:execute": 2
   },
   "crates/fb-core/src/sales/l3b_tests.rs": {
     "exhaust:execute": 2,
@@ -418,7 +560,7 @@
     "sum_rows:prepare": 1
   },
   "crates/fb-core/src/sales/receipts.rs": {
-    "record:execute": 4,
+    "record_receipt_tx:execute": 4,
     "reverse:execute": 1
   },
   "crates/fb-core/src/sales/review_hardening.rs": {
@@ -429,6 +571,7 @@
   },
   "crates/fb-core/src/salestax.rs": {
     "bulk_preview:prepare": 1,
+    "configure:write": 1,
     "finish_bulk_step:execute": 1,
     "finish_bulk_step:write": 1,
     "item:prepare": 1,
@@ -441,6 +584,21 @@
     "save_settings:write": 1,
     "set_item_active:prepare": 1,
     "set_item_active:write": 1
+  },
+  "crates/fb-core/src/salestax_payments.rs": {
+    "agencies:prepare": 1,
+    "owed:prepare": 3,
+    "payment:prepare": 1,
+    "payments:prepare": 1,
+    "record_payment_tx:atomic": 1,
+    "review_payment_tx:atomic": 1,
+    "seal:execute": 1,
+    "tax_accounts:prepare": 1,
+    "weights:prepare": 1
+  },
+  "crates/fb-core/src/salestax_payments_tests.rs": {
+    "forged:write": 1,
+    "sql_refused:execute_batch": 1
   },
   "crates/fb-core/src/services.rs": {
     "all_digit_numbers:prepare": 1,

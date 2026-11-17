@@ -25,13 +25,14 @@ fn http_timeout_does_not_retry_or_forget_good_credentials() {
     let server = FakeServer::start(move |_| {
         count.fetch_add(1, Ordering::SeqCst);
         let mut response = FakeResponse::new(202, "");
-        response.delay = Duration::from_millis(400);
+        response.delay = Duration::from_secs(4);
         response
     })
     .unwrap();
+    // The reply outlasts the client timeout by seconds, so a loaded machine still times out.
     let policy = HttpPolicy::loopback_for_tests(server.address().port())
         .unwrap()
-        .with_limits(Duration::from_millis(100), MAX_MESSAGE_BYTES, 64 * 1024)
+        .with_limits(Duration::from_secs(1), MAX_MESSAGE_BYTES, 64 * 1024)
         .unwrap();
     let audit = Arc::new(MemoryAuditSink::default());
     let cx = custom_context(
@@ -46,6 +47,12 @@ fn http_timeout_does_not_retry_or_forget_good_credentials() {
             error: PluginError::Timeout
         }
     ));
+    // send_outcome has returned, so any retry was already sent; the fake server may only be slow to
+    // count the one request it received.
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while requests.load(Ordering::SeqCst) == 0 && std::time::Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(10));
+    }
     assert_eq!(requests.load(Ordering::SeqCst), 1);
     assert_eq!(stored(&cx)["access_token"], "SYNTHETIC_ACCESS");
     assert_eq!(audit.events()[0].outcome, AuditOutcome::Failed);
@@ -54,9 +61,10 @@ fn http_timeout_does_not_retry_or_forget_good_credentials() {
 #[test]
 fn http_caps_refuse_oversized_response_and_request() {
     let server = FakeServer::start(|_| FakeResponse::new(202, vec![b'x'; 1025])).unwrap();
+    // The oversized reply never waits; the deadline is only a bound, long enough for a loaded machine.
     let policy = HttpPolicy::loopback_for_tests(server.address().port())
         .unwrap()
-        .with_limits(Duration::from_secs(1), MAX_MESSAGE_BYTES, 1024)
+        .with_limits(Duration::from_secs(20), MAX_MESSAGE_BYTES, 1024)
         .unwrap();
     let cx = custom_context(
         PluginHttp::new(policy),

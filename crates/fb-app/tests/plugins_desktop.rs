@@ -6,7 +6,7 @@
 //! - ChatGPT: start → the browser approves at the fake provider and hits fb-net's loopback →
 //!   poll → connected with the plan ("Using ChatGPT plan" state) → disconnect wipes the vault row.
 //! - The R11 vectors through the same desktop connect → pull → accept path, every stored TEXT dumped
-//!   for R11's independent stdlib decoders (scored by `staging/wave4-fix1/net/check_leak.py`).
+//!   for R11's independent stdlib decoders.
 mod support;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use fb_app::keys::MasterKey;
@@ -22,6 +22,9 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+
+/// The desktop sync summary: the provider pull, then the automatic-posting outcome.
+const SYNCED: &str = "1 accounts, 2 new transactions; 0 automatically posted by rules. Review downloaded transactions for any held items.";
 
 mod fakes;
 use fakes::*;
@@ -134,7 +137,8 @@ fn simplefin_connect_pull_accept_reopen_through_fb_net() {
     assert_eq!(again, Err("The setup token was refused. Obtain a new token from the provider.".into()));
 
     let summary = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().expect("pulled");
-    assert_eq!(summary, "1 accounts, 2 new transactions");
+    // The desktop sync adds the automatic-posting outcome (no imported rules here, so none posted).
+    assert_eq!(summary, SYNCED);
     // The manual minimum interval (Python MANUAL_MIN_INTERVAL) refuses an immediate second pull.
     let soon = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap_err();
     assert!(soon.starts_with("Synced 0 min ago. SimpleFIN asks apps not to pull too often; try again in 10 min."), "{soon}");
@@ -446,5 +450,5 @@ fn simplefin_requires_os_sealing_before_claim_or_sync_and_preserves_saved_creden
     assert_eq!(texts(&mut d.app), before);
     assert!(envelope(&mut d.app, co, "simplefin", &connection), "keep the saved connection intact");
     d.app.os_store_usable = true;
-    assert_eq!(plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap(), "1 accounts, 2 new transactions");
+    assert_eq!(plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap(), SYNCED);
 }

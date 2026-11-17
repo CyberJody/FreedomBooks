@@ -43,6 +43,7 @@ impl Files {
             created_at: "2026-10-30T12:00:00Z",
             passphrase,
             keep: None,
+            allow_incomplete: false,
         }
     }
     fn roptions<'a>(&'a self, target: &'a Path) -> RestoreOptions<'a> {

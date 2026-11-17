@@ -82,8 +82,12 @@ fn form(
     let banks = banks(app, c, &[])?;
     let mut initial = json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string(),"memo":"Funds transfer"});
     if banks.len() >= 2 {
-        initial["from_account"] = json!(banks[0].id.to_db());
-        initial["to_account"] = json!(banks[1].id.to_db());
+        // Start from the account the last transfer came from, and to the next other account.
+        let from = default_bank(app, c, &banks, "SELECT from_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?
+            .unwrap_or_else(|| banks[0].id.to_db());
+        let to = banks.iter().map(|a| a.id.to_db()).find(|id| *id != from).unwrap_or_default();
+        initial["from_account"] = json!(from);
+        initial["to_account"] = json!(to);
     }
     put(&mut vm, "form", bind_fields(fs, p, &initial, e, true));
     put(&mut vm, "csrf_token", token(app, path));
@@ -92,9 +96,8 @@ fn form(
     draw(app, "transfers/form.html", &vm)
 }
 fn filter_fields(app: &mut App, c: CompanyId) -> AppResult<Vec<Field>> {
-    // SIM-FIX item 3 (deliberate divergence): v1 offered every asset account here. Offer the designated
-    // banks, as the entry form does, plus any account a recorded transfer used (a bank that has since
-    // been undesignated), so every existing transfer stays findable.
+    // Offer the bank accounts, as the entry form does, plus any account a recorded transfer used
+    // (one that is no longer a bank account), so every existing transfer stays findable.
     let used = scoped_rows(
         app,
         c,
@@ -107,8 +110,8 @@ fn filter_fields(app: &mut App, c: CompanyId) -> AppResult<Vec<Field>> {
         Field::new("q", "Number or memo", Widget::Text).attr("maxlength", "120"),
         select(
             "account",
-            "Bank (from or to)",
-            "All banks",
+            "Bank account (from or to)",
+            "All bank accounts",
             a.iter().map(|a| (a.id.to_db(), a.label())).collect(),
             false,
         ),

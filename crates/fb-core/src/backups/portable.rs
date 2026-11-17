@@ -266,7 +266,9 @@ pub fn audit_event(book: &mut fb_db::Book, actor: crate::UserId, company: crate:
     let valid = match action {
         "book.password_prompt" => detail.as_object().is_some_and(|v| v.len() == 1 && v.get("ask_password").is_some_and(serde_json::Value::is_boolean)),
         "book.recovery_saved" => detail.as_object().is_some_and(|v| v.is_empty()),
-        "book.protection_changed" => detail.as_object().is_some_and(|v| v.len() == 1 && matches!(v.get("mode").and_then(serde_json::Value::as_str), Some("built-in" | "own-password"))),
+        "book.protection_changed" => detail.as_object().is_some_and(|v| v.len() == 2
+            && matches!(v.get("mode").and_then(serde_json::Value::as_str), Some("built-in" | "own-password"))
+            && matches!(v.get("authorized_by").and_then(serde_json::Value::as_str), Some("book_password" | "recovery_key" | "sign_in"))),
         _ => false,
     };
     if !valid { return Err(crate::FbError::refused("Invalid book protection audit event.")); }

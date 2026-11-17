@@ -241,6 +241,7 @@ impl Runner<'_> {
                         created_at: "2026-10-30T12:00:00Z",
                         passphrase: None,
                         keep: None,
+                        allow_incomplete: false,
                     },
                 )
                 .map_err(err)?;
@@ -816,6 +817,7 @@ mod review_tests {
             contents,
             attachments: vec![],
             not_included: vec![],
+            absent: vec![],
         };
         data.contents.tables.remove("ledger_company");
         assert!(runner.normalized_backup(&data).is_err());

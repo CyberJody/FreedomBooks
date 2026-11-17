@@ -5,7 +5,8 @@ Changed files are those since the merge base with FB_GATE_BASE (default main), p
 untracked files. Each file maps to the local package whose directory holds it (from cargo metadata,
 deepest path wins); the plan adds every workspace crate that depends on a changed package, transitively,
 through normal, build or dev dependencies, including chains through nonmembers. Files outside every
-local package are exempt only for known documentation, Electron and gate files. Shared build
+local package are exempt from crate tests only for known documentation, Electron and gate files;
+Electron files are checked by the Electron unit tests, which both gate tiers always run. Shared build
 files, declared external build inputs and unclassified files test every workspace crate.
 
 Prints the crate names to stdout, one per line, and the reasons to stderr.
@@ -138,15 +139,19 @@ def plan(root, base):
         log.append(f"gate(quick): {why}: testing all {len(members)} workspace crates")
         return sorted(members.values()), log
     direct = {}
-    outside = 0
+    outside = electron = 0
     for f in files:
         name = owner(f, dirs)
-        if name is None:
-            outside += 1
-        else:
+        if name is not None:
             direct[name] = direct.get(name, 0) + 1
+        elif os.path.relpath(f, ws_root).startswith("electron/"):
+            electron += 1
+        else:
+            outside += 1
+    if electron:
+        log.append(f"gate(quick): {electron} Electron file(s) changed: checked by npm --prefix electron test")
     if outside:
-        log.append(f"gate(quick): {outside} file(s) outside any crate: known documentation/Electron/gate files, no tests for them")
+        log.append(f"gate(quick): {outside} file(s) outside any crate: known documentation/gate files, no tests for them")
     reason = {}
     for name in sorted(direct):
         reason[name] = f"changed ({direct[name]} file(s))"
@@ -157,6 +162,12 @@ def plan(root, base):
             if dep not in reason:
                 reason[dep] = f"depends on {labels[name]}"
                 queue.append(dep)
+    # fb-node's hosting tests start the `fb-remote` gateway binary, which only `cargo test -p fb-remote`
+    # builds: test fb-remote with fb-node so the binary is there and current.
+    by_name = {pkg_name: key for key, pkg_name in members.items()}
+    node, gateway = by_name.get("fb-node"), by_name.get("fb-remote")
+    if node in reason and gateway is not None and gateway not in reason:
+        reason[gateway] = "its gateway binary is used by fb-node's hosting tests"
     selected = sorted(key for key in reason if key in members)
     for key in selected:
         log.append(f"gate(quick):   test {members[key]}: {reason[key]}")

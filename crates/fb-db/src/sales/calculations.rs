@@ -222,3 +222,52 @@ pub fn totals(
         json!({"lines":amounts,"subtotal":subtotal.to_string(),"taxable":taxable.to_string(),"tax":tax.to_string(),"total":total.to_string(),"tax_mode":tax_mode,"tax_rate":rate.to_string(),"tax_label":output_label,"tax_snapshot":snapshot}),
     )
 }
+
+/// Invoice adjustments use positive magnitudes; their sign belongs to the line kind.
+/// Legacy charge arithmetic and its serialized evidence remain unchanged.
+pub fn invoice_kind(line: &Value) -> FbResult<&str> {
+    match line.get("line_kind") {
+        None | Some(Value::Null) => Ok("CHARGE"),
+        Some(Value::String(s)) if matches!(s.as_str(), "CHARGE" | "DISCOUNT" | "NOTE") => Ok(s),
+        _ => Err(FbError::validation("Choose Charge, Discount / credit, or Note.")),
+    }
+}
+pub fn invoice_line_amount(line: &Value) -> FbResult<Money> {
+    if invoice_kind(line)? != "NOTE" {
+        return line_amount(&line["quantity"], &line["rate"]);
+    }
+    if !decimal(&line["quantity"], 4, Decimal::ZERO, false)?.is_zero()
+        || !unit_rate(&line["rate"])?.is_zero()
+        || line["taxable"] != false
+        || ["item_id", "income_account_id", "expense_account_id"].iter().any(|k| !line[*k].is_null())
+    {
+        return Err(FbError::validation("A note has zero quantity and rate, no tax, item, or accounts."));
+    }
+    Ok(Money::ZERO)
+}
+pub fn invoice_totals(lines: &[Value], tax: &Value, posting: bool) -> FbResult<Value> {
+    let mut taxable = 0i128;
+    let mut non_taxable = 0i128;
+    let mut amounts = Vec::new();
+    for l in lines {
+        let flag = l["taxable"].as_bool().ok_or_else(|| FbError::validation("Each line requires an explicit taxable flag."))?;
+        let kind = invoice_kind(l)?;
+        let amount = invoice_line_amount(l)?;
+        let signed = if kind == "DISCOUNT" { -amount.cents() } else { amount.cents() };
+        if flag { taxable += signed; } else { non_taxable += signed; }
+        amounts.push(amount.to_string());
+    }
+    if taxable < 0 || non_taxable < 0 || taxable + non_taxable > MAX_TOTAL_CENTS {
+        return Err(FbError::validation("Discounts cannot exceed charges in either the taxable or non-taxable portion of an invoice."));
+    }
+    let aggregates = [
+        json!({"quantity":"1", "rate":Money::from_cents(taxable).to_string(), "taxable":true}),
+        json!({"quantity":"1", "rate":Money::from_cents(non_taxable).to_string(), "taxable":false}),
+    ];
+    let mut result = totals(&aggregates, tax["tax_mode"].as_str().unwrap_or(""),
+        tax.get("tax_rate").filter(|v| !v.is_null()),
+        tax.get("tax_label").unwrap_or(&json!("")),
+        tax.get("tax_snapshot").filter(|v| !v.is_null()), posting)?;
+    result["lines"] = json!(amounts);
+    Ok(result)
+}

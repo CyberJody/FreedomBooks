@@ -8,7 +8,7 @@ Checked items are implemented on the development branch. Internal build verifica
 - [x] **AI access to accounting workflows.** Authorized AI can read reports, create invoices, categorize bank activity and import structured journal batches through validated accounting operations. Local API and MCP access have explicit permissions, revocation and actor audit. See [supported operations and limits](local-ai.md).
 - [x] **Faster transaction review.** Keyboard selection, previewed bulk draft edits and reusable rules are available. Applying bulk edits does not post transactions.
 - [x] **Authenticator-app MFA.** Optional per-user MFA with local QR setup, manual fallback and single-use recovery codes.
-- [ ] **Simultaneous access from other computers.** The current version supports one signed-in person at a time on one desktop.
+- [x] **Simultaneous access from other computers.** One computer hosts the books; other computers on the same network or Tailscale pair with a one-time code and sign in with their own users. See [Host these books](hosting.md). A headless host service is still to come.
 - [ ] **YubiKey sign-in.** Deferred; authenticator-app MFA is available now.
 - [x] **Direct transaction review navigation.** Put Review transactions first under Banking, with a distinct active-page indicator.
 - [x] **Copy recovery key.** Add an explicit Copy button when the encryption/recovery key is generated, with clear confirmation that it was copied, so it can be saved without manually selecting the text.

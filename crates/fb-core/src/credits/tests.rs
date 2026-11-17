@@ -12,11 +12,13 @@ struct Fixture {
     bank: AccountId,
     tax: AccountId,
     path: std::path::PathBuf,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fixture {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!("fb-credits-{}.fbbook", new_id()));
-        let mut book = Book::create(&path, &[24; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("credits");
+        let path = file.path().to_path_buf();
+        let mut book = file.book(&[24; 32]);
         let actor = users::create_user(&mut book, "Credits tester", false).unwrap();
         let company = services::create_company(&mut book, actor, "Synthetic credits", "USD", false)
             .unwrap()
@@ -51,6 +53,7 @@ impl Fixture {
             .unwrap()
             .to_owned();
         Self {
+            _file: file,
             book,
             actor,
             company,
@@ -288,7 +291,7 @@ fn snapshot(f: &Fixture) -> Vec<(String, Vec<Vec<fb_db::rusqlite::types::Value>>
         .into_iter()
         .map(|t| {
             let mut st = c
-                .prepare(&format!("SELECT * FROM {t} ORDER BY 1,2"))
+                .prepare(&fb_db::test_support::select_all_ordered(c, &t).unwrap())
                 .unwrap();
             let n = st.column_count();
             let rows = st

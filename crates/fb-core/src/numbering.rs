@@ -157,11 +157,11 @@ fn scope(
     bank: Option<AccountId>,
 ) -> FbResult<String> {
     if kind == CHECK {
-        let id = bank.ok_or_else(|| FbError::validation("Choose a designated bank account."))?;
+        let id = bank.ok_or_else(|| FbError::validation("Choose a bank account."))?;
         let eligible:bool=q.query_row("SELECT EXISTS(SELECT 1 FROM ledger_account a JOIN documents_designatedbank b ON b.account_id=a.id JOIN documents_accountingsetup s ON s.id=b.setup_id WHERE a.id=?1 AND a.company_id=?2 AND s.company_id=?2 AND a.active AND a.postable AND a.kind='ASSET')",params![id.to_db(),co.to_db()],|r|r.get(0))?;
         if !eligible {
             return Err(FbError::validation(
-                "Choose an active designated bank account in this company.",
+                "Choose an active bank account in this company.",
             ));
         }
         Ok(id.to_db())

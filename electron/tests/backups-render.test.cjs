@@ -6,11 +6,15 @@ const path=require('node:path');
 const vm=require('node:vm');
 const target='fb://app/c/0195b4a4-55af-719e-96cb-a2f946b067bf/backups/';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function fixture(bankFeeds=false, canLock=true) {
-  const state={open:true,signedIn:true,generation:1,pending:[],sync:0,agentRevoked:0};
-  const native={setHost(){},pluginsEnabled:()=>false,bankfeedsEnabled:()=>bankFeeds,configureBackups(){},
+const diagnostics=require('../main/diagnostics.cjs');
+function fixture(bankFeeds=false, canLock=true, deferResume=false, deferRecurring=false) {
+  const state={open:true,signedIn:true,generation:1,aiGeneration:1,pending:[],resumePending:[],recurringPending:[],sync:0,agentRevoked:0};
+  const native={setHost(){},pluginsEnabled:()=>false,bankfeedsEnabled:()=>bankFeeds,invoiceDeliveryEnabled:()=>false,configureBackups(){},
     aiInvalidate:()=>{state.agentRevoked++;},
+    recurringBillsAsync:()=>deferRecurring?new Promise(resolve=>state.recurringPending.push(resolve)):Promise.resolve(''),
+    aiGeneration:()=>String(state.aiGeneration),
     appState:()=>JSON.stringify({open:state.open,can_lock:canLock,signed_in:state.signedIn,session_generation:state.generation}),
+    hostingWanted:()=>false,hostingResumeAsync:()=>Promise.resolve('{"ok":true,"running":false}'),hostingState:()=>'{"available":false}',hostingActive:()=>false, hostingStatus:()=>'{"running":false,"bind":"","connected":0}',
     lock:()=>{state.open=false;state.signedIn=false;state.generation++;},
     signOut:()=>{state.signedIn=false;state.generation++;state.agentRevoked++;},
     renderGate:()=>'<h1>Unlock</h1>',render:()=>{state.sync++;throw new Error('Backups must run on worker');},
@@ -20,18 +24,25 @@ function fixture(bankFeeds=false, canLock=true) {
   };
   const electron={app:{getVersion:()=>'',commandLine:{appendSwitch(){}},enableSandbox(){},whenReady:()=>new Promise(()=>{}),on(){}},
     protocol:{registerSchemesAsPrivileged(){}},ipcMain:{handle(){}}};
-  const stubs={electron,'./development.cjs':{nativeModule:()=>'/native',userData:()=>'/synthetic',netHelper:()=>'/synthetic/fb-net'},'/native':native,
+  const stubs={electron,'./development.cjs':{nativeModule:()=>'/native',userData:()=>'/synthetic',netHelper:()=>'/synthetic/fb-net',remoteHelper:()=>'/none',hostingLoopback:()=>false},'./hosting.cjs':require('../main/hosting.cjs'),'/native':native,'./remote-client.cjs':require('../main/remote-client.cjs'),'./remote-mode.cjs':require('../main/remote-mode.cjs'),
     './keys.cjs':{userDataDir:()=>'/synthetic',store:()=>({exists:()=>true,returnToMain(){}})},
     './identity.cjs':{configure(){},claimInstance:()=>true},'./about.cjs':{osLabel:()=>''},
-    './ai-desktop.cjs':{create:()=>({menuItems:[]})},
+    './ai-desktop.cjs':{create:()=>({menuItems:[],resume:()=>deferResume?new Promise(resolve=>state.resumePending.push(resolve)):Promise.resolve()})},
     './save-file.cjs':{create:()=>({})},'./printing.cjs':{controller:()=>({})},
-    './guards.cjs':require('../main/guards.cjs')};
+    './guards.cjs':require('../main/guards.cjs'),'./navigation.cjs':require('../main/navigation.cjs'),
+    './diagnostics.cjs':{...diagnostics,logDir:()=>'/synthetic/logs',create:o=>({...diagnostics.create(o),install(){}})}};
   const sandbox={URL,Response,Buffer,__dirname:path.join(__dirname,'../main'),module:{exports:{}},
     require:n=>Object.hasOwn(stubs,n)?stubs[n]:require(n)};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../main/main.cjs'),'utf8')+'\nmodule.exports={handle,lockNow,calls,getPending:()=>pending};',sandbox);
   return {...sandbox.module.exports,state};
 }
 const result=()=>JSON.stringify({html:'<h1>Synthetic book Backups</h1>',status:200,route:'backups:page'});
+test('company change during AI resumption suppresses the older company page without changing the named session',async()=>{
+  const f=fixture(false,true,true),request=f.handle({url:target,method:'GET'});
+  await tick();f.state.pending[0].resolve(result());await tick();assert.equal(f.state.resumePending.length,1);
+  f.state.aiGeneration++;f.state.resumePending[0]();
+  const response=await request;assert.equal(response.status,303);assert.ok(!(await response.text()).includes('Synthetic book Backups'));
+});
 test('ordinary Backups GETs serialize, retain query strings and refuse competing writes',async()=>{
   const f=fixture(),get=()=>f.handle({url:target+'?created=test',method:'GET'});
   const a=get(),b=get(),c=get();await tick();
@@ -115,4 +126,30 @@ test('OS lock cancels an unfinished MFA sign-in even without a live actor',()=>{
   const generation=f.state.generation;f.lockNow();
   assert.equal(f.state.generation,generation+1,'pending sign-in must be invalidated');
   assert.equal(f.state.agentRevoked,1);assert.equal(f.state.open,true);
+});
+
+
+test('locking during recurring automation prevents the following page read',async()=>{
+  const f=fixture(false,true,false,true);
+  const request=f.handle({url:target,method:'GET'});
+  await tick();assert.equal(f.state.recurringPending.length,1);
+  f.lockNow();assert.equal(f.state.open,true,'lock waits for the native write boundary');
+  f.state.recurringPending[0]('');
+  const response=await request;
+  assert.equal(await response.text(),'<h1>Unlock</h1>');
+  assert.equal(f.state.pending.length,0,'no old-session render is admitted');
+  assert.equal(f.state.open,false);
+});
+
+
+test('navigation waits for recurring catch-up and renders without BUSY or another catch-up',async()=>{
+  const f=fixture(false,true,false,true);
+  const first=f.handle({url:target,method:'GET'});
+  await tick();assert.equal(f.state.recurringPending.length,1);
+  const second=f.handle({url:target,method:'GET'});
+  await tick();assert.equal(f.state.pending.length,0);
+  f.state.recurringPending[0]('');await tick();
+  assert.equal(f.state.recurringPending.length,1,'waiting navigation must not start another catch-up');
+  f.state.pending[0].resolve(result());assert.equal((await first).status,200);await tick();
+  f.state.pending[1].resolve(result());assert.equal((await second).status,200);
 });

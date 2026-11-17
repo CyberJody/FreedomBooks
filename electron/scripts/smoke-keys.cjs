@@ -7,6 +7,8 @@ const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const PASSWORD='Synthetic smoke owner password';
+// Since named users (908bf4f8), opening books asks the owner to choose, then enter, a sign-in password.
+const USER_PASSWORD='Synthetic smoke owner sign-in';
 
 async function main() {
   assert.ok(process.env.DISPLAY && ![':0',':20',':0.0',':20.0'].includes(process.env.DISPLAY),'isolated xvfb display required');
@@ -34,17 +36,35 @@ async function main() {
     const page=await app.firstWindow();page.setDefaultTimeout(180000);
     await page.setViewportSize({width:1440,height:1000});
     await page.waitForSelector('h1');
-    const native=async(method,args=[])=>app.evaluate((_e,{modulePath,method,args})=>process.mainModule.require(modulePath)[method](...args),{modulePath:path.join(root,'native/fb-node.node'),method,args});
+    // A direct read can meet a protection change still finishing on the worker (BUSY): reads wait for it.
+    const native=async(method,args=[])=>{for(let n=0;;n++){try{return await app.evaluate((_e,{modulePath,method,args})=>process.mainModule.require(modulePath)[method](...args),{modulePath:path.join(root,'native/fb-node.node'),method,args});}catch(e){if(!['appState','query'].includes(method)||!String(e.message).includes('BUSY')||n>=100)throw e;await new Promise(r=>setTimeout(r,100));}}};
     return {app,page,data,home,native};
   }
   async function close(s) { await s.app.close();sessions.delete(s.app); }
+  // Wait for a page matching `re`; on the way, enroll or sign in the owner whenever the sign-in screen shows.
+  async function arrive(s,re) {
+    const signin=/\/desktop\/sign-in\/$/;
+    for(let i=0;i<4;i++){
+      // Signing in to a protected restored copy can land on its recovery-key reminder first.
+      try { await s.page.waitForURL(u=>re.test(new URL(u).pathname)||signin.test(new URL(u).pathname)||/\/settings\/recovery-key\/$/.test(new URL(u).pathname),{timeout:60000}); }
+      catch(e){ throw new Error(`waiting for ${re} at ${s.page.url()}: ${(await s.page.locator('h1').first().innerText().catch(()=>''))} — ${(await s.page.locator('main').innerText().catch(()=>'')).slice(0,400)}`); }
+      if(re.test(new URL(s.page.url()).pathname)) return;
+      if(/\/settings\/recovery-key\/$/.test(new URL(s.page.url()).pathname)){await goHome(s);continue;}
+      if(await s.page.locator('#id_username').count()) await s.page.fill('#id_username','Synthetic owner');
+      await s.page.fill('#id_password',USER_PASSWORD);
+      const enrolling=await s.page.locator('#id_password_repeat').count();
+      if(enrolling){await s.page.fill('#id_password_repeat',USER_PASSWORD);if(await s.page.locator('input[name="confirm_owner"]').count())await s.page.check('input[name="confirm_owner"]');}
+      await Promise.all([s.page.waitForURL(u=>!signin.test(new URL(u).pathname)),s.page.getByRole('button',{name:enrolling?'Set password and continue':'Sign in',exact:true}).click()]);
+    }
+    throw new Error('never arrived at '+re);
+  }
   async function shot(s,name,mask=[]) { await s.page.screenshot({path:path.join(shots,'keys-'+name+'.png'),mask}); }
   async function create(s,own) {
     await s.page.fill('#id_owner_name','Synthetic owner');
     await s.page.fill('#id_company_name',own?'Synthetic protected books':'Synthetic built-in books');
     if(own){await s.page.check('#id_protect');await s.page.fill('#id_lock_password',PASSWORD);await s.page.fill('#id_lock_password2',PASSWORD);}
     await s.page.getByRole('button',{name:'Create books',exact:true}).click();
-    await s.page.waitForURL(own?/\/settings\/recovery-key\/$/:/\/home\/$/);
+    await arrive(s,own?/\/settings\/recovery-key\/$/:/\/home\/$/);
   }
   async function goHome(s) {
     const companies=JSON.parse(await s.native('query',[JSON.stringify({type:'Companies'})]));
@@ -61,7 +81,7 @@ async function main() {
   }
   async function stub(s,method,result) { await s.app.evaluate(({dialog},[m,r])=>{dialog[m]=async()=>r;},[method,result]); }
   async function gateRestore(s,file,secret,name) {
-    await s.page.locator('summary').filter({hasText:'Restore a backup'}).click();
+    await s.page.locator('summary').filter({hasText:'Restore a backup instead'}).click();
     await s.page.fill('#id_restore_name',name);
     await s.page.fill('#id_restore_secret',secret);
     await stub(s,'showOpenDialog',{canceled:false,filePaths:[file]});
@@ -75,22 +95,28 @@ async function main() {
     await shot(builtin,'01-default-setup');
     await create(builtin,false);
     assert.equal(JSON.parse(await builtin.native('appState')).can_lock,false);
-    assert.equal(await builtin.app.evaluate(({Menu})=>Menu.getApplicationMenu().getMenuItemById('lock-books').enabled),false);
+    // Named users (908bf4f8): File › Lock is on while someone is signed in; on a built-in-key book it signs them out.
+    assert.equal(await builtin.app.evaluate(({Menu})=>Menu.getApplicationMenu().getMenuItemById('lock-books').enabled),true);
     await builtin.page.goto('fb://app/settings/book-protection/');
     assert.doesNotMatch(await builtin.page.locator('main').innerText(),/encrypted/i);
     await shot(builtin,'02-builtin-settings');
     await close(builtin);builtin=await launch('builtin-source');
-    await builtin.page.waitForURL(/\/home\/$/);
-    pass('unchecked default opens straight to Home after restart; File and idle locks do not apply');
+    await arrive(builtin,/\/home\/$/);
+    pass('unchecked default opens straight to its sign-in, then Home, after restart; the books never close on lock');
     const builtinBackup=await makeBackup(builtin);
     assert.doesNotMatch(await builtin.page.locator('main').innerText(),/encrypted/i);
     await shot(builtin,'03-builtin-backups');
     let other=await launch('builtin-second');
     await gateRestore(other,builtinBackup,'','Portable built-in');
-    await other.page.waitForURL(/\/home\/$/);
+    await arrive(other,/\/home\/$/);
     assert.equal(JSON.parse(await other.native('appState')).builtin,true);
+    // A restored copy opens as a copy; restarting reopens it by itself only once it is made the
+    // books in use (until then the next start shows "Choose your books").
+    assert.equal(JSON.parse(await other.native('appState')).viewing_restored,true);
+    await other.page.goto('fb://app/settings/restored-book/');await other.page.check('input[name=confirm]');await other.page.getByRole('button',{name:'Use this as my books',exact:true}).click();await other.page.waitForURL(/done=1/);
+    assert.equal(JSON.parse(await other.native('appState')).viewing_restored,false);
     await close(other);other=await launch('builtin-second');
-    await other.page.waitForURL(/\/home\/$/);await close(other);
+    await arrive(other,/\/home\/$/);await close(other);
     pass('built-in backup restores and reopens in a second isolated HOME without a key store');
 
     let own=await launch('own-source');await create(own,true);
@@ -116,9 +142,9 @@ async function main() {
     await goHome(own);
     await own.app.evaluate(({Menu})=>Menu.getApplicationMenu().getMenuItemById('lock-books').click());
     await own.page.waitForSelector('#id_password');await shot(own,'06-locked');
-    await own.page.fill('#id_password','wrong password');await own.page.getByRole('button',{name:'Unlock',exact:true}).click();
+    await own.page.fill('#id_password','wrong password');await own.page.getByRole('button',{name:'Unlock books',exact:true}).click();
     await own.page.waitForSelector('.errorlist');assert.equal(JSON.parse(await own.native('appState')).open,false);
-    assert.equal((await own.page.locator('.errorlist').innerText()).trim(),"That password or key doesn't open these books. Check it and try again, or use your recovery key.");
+    assert.equal((await own.page.locator('.errorlist').innerText()).trim(),"That didn’t unlock the books. Check Caps Lock, and remember this is the book password (or the recovery key from your Emergency Kit), not your sign-in password.");
     const wrongKeyCategory = await own.app.evaluate((_electron, {nativePath, storePath, storeRoot}) => {
       const native = process.mainModule.require(nativePath);
       try { native.openProtectedBook(process.mainModule.require(storePath).store(storeRoot).bookPath(), 'wrong password'); }
@@ -126,8 +152,8 @@ async function main() {
     }, {nativePath:path.join(root,'native/fb-node.node'),storePath:path.join(root,'main/keys.cjs'),storeRoot:own.data});
     assert.deepEqual(wrongKeyCategory,{code:'FB_BOOK_WRONG_KEY',message:"That password or key doesn't open these books. Check it and try again, or use your recovery key."});
     await shot(own,'06a-wrong-password');
-    await own.page.fill('#id_password',PASSWORD);await own.page.getByRole('button',{name:'Unlock',exact:true}).click();
-    await own.page.waitForURL(/\/home\/$/);
+    await own.page.fill('#id_password',PASSWORD);await own.page.getByRole('button',{name:'Unlock books',exact:true}).click();
+    await arrive(own,/\/home\/$/);
     const ownBackup=await makeBackup(own);await shot(own,'07-protected-backups');
     for(const file of fs.readdirSync(path.dirname(ownBackup)).map(n=>path.join(path.dirname(ownBackup),n))){const b=fs.readFileSync(file);assert.ok(!b.includes(Buffer.from(PASSWORD)));assert.ok(!b.includes(Buffer.from(recovery)));}
     pass('own-password lock rejects a wrong password; backup and verification sidecar contain no password or recovery text');
@@ -135,10 +161,10 @@ async function main() {
       const target=await launch(name);
       await gateRestore(target,ownBackup,'wrong password','Portable protected');
       await target.page.waitForSelector('.errorlist');assert.ok(!fs.existsSync(path.join(target.data,'books/restored-portable-protected')));
-      await target.page.locator('summary').filter({hasText:'Restore a backup'}).click();
+      await target.page.locator('summary').filter({hasText:'Restore a backup instead'}).click();
       await target.page.fill('#id_restore_name','Portable protected');await target.page.fill('#id_restore_secret',secret);
       await target.page.getByRole('button',{name:'Choose a backup to restore…'}).click();
-      await target.page.waitForURL(/\/home\/$/);
+      await arrive(target,/\/home\/$/);
       assert.equal(JSON.parse(await target.native('appState')).builtin,false);
       await close(target);
     }
@@ -164,21 +190,21 @@ async function main() {
     await auto.page.uncheck('input[name=ask_password]');await auto.page.fill('#id_current_password',PASSWORD);
     await Promise.all([auto.page.waitForEvent('load'),auto.page.getByRole('button',{name:'Save setting'}).click()]);
     assert.equal(JSON.parse(await auto.native('appState')).can_lock,false);
-    await close(auto);auto=await launch('own-auto-open',true);await auto.page.waitForURL(/\/home\/$/);
+    await close(auto);auto=await launch('own-auto-open',true);await arrive(auto,/\/home\/$/);
     await close(auto);
     pass('own-password auto-open works with an isolated test keyring; basic_text refuses disabling the password prompt');
     fs.writeFileSync(path.join(auto.data,'books/default.fbbook.os-key'),Buffer.from('synthetic damaged sealed key'));
     auto=await launch('own-auto-open',true);await auto.page.waitForSelector('#id_password');
-    const damaged=await auto.page.locator('.errorlist').innerText();
-    assert.match(damaged,/could not be read[\s\S]*saves a new key/);assert.doesNotMatch(damaged,/Unsupported state|authenticate|decrypt/i);
+    const damaged=await auto.page.locator('main').innerText();
+    assert.match(damaged,/key saved on this computer can’t be read[\s\S]*save the key on this computer again/);assert.doesNotMatch(damaged,/Unsupported state|authenticate|decrypt/i);
     await shot(auto,'09-damaged-sealed-key');
-    await auto.page.fill('#id_password',PASSWORD);await auto.page.getByRole('button',{name:'Unlock',exact:true}).click();
-    await auto.page.waitForURL(/\/home\/$/);
-    await close(auto);auto=await launch('own-auto-open',true);await auto.page.waitForURL(/\/home\/$/);
+    await auto.page.fill('#id_password',PASSWORD);await auto.page.getByRole('button',{name:'Unlock books',exact:true}).click();
+    await arrive(auto,/\/home\/$/);
+    await close(auto);auto=await launch('own-auto-open',true);await arrive(auto,/\/home\/$/);
     await close(auto);
     pass('a damaged OS-sealed key asks plainly for the password, opens with it and is sealed again');
     await close(own);await close(builtin);
     console.log(`SMOKE KEYS OK: ${checks} checks; evidence ${base}`);
   } finally { for(const s of sessions)await s.close().catch(()=>{}); }
 }
-main().catch(e=>{console.error('SMOKE KEYS FAILED:',e.message);process.exitCode=1;});
+main().catch(e=>{console.error('SMOKE KEYS FAILED:',e.message,e.stack);process.exitCode=1;});

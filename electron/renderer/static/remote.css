@@ -1,0 +1,24 @@
+/* Remote access: the connected-host bar and the client-mode pages (connect, notices). */
+.fb-remote-bar { position: sticky; top: 0; z-index: 1000; padding: 4px 12px; font: 13px/1.4 system-ui, sans-serif; background: #e8f0fe; color: #123; border-bottom: 1px solid #b6c8e8; }
+.fb-remote-bar[data-state="reconnecting"] { background: #fff4d6; border-color: #e3c56b; }
+.fb-remote-bar[data-state="lost"] { background: #fde2e1; border-color: #e6a4a0; }
+.fb-remote-page { font: 15px/1.5 system-ui, sans-serif; color: #1b1b1b; background: #fff; margin: 0; }
+.fb-remote-page main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
+.fb-remote-page label { display: block; margin: 12px 0; }
+.fb-remote-page input { display: block; width: 100%; max-width: 420px; padding: 6px 8px; font: inherit; margin-top: 4px; }
+.fb-remote-page button { margin: 8px 8px 8px 0; padding: 6px 14px; font: inherit; }
+.fb-remote-page button.secondary { background: #f3f3f3; }
+.fb-remote-page form { display: inline-block; margin-right: 8px; }
+.fb-remote-page form[data-gate="remote-pair"] { display: block; }
+.fb-remote-errors, .fb-remote-warning { border: 1px solid #e6a4a0; background: #fde2e1; padding: 8px 12px; }
+.fb-remote-page code { background: #f3f3f3; padding: 0 4px; }
+/* "Host these books" (electron/main/hosting.cjs). */
+.fb-hosting-page main { max-width: 760px; }
+.fb-hosting-page fieldset { border: 1px solid #ccc; padding: 4px 12px; max-width: 700px; }
+.fb-hosting-page label.fb-hosting-choice { display: block; margin: 6px 0; }
+.fb-hosting-page label.fb-hosting-choice input { display: inline; width: auto; margin: 0 6px 0 0; }
+.fb-hosting-page .fb-hosting-choice .fb-remote-warning { display: block; margin-top: 4px; font-size: 13px; }
+.fb-hosting-page .fb-hosting-code strong code { font-size: 22px; letter-spacing: 1px; }
+.fb-hosting-devices { border-collapse: collapse; width: 100%; }
+.fb-hosting-devices th, .fb-hosting-devices td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid #e3e3e3; }
+.fb-hosting-devices td .fb-remote-warning { margin-top: 4px; font-size: 13px; }

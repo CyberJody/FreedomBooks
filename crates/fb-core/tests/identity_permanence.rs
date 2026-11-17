@@ -22,7 +22,7 @@ fn snapshot(conn: &Connection) -> Vec<Vec<Vec<Value>>> {
         .iter()
         .map(|table| {
             let mut stmt = conn
-                .prepare(&format!("SELECT * FROM {table} ORDER BY 1,2"))
+                .prepare(&fb_db::test_support::select_all_ordered(conn, table).unwrap())
                 .unwrap();
             let width = stmt.column_count();
             stmt.query_map([], |r| (0..width).map(|i| r.get(i)).collect())
@@ -97,6 +97,8 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
         "attachments_attachment",
         "directory_customer", "directory_vendor", "directory_item",
         "salestax_taxitem", "salestax_taxgroupmember", "salestax_salestaxsettings",
+        // Payment and void rows are immutable; salestax_payments_tests.rs attacks their guards.
+        "salestax_payment", "salestax_paymentvoid",
         "documents_documentsequence", "documents_documentidentity", "documents_documentaccount",
         "documents_accountingsetup", "documents_designatedbank",
         // Each later layer owns its populated primary-key/ownership matrix.
@@ -109,6 +111,8 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
         "sales_salesreceipt", "sales_salesreceiptline", "sales_seal", "sales_seal_due",
         "payables_bill", "payables_billrevision", "payables_billline",
         "payables_billpayment", "payables_paymentallocation", "payables_paymentreversal",
+        // Recurring template and immutable occurrence identity/replacement matrix: payables/recurring_tests.rs.
+        "payables_recurring", "payables_recurring_occurrence",
         // checks/guards_tests.rs owns the populated checks/transfers matrix.
         "checks_check", "checks_checkrevision", "checks_checkline",
         "transfers_transfer", "transfers_transfervoid",
@@ -141,6 +145,31 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
         "fb_numbering",
         // Mutable self-service MFA enrollment and single-use recovery: fb-app/tests/desktop_mfa.rs.
         "desktop_mfa_totp", "desktop_mfa_recovery",
+        // 0188 saved invoice preferences: tests/invoice_preferences.rs saved_preferences_identity_is_permanent.
+        "invoice_preferences",
+        // 0189 invoice email: tests/invoice_email.rs email_connection_and_delivery_identities_are_permanent.
+        "invoice_email_connection", "invoice_email_delivery",
+        // 0190 Stripe: tests/invoice_stripe.rs stripe_connection_link_and_payment_identities_are_permanent.
+        "invoice_stripe_connection", "invoice_stripe_link", "invoice_stripe_payment",
+        // 0191 imported bank rules: bankfeeds/tests/automatic.rs imported_policy_and_queue_identities_are_permanent.
+        "bankfeeds_rule_policy", "bankfeeds_auto_queue",
+        // 0191 hold notes: mutable by design (rewritten and deleted by bankfeeds/automatic.rs), so no
+        // permanent identity; their foreign key keeps each note on an existing downloaded transaction.
+        "bankfeeds_rule_review",
+        // 0195 invoice import: sales/historical_tests.rs imported_invoice_payment_and_seal_identities_are_permanent.
+        "sales_importinvoice", "sales_importpayment", "sales_importseal",
+        // 0196 bank-feed links and bank-changed amounts: mutable by design (removed by Return to review,
+        // rewritten by a later bank change or Keep as recorded), so no permanent identity; their guards are
+        // attacked in bankfeeds/tests/sync_safety.rs link_and_bank_change_guards_refuse_direct_sql_the_services_would_refuse.
+        "bankfeeds_link", "bankfeeds_bank_change",
+        // 0197 attachment key wraps: insert-only; update and delete are attacked in
+        // tests/attachment_keys_and_incomplete_backups.rs.
+        "attachments_keywrap",
+        // 0205 job tickets: jobs_tests.rs job_ticket_entry_and_billing_identities_are_permanent.
+        "jobs_ticket", "jobs_timeentry", "jobs_billing", "jobs_billingstep",
+        // 0206 remote host record: one row whose key CHECK(id = 1) cannot change; the record itself is
+        // rewritten by the host by design (fb-db remote_host_upgrade_tests attacks its bounds).
+        "remote_host",
     ].iter()).map(|s| s.to_string()).collect::<Vec<_>>();
     expected.sort();
     assert_eq!(

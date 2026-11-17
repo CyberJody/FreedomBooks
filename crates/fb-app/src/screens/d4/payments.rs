@@ -3,13 +3,13 @@ use super::*;
 const METHODS: &[(&str, &str)] = &[
     ("CHECK", "Check"),
     ("CASH", "Cash"),
-    ("CARD", "Card (record only)"),
-    ("TRANSFER", "Transfer (record only)"),
+    ("CARD", "Card"),
+    ("TRANSFER", "Bank transfer"),
     ("OTHER", "Other"),
 ];
 const DESTS: &[(&str, &str)] = &[
-    ("BANK", "Direct to designated bank"),
     ("UNDEPOSITED", "Undeposited funds"),
+    ("BANK", "Bank account"),
 ];
 fn label(choices: &[(&str, &str)], v: &Value) -> String {
     choices
@@ -35,7 +35,7 @@ fn header(
     app: &mut App,
     c: CompanyId,
     sale: bool,
-    selected: Option<&str>,
+    (selected, amount): (Option<&str>, Option<&str>),
     p: Option<Posted<'_>>,
     e: &Errors,
 ) -> AppResult<Vec<Field>> {
@@ -66,8 +66,6 @@ fn header(
         Field::new("request_key", "Request key", Widget::Hidden)
             .required()
             .value_opt(v("request_key", Some(uuid::Uuid::new_v4().to_string()))),
-        Field::new("review_token", "Review token", Widget::Hidden)
-            .value_opt(v("review_token", None)),
         Field::new(
             "customer",
             "Customer",
@@ -85,17 +83,17 @@ fn header(
     ];
     if !sale {
         fs.push(
-            Field::new("amount", "Receipt amount", Widget::Text)
+            Field::new("amount", "Amount received", Widget::Text)
                 .required()
                 .attr("inputmode", "decimal")
                 .attr("maxlength", "32")
-                .value_opt(v("amount", None)),
+                .value_opt(v("amount", amount.map(str::to_owned))),
         );
     }
     fs.extend([
         Field::new(
             "method",
-            if sale { "Payment method" } else { "Method" },
+            "Payment method",
             Widget::Select {
                 choices: METHODS
                     .iter()
@@ -107,22 +105,17 @@ fn header(
         .value_opt(v("method", None)),
         Field::new(
             "reference",
-            if sale {
-                "Reference (check number or note)"
-            } else {
-                "Reference"
-            },
+            "Check or reference no.",
             Widget::Text,
         )
         .attr("maxlength", "120")
-        .help("Reference only. Never enter card numbers, credentials or secrets.")
         .value_opt(v("reference", None)),
         Field::new("memo", "Memo", Widget::Textarea { cols: 40, rows: 3 })
             .attr("maxlength", "2000")
             .value_opt(v("memo", None)),
         Field::new(
             "destination",
-            if sale { "Deposit to" } else { "Destination" },
+            "Deposit to",
             Widget::Select {
                 choices: DESTS
                     .iter()
@@ -131,10 +124,10 @@ fn header(
             },
         )
         .required()
-        .value_opt(v("destination", sale.then(|| "UNDEPOSITED".into()))),
+        .value_opt(v("destination", Some("UNDEPOSITED".into()))),
         Field::new(
             "bank",
-            "Designated bank (direct-to-bank only)",
+            "Bank account",
             Widget::Select { choices: banks },
         )
         .value_opt(v("bank", None)),
@@ -156,126 +149,86 @@ fn header(
     }
     Ok(decorate(fs, e))
 }
-fn invoice_choices(
-    app: &mut App,
-    c: CompanyId,
-    customer: Option<&str>,
-    p: Option<Posted<'_>>,
-) -> AppResult<Vec<(String, String)>> {
+/// The open invoices a payment can be applied to, oldest first, for every customer. A retried
+/// form also keeps the invoices its earlier, already recorded payment used.
+fn open_invoices(app: &mut App, c: CompanyId, p: Option<Posted<'_>>) -> AppResult<Vec<Value>> {
     let prior = choices::prior_receipt(app, c, false, p)?;
+    let kept = prior
+        .as_ref()
+        .and_then(|v| v["invoice_ids"].as_array())
+        .cloned()
+        .unwrap_or_default();
+    let today = (app.today)().to_string();
     let o = app.open_mut()?;
     let mut bs = fb_core::sales::invoice_balances(&mut o.book, o.owner, c)?;
     bs.retain(|b| {
-        b["customer_id"].as_str() == customer
-            && (["OPEN", "PARTIAL"].contains(&b["payment_state"].as_str().unwrap_or(""))
-                || prior
-                    .as_ref()
-                    .and_then(|v| v["invoice_ids"].as_array())
-                    .is_some_and(|ids| ids.contains(&b["invoice_id"])))
+        ["OPEN", "PARTIAL"].contains(&b["payment_state"].as_str().unwrap_or(""))
+            || kept.contains(&b["invoice_id"])
     });
     bs.sort_by(|a, b| {
         a["date"]
             .as_str()
             .cmp(&b["date"].as_str())
+            .then(a["due_date"].as_str().cmp(&b["due_date"].as_str()))
             .then(a["invoice_id"].as_str().cmp(&b["invoice_id"].as_str()))
     });
-    let mut out = vec![("".into(), "Choose…".into())];
-    for b in bs {
-        let id = b["invoice_id"].as_str().unwrap().to_owned();
-        let number:String=o.book.read(|tx|tx.query_row("SELECT d.number FROM documents_documentidentity d JOIN sales_invoice i ON i.identity_id=d.id WHERE i.id=?1",[&id],|r|r.get(0)))?;
-        out.push((
-            id,
-            format!(
-                "{number} · outstanding {}",
-                b["outstanding"].as_str().unwrap_or("not open")
-            ),
-        ));
-    }
-    Ok(out)
-}
-fn allocation_fields(
-    prefix: &str,
-    choices: &[(String, String)],
-    p: Option<Posted<'_>>,
-    e: &Errors,
-) -> Vec<Field> {
-    let v = |k: &str| {
-        p.and_then(|p| get(p, &format!("{prefix}-{k}")))
-            .map(str::to_owned)
-    };
-    decorate(
-        vec![
-            Field::new(
-                "invoice",
-                "Invoice",
-                Widget::Select {
-                    choices: choices.to_vec(),
-                },
-            )
-            .prefix(prefix)
-            .value_opt(v("invoice")),
-            Field::new("amount", "Amount", Widget::Text)
-                .prefix(prefix)
-                .attr("inputmode", "decimal")
-                .attr("maxlength", "32")
-                .value_opt(v("amount")),
-            Field::new(
-                "DELETE",
-                "Delete",
-                Widget::Checkbox {
-                    checked: p
-                        .is_some_and(|p| super::super::d2::checked(p, &format!("{prefix}-DELETE"))),
-                },
-            )
-            .prefix(prefix),
-        ],
-        e,
-    )
-}
-fn allocations(
-    app: &mut App,
-    c: CompanyId,
-    customer: Option<&str>,
-    p: Option<Posted<'_>>,
-    e: &Errors,
-    non: &[String],
-) -> AppResult<FormsetVm> {
-    let choices = invoice_choices(app, c, customer, p)?;
-    let total = p
-        .map(|p| {
-            get(p, "allocations-TOTAL_FORMS")
-                .and_then(clean_integer)
-                .unwrap_or(0)
-                .clamp(0, 50) as usize
+    o.book
+        .read(|tx| -> Result<Vec<Value>, FbError> {
+            bs.into_iter()
+                .map(|b| {
+                    let id = b["invoice_id"].as_str().unwrap_or_default();
+                    let (number, receivables): (String, Option<String>) = tx.query_row(
+                        "SELECT d.number,(SELECT a.code||' · '||a.name FROM documents_documentaccount x JOIN ledger_account a ON a.id=x.account_id WHERE x.source_id=i.identity_id AND x.role='receivables') FROM sales_invoice i JOIN documents_displayidentity d ON d.id=i.identity_id WHERE i.id=?1",
+                        [id],
+                        |r| Ok((r.get(0)?, r.get(1)?)),
+                    )?;
+                    let overdue = b["due_date"].as_str().is_some_and(|d| d < today.as_str());
+                    Ok(json!({"invoice_id":id,"customer_id":b["customer_id"],"number":number,"date":b["date"],"due_date":b["due_date"],"total":b["total"],"outstanding":b["outstanding"].as_str().unwrap_or("0.00"),"overdue":overdue,"receivables":receivables.unwrap_or_default()}))
+                })
+                .collect()
         })
-        .unwrap_or(3);
-    let fs = (0..total)
+        .map_err(AppError::from)
+}
+/// The posted pay box and amount for each invoice row, keyed by invoice.
+fn posted_rows(p: Posted<'_>) -> Vec<(String, bool, String, usize)> {
+    let total = get(p, "allocations-TOTAL_FORMS")
+        .and_then(clean_integer)
+        .unwrap_or(0)
+        .clamp(0, MAX_ROWS);
+    (0..total as usize)
         .map(|i| {
-            forms::bind(
-                &allocation_fields(&format!("allocations-{i}"), &choices, p, e),
-                &[],
+            let k = |name: &str| format!("allocations-{i}-{name}");
+            (
+                get(p, &k("invoice")).unwrap_or("").to_owned(),
+                super::super::d2::checked(p, &k("pay")),
+                fb_core::py::py_strip(get(p, &k("amount")).unwrap_or("")).to_owned(),
+                i,
             )
         })
-        .collect();
-    let management = [
-        ("TOTAL_FORMS", p.map(|p|get(p,"allocations-TOTAL_FORMS").unwrap_or("").to_owned()).unwrap_or(total.to_string())),
-        ("INITIAL_FORMS", p.map(|p|get(p,"allocations-INITIAL_FORMS").unwrap_or("").to_owned()).unwrap_or("0".into())),
-        ("MIN_NUM_FORMS", p.map(|p|get(p,"allocations-MIN_NUM_FORMS").unwrap_or("").to_owned()).unwrap_or("1".into())),
-        ("MAX_NUM_FORMS", p.map(|p|get(p,"allocations-MAX_NUM_FORMS").unwrap_or("").to_owned()).unwrap_or("50".into())),
-    ];
-    let management_form = super::super::d2::management_html("allocations", &management, p.is_some());
-    Ok(FormsetVm {
-        management_form,
-        forms: fs,
-        empty_form: forms::bind(
-            &allocation_fields("allocations-__prefix__", &choices, None, &Errors::new()),
-            &[],
-        ),
-        non_form_errors: forms::error_list(non, None)
-            .replace("errorlist nonfield", "errorlist nonform"),
-        total_error_count: super::super::d2::formset_error_count(e, p, "allocations") + non.len(),
-    })
+        .collect()
 }
+/// Rows past this are refused as tampering; the core separately limits one payment to 50 invoices.
+const MAX_ROWS: i64 = 1000;
+/// Core refusals for a payment, said the way a bookkeeper would. Unknown messages pass through.
+fn plain(message: &str) -> String {
+    match message {
+        "Explicit allocations must equal the receipt amount exactly; no on-account credit." => "The amounts applied to invoices must add up to the amount received. FreedomBooks does not keep part of a payment as unapplied credit; if the customer paid before you invoiced, record a customer deposit instead.".into(),
+        "Allocation exceeds the actual outstanding invoice amount. Review again." => "An amount is more than that invoice's open balance. Lower it to the open balance or less.".into(),
+        "Payment date cannot precede any allocated invoice date." => "The payment date is before the date of an invoice you are applying it to. Change the payment date or untick that invoice.".into(),
+        "Receipt and allocation amounts must be positive." => "Enter amounts greater than zero.".into(),
+        "Enter 1–50 explicit allocations." => "Apply the payment to between 1 and 50 invoices. For more, record it as two payments.".into(),
+        "Allocate to each invoice only once." => "Each invoice can appear only once in a payment.".into(),
+        "Allocate only to this customer’s posted, unreversed invoices." => "One of the invoices is no longer open for this customer. Reload the page to see the current open invoices.".into(),
+        "Configure an explicit undeposited funds destination first." => "Choose your undeposited funds account in Accounting setup first, or deposit this payment straight to a bank account.".into(),
+        "Choose a designated bank account in Accounting setup." => "Choose a bank account. Bank accounts are listed in Accounting setup.".into(),
+        "Do not select a bank for undeposited funds." => "Clear the bank account, or choose Deposit to: Bank account.".into(),
+        "Choose an active customer in this company." => "This customer is archived. Reactivate the customer before recording a payment.".into(),
+        "Destination must differ from the invoices’ original receivables accounts." => "The deposit account cannot be the invoices' receivables account. Choose a different account.".into(),
+        m => m.into(),
+    }
+}
+/// The sales receipt form: the invoice editor's header, line grid and totals, with the entered
+/// values and any problems when a Save was refused.
 #[allow(clippy::too_many_arguments)]
 fn entry(
     app: &mut App,
@@ -285,44 +238,110 @@ fn entry(
     p: Option<Posted<'_>>,
     e: &Errors,
     non: &[String],
-    review: Option<&Value>,
+    problems: &[String],
 ) -> AppResult<(String, u16)> {
     let c = arg_company(r)?;
-    let sale = r.name.starts_with("sales_receipts:");
     let mut vm = context(app, r)?;
-    let fs = header(app, c, sale, selected, p, e)?;
-    let customers = fs.iter().find(|f| f.name == "customer").unwrap();
-    if let Widget::Select { choices } = &customers.widget {
-        put(&mut vm, "customer_choices", choices);
-    }
+    let fs = header(app, c, true, (selected, None), p, e)?;
     put(&mut vm, "form", forms::bind(&fs, &nonfield(e, "")));
     put(&mut vm, "csrf_token", token(app, path));
-    if sale {
-        let prior = choices::prior_receipt(app, c, true, p)?;
-        let ch = sale_choices(app, c, prior.as_ref())?;
-        put(
-            &mut vm,
-            "formset",
-            super::doc_forms::formset(KindForm::Sale, &ch, p, &[], e, non),
-        );
-        put(&mut vm, "catalog", ch.catalog);
-        put(&mut vm, "customer_tax", ch.customer_tax);
-    } else {
-        put(
-            &mut vm,
-            "formset",
-            allocations(app, c, selected, p, e, non)?,
-        );
-    }
-    put(&mut vm, "review", review);
+    let prior = choices::prior_receipt(app, c, true, p)?;
+    let ch = sale_choices(app, c, prior.as_ref())?;
+    put(
+        &mut vm,
+        "formset",
+        super::doc_forms::formset(KindForm::Sale, &ch, p, &[], e, non),
+    );
+    let (customers, rates) = super::doc_forms::editor_data(app, c, None)?;
+    put(&mut vm, "invoice_customers", customers);
+    put(&mut vm, "invoice_tax_rates", rates);
+    put(&mut vm, "posting_accounts", super::doc_forms::posting_accounts(app, c, "SR", &ch)?);
+    put(&mut vm, "item_count", ch.catalog.as_object().map_or(0, |m| m.len()));
+    put(&mut vm, "catalog", ch.catalog);
+    put(&mut vm, "customer_tax", ch.customer_tax);
+    put(&mut vm, "problems", problems);
+    put(&mut vm, "setup_hint", problems.iter().any(|m| m.contains("Accounting setup")));
+    put(&mut vm, "has_errors", super::super::d2::active_form_errors(e, p.unwrap_or(&[])) > 0 || !non.is_empty() || !problems.is_empty());
     Ok((
-        draw(app, &format!("sales/{}/form.html", ns(sale)), &vm)?,
-        if p.is_some() && review.is_none() {
-            400
-        } else {
-            200
-        },
+        draw(app, "sales/sales_receipts/form.html", &vm)?,
+        if p.is_some() { 400 } else { 200 },
     ))
+}
+/// Receive payment: one customer field, that customer's open invoices with a Pay box and an amount
+/// each, and one Save. `query` is the GET query (`customer`, `invoice`); `p` a refused submission.
+fn receive_page(
+    app: &mut App,
+    r: &Route,
+    path: &str,
+    query: Posted<'_>,
+    p: Option<Posted<'_>>,
+    e: &Errors,
+    non: &[String],
+) -> AppResult<(String, u16)> {
+    let c = arg_company(r)?;
+    let mut vm = context(app, r)?;
+    let rows = open_invoices(app, c, p)?;
+    // Arriving from an invoice preselects its customer, ticks it and fills its balance.
+    let from_invoice = if p.is_none() {
+        get(query, "invoice").and_then(|id| rows.iter().find(|r| r["invoice_id"] == id))
+    } else {
+        None
+    };
+    let customer = match (p, from_invoice) {
+        (Some(p), _) => get(p, "customer").map(str::to_owned),
+        (None, Some(row)) => row["customer_id"].as_str().map(str::to_owned),
+        (None, None) => get(query, "customer").map(str::to_owned),
+    };
+    let amount = from_invoice.and_then(|row| row["outstanding"].as_str());
+    let fs = header(app, c, false, (customer.as_deref(), amount), p, e)?;
+    let posted = p.map(posted_rows).unwrap_or_default();
+    let mut shown = vec![];
+    for row in rows.iter().filter(|r| r["customer_id"].as_str() == customer.as_deref()) {
+        let id = row["invoice_id"].as_str().unwrap_or_default();
+        let mut row = row.clone();
+        let (pay, apply) = match posted.iter().find(|(invoice, ..)| invoice == id) {
+            Some((_, pay, amount, _)) => (*pay || !amount.is_empty(), amount.clone()),
+            None if from_invoice.is_some_and(|f| f["invoice_id"] == id) => {
+                (true, row["outstanding"].as_str().unwrap_or_default().to_owned())
+            }
+            None => (false, String::new()),
+        };
+        row["index"] = json!(shown.len());
+        row["pay"] = json!(pay);
+        row["apply"] = json!(apply);
+        row["errors"] = json!(forms::error_list(
+            e.get(&format!("invoice-{id}")).map(Vec::as_slice).unwrap_or(&[]),
+            None
+        ));
+        shown.push(row);
+    }
+    let accounts = app.open_mut()?.book.read(|tx| -> Result<Value, FbError> {
+        let setup = fb_core::documents::setup_snapshot(tx, c)?;
+        let undeposited = match setup["undeposited"].as_str().and_then(AccountId::parse) {
+            Some(id) => fb_core::store::account(tx, id)?.map(|a| a.label()),
+            None => None,
+        };
+        Ok(json!({"undeposited": undeposited}))
+    })?;
+    let mut accounts = accounts;
+    accounts["banks"] = json!(accounts_map(app, c)?);
+    put(&mut vm, "customer_selected", customer.is_some_and(|c| !c.is_empty()));
+    put(&mut vm, "invoice_rows", &shown);
+    put(&mut vm, "open_invoices", &rows);
+    put(&mut vm, "payment_accounts", accounts);
+    put(&mut vm, "form", forms::bind(&fs, &nonfield(e, "")));
+    put(&mut vm, "problems", non);
+    put(&mut vm, "deposit_hint", non.iter().any(|m| m.contains("customer deposit")));
+    put(&mut vm, "setup_hint", non.iter().any(|m| m.contains("Accounting setup")));
+    put(&mut vm, "has_errors", !e.is_empty() || !non.is_empty());
+    put(&mut vm, "csrf_token", token(app, path));
+    Ok((
+        draw(app, "sales/receipts/form.html", &vm)?,
+        if p.is_some() { 400 } else { 200 },
+    ))
+}
+fn accounts_map(app: &mut App, c: CompanyId) -> AppResult<serde_json::Map<String, Value>> {
+    Ok(accounts(app, c)?.into_iter().map(|(id, label)| (id, json!(label))).collect())
 }
 pub(super) fn render(
     app: &mut App,
@@ -332,16 +351,8 @@ pub(super) fn render(
 ) -> AppResult<(String, u16)> {
     let sale = r.name.starts_with("sales_receipts:");
     match r.name.rsplit(':').next().unwrap() {
-        "new" => entry(
-            app,
-            r,
-            path,
-            get(p, "customer"),
-            None,
-            &Errors::new(),
-            &[],
-            None,
-        ),
+        "new" if sale => entry(app, r, path, get(p, "customer"), None, &Errors::new(), &[], &[]),
+        "new" => receive_page(app, r, path, p, None, &Errors::new(), &[]),
         "list" => listing(app, r, p, sale),
         "detail" => detail(app, r, sale),
         "void" | "reverse" => reverse_page(app, r, path, sale, None, &Errors::new()),
@@ -473,6 +484,7 @@ fn detail(app: &mut App, r: &Route, sale: bool) -> AppResult<(String, u16)> {
         put(&mut vm, "account_labels", labels);
     }
     super::attachments(app, c, v["identity_id"].as_str().unwrap(), &mut vm)?;
+    put(&mut vm, "receipt_notices", std::mem::take(&mut app.messages));
     put(&mut vm, "receipt", v);
     Ok((
         draw(app, &format!("sales/{}/detail.html", ns(sale)), &vm)?,
@@ -528,7 +540,7 @@ fn listing(app: &mut App, r: &Route, p: Posted<'_>, sale: bool) -> AppResult<(St
             format!("Select a valid choice. {state} is not one of the available choices."),
         );
     }
-    let mut ch = vec![("".into(), "Choose…".into())];
+    let mut ch = vec![("".into(), if sale { "All customers" } else { "Choose…" }.into())];
     ch.extend(choices::customers(
         &mut app.open_mut()?.book,
         c,
@@ -551,21 +563,17 @@ fn listing(app: &mut App, r: &Route, p: Posted<'_>, sale: bool) -> AppResult<(St
             Field::new("customer", "Customer", Widget::Select { choices: ch }).value(customer),
             Field::new(
                 "state",
-                "State",
+                if sale { "Status" } else { "State" },
                 Widget::Select {
                     choices: vec![
                         (
                             "".into(),
-                            format!("All {}", if sale { "sales receipts" } else { "receipts" }),
+                            format!("All {}", if sale { "sales receipts" } else { "payments" }),
                         ),
-                        ("LIVE".into(), "Recorded".into()),
+                        ("LIVE".into(), if sale { "Paid" } else { "Recorded" }.into()),
                         (
                             reversed.into(),
-                            if sale {
-                                "Voided".into()
-                            } else {
-                                "Reversed".into()
-                            },
+                            "Voided".into(),
                         ),
                     ],
                 },
@@ -623,6 +631,9 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     let sale = r.name.starts_with("sales_receipts:");
     let c = arg_company(r)?;
     let mut e = Errors::new();
+    if !sale && r.name.ends_with(":new") {
+        return receive_submit(app, r, path, p);
+    }
     if r.name.ends_with(":void") || r.name.ends_with(":reverse") {
         let revision = clean_revision(p, 1, &mut e);
         let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
@@ -654,17 +665,199 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             html: reverse_page(app, r, path, sale, Some(p), &e)?.0,
         });
     }
-    let header = header(app, c, sale, None, Some(p), &Errors::new())?;
+    sale_submit(app, r, path, p)
+}
+
+/// A sales receipt's one Save. The core reviews exactly the entered sale and records it with that
+/// review in this same request, so what is recorded is what passed review. A form whose sale is
+/// already recorded (a second click, or Back and Save again) shows that sale instead.
+fn sale_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
+    let c = arg_company(r)?;
+    if let Some(prior) = choices::prior_receipt(app, c, true, Some(p))? {
+        let id = prior["id"].as_str().unwrap_or_default().to_owned();
+        let number = app.open_mut()?.book.read(|tx| {
+            tx.query_row("SELECT d.number FROM sales_receipt r JOIN documents_displayidentity d ON d.id=r.identity_id WHERE r.id=?1", [&id], |r| r.get::<_, String>(0))
+        })?;
+        app.messages.push(format!("This sales receipt was already saved as {number}. Nothing new was recorded."));
+        return Ok(Outcome::Redirect { location: url("sales_receipts:detail", &[&c.to_db(), &id]) });
+    }
+    let mut e = Errors::new();
+    let mut problems = vec![];
+    let mut values = header_values(app, c, true, p, &mut e)?;
+    // The bank account applies only to a sale deposited straight to the bank; the field is hidden
+    // otherwise and anything left in it is not part of the sale.
+    if values["destination"] != "BANK" {
+        values["bank_id"] = Value::Null;
+        e.remove("bank");
+    }
+    let ch = sale_choices(app, c, None)?;
+    let (lines, non) = super::doc_forms::clean_lines(p, KindForm::Sale, &ch, 0, &mut e);
+    values["lines"] = json!(lines);
+    let tax = values["tax_mode"].as_str().unwrap_or("").to_owned();
+    if let Some(id) = tax.strip_prefix('T') {
+        values["tax_item_id"] = json!(id);
+        values["tax_mode"] = json!("ITEM");
+    }
+    if super::super::d2::active_form_errors(&e, p) == 0 && non.is_empty() {
+        let values: crate::commands::CustomerReceiptValues =
+            serde_json::from_value(values).map_err(|e| AppError::Invalid(e.to_string()))?;
+        let reviewed = app.run(Command::ReviewCustomerReceipt {
+            company_id: c.to_db(),
+            sales_receipt: true,
+            values: values.clone(),
+        });
+        let recorded = match reviewed {
+            Ok(Outcome::Done { data }) => app.run(Command::RecordCustomerReceipt {
+                company_id: c.to_db(),
+                sales_receipt: true,
+                values,
+                review_token: data["token"].as_str().unwrap_or_default().to_owned(),
+            }),
+            other => other,
+        };
+        match recorded {
+            Ok(Outcome::Done { data }) => {
+                return Ok(Outcome::Redirect {
+                    location: url("sales_receipts:detail", &[&c.to_db(), data["id"].as_str().unwrap()]),
+                });
+            }
+            Err(AppError::Core(FbError::Validation(messages))) => {
+                problems.extend(messages.iter().map(|m| super::doc_forms::plain_sale(m)));
+            }
+            Err(err) => return Err(err),
+            _ => unreachable!(),
+        }
+    }
+    Ok(Outcome::Invalid {
+        html: entry(app, r, path, get(p, "customer"), Some(p), &e, &non, &problems)?.0,
+    })
+}
+
+/// Amounts as the core reads them: up to two decimal places, no grouping.
+fn cents_of(text: &str) -> Option<i128> {
+    let d = fb_core::calculations::unit_rate(&json!(text)).ok()?;
+    fb_money::Money::from_decimal_exact(d).map(|m| m.cents())
+}
+/// Receive payment's one Save. The page proposes allocations; the core validates the same plan in
+/// a review and records it with that review in this one request, so what is recorded is exactly
+/// what passed review. Anything refused comes back on the form with the entered values.
+fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
+    let c = arg_company(r)?;
+    // A form whose payment is already recorded (a second click, or Back and Save again) shows that
+    // payment instead of recording anything new.
+    if let Some(prior) = choices::prior_receipt(app, c, false, Some(p))? {
+        let id = prior["id"].as_str().unwrap_or_default().to_owned();
+        let number = app.open_mut()?.book.read(|tx| {
+            tx.query_row("SELECT d.number FROM sales_receipt r JOIN documents_displayidentity d ON d.id=r.identity_id WHERE r.id=?1", [&id], |r| r.get::<_, String>(0))
+        })?;
+        app.messages.push(format!("This payment was already saved as {number}. Nothing new was recorded."));
+        return Ok(Outcome::Redirect { location: url("receipts:detail", &[&c.to_db(), &id]) });
+    }
+    let mut e = Errors::new();
+    let mut non = vec![];
+    let mut values = header_values(app, c, false, p, &mut e)?;
+    let customer = values["customer_id"].as_str().unwrap_or_default().to_owned();
+    let open = open_invoices(app, c, Some(p))?;
+    let mine = open.iter().filter(|r| r["customer_id"] == customer.as_str()).collect::<Vec<_>>();
+    if get(p, "allocations-TOTAL_FORMS").and_then(clean_integer).is_some_and(|n| n > MAX_ROWS) {
+        non.push("This form has more invoice rows than it can accept. Reload the page and try again.".to_owned());
+    }
+    let mut allocations = vec![];
+    let mut applied = Some(0i128);
+    for (id, pay, amount, _) in posted_rows(p) {
+        if !pay && amount.is_empty() {
+            continue;
+        }
+        let key = format!("invoice-{id}");
+        let Some(row) = mine.iter().find(|r| r["invoice_id"] == id.as_str()) else {
+            error(&mut e, &key, "This invoice is no longer open for this customer.");
+            non.push("One of the invoices is no longer open for this customer. Reload the page to see the current open invoices.".to_owned());
+            continue;
+        };
+        if amount.is_empty() {
+            error(&mut e, &key, "Enter the amount to apply, or untick Pay.");
+            continue;
+        }
+        match cents_of(&amount) {
+            Some(n) if n <= 0 => error(&mut e, &key, "Enter an amount greater than zero."),
+            Some(n) if n > money(&row["outstanding"]) => error(
+                &mut e,
+                &key,
+                format!("More than the open balance of {}.", row["outstanding"].as_str().unwrap_or("")),
+            ),
+            Some(n) => applied = applied.and_then(|sum| sum.checked_add(n)),
+            None => {
+                error(&mut e, &key, "Enter an amount such as 125.00.");
+                applied = None;
+            }
+        }
+        allocations.push(json!({"invoice_id": id, "amount": amount}));
+    }
+    if !customer.is_empty() && !e.contains_key("customer") && non.is_empty() {
+        if mine.is_empty() {
+            non.push("This customer has no open invoices. To record money received before you invoice, use Receive customer deposit.".to_owned());
+        } else if allocations.is_empty() {
+            non.push("Tick at least one invoice to apply this payment to.".to_owned());
+        } else if let (Some(received), Some(applied)) = (values["amount"].as_str().and_then(cents_of), applied)
+            && received != applied
+            && e.is_empty()
+        {
+            non.push(format!(
+                "You applied {} but received {}. The amounts applied to invoices must add up to the amount received; FreedomBooks does not keep part of a payment as unapplied credit.",
+                cash(applied),
+                cash(received)
+            ));
+        }
+    }
+    values["allocations"] = json!(allocations);
+    values.as_object_mut().unwrap().remove("review_token");
+    if e.is_empty() && non.is_empty() {
+        let values: crate::commands::CustomerReceiptValues =
+            serde_json::from_value(values).map_err(|e| AppError::Invalid(e.to_string()))?;
+        let reviewed = app.run(Command::ReviewCustomerReceipt {
+            company_id: c.to_db(),
+            sales_receipt: false,
+            values: values.clone(),
+        });
+        let recorded = match reviewed {
+            Ok(Outcome::Done { data }) => app.run(Command::RecordCustomerReceipt {
+                company_id: c.to_db(),
+                sales_receipt: false,
+                values,
+                review_token: data["token"].as_str().unwrap_or_default().to_owned(),
+            }),
+            other => other,
+        };
+        match recorded {
+            Ok(Outcome::Done { data }) => {
+                return Ok(Outcome::Redirect {
+                    location: url("receipts:detail", &[&c.to_db(), data["id"].as_str().unwrap()]),
+                });
+            }
+            Err(AppError::Core(FbError::Validation(messages))) => {
+                non.extend(messages.iter().map(|m| plain(m)));
+            }
+            Err(err) => return Err(err),
+            _ => unreachable!(),
+        }
+    }
+    Ok(Outcome::Invalid {
+        html: receive_page(app, r, path, &[], Some(p), &e, &non)?.0,
+    })
+}
+/// The cleaned header values of a receipt form, with errors recorded against each field.
+fn header_values(app: &mut App, c: CompanyId, sale: bool, p: Posted<'_>, e: &mut Errors) -> AppResult<Value> {
+    let header = header(app, c, sale, (None, None), Some(p), &Errors::new())?;
     let mut values = json!({});
     for f in &header {
         let name = &f.name;
         let s = get(p, name).unwrap_or("");
         let v = if let Widget::Select { choices } = &f.widget {
             if s.is_empty() && f.required {
-                error(&mut e, name, "This field is required.");
+                error(e, name, "This field is required.");
             } else if !choices.iter().any(|(id, _)| id == s) {
                 error(
-                    &mut e,
+                    e,
                     name,
                     if ["customer","bank"].contains(&name.as_str()) {"Select a valid choice. That choice is not one of the available choices.".into()}
                     else {format!("Select a valid choice. {s} is not one of the available choices.")},
@@ -672,7 +865,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             }
             s.to_owned()
         } else if name == "date" {
-            clean_date(p, name, true, &mut e).unwrap_or_default()
+            clean_date(p, name, true, e).unwrap_or_default()
         } else {
             let max = match name.as_str() {
                 "reference" => 120,
@@ -685,14 +878,14 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
                     .and_then(|(_, v)| v.parse().ok())
                     .unwrap_or(usize::MAX),
             };
-            let v = clean_text(p, name, max, f.required, true, &mut e);
+            let v = clean_text(p, name, max, f.required, true, e);
             if name == "reference" || name == "memo" {
-                super::super::d2::refuse_card_number(p, name, &mut e);
+                super::super::d2::refuse_card_number(p, name, e);
             }
             v
         };
         if name == "request_key" && !v.is_empty() && fb_core::py::py_uuid(&v).is_none() {
-            error(&mut e, name, "Enter a valid UUID.");
+            error(e, name, "Enter a valid UUID.");
         }
         let key = match name.as_str() {
             "customer" => "customer_id",
@@ -705,151 +898,8 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             json!(v)
         };
     }
-    let mut non = vec![];
-    if sale {
-        let prior = choices::prior_receipt(app, c, true, Some(p))?;
-        let ch = sale_choices(app, c, prior.as_ref())?;
-        let (lines, n) = super::doc_forms::clean_lines(p, KindForm::Sale, &ch, 0, &mut e);
-        non = n;
-        values["lines"] = json!(lines);
-        let tax = values["tax_mode"].as_str().unwrap_or("").to_owned();
-        if let Some(id) = tax.strip_prefix('T') {
-            values["tax_item_id"] = json!(id);
-            values["tax_mode"] = json!("ITEM");
-        }
-    } else {
-        let choices = invoice_choices(app, c, values["customer_id"].as_str(), Some(p))?;
-        let total = get(p, "allocations-TOTAL_FORMS").and_then(clean_integer);
-        let initial = get(p, "allocations-INITIAL_FORMS").and_then(clean_integer);
-        if total.is_none() || initial.is_none() {
-            let names = [("TOTAL_FORMS", total), ("INITIAL_FORMS", initial)]
-                .into_iter()
-                .filter(|(_, v)| v.is_none())
-                .map(|(n, _)| format!("allocations-{n}"))
-                .collect::<Vec<_>>()
-                .join(", ");
-            non.push(format!("ManagementForm data is missing or has been tampered with. Missing fields: {names}. You may need to file a bug report if the issue persists."));
-        }
-        if total.is_some_and(|n| n > 50) {
-            non.push("Please submit at most 50 forms.".into());
-        }
-        let mut allocations = vec![];
-        for i in 0..total.unwrap_or(0).clamp(0, 50) {
-            let prefix = format!("allocations-{i}");
-            let local = p
-                .iter()
-                .filter_map(|(k, v)| {
-                    k.strip_prefix(&format!("{prefix}-"))
-                        .map(|k| (k.into(), v.clone()))
-                })
-                .collect::<Vec<_>>();
-            let deleted = super::super::d2::checked(&local, "DELETE");
-            if i >= initial.unwrap_or(0).max(1) && !super::super::d2::extra_row_changed(
-                &local, &[("amount", "")], &["invoice"], &["DELETE"],
-            ) {
-                continue;
-            }
-            let mut le = Errors::new();
-            let id = get(&local, "invoice").unwrap_or("");
-            if id.is_empty() {
-                error(&mut le, "invoice", "This field is required.");
-            } else if !choices.iter().any(|(v, _)| v == id) {
-                error(
-                    &mut le,
-                    "invoice",
-                    "Select a valid choice. That choice is not one of the available choices.",
-                );
-            }
-            let amount = clean_text(&local, "amount", 32, true, true, &mut le);
-            for (k, v) in le {
-                e.insert(format!("{prefix}-{k}"), v);
-            }
-            if deleted { continue; }
-            allocations.push(json!({"invoice_id":id,"amount":amount}));
-        }
-        if allocations
-            .iter()
-            .all(|a| a["invoice_id"] == "" && a["amount"] == "")
-            && non.is_empty()
-        {
-            non.push("Please submit at least 1 form.".into());
-        }
-        values["allocations"] = json!(allocations);
-    }
-    let review_token = values
-        .as_object_mut()
-        .unwrap()
-        .remove("review_token")
-        .and_then(|v| v.as_str().map(str::to_owned))
-        .unwrap_or_default();
-    let mut review = None;
-    if super::super::d2::active_form_errors(&e, p) == 0 && non.is_empty() {
-        let values: crate::commands::CustomerReceiptValues =
-            serde_json::from_value(values).map_err(|e| AppError::Invalid(e.to_string()))?;
-        let action = get(p, "action").unwrap_or("review");
-        if action != "review" && action != "record" {
-            error(&mut e, "", "Choose Review or explicitly Record.");
-        } else {
-            let cmd = if action == "review" {
-                Command::ReviewCustomerReceipt {
-                    company_id: c.to_db(),
-                    sales_receipt: sale,
-                    values,
-                }
-            } else {
-                Command::RecordCustomerReceipt {
-                    company_id: c.to_db(),
-                    sales_receipt: sale,
-                    values,
-                    review_token,
-                }
-            };
-            match app.run(cmd) {
-                Ok(Outcome::Done { data }) => {
-                    if action == "record" {
-                        return Ok(Outcome::Redirect {
-                            location: url(
-                                &format!("{}:detail", ns(sale)),
-                                &[&c.to_db(), data["id"].as_str().unwrap()],
-                            ),
-                        });
-                    }
-                    review = Some(data);
-                }
-                Err(AppError::Core(FbError::Validation(messages))) => {
-                    error(&mut e, "", messages.join("; "))
-                }
-                Err(e) => return Err(e),
-                _ => unreachable!(),
-            }
-        }
-    }
-    let mut posted = p.to_vec();
-    if let Some(review) = &review {
-        posted.retain(|(k, _)| k != "review_token");
-        posted.push((
-            "review_token".into(),
-            review["token"].as_str().unwrap().into(),
-        ));
-    }
-    let html = entry(
-        app,
-        r,
-        path,
-        get(p, "customer"),
-        Some(&posted),
-        &e,
-        &non,
-        review.as_ref().map(|v| &v["review"]),
-    )?
-    .0;
-    Ok(if review.is_some() {
-        Outcome::Page { html, status: 200 }
-    } else {
-        Outcome::Invalid { html }
-    })
+    Ok(values)
 }
-
 pub(in crate::screens) fn sale_choices(app: &mut App, c: CompanyId, prior: Option<&Value>) -> AppResult<InvoiceChoices> {
     let lines = prior
         .and_then(|v| v["lines"].as_array())

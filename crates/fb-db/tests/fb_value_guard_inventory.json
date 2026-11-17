@@ -55,6 +55,13 @@
   "wrap_nonce": "text",
   "wrapped_key": "text"
  },
+ "attachments_keywrap": {
+  "audit_id": "uuid",
+  "company_id": "uuid",
+  "stored_name": "text",
+  "wrap_nonce": "text",
+  "wrapped_key": "text"
+ },
  "bankfeeds_account": {
   "balance_at": "timestamp",
   "conn_key": "text",
@@ -70,6 +77,11 @@
   "org_name": "text",
   "remote_id": "text",
   "remote_identity": "text"
+ },
+ "bankfeeds_auto_queue": {
+  "fingerprint": "text",
+  "item_id": "uuid",
+  "rule_id": "uuid"
  },
  "bankfeeds_connection": {
   "company_id": "uuid",
@@ -102,6 +114,17 @@
   "payee_name": "text",
   "sign": "text",
   "updated_at": "timestamp"
+ },
+ "bankfeeds_rule_policy": {
+  "company_id": "uuid",
+  "data": "text",
+  "rule_id": "uuid",
+  "source_hash": "text",
+  "source_key": "text"
+ },
+ "bankfeeds_rule_review": {
+  "item_id": "uuid",
+  "reason": "text"
  },
  "bankfeeds_transaction": {
   "accepted_as": "text",
@@ -426,6 +449,78 @@
   "id": "uuid",
   "username": "text"
  },
+ "invoice_email_connection": {
+  "client_id": "text",
+  "company_id": "uuid",
+  "from_address": "text",
+  "status": "text",
+  "updated_at": "timestamp",
+  "updated_by_id": "uuid"
+ },
+ "invoice_email_delivery": {
+  "company_id": "uuid",
+  "completed_at": "timestamp",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "document_hash": "text",
+  "error_code": "text",
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "invoice_revision_id": "uuid",
+  "message_key": "text",
+  "mode": "text",
+  "pdf_sha256": "text",
+  "provider_draft": "text",
+  "provider_message": "text",
+  "state": "text",
+  "subject": "text",
+  "to_address": "text"
+ },
+ "invoice_preferences": {
+  "company_id": "uuid",
+  "data": "text"
+ },
+ "invoice_stripe_connection": {
+  "account_key": "text",
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "id": "uuid",
+  "key_last4": "text",
+  "mode": "text",
+  "status": "text",
+  "updated_at": "timestamp",
+  "updated_by_id": "uuid"
+ },
+ "invoice_stripe_link": {
+  "checked_at": "timestamp",
+  "company_id": "uuid",
+  "connection_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "currency": "text",
+  "cursor": "text",
+  "description": "text",
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "invoice_revision_id": "uuid",
+  "payment_url": "text",
+  "provider_key": "text",
+  "state": "text"
+ },
+ "invoice_stripe_payment": {
+  "account_key": "text",
+  "company_id": "uuid",
+  "connection_id": "uuid",
+  "currency": "text",
+  "id": "uuid",
+  "intent_key": "text",
+  "link_id": "uuid",
+  "mode": "text",
+  "observed_at": "timestamp",
+  "provider_state": "text",
+  "receipt_id": "uuid",
+  "session_key": "text"
+ },
  "ledger_account": {
   "code": "text",
   "company_id": "uuid",
@@ -553,6 +648,23 @@
   "journal_id": "uuid",
   "payment_id": "uuid",
   "reason": "text"
+ },
+ "payables_recurring": {
+  "company_id": "uuid",
+  "data": "text",
+  "end_date": "date",
+  "frequency": "text",
+  "id": "uuid",
+  "name": "text",
+  "source_bill_id": "uuid",
+  "source_date": "date",
+  "start_date": "date"
+ },
+ "payables_recurring_occurrence": {
+  "bill_id": "uuid",
+  "company_id": "uuid",
+  "occurrence_date": "date",
+  "template_id": "uuid"
  },
  "plugin_credential": {
   "company_id": "uuid",
@@ -773,5 +885,107 @@
   "journal_id": "uuid",
   "reason": "text",
   "transfer_id": "uuid"
+ },
+ "sales_importinvoice": {
+  "actor_id": "uuid",
+  "audit_id": "uuid",
+  "company_id": "uuid",
+  "data": "text",
+  "digest": "text",
+  "invoice_id": "uuid",
+  "revision_id": "uuid",
+  "source": "text",
+  "source_id": "uuid",
+  "source_number": "text"
+ },
+ "sales_importpayment": {
+  "company_id": "uuid",
+  "external_key": "text",
+  "invoice_id": "uuid",
+  "receipt_id": "uuid",
+  "source": "text",
+  "source_id": "uuid"
+ },
+ "sales_importseal": {
+  "invoice_id": "uuid"
+ },
+ "salestax_payment": {
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "agency_id": "uuid",
+  "agency_name": "text",
+  "bank_id": "uuid",
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "creation_digest": "text",
+  "date": "date",
+  "expense_account_id": "uuid",
+  "id": "uuid",
+  "identity_id": "uuid",
+  "journal_id": "uuid",
+  "memo": "text",
+  "period_end_date": "date",
+  "period_start_date": "date",
+  "reference": "text",
+  "review_digest": "text",
+  "tax_account_id": "uuid"
+ },
+ "salestax_paymentvoid": {
+  "actor_id": "uuid",
+  "actor_name": "text",
+  "created_at": "timestamp",
+  "date": "date",
+  "id": "uuid",
+  "journal_id": "uuid",
+  "payment_id": "uuid",
+  "reason": "text"
+ },
+ "jobs_billing": {
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "customer_id": "uuid",
+  "entry_id": "uuid",
+  "id": "uuid",
+  "invoice_id": "uuid",
+  "ticket_id": "uuid"
+ },
+ "jobs_billingstep": {
+  "billing_id": "uuid",
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "id": "uuid",
+  "invoice_id": "uuid"
+ },
+ "jobs_ticket": {
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "customer_id": "uuid",
+  "description": "text",
+  "due_date": "date",
+  "finished_date": "date",
+  "id": "uuid",
+  "number": "text",
+  "opened_date": "date",
+  "request_key": "uuid",
+  "status": "text",
+  "title": "text",
+  "updated_at": "timestamp"
+ },
+ "jobs_timeentry": {
+  "company_id": "uuid",
+  "created_at": "timestamp",
+  "created_by_id": "uuid",
+  "customer_id": "uuid",
+  "date": "date",
+  "id": "uuid",
+  "item_id": "uuid",
+  "notes": "text",
+  "request_key": "uuid",
+  "ticket_id": "uuid",
+  "updated_at": "timestamp",
+  "worker_id": "uuid"
  }
 }

@@ -25,15 +25,14 @@ Every write path (`connect`, `forget`, `map_account`, `record_sync_failure`, `st
 `set_rule_active`) takes the connection's `SecretSet` as its last argument, which the plugin builds
 from its stored credential for the call. Every spelling of those values is masked where provider text
 enters and again in every text at the moment it is written (`write.rs`, FIX8), so text composed from
-several fields is masked too (threat model and plugin contract: `L4-BANKFEEDS.md`, "Threat model for
-credentials").
+several fields is masked too.
 
 `stage_bank_transactions` is the scoped bridge's legacy complete-only path: it stages into feed accounts the
 connection already downloaded, dedupes on (account, transaction id), never withdraws pending rows and
 records no sync; it audits the batch (`bankfeed.staged`: counts and every account / transaction id) in
 the same writer. The rich path (`fetch_result` with inventory) maps onto `store_pull`, which alone withdraws
 absent pending rows. The host adapter converting `fb_plugin_api::FeedTransaction` (Date -> `YYYY-MM-DD`,
-`Amount.cents`) is wave-4 wiring: `fb-plugin-api` is on `main`, not in this `int-l3` base.
+`Amount.cents`) is host wiring in `fb-app`.
 
 ## Schema (migration 0133)
 
@@ -70,8 +69,7 @@ key, HMAC-SHA256 of the raw value under a per-book random secret (`bankfeeds_ide
 first use): `conn_key_identity`, `remote_identity`. Unique keys, collision and fixed-identity guards,
 dedupe, withdrawal and lookups use the keys; `conn_key` / `remote_id` hold the redacted text for display
 and audit, and may repeat. The two tables are rebuilt (their UNIQUE keys were on the text) and existing
-rows get keys derived from their stored text. See `L4-BANKFEEDS.md` "Provider identity kept apart from
-display".
+rows get keys derived from their stored text, so provider identity stays apart from display text.
 
 ## Platform changes (not oddities)
 
@@ -97,9 +95,9 @@ display".
   tables are generated from the frozen interpreter (`fb-harness/py/gen_bankfeeds_unicode.py` ->
   `py_unicode.rs`), and `testdata/python-*.json` holds about 16,000 differential vectors from the frozen
   `client.redact` / `sanitize`, `default_check_number` and `str.lower` (`gen_bankfeeds_text_vectors.py`).
-- Not copied (lead decision, FIX2): Python's `redact` keeps credentials in a URL glued to a preceding
+- Not copied (FIX2): Python's `redact` keeps credentials in a URL glued to a preceding
   word character (`xhttps://u:p@h`: `\b` fails, so `_URL` never matches) and in non-http schemes. v2
-  removes the userinfo of every `scheme://…@`; see `L4-BANKFEEDS.md` "Python bugs not copied".
+  removes the userinfo of every `scheme://…@`.
 - Not copied (FIX4): Python stores provider names, ids, descriptions and messages as its parser kept
   them, so a credential its `redact` misses reaches the rows and later audits (`bankfeed.mapped`). v2
   redacts every provider-derived string once where it enters the core (`staging::provider_text` in
@@ -124,8 +122,8 @@ display".
 
 ## FIX10: admission and book-wide final text policy
 
-Public credential constructors enforce the 12-character minimum and the alphabet documented in
-`L4-BANKFEEDS.md`. The host must restore all stored credentials through `restore_connection_credentials`
+Public credential constructors enforce the 12-character minimum and the alphabet in
+`fb_db::credential_mask` (`MIN_CREDENTIAL_CHARS`, `CREDENTIAL_ALPHABET`). The host must restore all stored credentials through `restore_connection_credentials`
 before commands or network use on every open. Rejected existing credentials retain their connection and
 history, gain the durable `needs_reconnect` flag (migration 0137), and cannot be synced or staged.
 Every bank-feed command adds its mask to `Book::retain_text_guard`; all later `Book::write` calls inherit
@@ -137,5 +135,5 @@ INT-L4b enforces the host boundary in the core: opening a book records every act
 mask must be restored. `Book::write` refuses before entering any callback until all those connections
 have been restored, even if a later bank-feed call supplies a SecretSet for just one connection.
 Forgotten connections have no plugin credential to reload. Reads, reports and integrity checks remain
-available. Production restore-on-open wiring remains wave 4; the differential backup host restores
+available. Production restore-on-open wiring is host work; the differential backup host restores
 public synthetic fixture credentials only.

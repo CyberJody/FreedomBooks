@@ -73,3 +73,5 @@ details summary{cursor:pointer}
 .print-register{font-size:9pt}
 .print-register th,.print-register td{padding:3px 5px;border-bottom:1px solid #ccc;vertical-align:top}
 .print-register .amount{text-align:right;white-space:nowrap}
+
+.register-matching{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin:0 0 20px}.register-matching p{margin:0;max-width:75ch}

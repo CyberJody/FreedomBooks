@@ -254,7 +254,7 @@ pub(super) fn sources(app: &mut App, c: CompanyId) -> AppResult<BTreeMap<String,
         let meta = fb_core::banking::source_metadata(tx, c)?;
         let mut out = BTreeMap::new();
         let mut st = tx
-            .prepare("SELECT id,kind,number FROM documents_documentidentity WHERE company_id=?1")?;
+            .prepare("SELECT id,kind,number FROM documents_displayidentity WHERE company_id=?1")?;
         for row in st.query_map([c.to_db()], |r| {
             Ok((
                 r.get::<_, String>(0)?,
@@ -280,6 +280,7 @@ pub(super) fn sources(app: &mut App, c: CompanyId) -> AppResult<BTreeMap<String,
                 "CHK" => "checks:detail",
                 "DEP" => "deposits:detail",
                 "TRF" => "transfers:detail",
+                "STP" => "salestax:tax_payment",
                 _ => continue,
             };
             if kind == "CHK" {
@@ -307,7 +308,7 @@ pub(super) fn sources(app: &mut App, c: CompanyId) -> AppResult<BTreeMap<String,
         Ok(out)
     })?)
 }
-fn describe(c: CompanyId, row: &f::LedgerRow, sources: &BTreeMap<String, SourceVm>) -> Value {
+pub(super) fn describe(c: CompanyId, row: &f::LedgerRow, sources: &BTreeMap<String, SourceVm>) -> Value {
     let source = row.source_id.as_ref().and_then(|id| sources.get(id));
     let journal_url = row
         .journal

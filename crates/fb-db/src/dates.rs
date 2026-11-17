@@ -50,6 +50,48 @@ pub fn parse_iso_date(s: &str) -> Option<String> {
         .then(|| parsed.to_string())
 }
 
+/// Anchored calendar occurrence shared by recurring-bill services and SQL evidence guards.
+pub fn recurring_occurrence(start: &str, frequency: &str, index: i64) -> Option<String> {
+    use chrono::{Datelike, NaiveDate};
+    let start = NaiveDate::parse_from_str(&parse_iso_date(start)?, "%Y-%m-%d").ok()?;
+    if index < 0 {
+        return None;
+    }
+    let step = match frequency {
+        "MONTHLY" => 1,
+        "YEARLY" => 12,
+        _ => return None,
+    };
+    let month = index
+        .checked_mul(step)?
+        .checked_add(i64::from(start.year()) * 12 + i64::from(start.month0()))?;
+    let year = month / 12;
+    if !(1..=9999).contains(&year) {
+        return None;
+    }
+    (1..=start.day())
+        .rev()
+        .find_map(|day| NaiveDate::from_ymd_opt(year as i32, (month % 12 + 1) as u32, day))
+        .map(|d| d.to_string())
+}
+pub(crate) fn register(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+    use rusqlite::functions::FunctionFlags;
+    conn.create_scalar_function(
+        "fb_recurring_date",
+        3,
+        FunctionFlags::SQLITE_UTF8
+            | FunctionFlags::SQLITE_DETERMINISTIC
+            | FunctionFlags::SQLITE_INNOCUOUS,
+        |ctx| {
+            Ok(recurring_occurrence(
+                &ctx.get::<String>(0)?,
+                &ctx.get::<String>(1)?,
+                ctx.get::<i64>(2)?,
+            ))
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,9 +102,14 @@ mod tests {
             include_str!("dates_extra_vectors.json"),
             include_str!("dates_credit_vectors.json"),
         ] {
-            let vectors: Vec<(serde_json::Value, Option<String>)> = serde_json::from_str(raw).unwrap();
+            let vectors: Vec<(serde_json::Value, Option<String>)> =
+                serde_json::from_str(raw).unwrap();
             for (input, expected) in vectors {
-                assert_eq!(input.as_str().and_then(parse_iso_date), expected, "{input:?}");
+                assert_eq!(
+                    input.as_str().and_then(parse_iso_date),
+                    expected,
+                    "{input:?}"
+                );
             }
         }
     }

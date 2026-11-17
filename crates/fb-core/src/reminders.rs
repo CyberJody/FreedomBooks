@@ -104,6 +104,39 @@ fn group(
         json!({"count":count,"total":display(total),"overdue_count":overdue_count,"overdue_total":display(overdue_total),"capped":count>rows.len(),"rows":rows}),
     )
 }
+fn through(today: NaiveDate, days: i64) -> FbResult<NaiveDate> {
+    today.checked_add_signed(Duration::try_days(days).ok_or_else(||FbError::validation("Reminder date overflow."))?).filter(|d|(1..=9999).contains(&chrono::Datelike::year(d))).ok_or_else(||FbError::validation("Reminder date overflow."))
+}
+fn sum(rows: &[&Row]) -> FbResult<i128> {
+    rows.iter().try_fold(0i128, |t, r| {
+        t.checked_add(r.balance)
+            .ok_or_else(|| FbError::validation("Reminder total overflow."))
+    })
+}
+/// Company Home figures from the same open-document query as the reminder lists (and the same balances as
+/// the invoice and bill lists: posted, not void, total less live settlements, only positive balances).
+/// Receivables: every open invoice and the overdue ones (due before `today`). Payables: every open bill,
+/// the overdue ones, the ones due from `today` through the company's reminder window, and the next due
+/// date on or after `today`. The caller checks company access; one read, sums in Rust.
+pub fn home_totals(c: &(impl Query + ?Sized), co: CompanyId, today: NaiveDate) -> FbResult<Value> {
+    let days = store::get_company(c, co)?.bill_reminder_days;
+    let through = through(today, days)?;
+    let rows = current(c, co)?;
+    let of = |kind: &str| rows.iter().filter(|r| r.kind == kind).collect::<Vec<_>>();
+    let (invoices, bills) = (of("invoice"), of("bill"));
+    fn overdue<'a>(v: &[&'a Row], today: NaiveDate) -> Vec<&'a Row> {
+        v.iter().filter(|r| r.due < today).copied().collect()
+    }
+    let (late_invoices, late_bills) = (overdue(&invoices, today), overdue(&bills, today));
+    let soon = bills.iter().filter(|r| r.due >= today && r.due <= through).copied().collect::<Vec<_>>();
+    let next_due = bills.iter().map(|r| r.due).filter(|d| *d >= today).min();
+    Ok(json!({
+        "receivables": {"count": invoices.len(), "total": display(sum(&invoices)?), "overdue_count": late_invoices.len(), "overdue_total": display(sum(&late_invoices)?)},
+        "payables": {"count": bills.len(), "total": display(sum(&bills)?), "overdue_count": late_bills.len(), "overdue_total": display(sum(&late_bills)?),
+            "soon_count": soon.len(), "soon_total": display(sum(&soon)?), "next_due": next_due.map(|d| d.to_string()),
+            "days": days, "through": through.to_string()},
+    }))
+}
 pub fn build(
     book: &mut Book,
     actor: UserId,
@@ -114,7 +147,7 @@ pub fn build(
     let today = date(today)?;
     book.read(|c|{
         services::access(c,actor,co)?;let days=days.unwrap_or(store::get_company(c,co)?.bill_reminder_days);
-        let through=today.checked_add_signed(Duration::try_days(days).ok_or_else(||FbError::validation("Reminder date overflow."))?).filter(|d|(1..=9999).contains(&chrono::Datelike::year(d))).ok_or_else(||FbError::validation("Reminder date overflow."))?;
+        let through=through(today,days)?;
         let rows=current(c,co)?;let bills=rows.iter().filter(|r|r.kind=="bill"&&r.due<=through).cloned().collect();let invoices=rows.into_iter().filter(|r|r.kind=="invoice"&&r.due<today).collect();
         Ok(json!({"today":today.to_string(),"days":days,"through":through.to_string(),"bills":group(c,co,bills,today,directory::Model::Vendor)?,"invoices":group(c,co,invoices,today,directory::Model::Customer)?}))
     })

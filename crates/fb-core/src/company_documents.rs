@@ -149,6 +149,13 @@ pub fn save(
     currency: &str,
     changes: Changes,
 ) -> FbResult<crate::model::Company> {
+    save_with_preferences(book, actor, company, name, currency, changes, None)
+}
+
+pub fn save_with_preferences(
+    book: &mut Book, actor: UserId, company: CompanyId, name: &str, currency: &str,
+    changes: Changes, preferences: Option<crate::invoice_preferences::Change>,
+) -> FbResult<crate::model::Company> {
     let Changes {
         details,
         logo_upload,
@@ -168,6 +175,9 @@ pub fn save(
         let old_logo = logo(tx, company)?;
         let new_logo = if remove { None } else { uploaded.or_else(|| old_logo.clone()) };
         let company_row = services::edit_company_tx(tx, actor, company, name, currency)?;
+        if let Some(change) = preferences {
+            crate::invoice_preferences::save_tx(tx, actor, company, change)?;
+        }
         if before == details && old_logo == new_logo { return Ok(company_row); }
         let data = serde_json::to_string(&details).expect("details");
         // Permanent singleton identity refuses REPLACE, including with recursive triggers off.

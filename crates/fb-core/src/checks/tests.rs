@@ -14,8 +14,6 @@ mod primitive;
 mod upgrade;
 use super::*;
 use crate::{services::AccountInput, users};
-use std::sync::atomic::{AtomicUsize, Ordering};
-static NEXT: AtomicUsize = AtomicUsize::new(0);
 pub(crate) struct Fx {
     book: Book,
     actor: UserId,
@@ -25,15 +23,12 @@ pub(crate) struct Fx {
     ap: AccountId,
     bank2: AccountId,
     bank: AccountId,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fx {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "checks-{}-{}.fbbook",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::SeqCst)
-        ));
-        let mut book = Book::create(&path, &[42; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("checks");
+        let mut book = file.book(&[42; 32]);
         let actor = users::create_user(&mut book, "bill-test", true).unwrap();
         let co = services::create_company(&mut book, actor, "Synthetic bills", "USD", false)
             .unwrap()
@@ -91,6 +86,7 @@ impl Fx {
             .unwrap()
             .into();
         Self {
+            _file: file,
             book,
             actor,
             co,

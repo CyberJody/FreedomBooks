@@ -289,7 +289,7 @@ fn known_secret_fuzz(seed: u64, cases: usize) -> (usize, usize, std::collections
             let has_control = !fb_db::check_numbers::free_text_valid(&super::super::accept::memo_text(&item.description))
                 || !fb_db::check_numbers::free_text_valid(&text::sanitize(&item.description, 160));
             let before_accept = has_control.then(|| fb_db::test_support::snapshot(f.book.connection()).unwrap());
-            match f.accept(&fv("tx_id"), json!({"kind":"JOURNAL","account_id":f.acc("410")})) {
+            match f.accept(&fv("tx_id"), json!({"kind":"JOURNAL","account_id":f.acc("410"),"record_again":true})) {
                 Ok(accepted) => returned.push(format!("{accepted:?}")),
                 Err(e) => {
                     // SEC-FIX1: random spellings may retain an unrelated Cc/Cf
@@ -322,7 +322,9 @@ fn known_secret_fuzz(seed: u64, cases: usize) -> (usize, usize, std::collections
     (n, checked, spelled, actions)
 }
 fn run_fuzz(seed: u64) {
-    let cases: usize = std::env::var("FB_FIX6_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(1280);
+    // Seeded: 1,280 cases per seed in the release gate (FB_TEST_FULL_CASES=1), 64 otherwise;
+    // FB_FIX6_CASES still sets an explicit count.
+    let cases: usize = std::env::var("FB_FIX6_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or_else(|| fb_db::test_support::seeded_cases(1280, 64));
     let (n, checked, spelled, actions) = known_secret_fuzz(seed, cases);
     eprintln!("FIX6 fuzz seed {seed:#x}: {n} cases, {checked} stored/returned texts checked, 0 leaks; spellings embedded: {spelled:?}; actions: {actions:?}");
     // the sync, staging, mapping and review audits all ran (rule audits carry user text only)
@@ -330,7 +332,8 @@ fn run_fuzz(seed: u64) {
         assert!(actions.contains(a), "{a} not driven");
     }
 }
-// Four seeds of 1,280 cases each (5,120 in all), so the workspace run spreads them over its threads.
+// Four seeds of 1,280 cases each (5,120 in all) in the release gate, so the workspace run spreads them
+// over its threads; 64 cases each otherwise.
 #[test]
 fn fix6_known_secret_fuzz_a() {
     run_fuzz(0xF16A_0001_5EC2_E7A1);
@@ -546,13 +549,26 @@ fn r6_known_secret_persisted_all_provider_fields_and_audit_writers() {
             let item = f.item(value);
             ignore(&mut f.book, f.u, f.c, &item.id, &SecretSet::none()).unwrap();
             return_to_review(&mut f.book, f.u, f.c, &item.id, &SecretSet::none()).unwrap();
-            let journal = f.accept(value, json!({"kind":"JOURNAL","account_id":f.acc("410")})).unwrap();
-            let check = f.accept(&staged, json!({"kind":"CHECK","account_id":f.acc("500")})).unwrap();
-            if r6_leaks(&format!("{journal:?}{check:?}")) {
+            // Review-safety writers (2026-11-10) on this case's rows: link, undo, keep a bank change.
+            let mut linked = review_safety_link(&mut f, value);
+            linked.extend(review_safety_link(&mut f, &staged));
+            let journal = f.accept(value, json!({"kind":"JOURNAL","account_id":f.acc("410"),"record_again":true})).unwrap();
+            let check = f.accept(&staged, json!({"kind":"CHECK","account_id":f.acc("500"),"record_again":true})).unwrap();
+            let after = review_safety_after(&mut f, &journal, value, tx(&staged, "2026-10-20", -101, value));
+            if r6_leaks(&format!("{journal:?}{check:?}{linked:?}{after:?}")) {
                 failures.insert(format!("{}/accept-return", case.name));
             }
             f.map(value, None).unwrap();
             f.reopen_clean();
+        }
+        review_safety_gap(&mut f);
+        if seen.is_empty() {
+            // Once: turn off an imported rule's Auto-post, the one rules.rs writer the cases do not reach.
+            let mut returned = vec![];
+            drive_imported_auto_post_off(&mut f, &mut returned);
+            if r6_leaks(&returned.concat()) {
+                failures.insert("rule-import-return".into());
+            }
         }
         let mut st = f.book.connection().prepare("SELECT action,detail FROM ledger_auditevent").unwrap();
         for (action, payload) in st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))).unwrap().map(Result::unwrap) {
@@ -572,6 +588,8 @@ fn r6_known_secret_persisted_all_provider_fields_and_audit_writers() {
         }
         r5_finish(&mut f);
     }
+    // The import that reaches the turn-off writer is the one action outside fix4's source scan.
+    assert!(seen.remove("bankfeed.rule_imported"));
     assert_eq!(seen, fix4_emitted_actions());
     eprintln!("R6 known-secret persisted cases={n}, fields=15, actions={}, leaks={failures:?}", seen.len());
     assert!(failures.is_empty(), "R6 provider credential leak categories={}", failures.len());

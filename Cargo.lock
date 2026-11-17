@@ -272,6 +272,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cfb"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a347dcabdae9c31b0825fd6a8bed285ec9c2acb89c47827126d52fa4f59cece3"
+dependencies = [
+ "fnv",
+ "uuid",
+ "web-time",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -560,12 +571,14 @@ version = "0.1.0"
 dependencies = [
  "argon2",
  "base64 0.22.1",
+ "cfb",
  "chacha20poly1305",
  "chrono",
  "chrono-tz",
  "data-encoding",
  "fb-core",
  "fb-db",
+ "fb-diag",
  "fb-harness",
  "fb-ids",
  "fb-money",
@@ -599,8 +612,10 @@ dependencies = [
  "aho-corasick",
  "argon2",
  "base64 0.22.1",
+ "cfb",
  "chacha20poly1305",
  "chrono",
+ "chrono-tz",
  "crc32fast",
  "fb-db",
  "fb-ids",
@@ -652,6 +667,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fb-diag"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "fb-db",
+ "libc",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "fb-harness"
 version = "0.1.0"
 dependencies = [
@@ -670,6 +696,18 @@ dependencies = [
  "tempfile",
  "uuid",
  "zeroize",
+]
+
+[[package]]
+name = "fb-host"
+version = "0.1.0"
+dependencies = [
+ "fb-app",
+ "fb-core",
+ "fb-remote-proto",
+ "fb-templates",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -692,11 +730,14 @@ dependencies = [
 name = "fb-net"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "fb-plugin-api",
+ "fb-plugin-gmail",
  "fb-plugin-openai",
  "fb-plugin-simplefin",
  "serde",
  "serde_json",
+ "url",
  "uuid",
  "zeroize",
 ]
@@ -706,9 +747,16 @@ name = "fb-node"
 version = "0.1.0"
 dependencies = [
  "fb-app",
+ "fb-db",
+ "fb-diag",
+ "fb-host",
+ "fb-remote",
+ "fb-remote-proto",
+ "libc",
  "napi",
  "napi-build",
  "napi-derive",
+ "serde",
  "serde_json",
  "tempfile",
  "zeroize",
@@ -822,18 +870,36 @@ dependencies = [
 ]
 
 [[package]]
-name = "fb-screendiff"
+name = "fb-remote"
 version = "0.1.0"
 dependencies = [
- "chrono",
- "chrono-tz",
  "fb-app",
  "fb-core",
- "fb-db",
- "fb-harness",
- "fb-templates",
- "regex",
+ "fb-host",
+ "fb-remote-proto",
+ "getrandom 0.3.4",
+ "hmac",
+ "libc",
+ "rcgen",
+ "rustls",
+ "serde",
  "serde_json",
+ "sha2",
+ "subtle",
+ "tempfile",
+ "zeroize",
+]
+
+[[package]]
+name = "fb-remote-proto"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]

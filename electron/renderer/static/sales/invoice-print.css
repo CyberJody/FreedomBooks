@@ -1,0 +1,56 @@
+/* A compact, classic invoice layout; all amounts come from the core. */
+@page { size: letter portrait; margin: .5in .5in .65in }
+body.invoice-print { font-family: Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.35; color: #000 }
+.invoice-print .sheet { width: 8.5in; min-height: 11in; padding: .5in; display: flex; flex-direction: column }
+.invoice-print .doc-head { gap: 16px; margin-bottom: 10px }
+.invoice-print .seller { display: flex; gap: 14px; min-width: 0; flex: 1 }
+.invoice-print .business-logo { width: auto; max-width: 1.35in; max-height: 1.35in; object-fit: contain }
+.invoice-print .company-name { font-size: 15px; margin: 6px 0 2px }
+.invoice-print .title-block { width: 2.6in; max-width: 45% }
+.invoice-print .doc-title { font-size: 24px; letter-spacing: .01em; font-weight: 700 }
+.invoice-print .meta-box { width: 100% }
+.invoice-print .meta-box th, .invoice-print .meta-box td { min-width: 0; font-size: 11px; padding: 3px 6px }
+.invoice-print .meta-box th { font-weight: 400; text-transform: none; letter-spacing: normal }
+.invoice-print .revision-line { font-size: 10px; margin-top: 6px }
+.invoice-print .party-row { margin: 8px 0 10px }
+.invoice-print .party-box { min-width: 0; width: calc(100% - 2.6in - 16px); padding-bottom: 6px }
+.invoice-print .box-label { text-transform: none; font-size: 10px; letter-spacing: normal; font-weight: 400 }
+.invoice-print .linewrap { flex: 1 }
+.invoice-print .linewrap .lines { height: 3in }
+.invoice-print .lines .fill td { height: 100% }
+.invoice-print .lines { table-layout: fixed; margin-bottom: 0 }
+.invoice-print .lines th { text-transform: none; letter-spacing: normal; font-weight: 400; font-size: 10px; border: 1px solid #000; padding: 4px 6px }
+.invoice-print .lines td { font-size: 11.5px; border-left: 1px solid #000; border-right: 1px solid #000; border-bottom: 0; padding: 3px 6px }
+.invoice-print .lines tbody tr:nth-child(even) td { background: #fff }
+.invoice-print .quantity-width { width: .55in }
+.invoice-print .rate-width { width: .8in }
+.invoice-print .amount-width { width: 1.05in }
+.invoice-print .foot-row { gap: 16px; margin-top: 10px }
+.invoice-print .totals { flex: 0 0 2.6in; width: 2.6in }
+.invoice-print .totals th, .invoice-print .totals td { border: 1px solid #000; padding: 3px 6px; font-size: 11px }
+.invoice-print .totals td { font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums }
+.invoice-print .invoice-messages { flex: 1; min-width: 0 }
+.payment-callout { border: 2px dashed #3686c9; background: #ececec; border-radius: 10px; padding: 10px 12px; break-inside: avoid; print-color-adjust: exact }
+.payment-heading { font-size: 12px; font-weight: bold }
+.zelle-payment { display: flex; align-items: flex-start; gap: 10px; margin-top: 6px }
+.zelle-wordmark { font-size: 20px; color: #6d1ed4; font-weight: bold }
+.other-payment, .card-payment { border-top: 1px solid #c9c9c9; padding-top: 6px; margin-top: 6px !important }
+.invoice-print .memo, .invoice-print .posting-note { margin-top: 8px }
+.invoice-footer { margin-top: 12px; text-align: center; color: #444; font-size: 9.5px; break-inside: avoid }
+@media print {
+  /* Imported work descriptions may span a page. Keep their text flowing under
+     the repeated table heading instead of leaving a mostly empty first page. */
+  .invoice-print .lines tbody tr { break-inside: auto; page-break-inside: auto }
+  /* Normal block/table pagination keeps totals after the last row across pages. */
+  .invoice-print .sheet { width: auto; min-height: 9.6in; padding: 0; display: block }
+  .invoice-print .revision-line { display: none }
+  .invoice-print .seller { break-inside: avoid }
+}
+@media screen and (max-width: 9in) {
+  .invoice-print .sheet { width: auto; min-height: 0; padding: 24px 16px }
+  .invoice-print .title-block, .invoice-print .party-box, .invoice-print .totals { width: 100%; max-width: none; flex-basis: auto }
+}
+.invoice-print .party-box{min-height:1.05in}.invoice-print .card-payment{display:flex;gap:12px;align-items:flex-start}.payment-qr{flex:0 0 94px;width:94px}.payment-qr svg{width:94px;height:94px;display:block}.qr-placeholder{border:1px dashed #8d9297;background:#fff;width:94px;height:94px;display:flex;align-items:center;justify-content:center;text-align:center;color:#777;font-size:10px}.zelle-badge{margin:8px 6px;object-fit:contain}.payment-marks{display:flex;align-items:center;gap:6px;margin:8px 0}.payment-marks img{height:23px;width:auto;max-width:42px;object-fit:contain}.stripe-badge{display:block;margin-top:8px;object-fit:contain}.payment-preview-note{font-size:10px;color:#77591e;margin:4px 0 8px}.invoice-print .status-stamp{top:3.6in;right:auto;left:50%;border:0;transform:translateX(-50%) rotate(-25deg)}
+
+.invoice-print .has-payment-options .linewrap .lines{height:2.2in}
+.invoice-print .remit-to{margin:8px 0 0}

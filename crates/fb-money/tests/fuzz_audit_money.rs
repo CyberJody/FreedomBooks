@@ -3,8 +3,12 @@
 //! Properties: `parse(format(x)) == x` for every amount in range; half-up rounding exactly as the
 //! crate documents it; the refusals the validator promises; and a differential check of
 //! `money(Text)`, `parse_python_decimal` and `unicode_decimal` against the real CPython `decimal`
-//! module (the frozen reference is CPython 3.13 / Unicode 15.1, which is what `python3` is here).
-//! The Python check is skipped, with a message, when `python3` is not on PATH.
+//! module. The frozen reference is CPython 3.13 with Unicode 15.1. The interpreter is
+//! `FB_REFERENCE_PYTHON` (default `python3`). With Unicode 15.1 everything is compared. With Unicode
+//! 16.0 (CPython 3.14) everything is compared except the 80 decimal digits Unicode 16.0 added, which
+//! the reference does not know; `unicode_decimal` was checked against 3.14 over every code point and
+//! differs on exactly those. With any other interpreter, or none, the check is skipped with a printed
+//! reason, and fails instead when FB_TEST_FULL_CASES=1 (the release gate).
 use fb_money::{AMOUNT_LIMIT_CENTS, AmountInput, MAX_TOTAL_CENTS, Money, Parsed, money, parse_python_decimal, round_half_up};
 use proptest::prelude::*;
 use rust_decimal::Decimal;
@@ -154,8 +158,40 @@ out = {"money": [money(s) for s in inputs["money"]], "finite": [finite(s) for s 
 json.dump(out, sys.stdout)
 "#;
 
+fn reference_python() -> String {
+    std::env::var("FB_REFERENCE_PYTHON").unwrap_or_else(|_| "python3".into())
+}
+
+/// The decimal digits Unicode 16.0 added (Garay, Myanmar Extended-C, Sunuwar, Gurung Khema, Kirat Rai,
+/// Outlined, Ol Onal): the only code points where CPython 3.14 and the 15.1 reference disagree.
+const UNICODE_16_DIGITS: [(u32, u32); 7] = [
+    (0x10D40, 0x10D49), (0x116D0, 0x116E3), (0x11BF0, 0x11BF9), (0x16130, 0x16139),
+    (0x16D70, 0x16D79), (0x1CCF0, 0x1CCF9), (0x1E5F1, 0x1E5FA),
+];
+fn unicode_16_digit(c: char) -> bool {
+    UNICODE_16_DIGITS.iter().any(|(lo, hi)| (*lo..=*hi).contains(&(c as u32)))
+}
+
+/// How the differential runs here: Ok(false) for Unicode 15.1, Ok(true) for 16.0 (skip the 16.0 digits),
+/// Err(reason) when it cannot run.
+fn reference_python_mode() -> Result<bool, String> {
+    let interpreter = reference_python();
+    let probe = Command::new(&interpreter).args(["-I", "-c", "import sys,unicodedata;print(unicodedata.unidata_version, sys.version.split()[0])"]).output();
+    match probe {
+        Ok(out) if out.status.success() => {
+            let reported = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+            match reported.split_whitespace().next() {
+                Some("15.1.0") => Ok(false),
+                Some("16.0.0") => Ok(true),
+                _ => Err(format!("{interpreter} reports Unicode/CPython {reported}; the check knows Unicode 15.1 (the frozen reference) and 16.0 (set FB_REFERENCE_PYTHON)")),
+            }
+        }
+        _ => Err(format!("{interpreter} is not available (set FB_REFERENCE_PYTHON to CPython 3.13 or 3.14)")),
+    }
+}
+
 fn python(inputs: &serde_json::Value) -> Option<serde_json::Value> {
-    let mut child = Command::new("python3").args(["-I", "-c", PY]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::inherit()).spawn().ok()?;
+    let mut child = Command::new(reference_python()).args(["-I", "-c", PY]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::inherit()).spawn().ok()?;
     child.stdin.take().unwrap().write_all(inputs.to_string().as_bytes()).ok()?;
     let out = child.wait_with_output().ok()?;
     if !out.status.success() {
@@ -175,11 +211,19 @@ proptest! {
         chars in prop::collection::vec(any::<char>(), 300),
     ) {
         let inputs = serde_json::json!({"money": strings, "chars": chars.iter().map(|c| c.to_string()).collect::<Vec<_>>()});
-        let Some(out) = python(&inputs) else {
-            eprintln!("python3 not available; skipping the CPython differential check");
-            return Ok(());
+        let unicode_16 = match reference_python_mode() {
+            Ok(mode) => mode,
+            Err(reason) if std::env::var("FB_TEST_FULL_CASES").is_ok_and(|v| v == "1") => panic!("the release gate needs the CPython differential check: {reason}"),
+            Err(reason) => {
+                eprintln!("SKIPPED the CPython differential check: {reason}");
+                return Ok(());
+            }
         };
+        let out = python(&inputs).expect("the reference interpreter ran the differential script");
         for (i, s) in strings.iter().enumerate() {
+            if unicode_16 && s.chars().any(unicode_16_digit) {
+                continue;
+            }
             let expected = out["money"][i].as_str().map(|t| t.replace("-0.00", "0.00"));
             let actual = text(s).ok().map(|c| Money::from_cents(c).to_string());
             prop_assert_eq!(&actual, &expected, "money({:?}): rust {:?} vs python {:?}", s, actual, expected);
@@ -187,6 +231,9 @@ proptest! {
             prop_assert_eq!(kind, out["finite"][i].as_str().unwrap(), "parse_python_decimal({:?})", s);
         }
         for (i, c) in chars.iter().enumerate() {
+            if unicode_16 && unicode_16_digit(*c) {
+                continue;
+            }
             let expected = out["decimal"][i].as_u64().map(|d| d as u32);
             prop_assert_eq!(fb_money::unicode_decimal(*c), expected, "unicode_decimal({:?})", c);
         }

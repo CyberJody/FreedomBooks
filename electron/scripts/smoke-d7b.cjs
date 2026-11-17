@@ -4,7 +4,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 module.exports = async ({ app, page, company, ids, shot, pass }) => {
   try {
-  const run = command => page.evaluate(c => window.fb.books.run(c), command);
   const go = p => page.goto(`fb://app/c/${company}${p}`);
   const capture = name => shot(page, `d7b-${name}`);
   const csv = async (name, expected) => {
@@ -70,7 +69,7 @@ module.exports = async ({ app, page, company, ids, shot, pass }) => {
   await page.waitForSelector('.reconcile-begin');
   await page.fill('#id_statement_date','2026-10-31');
   await page.fill('#id_ending_balance','bad');
-  await page.click('button[type=submit]');
+  await page.locator('.reconcile-begin button[type=submit]').click();
   await page.waitForSelector('.errorlist');
   assert.equal(await page.inputValue('#id_ending_balance'),'bad');
   await page.fill('#id_ending_balance','799.00');

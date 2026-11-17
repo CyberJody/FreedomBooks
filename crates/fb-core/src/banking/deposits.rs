@@ -311,7 +311,18 @@ pub fn reverse_deposit(
     d: &Value,
     reason: &Value,
 ) -> FbResult<Value> {
-    command(book, |tx| {
+    command(book, |tx| reverse_deposit_tx(tx, actor, c, key, expected, d, reason))
+}
+/// [`reverse_deposit`] inside a caller's writer (bank-feed Undo).
+pub fn reverse_deposit_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    key: &str,
+    expected: Option<i64>,
+    d: &Value,
+    reason: &Value,
+) -> FbResult<Value> {
         let user = services::access(tx, actor, c)?;
         let old = deposit(tx, c, key)?;
         let d = date(d)?;
@@ -353,5 +364,4 @@ pub fn reverse_deposit(
             json!({"reason":reason,"date":d,"journal_id":j.id.to_db()}),
         )?;
         Ok(out)
-    })
 }

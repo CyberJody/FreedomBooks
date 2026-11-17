@@ -2,6 +2,7 @@
 use super::*;
 use crate::{AccountId, checks, directory, services::AccountInput, transfers, users};
 mod integration;
+mod automatic;
 use std::sync::atomic::{AtomicUsize, Ordering};
 // Synthetic service fixtures have no plugin vault. The explicit test-only
 // capability is the same escape hatch as the suite's raw SQL connection.
@@ -21,6 +22,7 @@ mod r10;
 mod fix10;
 mod dfix3;
 mod mapping;
+mod sync_safety;
 
 struct Fx {
     book: Book,
@@ -85,7 +87,8 @@ impl Fx {
     }
     fn new_in(dir: &std::path::Path) -> Self {
         let path = dir.join(format!("bankfeeds-{}-{}.fbbook", std::process::id(), NEXT.fetch_add(1, Ordering::SeqCst)));
-        let mut book = Book::create(&path, &[91; 32]).unwrap();
+        // A copy of the per-process migrated template; tests of creation itself call Book::create.
+        let mut book = fb_db::test_support::template_book(&path, &[91; 32]).unwrap();
         let u = users::create_user(&mut book, "feeds-test", true).unwrap();
         let outsider = users::create_user(&mut book, "outsider", false).unwrap();
         let c = services::create_company(&mut book, u, "Synthetic feeds", "USD", false).unwrap().id;
@@ -532,8 +535,10 @@ fn forget_keeps_history_and_blocks_sync_and_the_interval_is_respected() {
     let start = begin_sync(&mut f.book, f.u, f.c, &conn, "2026-10-28T12:30:00Z", SCHEDULED_MIN_INTERVAL_SECS, true).unwrap();
     assert_eq!(start, 1_793_188_800 - 7 * 86_400);
     record_sync_failure(&mut f.book, f.u, f.c, &conn, "2026-10-28T13:00:00Z", "SimpleFIN said: https://u:p@x.example/a", false, &SecretSet::none()).unwrap();
+    // A failed attempt is not a good sync: the window still reaches back to the last complete one (review
+    // 2026-11-10; it used to restart at 44 days before the failure's retry).
     let start = begin_sync(&mut f.book, f.u, f.c, &conn, "2026-10-28T13:00:00Z", SCHEDULED_MIN_INTERVAL_SECS, false).unwrap();
-    assert_eq!(start, 1_793_192_400 - 44 * 86_400);
+    assert_eq!(start, 1_793_188_800 - 7 * 86_400);
     let summary: String = f.book.connection().query_row("SELECT last_sync_summary FROM bankfeeds_connection", [], |r| r.get(0)).unwrap();
     assert_eq!(summary, "SimpleFIN said: https://***@x.example/a");
     forget(&mut f.book, f.u, f.c, &conn, &SecretSet::none()).unwrap();
@@ -1532,7 +1537,9 @@ fn fix3_userinfo_property_never_persists_on_any_sync_text_path() {
     // Audit rows already checked (the table has no rowid; UUIDv7 order within a millisecond is not promised).
     let seen = "CREATE TEMP TABLE fix3_seen(id TEXT PRIMARY KEY); INSERT INTO fix3_seen SELECT id FROM ledger_auditevent;";
     f.book.connection().execute_batch(seen).unwrap();
-    for i in 0..2_500usize {
+    // Seeded: the release gate runs all 2,500 cases (FB_TEST_FULL_CASES=1); other runs the first 300.
+    let total = fb_db::test_support::seeded_cases(2_500, 300);
+    for i in 0..total {
         // A fresh book every 250 cases keeps every query small; each finished book must reopen clean.
         if i > 0 && i % 250 == 0 {
             done(&mut f);
@@ -1641,7 +1648,7 @@ fn fix3_userinfo_property_never_persists_on_any_sync_text_path() {
     done(&mut f);
     eprintln!("fix3 userinfo property: {cases} cases, {checked_texts} persisted texts checked, per separator {by_separator:?}");
     assert!(failures.is_empty(), "{} leaks, first: {:#?}", failures.len(), &failures[..failures.len().min(6)]);
-    assert_eq!(cases, 2_500);
+    assert_eq!(cases, total);
 }
 
 // Independent R4 attacks. Synthetic credential markers only.
@@ -1662,6 +1669,7 @@ fn r4_independent_ascii_unicode_encoded_credentials_all_paths() {
     pool.extend(['é','中','😀','\u{301}','\u{200d}','ı','\u{ff20}','\u{fe6b}']);
     let encode = |s: &str| s.bytes().map(|b| format!("%{b:02X}")).collect::<String>();
     let mut inputs = vec![];
+    let persisted = fuzz_cases(384, 24, &SEPARATOR_CASES.iter().copied().chain(95..pool.len()).collect::<Vec<_>>());
     for i in 0..4096usize {
         let salt = if i < pool.len() { pool[i].to_string() } else { (0..next()%15).map(|_| pool[next() as usize % pool.len()]).collect() };
         // Authority terminators are percent-encoded when they are credential contents.
@@ -1678,7 +1686,9 @@ fn r4_independent_ascii_unicode_encoded_credentials_all_paths() {
         for output in [text::redact(&input),text::sanitize(&input,500),text::strip_url_userinfo(&input)] {
             r4_no_markers(&json!(output), &markers);
         }
-        if i < 384 { inputs.push((input,markers)); }
+        // Seeded: all 384 persisted cases in the release gate (FB_TEST_FULL_CASES=1); otherwise the first 24,
+        // the separators and every non-ASCII salt.
+        if persisted.contains(&i) { inputs.push((input,markers)); }
     }
     let temp_root = std::env::temp_dir();
     let dir = temp_root.as_path();
@@ -1697,9 +1707,16 @@ fn r4_independent_ascii_unicode_encoded_credentials_all_paths() {
         let item = f.item(&remote);
         ignore(&mut f.book,f.u,f.c,&item.id, &SecretSet::none()).unwrap();
         return_to_review(&mut f.book,f.u,f.c,&item.id, &SecretSet::none()).unwrap();
-        let payload = if i%2==0 { json!({"kind":"JOURNAL","account_id":f.acc("410")}) } else {json!({"kind":"CHECK","account_id":f.acc("500")})};
+        // Redaction makes descriptions identical, but confirmation is needed only for a look-alike from
+        // an earlier sync. The first occurrence records normally; later syncs still fuzz the confirmation.
+        let mut payload = if i%2==0 { json!({"kind":"JOURNAL","account_id":f.acc("410")}) } else {json!({"kind":"CHECK","account_id":f.acc("500")})};
+        if let Some(earlier) = f.book.read(|q| already_recorded(q, f.c, &item)).unwrap() {
+            payload["record_again"] = json!(true);
+            payload["recorded_as"] = json!(earlier.earlier_id);
+        }
         f.accept(&remote,payload).unwrap();
     }
+    assert!(f.count("SELECT count(*) FROM ledger_auditevent WHERE action='bankfeed.recorded_again'") > 0, "the fuzz reaches the record-again audit");
     let mut texts = vec![];
     for query in ["SELECT last_sync_summary FROM bankfeeds_connection", "SELECT detail FROM ledger_auditevent", "SELECT target FROM ledger_auditevent"] {
         let mut st = f.book.connection().prepare(query).unwrap();
@@ -1710,7 +1727,8 @@ fn r4_independent_ascii_unicode_encoded_credentials_all_paths() {
     r4_no_markers(&json!(texts),&markers);
     f.reopen_clean();
     for suffix in ["","-wal","-shm"] { let _ = std::fs::remove_file(format!("{}{suffix}",f.path.display())); }
-    eprintln!("R4: 4096 generated credential cases; 384 through failure, success, staging, ignore, return, and acceptance paths");
+    let persisted = persisted.len();
+    eprintln!("R4: 4096 generated credential cases; {persisted} through failure, success, staging, ignore, return, and acceptance paths");
 }
 
 #[test]
@@ -1802,6 +1820,39 @@ fn r4_provider_account_text_never_leaks_when_mapping() {
 // FIX4: provider text is redacted once where it enters the core, so no audit writer can store it raw.
 
 /// Every `"bankfeed.<action>"` literal the module's sources pass to the audit writer.
+/// Review-safety writers (2026-11-10) in the credential fuzzes: a case row that looks already recorded is
+/// linked to the earlier entry and returned to review (`bankfeed.linked`, `.returned`).
+fn review_safety_link(f: &mut Fx, remote: &str) -> Vec<String> {
+    let item = f.item(remote);
+    if f.book.read(|q| already_recorded(q, f.c, &item)).unwrap().is_none() {
+        return vec![];
+    }
+    vec![
+        format!("{:?}", link_existing(&mut f.book, f.u, f.c, &item.id, None, &SecretSet::none()).unwrap()),
+        format!("{:?}", return_to_review(&mut f.book, f.u, f.c, &item.id, &SecretSet::none()).unwrap()),
+    ]
+}
+/// After a case's acceptances: Undo the first (`bankfeed.undone`), and the bank revises the staged one,
+/// which the user keeps as recorded (`bankfeed.bank_change_kept`).
+fn review_safety_after(f: &mut Fx, accepted: &Item, account: &str, revised: StagedTransaction) -> Vec<String> {
+    let remote = revised.remote_id.clone();
+    let conn = f.conn.clone();
+    let mut out = vec![format!("{:?}", undo_accept(&mut f.book, f.u, f.c, &accepted.id, &SecretSet::none()).unwrap())];
+    out.push(format!("{:?}", stage_bank_transactions(&mut f.book, f.u, f.c, &conn, &[(account.to_owned(), revised)], &SecretSet::none()).unwrap()));
+    let staged = f.item(&remote);
+    keep_recorded(&mut f.book, f.u, f.c, &staged.id, &SecretSet::none()).unwrap();
+    out
+}
+/// A capped window's gap and its review (`bankfeed.gap_reviewed`; dates only, no provider text).
+fn review_safety_gap(f: &mut Fx) {
+    let conn = f.conn.clone();
+    store_pull(&mut f.book, f.u, f.c, &conn, &StagedPull::default(), "2027-01-01T12:00:00Z", false, None, &SecretSet::none()).unwrap();
+    let start = begin_sync(&mut f.book, f.u, f.c, &conn, "2027-06-01T12:00:00Z", 0, true).unwrap();
+    let r = store_pull(&mut f.book, f.u, f.c, &conn, &StagedPull::default(), "2027-06-01T12:00:00Z", false, Some(start), &SecretSet::none()).unwrap();
+    assert!(r["missing"].is_object(), "{r}");
+    review_sync_gap(&mut f.book, f.u, f.c, &conn, &SecretSet::none()).unwrap();
+}
+
 fn fix4_emitted_actions() -> std::collections::BTreeSet<String> {
     let sources = [include_str!("mod.rs"), include_str!("staging.rs"), include_str!("accept.rs"), include_str!("rules.rs")];
     let found: std::collections::BTreeSet<String> = sources
@@ -1812,6 +1863,31 @@ fn fix4_emitted_actions() -> std::collections::BTreeSet<String> {
         .collect();
     assert!(found.len() >= 11, "action scan found too few actions: {found:?}");
     found
+}
+
+/// The cases a seeded credential fuzz runs: all of `0..full` in the release gate (FB_TEST_FULL_CASES=1),
+/// otherwise the first `head` cases (every scheme, wrapper and separator rotation) plus the salts most
+/// likely to break masking: `extra` names their case numbers.
+fn fuzz_cases(full: usize, head: usize, extra: &[usize]) -> Vec<usize> {
+    if fb_db::test_support::full_cases() { return (0..full).collect(); }
+    let mut cases: Vec<usize> = (0..head.min(full)).chain(extra.iter().copied().filter(|i| *i < full)).collect();
+    cases.sort_unstable();
+    cases.dedup();
+    cases
+}
+/// Pool positions (the printable-ASCII pools start at ' ') of the URL authority separators.
+const SEPARATOR_CASES: [usize; 7] = [3, 5, 15, 26, 31, 32, 60]; // # % / : ? @ \
+
+/// 0192's one-way policy edit (turn off imported Auto-post) writes the rule id and two flags, never
+/// provider text. The provider-field fuzzes run it once, on an imported rule scoped to a provider
+/// account, so their check that every rules.rs audit writer was driven covers it. The import itself
+/// writes `bankfeed.rule_imported` (qbo.rs, outside that scan; fix8 drives it with known secrets).
+fn drive_imported_auto_post_off(f: &mut Fx, returned: &mut Vec<String>) {
+    f.connected_books();
+    let row = qbo::parse_row(2, "Fuzz imported", &json!({"ruleConditions":[{"ruleType":1,"value":"Fuzz automatic"},{"ruleType":10,"value":"-1"}],"isAndRule":true}).to_string(), r#"{"ruleActions":[{"actionType":0,"value":"Office"},{"actionType":8,"value":true}]}"#);
+    let selection = qbo::Selection { row: 2, preserve_auto_post: true, account_id: f.acc("500"), scope: f.feed("ACT-checking"), kind: "EXPENSE".into(), payee_id: String::new(), payee_table: String::new() };
+    returned.push(qbo::import_rules(&mut f.book, f.u, f.c, &qbo::Import { hash: "4".repeat(64), rows: vec![row] }, &[selection], true, &SecretSet::none()).unwrap().to_string());
+    assert_eq!(turn_off_imported_auto_post(&mut f.book, f.u, f.c, None, &SecretSet::none()).unwrap(), 1);
 }
 
 #[test]
@@ -1827,7 +1903,11 @@ fn fix4_every_audit_writer_is_credential_fuzzed_on_every_provider_field() {
     };
     let mut pool: Vec<char> = (32u8..=126).map(char::from).collect();
     pool.extend(['é', '中', '😀', '\u{301}', '\u{200d}', 'ı', '\u{ff20}', '\u{fe6b}']);
-    let cases = pool.len() * 3;
+    // Seeded: three passes over the pool in the release gate (FB_TEST_FULL_CASES=1); otherwise the first
+    // 24 cases (every scheme and wrapper twice), the separators, every non-ASCII salt and two random ones.
+    let extra: Vec<usize> = SEPARATOR_CASES.iter().copied().chain(95..pool.len() + 2).collect();
+    let indices = fuzz_cases(pool.len() * 3, 24, &extra);
+    let cases = indices.len();
     let mut f = Fx::new();
     let (office, interest) = (f.acc("500"), f.acc("410"));
     let rule = save_rule(&mut f.book, f.u, f.c, &json!({"name":"F4","match_text":"office","account_id":office}), &SecretSet::none()).unwrap();
@@ -1837,7 +1917,7 @@ fn fix4_every_audit_writer_is_credential_fuzzed_on_every_provider_field() {
     set_rule_active(&mut f.book, f.u, f.c, &rule.id, &json!(false), &SecretSet::none()).unwrap();
     let mut markers: Vec<(String, String)> = vec![];
     let mut returned: Vec<String> = vec![];
-    for i in 0..cases {
+    for &i in &indices {
         let salt: String = if i < pool.len() { pool[i].to_string() } else { (0..next() % 7).map(|_| pool[next() as usize % pool.len()]).collect() };
         let safe = salt.replace(' ', "%20").replace('/', "%2F").replace('?', "%3F").replace('#', "%23");
         let scheme = ["hTTps://", "xHTTPS://", "ftp://", "s3://", "https%3a%2f%2f", "https:\\\\"][i % 6];
@@ -1884,13 +1964,22 @@ fn fix4_every_audit_writer_is_credential_fuzzed_on_every_provider_field() {
         let item = f.item(&creds["tr"]);
         returned.push(format!("{:?}", ignore(&mut f.book, f.u, f.c, &item.id, &SecretSet::none()).unwrap()));
         returned.push(format!("{:?}", return_to_review(&mut f.book, f.u, f.c, &item.id, &SecretSet::none()).unwrap()));
-        let journal = |f: &Fx| json!({"kind":"JOURNAL","account_id":f.acc("410")});
-        let check = |f: &Fx| json!({"kind":"CHECK","account_id":f.acc("500")});
+        // Every case maps a new downloaded account to account 100 with the same amounts and dates, so from the
+        // second case on its rows look already recorded (review 2026-11-10): confirm recording them again, and
+        // drive the link, undo and bank-change writers with this case's credential-bearing fields.
+        let journal = |f: &Fx| json!({"kind":"JOURNAL","account_id":f.acc("410"),"record_again":true});
+        let check = |f: &Fx| json!({"kind":"CHECK","account_id":f.acc("500"),"record_again":true});
         let (first, second) = if money_in { (journal(&f), check(&f)) } else { (check(&f), journal(&f)) };
-        returned.push(format!("{:?}", f.accept(&creds["tr"], first).unwrap()));
+        returned.extend(review_safety_link(&mut f, &creds["tr"]));
+        let accepted = f.accept(&creds["tr"], first).unwrap();
+        returned.push(format!("{accepted:?}"));
         returned.push(format!("{:?}", f.accept(&creds["sr"], second).unwrap()));
+        let revised = tx(&creds["sr"], "2026-10-21", if money_in { -101 } else { 101 }, &creds["sd"]);
+        returned.extend(review_safety_after(&mut f, &accepted, &creds["ar"], revised));
         f.map(&creds["ar"], None).unwrap();
     }
+    review_safety_gap(&mut f);
+    drive_imported_auto_post_off(&mut f, &mut returned);
     // Every action the sources emit was driven by this fuzz: a new audit writer fails here until it is.
     let mut st = f.book.connection().prepare("SELECT DISTINCT action FROM ledger_auditevent WHERE action GLOB 'bankfeed.*'").unwrap();
     let seen: std::collections::BTreeSet<String> = st.query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
@@ -1979,7 +2068,16 @@ fn r5_independent_provider_field_fuzz_and_all_audits() {
     }
     let mut seen=std::collections::BTreeSet::<String>::new();
     const FIELDS: [&str;15]=["host","failure","connkey","accountid","accountname","org","currency","accountskip","pullskip","error","txid","description","stageid","stagedesc","stageaccount"];
-    for chunk in 0..12 {
+    // Seeded: 12 books x 100 persisted cases in the release gate (FB_TEST_FULL_CASES=1); otherwise one book
+    // with the first 30 cases (every scheme, form, separator and wrapper), the authority separators and
+    // every non-ASCII salt.
+    let books: Vec<Vec<usize>> = if fb_db::test_support::full_cases() {
+        (0..12).map(|chunk| (chunk * 100..(chunk + 1) * 100).collect()).collect()
+    } else {
+        vec![fuzz_cases(1200, 30, &SEPARATOR_CASES.iter().copied().chain(95..104).collect::<Vec<_>>())]
+    };
+    let persisted: usize = books.iter().map(Vec::len).sum();
+    for (chunk, cases) in books.iter().enumerate() {
         let mut f=Fx::new();
         let category=f.acc("500");
         let rule=save_rule(&mut f.book,f.u,f.c,&json!({"name":"R5 first","match_text":"office","account_id":category}), &SecretSet::none()).unwrap();
@@ -1988,7 +2086,7 @@ fn r5_independent_provider_field_fuzz_and_all_audits() {
         move_rule(&mut f.book,f.u,f.c,&rule.id,&json!("down"), &SecretSet::none()).unwrap();
         set_rule_active(&mut f.book,f.u,f.c,&rule.id,&json!(false), &SecretSet::none()).unwrap();
         let mut returned=String::new();
-        for i in chunk*100..(chunk+1)*100 {
+        for &i in cases {
             let values: std::collections::HashMap<_,_>=FIELDS.iter().map(|k|(*k,r5_vector(i,k,&mut seed))).collect();
             let connection=connect(&mut f.book,f.u,f.c,&json!("R5"),&values["host"], &SecretSet::none()).unwrap();
             returned.push_str(&connection.to_string());
@@ -2007,24 +2105,37 @@ fn r5_independent_provider_field_fuzz_and_all_audits() {
             let item=f.item(&values["txid"]);
             returned.push_str(&format!("{:?}",ignore(&mut f.book,f.u,f.c,&item.id, &SecretSet::none()).unwrap()));
             returned.push_str(&format!("{:?}",return_to_review(&mut f.book,f.u,f.c,&item.id, &SecretSet::none()).unwrap()));
-            let journal=json!({"kind":"JOURNAL","account_id":f.acc("410")});
-            let check=json!({"kind":"CHECK","account_id":f.acc("500")});
+            // Later cases look already recorded (same ledger account, amount and date): see fix4.
+            let journal=json!({"kind":"JOURNAL","account_id":f.acc("410"),"record_again":true});
+            let check=json!({"kind":"CHECK","account_id":f.acc("500"),"record_again":true});
             let (one,two)=if amount>0 {(journal,check)} else {(check,journal)};
-            returned.push_str(&format!("{:?}",f.accept(&values["txid"],one).unwrap()));
+            returned.push_str(&review_safety_link(&mut f,&values["txid"]).join("\n"));
+            let accepted=f.accept(&values["txid"],one).unwrap();
+            returned.push_str(&format!("{accepted:?}"));
             returned.push_str(&format!("{:?}",f.accept(&values["stageid"],two).unwrap()));
+            let revised=tx(&values["stageid"],"2026-10-20",-amount-1,&values["stagedesc"]);
+            returned.push_str(&review_safety_after(&mut f,&accepted,&values["accountid"],revised).join("\n"));
             returned.push_str(&f.map(&values["accountid"],None).unwrap().to_string());
+        }
+        if chunk == 0 {
+            let mut more = vec![];
+            drive_imported_auto_post_off(&mut f, &mut more);
+            returned.push_str(&more.concat());
         }
         r5_assert_clean(&returned,"service returns");
         let snapshot=fb_db::test_support::snapshot(f.book.connection()).unwrap();
         // Snapshot serializes typed SQLite strings; scan every table, including derived payees/memos.
         r5_assert_clean(&format!("{snapshot:?}"),"whole book");
+        review_safety_gap(&mut f);
         let mut st=f.book.connection().prepare("SELECT DISTINCT action FROM ledger_auditevent WHERE action GLOB 'bankfeed.*'").unwrap();
         seen.extend(st.query_map([],|r|r.get::<_,String>(0)).unwrap().map(Result::unwrap));
         drop(st);
         r5_finish(&mut f);
     }
+    // The import that reaches the turn-off writer is the one action outside fix4's source scan.
+    assert!(seen.remove("bankfeed.rule_imported"));
     assert_eq!(seen,fix4_emitted_actions());
-    eprintln!("R5: 8192 pure-text cases; 1200 persisted cases x 15 provider fields; {} audit actions",seen.len());
+    eprintln!("R5: 8192 pure-text cases; {persisted} persisted cases x 15 provider fields; {} audit actions",seen.len());
 }
 
 fn r5_seed_check(f:&mut Fx,remote:&str,input:&Value) {

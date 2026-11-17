@@ -12,44 +12,109 @@ body.shell .preview{padding:5px 20px;font-size:11.5px;border-bottom:1px solid va
 body.shell .preview-notice{letter-spacing:0;line-height:1.45;font-weight:700;text-transform:none;border-bottom:2px solid var(--fb-plum)}
 body.shell footer .report-problem{font-weight:650;white-space:nowrap}
 
-/* Title bar */
-body.shell .titlebar{display:flex;align-items:center;gap:18px;padding:9px 20px;background:linear-gradient(#5a3767,var(--fb-plum-dark));border-bottom:1px solid var(--fb-plum-deep);color:#fff}
-body.shell .titlebar .brand{color:#fff;font-size:19px;letter-spacing:-.02em}
-body.shell .titlebar .brand small{color:#e5d9ea;font-size:12px;margin-left:10px}
-body.shell .titlebar-company{font-size:14px;font-weight:650;color:#fff;overflow-wrap:anywhere;min-width:0}
-body.shell .titlebar-sep{margin-right:14px;color:#cdb9d6}
-body.shell .titlebar .operator{margin-left:auto;color:#eadff0;font-size:12px}
-body.shell .titlebar .operator a{color:inherit}
-body.shell .titlebar a:focus-visible{outline-color:#fff}
+/* Frame: the title bar stays at the top and the sidebar stays in view (scrolling on its own only when the
+   window is very short); the footer sits at the bottom of short pages. */
+:root{--fb-titlebar:48px;--fb-footer:36px;--fb-nav-width:212px}
+body.shell{display:flex;flex-direction:column;min-height:100vh}
 
-/* Left icon bar (main navigation) */
-body.shell .layout{grid-template-columns:212px minmax(0,1fr);min-height:78vh}
-body.shell .appnav{padding:10px 8px 18px;background:linear-gradient(90deg,var(--fb-tan-soft),#f3ecdc);border-right:1px solid var(--fb-tan-line)}
-body.shell .appnav a{display:flex;align-items:center;gap:9px;padding:4px 8px;margin:1px 0;border:1px solid transparent;border-radius:4px;color:#3d2c46;font-size:13.5px;line-height:1.3;text-decoration:none}
+/* Title bar: brand · company menu · tools (room for Find and New) · the signed-in person's menu */
+body.shell .titlebar{position:sticky;top:0;z-index:30;box-sizing:border-box;height:var(--fb-titlebar);display:flex;align-items:center;gap:14px;padding:0 20px;background:linear-gradient(#5a3767,var(--fb-plum-dark));border-bottom:1px solid var(--fb-plum-deep);color:#fff}
+body.shell .titlebar .brand{color:#fff;font-size:18px;letter-spacing:-.02em;flex:none}
+body.shell .titlebar-tools{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px}
+body.shell .titlebar .operator{margin-left:0;flex:none;color:#eadff0;font-size:12.5px}
+body.shell .titlebar .operator a{color:inherit}
+body.shell .titlebar a:focus-visible,body.shell .titlebar summary:focus-visible{outline-color:#fff}
+
+/* Title-bar menus: <details> disclosures (keyboard and screen-reader native; shell.js adds Escape and
+   click-away). The list is plain links and buttons, not an ARIA menu. */
+body.shell details.menu{position:relative;min-width:0;padding:0;border:0;border-radius:0;background:none}
+body.shell .menu>summary{display:flex;align-items:center;gap:7px;min-width:0;padding:5px 10px;border:1px solid transparent;border-radius:4px;color:#fff;font-size:14px;font-weight:650;list-style:none;cursor:pointer}
+body.shell .menu>summary::-webkit-details-marker{display:none}
+body.shell .menu>summary::after{content:"";flex:none;width:0;height:0;margin-top:2px;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor}
+body.shell .menu>summary:hover{background:rgb(255 255 255 / .12);border-color:rgb(255 255 255 / .25)}
+body.shell .menu[open]>summary{background:rgb(255 255 255 / .18);border-color:rgb(255 255 255 / .35)}
+body.shell .menu-end>summary{font-size:13px;font-weight:600;color:#f3ecf6}
+body.shell .menu-name{min-width:0;max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.shell .menu-list{position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:210px;margin:0;padding:5px;list-style:none;background:#fff;border:1px solid var(--fb-border);border-radius:6px;box-shadow:0 10px 28px rgb(30 15 40 / .22)}
+body.shell .menu-end .menu-list{left:auto;right:0}
+body.shell .menu-list a,body.shell .menu-list button{display:block;box-sizing:border-box;width:100%;padding:7px 11px;border:0;border-radius:4px;background:none;box-shadow:none;color:var(--fb-text);font:500 13.5px/1.4 system-ui,-apple-system,sans-serif;text-align:left;text-decoration:none;white-space:nowrap;cursor:pointer}
+body.shell .titlebar .menu-list a{color:var(--fb-text)}
+body.shell .titlebar .menu-list a:hover,body.shell .menu-list button:hover{background:var(--fb-lavender);color:var(--fb-plum-deep)}
+body.shell .menu-list a:focus-visible,body.shell .menu-list button:focus-visible{outline:3px solid var(--fb-focus);outline-offset:-3px}
+
+/* Sidebar (main navigation). The tan column is painted on .layout so the sidebar itself can stay in view. */
+body.shell .layout{flex:1 0 auto;display:grid;grid-template-columns:var(--fb-nav-width) minmax(0,1fr);min-height:0;background:linear-gradient(90deg,var(--fb-tan-soft),#f3ecdc calc(var(--fb-nav-width) - 1px),var(--fb-tan-line) calc(var(--fb-nav-width) - 1px),var(--fb-tan-line) var(--fb-nav-width),var(--fb-canvas) var(--fb-nav-width))}
+body.shell .appnav{position:sticky;top:var(--fb-titlebar);align-self:start;box-sizing:border-box;display:flex;flex-direction:column;height:calc(100vh - var(--fb-titlebar) - var(--fb-footer));overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:8px 8px 8px;background:none;border-right:0}
+body.shell:has(> .preview) .appnav{height:calc(100vh - var(--fb-titlebar) - var(--fb-footer) - 30px)}
+body.shell .appnav a{display:flex;align-items:center;gap:9px;min-height:30px;box-sizing:border-box;padding:4px 8px;margin:0;border:1px solid transparent;border-radius:4px;color:#3d2c46;font-size:13.5px;line-height:1.3;text-decoration:none}
 body.shell .appnav a:hover{background:#fff;border-color:var(--fb-tan-line);color:var(--fb-plum-dark)}
 body.shell .appnav a[aria-current=page]{background:var(--fb-lavender);border-color:#c9b8d0;box-shadow:inset 3px 0 0 var(--fb-plum);font-weight:700;color:var(--fb-plum-deep)}
-body.shell .appnav .nav-icon{width:22px;height:22px;flex:none}
-body.shell .appnav .nav-badge{margin-left:auto;min-width:20px;padding:0 6px;border-radius:10px;background:#8f2f3b;color:#fff;font-size:11.5px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}  /* P2-3 reminders count */
-body.shell .appnav a.has-badge{position:relative}  /* P2-3: the badge's screen-reader text stays inside the link (no page overflow on the narrow nav strip) */
-body.shell .appnav .nav-label{margin:8px 0 2px;padding:6px 8px 4px;font-size:12px;font-weight:750;color:var(--fb-plum-deep);border-top:1px solid var(--fb-tan-line);overflow-wrap:anywhere}
-body.shell .nav-group{margin-top:8px}
-body.shell .nav-group-label{margin:0 0 2px;padding:3px 8px;font-size:10.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:#6b5a4a;background:var(--fb-tan-mid);border-radius:3px}
-body.shell .appnav .aside-note{padding:18px 8px 0;font-size:11.5px;color:#7a6e70}
+body.shell .appnav .nav-icon{width:20px;height:20px;flex:none}
+body.shell .appnav .nav-badge{margin-left:auto;min-width:20px;padding:0 6px;border-radius:10px;background:#8f2f3b;color:#fff;font-size:11.5px;font-weight:700;line-height:18px;text-align:center;font-variant-numeric:tabular-nums}
+body.shell .appnav a.has-badge{position:relative}  /* the badge's screen-reader text stays inside the link */
+body.shell .nav-group{margin-top:6px}
+body.shell .nav-group-label{margin:0 0 2px;padding:2px 8px;font-size:10.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:#6b5a4a;background:var(--fb-tan-mid);border-radius:3px}
+body.shell .nav-bottom{margin-top:auto;padding-top:6px;border-top:1px solid var(--fb-tan-line)}
+
+/* app.css styles every bare <nav> as the old sidebar; the frame's other navigation regions opt out. */
+body.shell .crumbs,body.shell .page-tabs,body.shell .settings-menu{display:block;padding:0;border:0;background:none}
+body.shell .crumbs a{display:inline;padding:0;border-radius:0}
+
+/* Breadcrumb (from nav.rs): Area › List › This page; every segment but the last is a link. */
+body.shell .crumbs{margin:-4px 0 8px;font-size:12.5px;line-height:1.4}
+body.shell .crumbs ol{display:flex;flex-wrap:wrap;align-items:baseline;margin:0;padding:0;list-style:none}
+body.shell .crumbs li{min-width:0;overflow-wrap:anywhere}
+body.shell .crumbs li+li::before{content:"›" / "";margin:0 7px;color:var(--fb-muted)}
+body.shell .crumbs a{color:var(--fb-plum);font-weight:600}
+body.shell .crumbs [aria-current=page]{color:var(--fb-muted)}
+
+/* Tab strip on an area's list pages (ledger/tabs.html). */
+body.shell .page-tabs{margin:0 0 12px}
+body.shell .page-tabs ul{display:flex;flex-wrap:wrap;gap:4px;margin:0;padding:0;list-style:none;border-bottom:1px solid var(--fb-tan-line)}
+body.shell .page-tabs a{display:block;margin-bottom:-1px;padding:6px 14px;border:1px solid transparent;border-radius:4px 4px 0 0;color:#3d2c46;font-size:13.5px;font-weight:600;text-decoration:none}
+body.shell .page-tabs a:hover{background:#fff;border-color:var(--fb-tan-line)}
+body.shell .page-tabs a[aria-current=page]{background:#fff;border-color:var(--fb-tan-line) var(--fb-tan-line) #fff;box-shadow:inset 0 3px 0 var(--fb-plum);color:var(--fb-plum-deep)}
+
+/* Settings: the menu beside every settings page; Security and data stands apart. */
+body.shell .settings-frame{display:grid;grid-template-columns:196px minmax(0,1fr);gap:26px;align-items:start}
+body.shell .settings-menu{position:sticky;top:calc(var(--fb-titlebar) + 12px);font-size:13.5px}
+body.shell .settings-group{margin-bottom:12px}
+body.shell .settings-group-label{margin:0 0 3px;padding:0 10px;font-size:10.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:#6b5a4a}
+body.shell .settings-menu ul{margin:0;padding:0;list-style:none}
+body.shell .settings-menu a{display:block;padding:4px 10px;border-left:3px solid transparent;border-radius:0 4px 4px 0;color:#3d2c46;text-decoration:none}
+body.shell .settings-menu a:hover{background:#fff;color:var(--fb-plum-dark)}
+body.shell .settings-menu a[aria-current=page]{background:var(--fb-lavender);border-left-color:var(--fb-plum);font-weight:700;color:var(--fb-plum-deep)}
+body.shell .settings-menu .settings-security{padding-top:10px;border-top:2px solid var(--fb-tan-mid)}
+body.shell .settings-body{min-width:0}
+/* The Reports and Settings pages: groups of links, one line on each. */
+body.shell .hub-intro{color:var(--fb-muted);margin:0 0 16px}
+body.shell .hub{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
+body.shell .hub-group{margin:0;padding:12px 18px 8px;background:var(--fb-panel);border:1px solid var(--fb-border);border-radius:6px;overflow:visible}
+body.shell .hub-group h2{margin:0 0 6px;font-size:15px}
+body.shell .hub-group ul{margin:0;padding:0;list-style:none}
+body.shell .hub-group li{padding:8px 0;border-top:1px solid #eee6d8}
+body.shell .hub-group li:first-child{border-top:0}
+body.shell .hub-group li a{font-weight:650}
+body.shell .hub-group li span{display:block;font-size:13px;color:var(--fb-muted)}
+body.shell .hub-group.settings-security{grid-column:1/-1;border-color:#c9b8d0;box-shadow:inset 4px 0 0 var(--fb-plum)}
+body.shell .hub-group.settings-security ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:28px}
+body.shell .hub-group.settings-security li:nth-child(-n+3){border-top:0}
+body.shell .hub-note{margin:0 0 4px;font-size:13px;color:var(--fb-muted)}
 
 /* Work area */
 body.shell main{padding:18px 26px 26px}
 body.shell main h1{font-size:23px;letter-spacing:-.02em;line-height:1.25;margin:0 0 10px;color:var(--fb-plum-deep)}
 body.shell main.has-page-icon h1:first-of-type::before{content:'';display:inline-block;width:32px;height:32px;margin:-6px 9px 0 -3px;vertical-align:middle;background:var(--page-icon) center/contain no-repeat}
 body.shell main h2{font-size:16px;color:var(--fb-plum-deep)}
-body.shell .eyebrow{font-size:10.5px;color:#7a6a58;margin-bottom:6px}
 body.shell .heading{margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--fb-tan-mid)}
 
-/* Buttons: compact desktop buttons, plum primary */
+/* Controls, one rule for the frame: a filled button for the page's single main action, an outline button
+   (.secondary) for other actions, and plain links for navigation only. */
 /* :where() keeps these at the specificity of app.css's own `.button,button`, so a screen's outline-style buttons
    (e.g. .add-line, #add-line) still win and keep their dark-on-white text. */
 :where(body.shell) button,:where(body.shell) .button{border-radius:4px;padding:6px 14px;font:650 13px/1.4 system-ui,-apple-system,sans-serif;background:linear-gradient(#77508a,var(--fb-plum));border-color:var(--fb-plum-dark);box-shadow:0 1px 0 rgb(0 0 0 / .08)}
 :where(body.shell) button:hover,:where(body.shell) .button:hover{background:var(--fb-plum-dark)}
-:where(body.shell) .secondary{background:linear-gradient(#fff,var(--fb-tan-soft));color:var(--fb-plum-dark);border-color:var(--fb-tan-line)}
+:where(body.shell) .secondary{background:#fff;color:var(--fb-plum-dark);border-color:var(--fb-plum)}
 :where(body.shell) .secondary:hover{background:var(--fb-tan);color:var(--fb-plum-deep)}
 
 /* Lists and registers: tan column headers, ruled rows, light banding */
@@ -88,24 +153,68 @@ body.shell .company-card h2{margin:0 0 6px;font-size:17px}
 body.shell .company-card p{margin:0;color:var(--fb-muted)}
 body.shell .company-card:hover{border-color:var(--fb-plum)}
 
-body.shell footer{padding:10px 20px;font-size:11.5px;background:var(--fb-tan-soft);border-top:1px solid var(--fb-tan-line)}
+body.shell footer{box-sizing:border-box;min-height:var(--fb-footer);display:flex;align-items:center;flex-wrap:wrap;gap:0 4px;padding:8px 20px;font-size:12px;color:#5f5664;background:var(--fb-tan-soft);border-top:1px solid var(--fb-tan-line)}
+/* Help text and small print meet 4.5:1 on white and on the page background. */
+body.shell .helptext,body.shell .muted,body.shell small,body.shell .heading p{color:var(--fb-muted)}
 
 /* Narrow screens: the icon bar becomes a wrapped strip of compact chips above the work area. */
 @media(max-width:850px){
- body.shell .layout{grid-template-columns:minmax(0,1fr)}
- body.shell .appnav{display:grid;grid-auto-flow:column;grid-template-rows:auto auto;grid-auto-columns:max-content;gap:4px;padding:8px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;-webkit-mask-image:linear-gradient(90deg,#000 88%,rgb(0 0 0 / .35));mask-image:linear-gradient(90deg,#000 88%,rgb(0 0 0 / .35));background:var(--fb-tan-soft);border-right:0;border-bottom:1px solid var(--fb-tan-line)}
+ body.shell .layout{grid-template-columns:minmax(0,1fr);background:var(--fb-canvas)}
+ body.shell .titlebar{position:static;height:auto;min-height:var(--fb-titlebar)}
+ body.shell .appnav,body.shell:has(> .preview) .appnav{position:static;height:auto;align-self:auto;display:grid;grid-auto-flow:column;grid-template-rows:auto auto;grid-auto-columns:max-content;gap:4px;padding:8px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;-webkit-mask-image:linear-gradient(90deg,#000 88%,rgb(0 0 0 / .35));mask-image:linear-gradient(90deg,#000 88%,rgb(0 0 0 / .35));background:var(--fb-tan-soft);border-right:0;border-bottom:1px solid var(--fb-tan-line)}
  body.shell .appnav a{min-height:34px;padding:4px 9px;gap:6px;margin:0;font-size:13px;background:#fff;border-color:var(--fb-tan-line)}
  body.shell .appnav .nav-icon{width:20px;height:20px}
- body.shell .nav-group{display:contents}
- body.shell .nav-group-label,body.shell .appnav .nav-label,body.shell .appnav .aside-note{display:none}
+ body.shell .nav-group,body.shell .nav-bottom{display:contents}
+ body.shell .nav-group-label{display:none}
+ body.shell .menu-name{max-width:46vw}
+ body.shell .settings-menu{position:static}
  body.shell main{padding:14px 12px 20px}
  body.shell .titlebar{flex-wrap:wrap;gap:6px 12px;padding:8px 12px}
- body.shell .titlebar .operator{margin-left:0;width:100%}
- body.shell .titlebar-sep{display:none}
+ body.shell .titlebar-tools{flex-basis:0}
  body.shell main h1{font-size:21px}
  body.shell main.has-page-icon h1:first-of-type::before{width:28px;height:28px;margin-right:8px}
  /* Registers scroll sideways inside their own box here (app.css); keep names and memos in whole words so the
     columns stay readable instead of breaking every few letters. Long unbroken text still wraps. */
  body.shell .register td{overflow-wrap:break-word}
 }
+/* Settings menu: above the page, as a wrapped row, when the window is too narrow for two columns. */
+@media(max-width:1180px){
+ body.shell .settings-frame{grid-template-columns:minmax(0,1fr);gap:10px}
+ body.shell .settings-menu{position:static;display:flex;flex-wrap:wrap;gap:4px 16px;padding:8px 10px;background:var(--fb-tan-soft);border:1px solid var(--fb-tan-line);border-radius:4px}
+ body.shell .settings-group{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;margin:0}
+ body.shell .settings-group-label{padding:0 4px 0 0}
+ body.shell .settings-menu ul{display:flex;flex-wrap:wrap;gap:2px}
+ body.shell .settings-menu a{padding:3px 8px;border-left:0;border-radius:4px}
+ body.shell .settings-menu .settings-security{padding:0 0 0 12px;border-top:0;border-left:2px solid var(--fb-tan-mid)}
+}
+/* Printing a screen prints its content, not the frame. */
+@media print{
+ body.shell .titlebar,body.shell .appnav,body.shell .crumbs,body.shell .page-tabs,body.shell .settings-menu,body.shell footer,body.shell .skip-link{display:none}
+ body.shell .layout,body.shell .settings-frame{display:block;background:none}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+body.shell .heading-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+
+/* Title bar: Back and Forward, Find and "+ New". Find takes the free width between the company menu and
+   the signed-in person's menu and shrinks first, so both menus stay on screen at 1024 px. */
+body.shell .history-nav{display:flex;flex:none;gap:2px;margin-left:-8px}
+body.shell .titlebar .history-button{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid transparent;border-radius:4px;background:none;color:#fff;cursor:pointer}
+body.shell .titlebar .history-button:hover{background:none;color:#fff}
+body.shell .titlebar .history-button:not(:disabled):hover{background:rgb(255 255 255 / .12);border-color:rgb(255 255 255 / .25)}
+body.shell .titlebar .history-button:disabled{opacity:.4;cursor:default}
+body.shell .titlebar button:focus-visible,body.shell .titlebar input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+body.shell .titlebar .find{position:relative;display:flex;align-items:center;flex:1 1 360px;min-width:150px;max-width:460px;margin:0}
+body.shell .titlebar .find input{box-sizing:border-box;width:100%;height:32px;padding:5px 34px 5px 11px;border:1px solid rgb(255 255 255 / .4);border-radius:5px;background:#fff;color:var(--fb-text);font:500 13.5px/1.3 system-ui,-apple-system,sans-serif}
+body.shell .titlebar .find input::placeholder{color:#6b6070;opacity:1}
+body.shell .titlebar .find input:focus{outline:2px solid #fff;outline-offset:2px}
+body.shell .titlebar .find-go{position:absolute;top:3px;right:3px;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:0;border-radius:4px;background:none;color:var(--fb-plum)}
+body.shell .titlebar .find-go:hover{background:var(--fb-lavender);color:var(--fb-plum-deep)}
+body.shell .titlebar .find-go:focus-visible{outline:2px solid var(--fb-plum);outline-offset:0}
+body.shell .titlebar-new{flex:none}
+body.shell .titlebar-new>summary{border-color:rgb(255 255 255 / .45);white-space:nowrap}
+body.shell .new-menu{min-width:200px;padding:5px}
+body.shell .new-menu .menu-group{margin:6px 11px 2px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fb-muted)}
+body.shell .new-menu ul{margin:0;padding:0;list-style:none}
+body.shell .new-group+.new-group{margin-top:4px;padding-top:2px;border-top:1px solid var(--fb-border)}
+@media(max-width:1180px){body.shell .titlebar-company .menu-name{max-width:24vw}body.shell .titlebar .menu-end .menu-name{max-width:16vw}}
+@media(max-width:850px){body.shell .titlebar .find{order:5;flex:1 1 100%;max-width:none}}

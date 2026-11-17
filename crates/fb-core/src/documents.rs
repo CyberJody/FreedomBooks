@@ -8,6 +8,9 @@ use serde_json::{Value, json};
 pub const KINDS: &[&str] = &[
     "EST", "INV", "RCP", "BILL", "BPAY", "DEP", "CHK", "SR", "TRF", "CM", "RFD", "CDP", "CDA", "CDR",
 ];
+/// Document kinds that number sequentially from 1 and have no numbering setting (fb_numbering keeps its
+/// original kind list): sales tax payments.
+pub const UNNUMBERED_KINDS: &[&str] = &[crate::salestax_payments::KIND];
 pub const ROLES: &[&str] = &["receivables", "payables", "undeposited", "collected_tax", "customer_deposits"];
 pub fn check_revision(actual: i64, expected: Option<i64>) -> FbResult<()> {
     if expected.is_none_or(|e| e < 0 || e != actual) {
@@ -21,6 +24,14 @@ pub fn check_revision(actual: i64, expected: Option<i64>) -> FbResult<()> {
 pub fn identity(conn: &(impl fb_db::Query + ?Sized), company: CompanyId, id: &str) -> FbResult<Value> {
     conn.query_row("SELECT id,company_id,kind,ordinal,number,request_key,currency FROM documents_documentidentity WHERE company_id=?1 AND id=?2",params![company.to_db(),id],|r|Ok(json!({"id":r.get::<_,String>(0)?,"company_id":r.get::<_,String>(1)?,"kind":r.get::<_,String>(2)?,"ordinal":r.get::<_,i64>(3)?,"number":r.get::<_,String>(4)?,"request_key":r.get::<_,String>(5)?,"currency":r.get::<_,String>(6)?}))).optional()?.ok_or_else(||FbError::missing("DocumentIdentity"))
 }
+/// Customer-facing identity retains an imported invoice's original number. Native numbering stays immutable.
+pub fn display_identity(conn: &(impl fb_db::Query + ?Sized), company: CompanyId, id: &str) -> FbResult<Value> {
+    let mut value=identity(conn,company,id)?;
+    let original:Option<String>=conn.query_row("SELECT h.source_number FROM sales_importinvoice h JOIN sales_invoice i ON i.id=h.invoice_id WHERE h.company_id=?1 AND i.identity_id=?2",params![company.to_db(),id],|r|r.get(0)).optional()?;
+    if let Some(number)=original {value["native_number"]=value["number"].clone();value["number"]=json!(number);}
+    Ok(value)
+}
+
 /// Requires the owning Writer, never a read callback handle.
 /// ```compile_fail
 /// fn invalid(reader: &fb_db::Reader<'_>, actor: fb_core::UserId, company: fb_core::CompanyId) {
@@ -31,7 +42,7 @@ pub fn create_identity(tx: &Writer<'_>, actor: UserId, company: CompanyId, kind:
     atomic_primitive(tx, || {
         let user = services::access(tx, actor, company)?;
         let co = store::get_company(tx, company)?;
-        if !KINDS.contains(&kind) {
+        if !KINDS.contains(&kind) && !UNNUMBERED_KINDS.contains(&kind) {
             return Err(FbError::validation("Unsupported document type."));
         }
         let key = py::py_uuid(request_key)
@@ -150,7 +161,7 @@ fn validate_mapping(conn: &(impl fb_db::Query + ?Sized), company: CompanyId, val
         let account = AccountId::parse(id).map(|id| store::account(conn, id)).transpose()?.flatten();
         if account.is_none_or(|a| a.company_id != company || !a.active || !a.postable || a.kind.as_str() != "ASSET") {
             return Err(FbError::validation(
-                "Designated banks must be active, postable asset accounts in this company. Replace or clear unavailable banks.",
+                "Bank accounts must be active, postable asset accounts in this company. Replace or clear unavailable accounts.",
             ));
         }
     }
@@ -181,6 +192,12 @@ pub(crate) fn save_setup_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, 
         };
         let banks=banks.iter().map(|b|b.as_str().map(str::to_string)).collect::<Option<Vec<_>>>().ok_or_else(||FbError::validation("Select each bank account once."))?;
         if banks.iter().collect::<std::collections::BTreeSet<_>>().len()!=banks.len(){return Err(FbError::validation("Select each bank account once."));}
+        // Every active, postable Bank-type account is a bank account; the list chosen here only
+        // adds other asset accounts (petty cash, for example). Accounts used in a role stay out.
+        // Choosing a bank account for a role takes it off the bank list, as unticking it in the
+        // same save always could; the change is in the setup audit entry.
+        let mut banks=banks;
+        for b in automatic_banks(tx,company,&v)? {if !banks.contains(&b){banks.push(b);}}
         validate_mapping(tx,company,&v,None,&banks)?;
         let id=before["id"].as_str().map(str::to_string).unwrap_or_else(||fb_ids::new_v7().to_string());
         let sql = if before["id"].is_null() {
@@ -210,7 +227,7 @@ pub fn lock_configuration(
     let v = setup_snapshot(tx, company)?;
     let selected = bank.map(|b| b.to_db()).into_iter().collect::<Vec<_>>();
     if selected.iter().any(|b| !v["banks"].as_array().unwrap().contains(&json!(b))) {
-        return Err(FbError::validation("Choose a designated bank account in Accounting setup."));
+        return Err(FbError::validation("Choose an active bank account in this company."));
     }
     for id in additional {
         if store::account(tx, *id)?.is_none_or(|a| a.company_id != company || !a.active || !a.postable) {
@@ -436,7 +453,7 @@ pub fn control_message(a: &crate::model::Account, role: &str) -> String {
             "is an undeposited-funds control account. Record customer receipts or sales receipts to undeposited funds and move them to a bank with Make deposits instead."
         }
         "collected_tax" => {
-            "is the collected sales tax control account. Sales tax is posted by invoices and sales receipts; a sales tax payment or adjustment screen is not built yet."
+            "is the collected sales tax control account. Sales tax is posted by invoices, sales receipts and credit memos, and paid down by recording a sales tax payment (Settings → Sales tax → What you owe)."
         }
         _ => {
             "is the customer deposits (prepayments) control account. Customer deposit balances must tie out to it: receive, apply or refund a customer deposit instead."
@@ -451,6 +468,63 @@ fn atomic_primitive<T>(tx: &Writer<'_>, f: impl FnOnce() -> FbResult<T>) -> FbRe
     tx.atomic(f)
 }
 
+/// Active, postable asset accounts of detail type Bank that no accounting role uses. These are
+/// bank accounts without a separate designation step; `roles` is a setup snapshot.
+/// Accounts posted documents have used as a control account (receivables, undeposited funds…)
+/// stay out too, as the transfer service already refuses them.
+fn automatic_banks(conn: &(impl fb_db::Query + ?Sized), company: CompanyId, roles: &Value) -> FbResult<Vec<String>> {
+    let used = ROLES.iter().filter_map(|r| roles[*r].as_str()).collect::<Vec<_>>();
+    let mut st = conn.prepare("SELECT DISTINCT account_id FROM fb_control_accounts WHERE company_id=?1")?;
+    let control = st.query_map([company.to_db()], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+    Ok(store::accounts(conn, company)?
+        .into_iter()
+        .filter(|a| a.active && a.postable && a.kind.as_str() == "ASSET" && a.detail_type.as_str() == "BANK")
+        .map(|a| a.id.to_db())
+        .filter(|id| !used.contains(&id.as_str()) && !control.contains(id))
+        .collect())
+}
+/// Keep the bank-account list in step with the chart after an account is created or edited:
+/// add every eligible Bank-type account, and drop Bank-type accounts that are no longer eligible
+/// (inactive, not postable, changed type, or used in a role). `leaving` is an account about to be
+/// edited into something that is not a bank account; its row goes first so the edit is allowed.
+/// Accounts chosen by hand that are not Bank-type are left as they are. A book whose setup was
+/// never saved has nothing to keep yet: its first setup save adds every Bank-type account. The
+/// change is audited as an accounting setup change and bumps the setup revision.
+pub(crate) fn sync_bank_accounts_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, leaving: Option<crate::AccountId>) -> FbResult<()> {
+    let user = services::access(tx, actor, company)?;
+    let before = setup_record(tx, company)?;
+    let Some(id) = before["id"].as_str().map(str::to_owned) else { return Ok(()) };
+    let wanted = automatic_banks(tx, company, &before)?
+        .into_iter()
+        .filter(|b| leaving.is_none_or(|l| l.to_db() != *b))
+        .collect::<Vec<_>>();
+    let current = before["banks"].as_array().cloned().unwrap_or_default();
+    let mut removed = vec![];
+    for b in current.iter().filter_map(Value::as_str) {
+        let account = crate::AccountId::parse(b).map(|a| store::account(tx, a)).transpose()?.flatten();
+        let bank_type = account.as_ref().is_some_and(|a| a.detail_type.as_str() == "BANK");
+        if (bank_type && !wanted.iter().any(|w| w == b)) || leaving.is_some_and(|l| l.to_db() == b) {
+            removed.push(b.to_owned());
+        }
+    }
+    let added = wanted.into_iter().filter(|w| !current.contains(&json!(w))).collect::<Vec<_>>();
+    if added.is_empty() && removed.is_empty() {
+        return Ok(());
+    }
+    for b in &removed {
+        tx.execute("DELETE FROM documents_designatedbank WHERE setup_id=?1 AND account_id=?2", params![id, b])?;
+    }
+    for b in &added {
+        tx.execute("INSERT INTO documents_designatedbank VALUES(?1,?2,?3)", params![fb_ids::new_v7().to_string(), id, b])?;
+    }
+    tx.execute(
+        "UPDATE documents_accountingsetup SET revision=?2 WHERE id=?1",
+        params![id, next_revision(before["revision"].as_i64().unwrap_or(0))?],
+    )?;
+    let after = setup_snapshot(tx, company)?;
+    services::audit(tx, &user, company, "accounting.setup", format!("accountingsetup:{id}"), json!({"before":without_id(&before),"after":without_id(&after),"bank_accounts":"chart"}))?;
+    Ok(())
+}
 fn without_id(v: &Value) -> Value {
     let mut out = v.clone();
     out.as_object_mut().unwrap().remove("id");

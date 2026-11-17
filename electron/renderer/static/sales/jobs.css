@@ -1,0 +1,26 @@
+.jobs .heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px }
+.jobs-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.jobs-title { margin: 4px 0 0; color: #675d6b }
+.jobs-filter label { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px }
+.jobs-summary { margin: 10px 0 }
+.jobs-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 14px 0 }
+.jobs-facts dt { font-weight: 600 }
+.jobs-facts dd { margin: 0 }
+.jobs-totals { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 }
+.jobs-totals p { margin: 0; padding: 10px 16px; background: #fff; border: 1px solid #d8d0c4; border-radius: 4px; display: grid; gap: 2px; min-width: 120px }
+.jobs-totals span { color: #675d6b; font-size: 13px }
+.jobs-totals strong { font-size: 18px; font-variant-numeric: tabular-nums }
+.jobs-table td { vertical-align: top; overflow-wrap: anywhere }
+.time-table { min-width: 760px }
+.jobs-move { display: inline-flex; gap: 6px; margin-left: 10px; align-items: center }
+.jobs-move select { max-width: 200px }
+.jobs-form .field { margin: 0 0 12px; display: grid; gap: 4px; max-width: 560px }
+.jobs-form .field-billable, .jobs-form .field-mark_invoiced, .jobs-inline .field-billable { display: flex; gap: 8px; align-items: center }
+.jobs-form fieldset { border: 1px solid #d8d0c4; border-radius: 4px; padding: 10px 14px; max-width: 760px }
+.jobs-inline { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end }
+.jobs-inline .field { display: grid; gap: 4px; margin: 0 }
+.jobs-inline .field-notes input { width: min(320px, 100%) }
+.jobs-add-time, .jobs-status { margin-top: 22px; padding: 14px 16px; background: #fff; border: 1px solid #d8d0c4; border-radius: 4px }
+.jobs-add-time h2, .jobs-status h2 { margin-top: 0; font-size: 16px }
+.jobs-delete { margin-top: 18px }
+.jobs-invoices { padding-left: 18px }

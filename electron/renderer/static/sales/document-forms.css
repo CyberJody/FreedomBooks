@@ -1,0 +1,20 @@
+/* Estimates, sales receipts and credit memos on the invoice editor's grid. */
+/* Income account: asked for on its own row only where the line has no item to take it from. */
+.invoice-row .line-field[data-field=income_account]{display:none}
+.invoice-row.needs-account .line-field[data-field=income_account]{display:flex;align-items:center;gap:10px;grid-column:1/4;grid-row:2;flex-wrap:wrap}
+.invoice-row.needs-account .line-field[data-field=income_account] select{width:auto;min-width:240px;max-width:100%;flex:1 1 240px}
+/* The two item choices on a saved estimate line, shown only when they apply. */
+.invoice-row .line-field[data-field=refresh_item],.invoice-row .line-field[data-field=keep_archived]{grid-column:2/7;grid-row:2;display:flex;align-items:center;gap:8px}
+.invoice-row .line-field[data-field=keep_archived]{grid-row:3}
+.invoice-row .line-field[data-field=income_account]>label,.invoice-row .line-field[data-field=refresh_item]>label,.invoice-row .line-field[data-field=keep_archived]>label{position:static;width:auto;height:auto;clip:auto;overflow:visible;white-space:normal;font-size:13px;font-weight:600;color:#5c4864;margin:0}
+.invoice-row .line-field[data-field=refresh_item] input,.invoice-row .line-field[data-field=keep_archived] input{width:auto;margin:0;order:-1}
+.invoice-row .line-field .errorlist{margin:6px 0 0;width:100%}
+.document-choice{display:flex;align-items:center;gap:8px;margin:10px 0 0;font-size:13px}.document-choice input{width:auto;margin:0}.document-choice label{font-weight:600;color:#5c4864}
+.invoice-dates [data-bank-field][hidden]{display:none}
+.document-editor .document-title p{margin:4px 0 0}
+.document-editor .entries-panel{background:#fff;border:1px solid #ded4e3;border-radius:8px;padding:10px 16px;margin:0 0 18px}
+.document-editor .entries-panel summary{font-size:13px;font-weight:600;color:#5c4864;cursor:pointer}
+.document-editor .entries-panel p{font-size:13px;color:#6b5b74;margin:8px 0 0}
+.document-editor .form-problems ul{margin:6px 0}
+@media(max-width:1080px){.invoice-row.needs-account .line-field[data-field=income_account]{grid-column:1/-1;grid-row:4}.invoice-row .line-field[data-field=refresh_item]{grid-column:1/-1;grid-row:5}.invoice-row .line-field[data-field=keep_archived]{grid-column:1/-1;grid-row:6}}
+.receive-payment #deposit-setup-needed{padding:18px 22px}.receive-payment #deposit-setup-needed h2{margin:0 0 8px;font-size:17px}

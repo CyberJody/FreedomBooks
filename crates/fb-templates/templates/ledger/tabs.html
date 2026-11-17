@@ -1,0 +1,1 @@
+{# The tab strip of an area's list pages (Invoices · Estimates · Sales receipts · Credit memos, …), from nav.rs. #}{% if nav.tabs %}<nav class="page-tabs" aria-label="{{ nav.current.label }}"><ul>{% for tab in nav.tabs %}<li><a href="{{ tab.url }}"{% if tab.current %} aria-current="page"{% endif %}>{{ tab.label }}</a></li>{% endfor %}</ul></nav>{% endif %}

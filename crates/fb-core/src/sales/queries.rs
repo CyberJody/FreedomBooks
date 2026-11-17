@@ -83,7 +83,7 @@ pub(super) fn refuse_live_deposit(conn: &(impl Query + ?Sized), key: &str, d: &s
 pub fn invoice_balances(book: &mut Book, actor: UserId, c: CompanyId) -> FbResult<Vec<Value>> {
     book.read(|conn| invoice_balances_query(conn, actor, c))
 }
-pub(super) fn invoice_balances_query(
+pub(crate) fn invoice_balances_query(
     conn: &(impl Query + ?Sized),
     actor: UserId,
     c: CompanyId,

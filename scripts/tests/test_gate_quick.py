@@ -23,6 +23,9 @@ CRATES = {
 
 CARGO_STUB = """#!/usr/bin/env bash
 echo "cargo $*" >> "$GATE_LOG"
+if [ "$1" = test ]; then echo "cargo $* FB_TEST_FULL_CASES=${FB_TEST_FULL_CASES:-unset}" >> "$GATE_LOG.env"; fi
+if [ "$1" = test ]; then echo "$TMPDIR" >> "$GATE_LOG.tmp"; [ -d "$TMPDIR" ] || echo MISSING >> "$GATE_LOG.tmp"; fi
+if [ "$1" = test ]; then echo "${RUST_TEST_THREADS:-unset}" >> "$GATE_LOG.threads"; fi
 if [ "$1" = metadata ]; then exec "$REAL_CARGO" "$@"; fi
 if [ "${CARGO_STUB_FAIL:-}" = "$1" ] && { [ "$1" != tree ] || [ "${CARGO_TREE_CRATE:-}" = "$3" ]; }; then
   echo "fixture: cargo $1 failed" >&2
@@ -33,6 +36,13 @@ if [ "$1" = tree ] && [ "${CARGO_TREE_CRATE:-}" = "$3" ]; then
 fi
 exit "${CARGO_STUB_RC:-0}"
 """
+
+NPM_STUB = """#!/usr/bin/env bash
+echo "npm $*" >> "$GATE_LOG"
+if [ "${NPM_STUB_FAIL:-}" = 1 ]; then echo "fixture: npm failed" >&2; exit 74; fi
+"""
+
+# PostgreSQL answers only when the test says so; the real server state must not change the result.
 
 SCRIPT_STUB = """#!/usr/bin/env bash
 echo "$0" | sed "s|^$PWD/||" >> "$GATE_LOG"
@@ -48,19 +58,19 @@ def write(path, text, mode=None):
 
 
 class Fixture:
-    def __init__(self, gate_sh=None):
+    def __init__(self, gate_sh=None, crates=CRATES):
         self.dir = tempfile.mkdtemp(prefix="gate-quick-")
         self.root = os.path.join(self.dir, "repo")
-        members = ", ".join(f'"{p}"' for p in CRATES)
+        members = ", ".join(f'"{p}"' for p in crates)
         write(f"{self.root}/Cargo.toml", f'[workspace]\nresolver = "2"\nmembers = [{members}]\n')
         write(f"{self.root}/Cargo.lock", "version = 4\n")
         write(f"{self.root}/README.md", "fixture\n")
         write(f"{self.root}/crates/group/README.md", "not a crate\n")
-        for path, (name, deps) in CRATES.items():
+        for path, (name, deps) in crates.items():
             write(f"{self.root}/{path}/Cargo.toml",
                   f'[package]\nname = "{name}"\nversion = "0.1.0"\nedition = "2021"\n\n{deps}')
             write(f"{self.root}/{path}/src/lib.rs", "")
-        for script in ("crates/fb-db/check_json_features.sh", "crates/fb-screendiff/run_screendiff.sh"):
+        for script in ("crates/fb-db/check_json_features.sh",):
             write(f"{self.root}/{script}", SCRIPT_STUB, 0o755)
         os.makedirs(f"{self.root}/scripts")
         shutil.copy(gate_sh or os.path.join(SCRIPTS, "gate.sh"), f"{self.root}/scripts/gate.sh")
@@ -68,6 +78,7 @@ class Fixture:
         write(f"{self.root}/.gitignore", "/target\n")
         bin_dir = os.path.join(self.dir, "bin")
         write(f"{bin_dir}/cargo", CARGO_STUB, 0o755)
+        write(f"{bin_dir}/npm", NPM_STUB, 0o755)
         self.log = os.path.join(self.dir, "gate.log")
         self.env = dict(os.environ)
         self.env.update({
@@ -124,8 +135,15 @@ ISOLATION = [
     "cargo tree -p fb-core -e normal --prefix none",
     "cargo tree -p fb-app -e normal,build --prefix none",
     "cargo tree -p fb-node -e normal,build --prefix none",
+    "cargo tree -p fb-remote-proto -e normal,build --prefix none",
+    "cargo tree -p fb-host -e normal,build --prefix none",
+    "cargo tree -p fb-remote -e normal,build --prefix none",
 ]
-FULL_GATE = [CLIPPY, "crates/fb-db/check_json_features.sh", *ISOLATION, "crates/fb-screendiff/run_screendiff.sh"]
+KEY_TESTS = ("cargo test -p fb-app --features key-test-hooks --test key_crashes --test protection_audit "
+             "--test protection_publication --no-fail-fast")
+ELECTRON = "npm --prefix electron test"
+WORKSPACE_TESTS = "cargo test --workspace --no-fail-fast"
+FULL_GATE = [CLIPPY, WORKSPACE_TESTS, "crates/fb-db/check_json_features.sh", KEY_TESTS, ELECTRON, *ISOLATION]
 
 
 class QuickGateTest(unittest.TestCase):
@@ -139,8 +157,8 @@ class QuickGateTest(unittest.TestCase):
         self.assertEqual(self.fx.plan()[0], [])
         r, commands = self.fx.gate("--quick")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(commands, [CLIPPY, *ISOLATION])
-        self.assertIn("gate(quick): 0 crates tested, clippy clean, core isolation OK — passed", r.stdout)
+        self.assertEqual(commands, [CLIPPY, ELECTRON, *ISOLATION])
+        self.assertIn("gate(quick): 0 crates tested, clippy clean, Electron unit tests and core isolation OK — passed", r.stdout)
         self.assertIn("no crate changed", r.stderr)
 
     def test_one_crate_tests_it_and_its_dependents(self):
@@ -153,7 +171,7 @@ class QuickGateTest(unittest.TestCase):
         self.assertIn("test c: depends on b", why)
         r, commands = self.fx.gate("--quick")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(commands, [CLIPPY, "cargo test -p a -p b -p c --no-fail-fast", *ISOLATION])
+        self.assertEqual(commands, [CLIPPY, "cargo test -p a -p b -p c --no-fail-fast", ELECTRON, *ISOLATION])
         self.assertIn("gate(quick): 3 crates tested", r.stdout)
 
     def test_leaf_crate_tests_only_itself(self):
@@ -307,7 +325,7 @@ class QuickGateTest(unittest.TestCase):
                 with self.subTest(args=args, crate=crate):
                     r, commands = self.fx.gate(*args, CARGO_STUB_FAIL="tree", CARGO_TREE_CRATE=crate)
                     self.assertEqual(r.returncode, 73, r.stderr)
-                    prefix = [CLIPPY] if args else [CLIPPY, "crates/fb-db/check_json_features.sh"]
+                    prefix = [CLIPPY, ELECTRON] if args else FULL_GATE[:5]
                     self.assertEqual(commands, [*prefix, *ISOLATION[:index + 1]])
                     self.assertNotIn("passed", r.stdout)
                     self.assertIn("fixture: cargo tree failed", r.stderr)
@@ -357,7 +375,107 @@ class QuickGateTest(unittest.TestCase):
         r, commands = self.fx.gate()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(commands, FULL_GATE)
-        self.assertIn("gate: clippy, check_json_features.sh", r.stdout)
+        self.assertIn("gate: clippy, workspace tests, check_json_features.sh, key-change tests, Electron unit tests "
+                      "and core isolation passed", r.stdout)
+
+
+    def test_full_gate_sets_full_case_counts_and_quick_gate_does_not(self):
+        self.fx.edit("crates/a/src/lib.rs")
+        env_log = self.fx.log + ".env"
+        for args, expected in (((), "FB_TEST_FULL_CASES=1"), (("--quick",), "FB_TEST_FULL_CASES=unset")):
+            with self.subTest(args=args):
+                if os.path.exists(env_log):
+                    os.remove(env_log)
+                r, _ = self.fx.gate(*args, FB_TEST_FULL_CASES="")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                with open(env_log) as f:
+                    lines = f.read().splitlines()
+                self.assertTrue(lines)
+                for line in lines:
+                    self.assertTrue(line.endswith(expected), line)
+
+    def test_each_run_gets_a_private_temp_folder_removed_at_the_end(self):
+        self.fx.edit("crates/a/src/lib.rs")
+        parent = os.path.join(self.fx.dir, "tmp-parent")
+        os.makedirs(parent)
+        tmp_log = self.fx.log + ".tmp"
+        # A failing cargo test still removes the folder.
+        for args, rc, fail in (((), 0, ""), (("--quick",), 0, ""), (("--quick",), 72, "test"), ((), 72, "test")):
+            with self.subTest(args=args, rc=rc):
+                if os.path.exists(tmp_log):
+                    os.remove(tmp_log)
+                r, _ = self.fx.gate(*args, FB_GATE_TMP_PARENT=parent, CARGO_STUB_FAIL=fail, CARGO_STUB_FAIL_RC="72")
+                self.assertEqual(r.returncode, rc, r.stderr)
+                with open(tmp_log) as f:
+                    seen = f.read().splitlines()
+                self.assertTrue(seen)
+                self.assertNotIn("MISSING", seen)
+                self.assertTrue(all(os.path.dirname(t) == parent and os.path.basename(t).startswith("fb-gate.") for t in seen), seen)
+                self.assertEqual(os.listdir(parent), [], "the gate removes its temp folder")
+
+    def test_test_threads_default_to_eight_and_can_be_overridden(self):
+        self.fx.edit("crates/a/src/lib.rs")
+        threads_log = self.fx.log + ".threads"
+        for args in ((), ("--quick",)):
+            for given, expected in (("", "8"), ("3", "3")):
+                with self.subTest(args=args, given=given):
+                    if os.path.exists(threads_log):
+                        os.remove(threads_log)
+                    env = {"RUST_TEST_THREADS": given} if given else {}
+                    saved = self.fx.env.pop("RUST_TEST_THREADS", None)
+                    try:
+                        r, _ = self.fx.gate(*args, **env)
+                    finally:
+                        if saved is not None:
+                            self.fx.env["RUST_TEST_THREADS"] = saved
+                    self.assertEqual(r.returncode, 0, r.stderr)
+                    with open(threads_log) as f:
+                        self.assertEqual(set(f.read().split()), {expected})
+
+    def test_electron_failure_fails_both_gates(self):
+        for args in (("--quick",), ()):
+            with self.subTest(args=args):
+                r, commands = self.fx.gate(*args, NPM_STUB_FAIL="1")
+                self.assertEqual(r.returncode, 74, r.stderr)
+                self.assertEqual(commands[-1], ELECTRON)
+                self.assertNotIn("passed", r.stdout)
+
+    def test_electron_change_is_checked_by_the_electron_tests(self):
+        write(os.path.join(self.fx.root, "electron/main/guards.cjs"), "// changed\n")
+        crates, why = self.fx.plan()
+        self.assertEqual(crates, [])
+        self.assertIn("1 Electron file(s) changed: checked by npm --prefix electron test", why)
+        self.assertNotIn("no tests for them", why)
+        r, commands = self.fx.gate("--quick")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(ELECTRON, commands)
+
+
+class KeyTestsGateTest(unittest.TestCase):
+    """fb-app's key-change tests need its key-test-hooks feature, so the plain cargo test never runs them."""
+
+    def setUp(self):
+        self.fx = Fixture(crates={**CRATES, "crates/fb-app": ("fb-app", '[dependencies]\na = { path = "../a" }\n')})
+
+    def tearDown(self):
+        self.fx.close()
+
+    def test_fb_app_change_runs_the_key_tests(self):
+        self.fx.edit("crates/fb-app/src/lib.rs")
+        r, commands = self.fx.gate("--quick")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(commands, [CLIPPY, "cargo test -p fb-app --no-fail-fast", KEY_TESTS, ELECTRON, *ISOLATION])
+
+    def test_unrelated_crate_skips_them(self):
+        self.fx.edit("crates/d/src/lib.rs")
+        r, commands = self.fx.gate("--quick")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn(KEY_TESTS, commands)
+
+    def test_full_gate_always_runs_them(self):
+        r, commands = self.fx.gate()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(KEY_TESTS, commands)
 
 
 if __name__ == "__main__":

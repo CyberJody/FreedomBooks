@@ -1,0 +1,35 @@
+/* The unlock and first-run screens: no sidebar, one centred card. */
+body.gate-page { display: flex; flex-direction: column; min-height: 100vh; }
+body.gate-page main.gate { flex: 1; display: flex; justify-content: center; padding: 40px 16px 56px; max-width: none; }
+.gate-card { width: 100%; max-width: 560px; background: #fff; border: 1px solid #ded8df; border-radius: 12px; padding: 32px 36px; box-shadow: 0 1px 3px rgba(53, 37, 62, .06); }
+.gate-card h1 { margin: 6px 0 14px; }
+.gate-card label { display: block; font-size: 14px; font-weight: 650; margin-bottom: 6px; }
+.gate-card input:not([type=checkbox]), .gate-card select { width: 100%; }
+.gate-card input[type=checkbox] { margin-right: 6px; }
+.gate-card form p { margin-bottom: 12px; }
+.gate-card .help { font-size: 13px; color: #5f5566; margin-top: -4px; }
+.gate-card code { font-size: 12.5px; overflow-wrap: anywhere; }
+.gate-card section.errorlist { border: 1px solid #f0c9cd; margin: 12px 0 16px; overflow: visible; }
+.gate-card section.errorlist p { margin: 0; }
+.gate-steps { display: flex; gap: 8px; list-style: none; margin: 0 0 10px; padding: 0; font-size: 13px; color: #5f5566; flex-wrap: wrap; }
+.gate-steps li { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; background: #f4f0f6; }
+.gate-steps li + li::before { content: "→"; margin: 0 6px 0 2px; color: #8d8293; }
+.gate-steps li span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #ddd3e2; color: #41244c; font-weight: 700; font-size: 12px; }
+.gate-steps li[aria-current=step] { background: #ebe1f0; color: #41244c; font-weight: 650; }
+.gate-steps li[aria-current=step] span { background: #684276; color: #fff; }
+.gate-steps li.done span { background: #4f7b55; color: #fff; }
+.gate-step-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #6b6070; font-weight: 700; margin: 0; }
+.gate-version { color: #4f4656; }
+.gate-file { font-size: 13px; color: #4f4656; background: #faf8fb; border: 1px solid #ece6ee; border-radius: 7px; padding: 10px 12px; }
+.gate-next { font-size: 14px; color: #4f4656; margin-top: 16px; }
+.gate-more { margin-top: 14px; padding: 12px 16px; }
+.gate-more summary { font-weight: 600; }
+.gate-more form { margin-top: 10px; }
+.gate-protect { border: 1px solid #ece6ee; border-radius: 8px; padding: 10px 14px 4px; margin: 6px 0 16px; }
+.gate-protect legend { font-size: 14px; font-weight: 650; padding: 0 4px; }
+.gate-books { list-style: none; padding: 0; margin: 12px 0 0; }
+.gate-books li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #eee9ef; font-size: 13px; }
+.gate-books li form { margin: 0; flex: none; }
+.gate-tag { display: inline-block; font-size: 11px; background: #ebe4ee; color: #41244c; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
+body.gate-page footer { color: #6b6070; }
+@media (max-width: 600px) { .gate-card { padding: 22px 18px; } .gate-books li { flex-direction: column; align-items: flex-start; } }

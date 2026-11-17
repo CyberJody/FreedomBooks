@@ -1,8 +1,16 @@
-//! Downloaded transaction review. Draft edits never write to the ledger.
+//! "Review transactions": downloaded bank transactions waiting to be recorded. Draft edits never write to
+//! the ledger; every decision goes through `fb_core::bankfeeds`.
+//!
+//! A post from the page's script carries `inline=1` and gets back only what changed (the acted-on rows and
+//! the status area) as fragments plus the form's next single-use token; the preload swaps them in place
+//! (`electron/preload/preload.cjs`, `applyFragments`). Without it the whole page is re-rendered as before.
 use super::*;
+use std::collections::HashSet;
 
 const PER_PAGE: usize = 50;
 const MAX_BULK: usize = 100;
+/// Old copies one "Ignore old copies" press handles.
+const MAX_COPIES: usize = 500;
 
 // --- review ----------------------------------------------------------------------------------------
 
@@ -87,6 +95,10 @@ struct Posted1 {
 pub(super) struct ReviewPost {
     posted: HashMap<i64, Posted1>,
     results: Vec<Value>,
+    /// Rows this post acted on, in order: an in-place reply re-renders exactly these.
+    touched: Vec<i64>,
+    /// Accepted rows whose Undo asks for confirmation on this render.
+    undo_confirm: HashSet<i64>,
 }
 
 fn accept_from_post(
@@ -95,6 +107,7 @@ fn accept_from_post(
     pk: i64,
     p: Posted<'_>,
     vendors: &HashMap<String, String>,
+    record_again: Option<&str>,
 ) -> AppResult<Result<bf::Item, FbError>> {
     let owner = actor(app)?;
     let id = target_id(app, c, pk)?;
@@ -114,9 +127,15 @@ fn accept_from_post(
     } else {
         vendors.get(&bf::text::py_lower(&payee)).cloned()
     };
-    let input = json!({"kind": get(p, &format!("kind_{pk}")).unwrap_or(""), "account_id": posted_id("account"), "payee_name": payee,
+    let mut input = json!({"kind": get(p, &format!("kind_{pk}")).unwrap_or(""), "account_id": posted_id("account"), "payee_name": payee,
         "vendor_id": vendor_id, "check_number": py::py_truncate(py::py_strip(field("number")), 20), "journal_line_id": posted_id("line"),
         "receipt_ids": posted_id("receipt").into_iter().collect::<Vec<_>>(), "transfer_account_id": posted_id("to")});
+    if let Some(seen) = record_again {
+        // The user's explicit "Record again" on a row the page showed as already recorded as `seen` (the
+        // earlier transaction): the core records it only if that is still the entry it would duplicate.
+        input["record_again"] = json!(true);
+        input["recorded_as"] = json!(seen);
+    }
     Ok(bf::accept(
         &mut app.open_mut()?.book,
         owner,
@@ -125,6 +144,22 @@ fn accept_from_post(
         &input,
         &bf::SecretSet::none(),
     ))
+}
+
+/// One row action of a post: what the user pressed, on which row.
+#[derive(Clone, Copy, PartialEq)]
+enum Act {
+    Accept,
+    AcceptAgain,
+    Ignore,
+    Return,
+    Link,
+    Undo,
+    UndoConfirmed,
+    Cancel,
+    Keep,
+    /// Ignore the never-reviewed rows of disconnected connections that a connected one downloaded again.
+    IgnoreCopies,
 }
 
 pub(super) fn run_review_post(app: &mut App, c: CompanyId, p: Posted<'_>) -> AppResult<ReviewPost> {
@@ -161,14 +196,30 @@ pub(super) fn run_review_post(app: &mut App, c: CompanyId, p: Posted<'_>) -> App
         Ok(rows.into_iter().map(|(n, id)| (bf::text::py_lower(&n), id)).collect())
     })?;
     let truthy = |k: &str| get(p, k).filter(|v| !v.is_empty());
-    let mut targets: Vec<(&str, Option<i64>)> = vec![];
-    if let Some(v) = truthy("accept_one") {
-        targets.push(("accept", int(v)));
-    } else if let Some(v) = truthy("ignore_one") {
-        targets.push(("ignore", int(v)));
-    } else if let Some(v) = truthy("return_one") {
-        targets.push(("return", int(v)));
+    let single = [
+        ("accept_one", Act::Accept),
+        ("accept_again_one", Act::AcceptAgain),
+        ("ignore_one", Act::Ignore),
+        ("return_one", Act::Return),
+        ("link_one", Act::Link),
+        ("undo_one", Act::Undo),
+        ("undo_confirm_one", Act::UndoConfirmed),
+        ("cancel_one", Act::Cancel),
+        ("keep_one", Act::Keep),
+        ("ignore_copies", Act::IgnoreCopies),
+    ];
+    let mut targets: Vec<(Act, Option<i64>)> = vec![];
+    let mut bulk = false;
+    if truthy("ignore_copies").is_some() {
+        let copies = app.open_mut()?.book.read(|tx| retired_copies(tx, c))?;
+        targets = copies.into_iter().take(MAX_COPIES).map(|i| (Act::IgnoreCopies, Some(i.ordinal))).collect();
+        if targets.is_empty() {
+            out.results.push(json!({"ok": false, "text": "No old copies are left to ignore."}));
+        }
+    } else if let Some((v, act)) = single.iter().find_map(|(name, act)| truthy(name).map(|v| (v, *act))) {
+        targets.push((act, int(v)));
     } else if let Some(action) = get(p, "action").filter(|a| ["accept", "ignore"].contains(a)) {
+        bulk = true;
         let mut found = vec![];
         for (_, v) in p.iter().filter(|(k, _)| k == "sel").take(MAX_BULK + 1) {
             if let Some(n) = int(v)
@@ -177,19 +228,8 @@ pub(super) fn run_review_post(app: &mut App, c: CompanyId, p: Posted<'_>) -> App
                 found.push(n);
             }
         }
-        targets = found
-            .into_iter()
-            .map(|n| {
-                (
-                    if action == "accept" {
-                        "accept"
-                    } else {
-                        "ignore"
-                    },
-                    Some(n),
-                )
-            })
-            .collect();
+        let act = if action == "accept" { Act::Accept } else { Act::Ignore };
+        targets = found.into_iter().map(|n| (act, Some(n))).collect();
     }
     if targets.len() > MAX_BULK {
         out.results.push(
@@ -202,54 +242,88 @@ pub(super) fn run_review_post(app: &mut App, c: CompanyId, p: Posted<'_>) -> App
             json!({"ok": false, "text": "Tick the rows to accept or ignore, or use a row button."}),
         );
     }
+    // Bulk accept never records a row that looks already recorded unless the user asked for it, and then
+    // only a row this page showed as already recorded, as that same entry (its `link_to_<pk>`): a row that
+    // became "already recorded" after the page was drawn is not recorded on the strength of the tick.
+    let include_recorded = bulk && checked(p, "include_recorded");
+    let mut skipped_recorded = 0;
+    let mut newly_recorded = 0;
     for (action, pk) in targets {
         let Some(pk) = pk else { continue };
+        out.touched.push(pk);
         let current = app
             .open_mut()?
             .book
             .read(|tx| transaction_by_ordinal(tx, c, pk))?;
-        let result = if action != "return" && current.is_some_and(|i| i.status != "NEW") {
-            Err(FbError::validation(
-                "This transaction is no longer new. No review edits were applied; refresh the review list.",
-            ))
-        } else {
-            match action {
-                "accept" => accept_from_post(app, c, pk, p, &vendors)?.map(|i| (i, "accept")),
-                "ignore" => {
-                    let id = target_id(app, c, pk)?;
-                    bf::ignore(
-                        &mut app.open_mut()?.book,
-                        owner,
-                        c,
-                        &id,
-                        &bf::SecretSet::none(),
-                    )
-                    .map(|i| (i, "ignore"))
-                }
-                _ => {
-                    let id = target_id(app, c, pk)?;
-                    bf::return_to_review(
-                        &mut app.open_mut()?.book,
-                        owner,
-                        c,
-                        &id,
-                        &bf::SecretSet::none(),
-                    )
-                    .map(|i| (i, "return"))
-                }
+        let decides = matches!(action, Act::Accept | Act::AcceptAgain | Act::Ignore | Act::Link | Act::IgnoreCopies);
+        if decides && current.as_ref().is_some_and(|i| i.status != "NEW") {
+            let message = "This transaction is no longer new. No review edits were applied; refresh the review list.";
+            if let Some(row) = out.posted.get_mut(&pk) {
+                row.error = message.into();
             }
+            out.results.push(json!({"ok": false, "text": message, "pk": pk}));
+            continue;
+        }
+        let seen = get(p, &format!("link_to_{pk}")).filter(|v| !v.is_empty());
+        let mut record_again = (action == Act::AcceptAgain).then(|| seen.unwrap_or(""));
+        if bulk && action == Act::Accept && let Some(item) = &current {
+            let found = app.open_mut()?.book.read(|tx| bf::already_recorded(tx, c, item))?;
+            if seen != found.as_ref().map(|f| f.earlier_id.as_str()) {
+                // Shown one way, now the other: nothing is recorded on the strength of the page's tick.
+                newly_recorded += 1;
+                let message = match &found {
+                    Some(f) => format!("This now looks already recorded as {} ({}). Nothing was recorded; review it again.", f.reference, f.date),
+                    None => "This no longer looks already recorded. Nothing was recorded; review it again.".to_owned(),
+                };
+                if let Some(row) = out.posted.get_mut(&pk) {
+                    row.error = message;
+                }
+                continue;
+            }
+            if found.is_some() {
+                if !include_recorded {
+                    skipped_recorded += 1;
+                    continue;
+                }
+                record_again = seen;
+            }
+        }
+        let id = target_id(app, c, pk)?;
+        let none = bf::SecretSet::none();
+        let result = match action {
+            Act::Accept | Act::AcceptAgain => accept_from_post(app, c, pk, p, &vendors, record_again)?,
+            Act::Ignore | Act::IgnoreCopies => bf::ignore(&mut app.open_mut()?.book, owner, c, &id, &none),
+            Act::Return => bf::return_to_review(&mut app.open_mut()?.book, owner, c, &id, &none),
+            Act::Link => {
+                let expected = get(p, &format!("link_to_{pk}")).filter(|v| !v.is_empty());
+                bf::link_existing(&mut app.open_mut()?.book, owner, c, &id, expected, &none)
+            }
+            Act::UndoConfirmed => bf::undo_accept(&mut app.open_mut()?.book, owner, c, &id, &none),
+            Act::Keep => bf::keep_recorded(&mut app.open_mut()?.book, owner, c, &id, &none)
+                .and_then(|()| app.open_mut().map_err(|e| FbError::validation(e.to_string()))?.book.read(|tx| bf::item(tx, c, &id))),
+            Act::Undo => {
+                // First press: the row asks for confirmation; nothing is written.
+                out.undo_confirm.insert(pk);
+                continue;
+            }
+            Act::Cancel => continue,
         };
         match result {
-            Ok((item, what)) => {
+            Ok(item) => {
                 let head = format!(
                     "{} {} {}",
                     item.date().unwrap_or("None"),
                     py::py_truncate(&item.description, 60),
                     cents(item.amount)
                 );
-                out.results.push(match what {
-                    "accept" => json!({"ok": true, "text": format!("{head}: recorded as {}", item.reference), "url": reference_url(c, &item.reference_url)}),
-                    "ignore" => json!({"ok": true, "text": format!("{head}: ignored")}),
+                let url = reference_url(c, &item.reference_url);
+                out.results.push(match action {
+                    Act::Accept | Act::AcceptAgain => json!({"ok": true, "text": format!("{head}: recorded as {}", item.reference), "url": url}),
+                    Act::Ignore => json!({"ok": true, "text": format!("{head}: ignored")}),
+                    Act::IgnoreCopies => json!({"ok": true, "text": format!("{head}: old copy ignored")}),
+                    Act::Link => json!({"ok": true, "text": format!("{head}: linked to the entry already in the books; nothing posted")}),
+                    Act::UndoConfirmed => json!({"ok": true, "text": format!("{head}: undone; the entry was voided and the transaction is back in review")}),
+                    Act::Keep => json!({"ok": true, "text": format!("{head}: kept as recorded")}),
                     _ => json!({"ok": true, "text": format!("{head}: back in review")}),
                 });
             }
@@ -263,6 +337,21 @@ pub(super) fn run_review_post(app: &mut App, c: CompanyId, p: Posted<'_>) -> App
             }
         }
     }
+    if newly_recorded > 0 {
+        out.results.push(json!({"ok": false, "text": format!(
+            "{newly_recorded} selected {} changed since this page was shown (whether {} already recorded), so nothing was recorded for {}. Review {} again.",
+            if newly_recorded == 1 { "row" } else { "rows" }, if newly_recorded == 1 { "it looks" } else { "they look" }, if newly_recorded == 1 { "it" } else { "them" }, if newly_recorded == 1 { "it" } else { "them" })}));
+    }
+    let copies = out.results.iter().filter(|r| r["ok"] == true && r["text"].as_str().is_some_and(|t| t.ends_with(": old copy ignored"))).count();
+    if copies > 1 {
+        out.results.retain(|r| !(r["ok"] == true && r["text"].as_str().is_some_and(|t| t.ends_with(": old copy ignored"))));
+        out.results.push(json!({"ok": true, "text": format!("{copies} old copies from a disconnected bank connection ignored; the new connection's copies stay to review.")}));
+    }
+    if skipped_recorded > 0 {
+        out.results.push(json!({"ok": false, "text": format!(
+            "Skipped {skipped_recorded} selected {} that {} already recorded. Link {} to the existing entry, or tick “Also record rows that look already recorded”.",
+            if skipped_recorded == 1 { "row" } else { "rows" }, if skipped_recorded == 1 { "looks" } else { "look" }, if skipped_recorded == 1 { "it" } else { "them" })}));
+    }
     Ok(out)
 }
 
@@ -270,6 +359,253 @@ struct Filter {
     status: String,
     account: Option<String>,
     q: String,
+}
+
+/// What every row of one render shares.
+struct RowCtx {
+    rules: Vec<bf::Rule>,
+    categories: Vec<fb_core::model::Account>,
+    banks: Vec<String>,
+    bank_accounts: Vec<fb_core::model::Account>,
+    currency: String,
+    owner: UserId,
+}
+fn row_ctx(app: &mut App, c: CompanyId) -> AppResult<RowCtx> {
+    let owner = actor(app)?;
+    let rules = bf::active_rules(&mut app.open_mut()?.book, owner, c)?;
+    let categories = bf::rule_accounts(&mut app.open_mut()?.book, owner, c)?;
+    let (banks, bank_accounts, currency) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let banks = designated(tx, c)?;
+        let bank_accounts: Vec<fb_core::model::Account> = store::accounts(tx, c)?.into_iter().filter(|a| banks.contains(&a.id.to_db())).collect();
+        let currency: String = tx.query_row("SELECT currency FROM ledger_company WHERE id=?1", [c.to_db()], |r| r.get(0))?;
+        Ok((banks, bank_accounts, currency))
+    })?;
+    Ok(RowCtx { rules, categories, banks, bank_accounts, currency, owner })
+}
+
+/// One review row's view model (the `row` of `bankfeeds/review_row.html`).
+fn row_vm(tx: &(impl Query + ?Sized), c: CompanyId, ctx: &RowCtx, item: &bf::Item, post: &ReviewPost) -> Result<Value, FbError> {
+    let feed = bf::feed(tx, &item.feed_account_id)?.ok_or_else(|| FbError::validation("Choose a downloaded transaction of this company."))?;
+    let ledger = feed.ledger_account_id.as_deref().and_then(AccountId::parse).map(|id| store::account(tx, id)).transpose()?.flatten();
+    let mut iv = json!({"pk": item.ordinal, "status": item.status, "status_display": status_display(&item.status), "pending": item.pending,
+        "date": item.date().unwrap_or(""), "description": item.description, "amount": cents(item.amount), "money_in": item.money_in(),
+        "reference": item.reference, "reference_url": reference_url(c, &item.reference_url), "accepted_as": item.accepted_as,
+        "accepted_as_display": kind_display(&item.accepted_as),
+        "feed_account": {"name": feed.name, "ledger_account": ledger.as_ref().map(|a| json!({"code": a.code, "name": a.name}))}});
+    if item.status != "NEW" {
+        let reversed = match &item.journal_id {
+            Some(j) => tx.query_row("SELECT EXISTS(SELECT 1 FROM ledger_journal WHERE reversal_of_id=?1)", [j], |r| r.get::<_, bool>(0))?,
+            None => false,
+        };
+        // A row linked to an entry already in the books ("Link to existing"): ignored, nothing posted.
+        let linked: Option<(String, String, bool)> = tx
+            .query_row(
+                "SELECT e.reference,e.reference_url,e.status IN('ACCEPTED','MATCHED') AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=e.journal_id)
+                   FROM bankfeeds_link k JOIN bankfeeds_transaction e ON e.ordinal=k.earlier_ordinal WHERE k.item_ordinal=?1",
+                [item.ordinal],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .optional()?;
+        if linked.is_some() {
+            iv["status_display"] = json!("Already recorded");
+        }
+        let change: Option<i64> =
+            tx.query_row("SELECT amount FROM bankfeeds_bank_change WHERE item_ordinal=?1 AND kept=0", [item.ordinal], |r| r.get(0)).optional()?;
+        let (undo, undo_blocked) = match bf::undo_status(tx, ctx.owner, c, item)? {
+            Some(Ok(plan)) => (Some(plan), None),
+            Some(Err(reason)) => (None, Some(reason)),
+            None => (None, None),
+        };
+        let return_blocked = bf::return_blocker(tx, c, item)?;
+        return Ok(json!({"item": iv, "suggestion": null, "reversed": reversed,
+            "linked": linked.map(|(reference, url, live)| json!({"reference": reference, "url": reference_url(c, &url), "live": live})),
+            "bank_change": change.map(cents),
+            "undo": undo.map(|u| json!({"reference": u.reference, "date": u.date, "kind": kind_display(&u.kind).to_lowercase()})),
+            "undo_blocked": undo_blocked,
+            "undo_manual_void": return_blocked.is_none(),
+            "return_blocked": return_blocked,
+            "stale": bf::stale_decision(tx, item)?,
+            "retired": bf::retired_connection(tx, item)?,
+            "undo_confirm": post.undo_confirm.contains(&item.ordinal)}));
+    }
+    let s = bf::suggest_for(tx, c, item, Some(&ctx.rules))?;
+    let automatic_note: Option<String> = tx.query_row("SELECT reason FROM bankfeeds_rule_review WHERE item_id=?1", [&item.id], |r| r.get(0)).optional()?;
+    iv["automatic_note"] = json!(automatic_note);
+    let recorded = bf::already_recorded(tx, c, item)?;
+    // A never-reviewed row of a disconnected connection: it can only be ignored. Say whether the connected
+    // one downloaded it again, so the user knows the books will still get it.
+    let retired = bf::retired_connection(tx, item)?
+        .map(|label| -> Result<Value, FbError> {
+            let again = bf::downloaded_again(tx, c, item)?;
+            Ok(json!({"label": label, "again": again.map(|a| json!({"date": a.date(), "status": status_display(&a.status), "account": bf::feed(tx, &a.feed_account_id).ok().flatten().map(|f| f.name)}))}))
+        })
+        .transpose()?;
+    let is_designated = feed.ledger_account_id.as_ref().is_some_and(|a| ctx.banks.contains(a));
+    let other: Vec<&fb_core::model::Account> = ctx.bank_accounts.iter().filter(|b| Some(b.id.to_db()) != feed.ledger_account_id && b.active && b.postable).collect();
+    let mut options: Vec<(&str, &str)> = vec![];
+    if !s.matches.is_empty() {
+        options.push(("MATCH", "Match existing entry"));
+    }
+    if !s.receipts.is_empty() {
+        options.push(("DEPOSIT", "Deposit receipt"));
+    }
+    if item.money_in() {
+        options.push(("JOURNAL", if is_designated { "Deposit (journal)" } else { "Payment (journal)" }));
+    } else {
+        if is_designated {
+            options.push(("CHECK", "Check or debit"));
+        }
+        options.push(("JOURNAL", if !is_designated { "Charge (journal)" } else { "Journal entry" }));
+    }
+    if is_designated && !other.is_empty() {
+        options.push(("TRANSFER", "Transfer"));
+    }
+    let default_kind = if !item.money_in() && is_designated { "CHECK" } else { "JOURNAL" };
+    let preferred = if s.kind.is_empty() { default_kind } else { s.kind.as_str() };
+    options.sort_by_key(|o| o.0 != preferred);
+    let posted = post.posted.get(&item.ordinal);
+    let kind = posted.and_then(|x| x.kind.clone()).unwrap_or_else(|| options.first().map(|o| o.0.to_owned()).unwrap_or_default());
+    let account_id = posted.and_then(|x| x.account_id.clone()).or_else(|| s.account_id.clone());
+    let payee = posted.map(|x| x.payee.clone()).unwrap_or_else(|| s.payee_name.clone());
+    // Only a real check number from the bank's text ("CHECK 1041") is filled in. Left blank, a check
+    // recorded from a debit still gets its `EFT-<n>` number from the core, as before.
+    let number = posted.map(|x| x.number.clone()).unwrap_or_else(|| if item.money_in() { String::new() } else { bf::text::check_number_in(&item.description).unwrap_or_default() });
+    // Keep unavailable submitted choices visible instead of silently selecting a new value.
+    if !options.iter().any(|(value, _)| *value == kind) {
+        options.push((&kind, "Unavailable choice — choose again"));
+    }
+    let category_valid = account_id.as_ref().is_none_or(|id| id.is_empty() || ctx.categories.iter().any(|a| a.id.to_db() == *id && Some(id) != feed.ledger_account_id.as_ref()));
+    let bulk_block = if retired.is_some() {
+        "From a disconnected bank connection: ignore it"
+    } else if !feed.active || ledger.as_ref().is_none_or(|a| !a.active || !a.postable) {
+        "Map to an active posting account first"
+    } else if item.pending { "Still pending at the bank" }
+    else if item.date().is_none() { "Missing transaction date" }
+    else if item.amount == 0 { "Zero amount cannot be accepted" }
+    else if feed.currency.to_uppercase() != ctx.currency { "Account currency differs from the company" }
+    else { "" };
+    Ok(json!({
+        "item": iv,
+        "suggestion": {
+            "matches": s.matches.iter().map(|m| json!({"label": m.label, "date": m.date, "line": {"pk": m.line_id}})).collect::<Vec<_>>(),
+            "receipts": s.receipts.iter().map(|x| json!({"label": x.label, "date": x.date, "receipt": {"pk": x.receipt_id}})).collect::<Vec<_>>(),
+            "rule": s.rule.as_ref().map(|x| json!({"name": x.name, "pk": x.id})),
+        },
+        "recorded": recorded.map(|r| json!({"reference": r.reference, "url": reference_url(c, &r.reference_url), "date": r.date, "earlier": r.earlier_id, "same_identity": r.same_identity, "same_account": r.same_account})),
+        "retired": retired,
+        "options": options,
+        "kind": kind,
+        "category_valid": category_valid,
+        "draft_retained": if posted.is_some() { "true" } else { "false" },
+        "selected": posted.is_some_and(|x| x.selected),
+        "other_bank_valid": posted.is_none_or(|x| x.other_bank.is_empty() || other.iter().any(|a| a.id.to_db() == x.other_bank)),
+        "line_valid": posted.is_none_or(|x| x.line.is_empty() || s.matches.iter().any(|m| m.line_id == x.line)),
+        "receipt_valid": posted.is_none_or(|x| x.receipt.is_empty() || s.receipts.iter().any(|r| r.receipt_id == x.receipt)),
+        "other_bank": posted.map(|x| x.other_bank.clone()).unwrap_or_default(),
+        "line": posted.map(|x| x.line.clone()).unwrap_or_else(|| s.matches.first().map(|m| m.line_id.clone()).unwrap_or_default()),
+        "receipt": posted.map(|x| x.receipt.clone()).unwrap_or_else(|| s.receipts.first().map(|r| r.receipt_id.clone()).unwrap_or_default()),
+        "bulk_block": bulk_block,
+        "matching_rules": ctx.rules.iter().filter(|rule| bf::rule_for(std::slice::from_ref(*rule), item).is_some()).map(|r| r.id.clone()).collect::<Vec<_>>().join(" "),
+        "account_id": account_id,
+        "payee": payee,
+        "number": number,
+        "categories": ctx.categories.iter().filter(|a| Some(a.id.to_db()) != feed.ledger_account_id).map(|a| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name})).collect::<Vec<_>>(),
+        "other_banks": other.iter().map(|a| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name})).collect::<Vec<_>>(),
+        "error": posted.map(|x| x.error.clone()),
+    }))
+}
+
+/// The status area above the table (counts, notices, results), also sent as a fragment.
+fn status_vm(tx: &(impl Query + ?Sized), c: CompanyId, vm: &mut Value, results: &[Value]) -> Result<(), FbError> {
+    let unmapped: i64 = tx.query_row("SELECT count(DISTINCT f.id) FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id JOIN bankfeeds_transaction t ON t.feed_account_id=f.id WHERE c.company_id=?1 AND c.active=1 AND f.active=1 AND f.ledger_account_id IS NULL AND t.status='NEW'", [c.to_db()], |r| r.get(0))?;
+    let (_, pending, _) = overview(tx, c)?;
+    put(vm, "unmapped", unmapped);
+    put(vm, "pending", pending);
+    put(vm, "recorded_count", bf::already_recorded_count(tx, c)?);
+    let mut changes = vec![];
+    for b in bf::bank_changes(tx, c)? {
+        // A linked row has no entry of its own: the entry it relies on is the earlier transaction's.
+        let linked: Option<(String, String)> = tx
+            .query_row(
+                "SELECT e.reference,e.reference_url FROM bankfeeds_link k JOIN bankfeeds_transaction e ON e.ordinal=k.earlier_ordinal WHERE k.item_ordinal=?1",
+                [b.ordinal],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        let (reference, url) = linked.clone().unwrap_or((b.reference.clone(), b.reference_url.clone()));
+        changes.push(json!({"pk": b.ordinal, "date": b.date, "description": b.description, "recorded": cents(b.recorded), "bank": cents(b.bank),
+            "reference": reference, "url": reference_url(c, &url), "linked": linked.is_some()}));
+    }
+    put(vm, "bank_changes", changes);
+    put(vm, "results", results);
+    // Never-reviewed rows of disconnected connections, and how many of them a connected one downloaded again.
+    let retired: i64 = tx.query_row(
+        "SELECT count(*) FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+          WHERE c.company_id=?1 AND c.active=0 AND (f.ledger_account_id IS NULL OR f.active=0) AND t.status='NEW'",
+        [c.to_db()],
+        |r| r.get(0),
+    )?;
+    put(vm, "retired_count", retired);
+    put(vm, "retired_copies", if retired > 0 { retired_copies(tx, c)?.len() } else { 0 });
+    put(vm, "stale_count", bf::stale_decisions(tx, c)?.len());
+    let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
+    put(vm, "clock_warning", bf::clock_warning(tx, c, &now)?.map(|w| json!({"recorded": w.recorded, "now": w.now})));
+    Ok(())
+}
+/// Never-reviewed rows of disconnected connections that a connected connection downloaded again: safe to
+/// ignore, since the books get the transaction through the new copy.
+fn retired_copies(tx: &(impl Query + ?Sized), c: CompanyId) -> Result<Vec<bf::Item>, FbError> {
+    let mut st = tx.prepare(
+        "SELECT t.id FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+          WHERE c.company_id=?1 AND c.active=0 AND (f.ledger_account_id IS NULL OR f.active=0) AND t.status='NEW' ORDER BY t.ordinal",
+    )?;
+    let ids = st.query_map([c.to_db()], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+    let mut out = vec![];
+    for id in ids {
+        let item = bf::item(tx, c, &id)?;
+        if bf::downloaded_again(tx, c, &item)?.is_some() {
+            out.push(item);
+        }
+    }
+    Ok(out)
+}
+/// Categories the company used most recently on accepted downloads, newest first ("recently used first").
+fn recent_categories(tx: &(impl Query + ?Sized), c: CompanyId) -> Result<Vec<String>, FbError> {
+    let mut st = tx.prepare(
+        "SELECT l.account_id FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+          JOIN ledger_journalline l ON l.journal_id=t.journal_id AND l.account_id IS NOT f.ledger_account_id
+          WHERE c.company_id=?1 AND t.status='ACCEPTED' GROUP BY l.account_id ORDER BY max(t.decided_at) DESC LIMIT 8",
+    )?;
+    Ok(st.query_map([c.to_db()], |r| r.get(0))?.collect::<Result<Vec<_>, _>>()?)
+}
+
+/// An in-place reply: the acted-on rows and the status area as fragments, and the form's next token.
+pub(super) fn review_fragments(app: &mut App, r: &Route, path: &str, p: Posted<'_>, post: ReviewPost) -> AppResult<Outcome> {
+    let c = arg_company(r)?;
+    let ctx = row_ctx(app, c)?;
+    let mut vm = base(app, r, path)?;
+    let editable = get(p, "review_layout") == Some("new");
+    put(&mut vm, "review_editable", editable);
+    let (rows, ()) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let mut rows = vec![];
+        for pk in &post.touched {
+            if let Some(item) = transaction_by_ordinal(tx, c, *pk)? {
+                rows.push((*pk, row_vm(tx, c, &ctx, &item, &post)?));
+            }
+        }
+        status_vm(tx, c, &mut vm, &post.results)?;
+        Ok((rows, ()))
+    })?;
+    let mut fragments = vec![json!({"id": "review-status", "html": draw(app, "bankfeeds/review_status.html", &vm)?})];
+    let mut seen = HashSet::new();
+    for (pk, row) in rows {
+        if !seen.insert(pk) {
+            continue;
+        }
+        put(&mut vm, "row", row);
+        fragments.push(json!({"id": format!("review-row-{pk}"), "html": draw(app, "bankfeeds/review_row.html", &vm)?}));
+    }
+    Ok(Outcome::Done { data: json!({"fragments": fragments, "next_token": app.tokens.mint(path), "touched": post.touched}) })
 }
 
 pub(super) fn review_page(
@@ -281,7 +617,6 @@ pub(super) fn review_page(
     post: Option<ReviewPost>,
 ) -> AppResult<(String, u16)> {
     let c = arg_company(r)?;
-    let owner = actor(app)?;
     let mut status = 200;
     let post = post.unwrap_or_default();
     if post.results.iter().any(|x| x["ok"] == false) {
@@ -301,8 +636,9 @@ pub(super) fn review_page(
     let status_choices: Vec<(String, String)> = [
         ("", "To review"),
         ("ACCEPTED", "Accepted"),
-        ("MATCHED", "Matched"),
+        ("MATCHED", "Matched or linked"),
         ("IGNORED", "Ignored"),
+        ("ATTENTION", "Pointing at a voided entry"),
         ("ALL", "Everything"),
     ]
     .iter()
@@ -353,18 +689,19 @@ pub(super) fn review_page(
     ];
     let filter_form = forms::bind(&bind_errors(fields, &e), &[]);
 
-    let rules = bf::active_rules(&mut app.open_mut()?.book, owner, c)?;
-    let categories = bf::rule_accounts(&mut app.open_mut()?.book, owner, c)?;
+    let ctx = row_ctx(app, c)?;
     let mut vm = base(app, r, path)?;
-    let (rows, page, unmapped, pending, vendor_names) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+    let (rows, page, vendor_names, recent) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
         let mut items: Vec<bf::Item> = vec![];
         if let Some(f) = &filter {
-            let mut st = tx.prepare("SELECT t.id,t.feed_account_id,t.status,t.description FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1 ORDER BY t.posted_on IS NOT NULL,t.posted_on DESC,t.ordinal DESC")?;
-            let ids = st.query_map([c.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?)))?.collect::<Result<Vec<_>, _>>()?;
+            let mut st = tx.prepare("SELECT t.id,t.feed_account_id,t.status,t.description,EXISTS(SELECT 1 FROM bankfeeds_link k WHERE k.item_ordinal=t.ordinal) FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1 ORDER BY t.posted_on IS NOT NULL,t.posted_on DESC,t.ordinal DESC")?;
+            let ids = st.query_map([c.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, bool>(4)?)))?.collect::<Result<Vec<_>, _>>()?;
             let wanted = if f.status.is_empty() { "NEW" } else { f.status.as_str() };
             let needle = bf::text::py_lower(py::py_strip(&f.q));
-            for (id, feed, st, description) in ids {
-                if wanted != "ALL" && st != wanted {
+            for (id, feed, st, description, linked) in ids {
+                // Rows linked to an entry already in the books show with the matched ones, not as ignored.
+                let shown = if linked { "MATCHED" } else { st.as_str() };
+                if wanted != "ALL" && wanted != "ATTENTION" && shown != wanted {
                     continue;
                 }
                 if f.account.as_ref().is_some_and(|a| *a != feed) {
@@ -373,7 +710,11 @@ pub(super) fn review_page(
                 if !f.q.is_empty() && !bf::text::py_lower(&description).contains(&needle) {
                     continue;
                 }
-                items.push(bf::item(tx, c, &id)?);
+                let item = bf::item(tx, c, &id)?;
+                if wanted == "ATTENTION" && bf::stale_decision(tx, &item)?.is_none() {
+                    continue;
+                }
+                items.push(item);
             }
         }
         // Paginator(PER_PAGE).get_page(request.GET.get('page')).
@@ -385,103 +726,16 @@ pub(super) fn review_page(
             None => 1,
         };
         let shown: Vec<bf::Item> = items.into_iter().skip((number - 1) * PER_PAGE).take(PER_PAGE).collect();
-        let banks = designated(tx, c)?;
-        let bank_accounts: Vec<fb_core::model::Account> = store::accounts(tx, c)?.into_iter().filter(|a| banks.contains(&a.id.to_db())).collect();
-        let currency: String = tx.query_row("SELECT currency FROM ledger_company WHERE id=?1", [c.to_db()], |r| r.get(0))?;
         let mut rows = vec![];
-        for item in shown {
-            let feed = bf::feed(tx, &item.feed_account_id)?.ok_or_else(|| FbError::validation("Choose a downloaded transaction of this company."))?;
-            let ledger = feed.ledger_account_id.as_deref().and_then(AccountId::parse).map(|id| store::account(tx, id)).transpose()?.flatten();
-            let mut iv = json!({"pk": item.ordinal, "status": item.status, "status_display": status_display(&item.status), "pending": item.pending,
-                "date": item.date().unwrap_or(""), "description": item.description, "amount": cents(item.amount), "money_in": item.money_in(),
-                "reference": item.reference, "reference_url": reference_url(c, &item.reference_url), "accepted_as": item.accepted_as,
-                "accepted_as_display": kind_display(&item.accepted_as),
-                "feed_account": {"name": feed.name, "ledger_account": ledger.as_ref().map(|a| json!({"code": a.code, "name": a.name}))}});
-            if item.status != "NEW" {
-                let reversed = match &item.journal_id {
-                    Some(j) => tx.query_row("SELECT EXISTS(SELECT 1 FROM ledger_journal WHERE reversal_of_id=?1)", [j], |r| r.get::<_, bool>(0))?,
-                    None => false,
-                };
-                rows.push(json!({"item": iv, "suggestion": null, "reversed": reversed}));
-                continue;
-            }
-            let s = bf::suggest_for(tx, c, &item, Some(&rules))?;
-            let is_designated = feed.ledger_account_id.as_ref().is_some_and(|a| banks.contains(a));
-            let other: Vec<&fb_core::model::Account> = bank_accounts.iter().filter(|b| Some(b.id.to_db()) != feed.ledger_account_id && b.active && b.postable).collect();
-            let mut options: Vec<(&str, &str)> = vec![];
-            if !s.matches.is_empty() {
-                options.push(("MATCH", "Match existing entry"));
-            }
-            if !s.receipts.is_empty() {
-                options.push(("DEPOSIT", "Deposit receipt"));
-            }
-            if item.money_in() {
-                options.push(("JOURNAL", if is_designated { "Deposit (journal)" } else { "Payment (journal)" }));
-            } else {
-                if is_designated {
-                    options.push(("CHECK", "Check or debit"));
-                }
-                options.push(("JOURNAL", if !is_designated { "Charge (journal)" } else { "Journal entry" }));
-            }
-            if is_designated && !other.is_empty() {
-                options.push(("TRANSFER", "Transfer"));
-            }
-            let default_kind = if !item.money_in() && is_designated { "CHECK" } else { "JOURNAL" };
-            let preferred = if s.kind.is_empty() { default_kind } else { s.kind.as_str() };
-            options.sort_by_key(|o| o.0 != preferred);
-            let posted = post.posted.get(&item.ordinal);
-            let kind = posted.and_then(|x| x.kind.clone()).unwrap_or_else(|| options.first().map(|o| o.0.to_owned()).unwrap_or_default());
-            let account_id = posted.and_then(|x| x.account_id.clone()).or_else(|| s.account_id.clone());
-            let payee = posted.map(|x| x.payee.clone()).unwrap_or_else(|| s.payee_name.clone());
-            let number = posted.map(|x| x.number.clone()).unwrap_or_else(|| if item.money_in() { String::new() } else { bf::default_check_number(&item) });
-            // Keep unavailable submitted choices visible instead of silently selecting a new value.
-            if !options.iter().any(|(value, _)| *value == kind) {
-                options.push((&kind, "Unavailable choice — choose again"));
-            }
-            let category_valid = account_id.as_ref().is_none_or(|id| id.is_empty() || categories.iter().any(|a| a.id.to_db() == *id && Some(id) != feed.ledger_account_id.as_ref()));
-            let bulk_block = if !feed.active || ledger.as_ref().is_none_or(|a| !a.active || !a.postable) {
-                "Map to an active posting account first"
-            } else if item.pending { "Still pending at the bank" }
-            else if item.date().is_none() { "Missing transaction date" }
-            else if item.amount == 0 { "Zero amount cannot be accepted" }
-            else if feed.currency.to_uppercase() != currency { "Account currency differs from the company" }
-            else { "" };
-            iv["pk"] = json!(item.ordinal);
-            rows.push(json!({
-                "item": iv,
-                "suggestion": {
-                    "matches": s.matches.iter().map(|m| json!({"label": m.label, "date": m.date, "line": {"pk": m.line_id}})).collect::<Vec<_>>(),
-                    "receipts": s.receipts.iter().map(|x| json!({"label": x.label, "date": x.date, "receipt": {"pk": x.receipt_id}})).collect::<Vec<_>>(),
-                    "rule": s.rule.as_ref().map(|x| json!({"name": x.name, "pk": x.id})),
-                },
-                "options": options,
-                "kind": kind,
-                "category_valid": category_valid,
-                "draft_retained": if posted.is_some() { "true" } else { "false" },
-                "selected": posted.is_some_and(|x| x.selected),
-                "other_bank_valid": posted.is_none_or(|x| x.other_bank.is_empty() || other.iter().any(|a| a.id.to_db() == x.other_bank)),
-                "line_valid": posted.is_none_or(|x| x.line.is_empty() || s.matches.iter().any(|m| m.line_id == x.line)),
-                "receipt_valid": posted.is_none_or(|x| x.receipt.is_empty() || s.receipts.iter().any(|r| r.receipt_id == x.receipt)),
-                "other_bank": posted.map(|x| x.other_bank.clone()).unwrap_or_default(),
-                "line": posted.map(|x| x.line.clone()).unwrap_or_else(|| s.matches.first().map(|m| m.line_id.clone()).unwrap_or_default()),
-                "receipt": posted.map(|x| x.receipt.clone()).unwrap_or_else(|| s.receipts.first().map(|r| r.receipt_id.clone()).unwrap_or_default()),
-                "bulk_block": bulk_block,
-                "matching_rules": rules.iter().filter(|rule| bf::rule_for(std::slice::from_ref(*rule), &item).is_some()).map(|r| r.id.clone()).collect::<Vec<_>>().join(" "),
-                "account_id": account_id,
-                "payee": payee,
-                "number": number,
-                "categories": categories.iter().filter(|a| Some(a.id.to_db()) != feed.ledger_account_id).map(|a| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name})).collect::<Vec<_>>(),
-                "other_banks": other.iter().map(|a| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name})).collect::<Vec<_>>(),
-                "error": posted.map(|x| x.error.clone()),
-            }));
+        for item in &shown {
+            rows.push(row_vm(tx, c, &ctx, item, &post)?);
         }
         let page = json!({"number": number, "has_previous": number > 1, "has_next": number < pages, "previous_page_number": number.saturating_sub(1),
             "next_page_number": number + 1, "paginator": {"num_pages": pages, "count": count}});
-        let unmapped: i64 = tx.query_row("SELECT count(DISTINCT f.id) FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id JOIN bankfeeds_transaction t ON t.feed_account_id=f.id WHERE c.company_id=?1 AND f.active=1 AND f.ledger_account_id IS NULL AND t.status='NEW'", [c.to_db()], |r| r.get(0))?;
-        let (_, pending, _) = overview(tx, c)?;
+        status_vm(tx, c, &mut vm, &post.results)?;
         let mut st = tx.prepare("SELECT display_name FROM directory_vendor WHERE company_id=?1 AND active=1 ORDER BY display_name COLLATE fb_text,id LIMIT 500")?;
         let vendor_names = st.query_map([c.to_db()], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
-        Ok((rows, page, unmapped, pending, vendor_names))
+        Ok((rows, page, vendor_names, recent_categories(tx, c)?))
     })?;
     let query: Vec<(String, String)> = params
         .iter()
@@ -498,12 +752,12 @@ pub(super) fn review_page(
     put(
         &mut vm,
         "bulk_categories",
-        categories
+        ctx.categories
             .iter()
             .map(|a| json!({"pk": a.id.to_db(), "label": account_label(a)}))
             .collect::<Vec<_>>(),
     );
-    put(&mut vm, "bulk_rules", rules.iter().map(|r| json!({"pk": r.id, "name": r.name, "account": r.account_id, "payee": r.payee_name})).collect::<Vec<_>>());
+    put(&mut vm, "bulk_rules", ctx.rules.iter().map(|r| json!({"pk": r.id, "name": r.name, "account": r.account_id, "payee": r.payee_name})).collect::<Vec<_>>());
     put(&mut vm, "filter_form", filter_form);
     put(&mut vm, "page", page);
     put(
@@ -512,7 +766,7 @@ pub(super) fn review_page(
         rows.iter().any(|r| r["item"]["status"] == "NEW"),
     );
     put(&mut vm, "rows", rows);
-    put(&mut vm, "results", post.results);
+    put(&mut vm, "recent_categories", recent.join(" "));
     put(&mut vm, "query_string", urlencode(&query));
     put(&mut vm, "vendor_names", vendor_names);
     put(
@@ -524,8 +778,6 @@ pub(super) fn review_page(
             "NEW".into()
         },
     );
-    put(&mut vm, "unmapped", unmapped);
-    put(&mut vm, "pending", pending);
     put(&mut vm, "full_path", full_path);
     Ok((draw(app, "bankfeeds/review.html", &vm)?, status))
 }

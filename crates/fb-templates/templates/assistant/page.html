@@ -1,6 +1,6 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('assistant/assistant.css') }}">{% endblock %}
 {% block content %}
-<div class="heading"><div><p class="eyebrow">{{ company.name }} · Company settings</p><h1>AI assistant</h1><p>Connect your own OpenAI account. The books stay here: the only AI feature, reading a receipt into a draft bill, sends one attachment at a time and only when a member asks.</p></div></div>
+<div class="heading"><div><h1>AI assistant</h1><p>Connect your own OpenAI account. The books stay here: the only AI feature, reading a receipt into a draft bill, sends one attachment at a time and only when a member asks.</p></div></div>
 {% for message in messages %}<p class="{% if message.level_tag == 'error' or message.level_tag == 'warning' %}errorlist{% else %}notice{% endif %}" role="status">{{ message.text }}</p>{% endfor %}
 {% if not secrets_available %}<p class="errorlist" role="alert">This server has no <code>FB_SECRETS_KEY</code>, so it cannot store an AI connection. The administrator sets one in <code>.env</code> (see <code>docs/deploy/security.md</code>).</p>{% endif %}
 

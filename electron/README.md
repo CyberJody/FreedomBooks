@@ -38,11 +38,11 @@ Regenerate the fourteen D2 templates with:
 
 The extended smoke exercises real account/setup forms, journal Add line, invalid input retention,
 editing/posting/reversal, CSV save, the other D2 screens, and D1's hardened-window/invoice checks.
-Set `FB_SMOKE_SHOTS` to the project's `staging/d2` directory. It also captures the shared print-note
+Set `FB_SMOKE_SHOTS` to a new directory for the screenshots. It also captures the shared print-note
 include from `target/screendiff/rust/print-toolbar-note.html`, so run the screen diff first.
 
 If Xvfb is absent, extract Debian's `xvfb` package into this worktree's ignored `electron/.tooling/xvfb`
 and prepend its `usr/bin` directory to PATH. No sudo or machine-wide install is needed.
 
-The known existing core refusal mismatch is documented in `../D2-CORE-GAPS.md`; the screen gate keeps
-that case visible instead of changing the core or suppressing its missing sentence.
+The screen gate keeps the known existing core refusal mismatch visible instead of changing the core
+or suppressing its missing sentence.

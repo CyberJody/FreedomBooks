@@ -383,12 +383,23 @@ pub(crate) fn save_account_tx(tx: &Writer<'_>, actor: UserId, company_id: Compan
         active: draft.active,
         postable: draft.postable,
     };
+    let bank = |a: &Account| a.active && a.postable && a.kind == Kind::Asset && a.detail_type == DetailType::Bank;
+    let usable_asset = account.active && account.postable && account.kind == Kind::Asset;
+    if let Some(old) = existing.as_ref().filter(|a| a.detail_type == DetailType::Bank && !usable_asset) {
+        // A Bank-type account made inactive, unpostable or not an asset stops being a bank account
+        // before the edit, so the edit is allowed. Retyped to another asset type it stays listed,
+        // as an account chosen in Accounting setup.
+        crate::documents::sync_bank_accounts_tx(tx, actor, company_id, Some(old.id))?;
+    }
     if existing.is_some() {
         store::update_account(tx, &account)?;
     } else {
         store::insert_account(tx, &account)?;
     }
     audit(tx, &user, company_id, "account.saved", format!("account:{}", account.id), json!({"before": before, "after": account_fields(&draft)}))?;
+    if bank(&account) {
+        crate::documents::sync_bank_accounts_tx(tx, actor, company_id, None)?;
+    }
     Ok(account)
 }
 

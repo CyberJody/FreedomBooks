@@ -48,8 +48,8 @@ async function live({ app, page, company, pass }) {
   const footer = await page.locator('footer').textContent();
   for (const word of ['Bank feeds', 'AI assistant']) assert.ok(!nav.includes(word) && !footer.includes(word), word);
   const menu = await app.evaluate(({ Menu }) => JSON.stringify(Menu.getApplicationMenu().items.map(function walk(i) { return { l: i.label, s: (i.submenu ? i.submenu.items : []).map(walk) }; })));
-  assert.doesNotMatch(menu, /bank|feed|chatgpt|assistant|openai|receipt/i, 'application menu');
-  pass('plugin pages answer 404; nav, footer and menus name no plugin');
+  assert.doesNotMatch(menu, /bank feeds|chatgpt|openai|upload receipt/i, 'application menu');
+  pass('plugin pages answer 404; nav, footer and menus name no network plugin');
 
   const log = await app.evaluate(({ app: a }) => {
     const require = process.getBuiltinModule('module').createRequire(a.getAppPath() + '/package.json');

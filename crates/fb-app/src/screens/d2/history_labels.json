@@ -87,7 +87,15 @@
     "credit_refund.recorded": "Refund recorded",
     "credit_refund.voided": "Refund voided",
     "attachment.added": "Attachment added",
-    "attachment.removed": "Attachment removed"
+    "attachment.removed": "Attachment removed",
+    "recurring_bill.created": "Recurring bill template created",
+    "recurring_bill.updated": "Recurring bill template updated",
+    "recurring_bill.pause": "Recurring bill paused",
+    "recurring_bill.skipped": "Recurring bill period skipped",
+    "recurring_bill.resume": "Recurring bill resumed",
+    "recurring_bill.skip_missed": "Recurring bill missed dates skipped; still paused",
+    "recurring_bill.delete": "Recurring bill template deleted",
+    "recurring_bill.generated": "Recurring bill generated"
   },
   "DOCUMENT_TYPES": [
     [
@@ -189,6 +197,11 @@
       "document",
       "Document numbers",
       "documentidentity:"
+    ],
+    [
+      "recurring_bill",
+      "Recurring bill templates",
+      "recurring_bill:"
     ]
   ],
   "TYPE_NOUN": {
@@ -210,7 +223,8 @@
     "company": "Company",
     "accountingsetup": "Accounting setup",
     "documentidentity": "Document",
-    "reconciliation": "Reconciliation"
+    "reconciliation": "Reconciliation",
+    "recurring_bill": "Recurring bill template"
   },
   "NAMED_TARGETS": {
     "ai:openai": "AI assistant (OpenAI)",

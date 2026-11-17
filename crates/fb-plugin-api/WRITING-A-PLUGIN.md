@@ -43,7 +43,7 @@ waiting and partially received callbacks check cancellation promptly and close.
 Providers recheck before token exchange and credential save. Keep provider
 mutex/generation protections until host coordination is integrated and verified.
 
-Wave 4 must hold real unlock leases and serialize lock/Forget against service
+Host integration must hold real unlock leases and serialize lock/Forget against service
 commits. A pre-call atomic flag cannot eliminate a cancellation-versus-save race;
 CoreBridge and encrypted stores must recheck under their transaction/lock. This
 framework is not the book-lock implementation. Audit may record cancellation.
@@ -56,7 +56,7 @@ zeroize owned memory, not every transient library copy. Return fixed errors, nev
 provider bodies, URLs, email content, or transport diagnostics.
 
 `EncryptedCredential` and `ConnectionKeyWrapper` define envelopes, not encryption.
-Wave 4 supplies random per-connection keys, authenticated scope binding and
+Host integration supplies random per-connection keys, authenticated scope binding and
 `plugin-credentials` HKDF labeling. Forget wipes blob and wrapped key.
 
 Optional `Plugin::connection_lifecycle()` exposes object-safe `ConnectionLifecycle`
@@ -139,7 +139,7 @@ None is a valid provider id. Never auto-retry; inspect provider history when unc
 document ref, receipt, scoped actor/time/counts and closed event codes. Use
 `record_document_send_audit`; an unsupported sink fails closed rather than dropping
 metadata. Validate opaque provider IDs; no content, addresses or tokens. Testkit
-retains typed events and bridge receipts. Wave 4 owns durable pre-network attempts,
+retains typed events and bridge receipts. Host integration owns durable pre-network attempts,
 crash recovery and atomic history/audit. Agree on single recording ownership when
 wiring: Gmail currently records via bridge; never duplicate its event blindly.
 
@@ -147,6 +147,5 @@ wiring: Gmail currently records via bridge; never duplicate its event blindly.
 
 Use synthetic servers, memory credentials/audit, fake bridge and fixed clock only.
 Memory storage is not encrypted persistence. Run both framework package tests and
-clippy with `--all-targets -- -D warnings`. See `MIGRATION-W1-FIX1.md` for exact
-provider changes and deferred core work. No real accounts, publishing, or license
+clippy with `--all-targets -- -D warnings`. No real accounts, publishing, or license
 choice belongs to framework tests.

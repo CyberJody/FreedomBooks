@@ -74,7 +74,7 @@ crate. Test endpoint overrides exist only in unit-test compilation.
 - No automatic send retry, including timeout, 429, 5xx, authentication failure or
   audit failure. A request can have reached Microsoft before an error became
   visible. Check Sent Items before explicitly trying again. These outcomes need
-  careful UI wording in wave 4; see `FRAMEWORK-REQUESTS.md`.
+  careful UI wording during host integration.
 - Conservative simple-send limits: 2,800,000 aggregate raw PDF/attachment bytes,
   3,900,000 serialized JSON bytes, 64 KiB plain-text body, 100 recipients, 20 extra
   attachments, 998-byte subject, 255-byte extra filenames. All attachments use
@@ -90,7 +90,7 @@ crate. Test endpoint overrides exist only in unit-test compilation.
   buffering them. A request cap of `MAX_MESSAGE_BYTES` and a finite timeout (the
   framework default is 30 seconds) are appropriate for this plugin.
 
-## Host wiring (wave 4)
+## Host wiring
 
 1. Construct one `M365Sender` per configured client ID, register its static
    manifest and `Arc<dyn DocumentSender>` in `PluginRegistration`, and obtain an
@@ -128,15 +128,15 @@ no plugin-completion event; the host owns UI cancellation bookkeeping. Byte coun
 are attempted request-body bytes and received response-body bytes (not proof of
 wire delivery and not headers); refresh traffic is included in the send event.
 
-## Jody's later Entra setup: evidence and open checks
+## Later Entra setup: evidence and open checks
 
-No external network calls or real Microsoft sign-in were allowed in this job.
+Development used fakes only: no external network calls or real Microsoft sign-in.
 Consequently, fake-test verification below is NOT verification of current Entra
 portal policy. The following registration/consent steps are marked honestly:
 
 - **Verified locally:** code uses `common`, only `Mail.Send offline_access`, public
   client PKCE, and no client secret/User.Read; fake token/Graph contracts pass.
-- **Likely (Microsoft documented model; not re-fetched here):** Jody needs access
+- **Likely (Microsoft documented model; not re-fetched here):** the maintainer needs access
   to a Microsoft Entra tenant and permission to register applications. Register a
   new app with supported accounts "Accounts in any organizational directory and
   personal Microsoft accounts". Copy its application/client ID into this plugin's
@@ -147,7 +147,7 @@ portal policy. The following registration/consent steps are marked honestly:
   A user with a personal Outlook.com mailbox or a work/school Exchange Online
   mailbox consents to sending on their behalf. A Microsoft account alone does not
   guarantee that it has a usable mailbox.
-- **Unknown / explicit wave-4 gate:** confirm the exact current Entra manifest or
+- **Unknown / check before live use:** confirm the exact current Entra manifest or
   portal procedure for registering `http://127.0.0.1/callback` for this public-client
   account audience, and whether its redirect matching accepts the helper's dynamic
   port. Some Microsoft guidance/UI examples use `http://localhost` and differences
@@ -160,7 +160,7 @@ portal policy. The following registration/consent steps are marked honestly:
   tenant's user-consent, publisher-trust or conditional-access rules may require
   tenant-admin consent or block it. Entra "Allow public client flows" guidance
   should be checked for the registered native platform; do not enable unrelated
-  password/device flows just by assumption. **Unknown:** Jody's and each customer's
+  password/device flows just by assumption. **Unknown:** the maintainer's and each customer's
   actual tenant policies, eligible accounts and admin access.
 - **Likely:** configure app branding, publisher domain, homepage/privacy/terms as
   required for consent. For a verified-publisher badge, complete Microsoft's
@@ -169,12 +169,12 @@ portal policy. The following registration/consent steps are marked honestly:
   meet Microsoft's role/domain/MFA prerequisites. Publisher verification is not
   mail permission or a guarantee of tenant consent. Unverified apps may be usable
   for development but blocked by customer consent policies; do not promise public
-  availability without it. **Unknown:** current exact prerequisites and Jody's
+  availability without it. **Unknown:** current exact prerequisites and the maintainer's
   eligibility/verification status. No registration, consent, domain verification,
   Partner Center operation or publication was performed here.
 
-Documentation entry points for Jody/lead to verify before wave 4 (not fetched in
-this fake-only job):
+Documentation entry points for the maintainer to verify before live use (not yet
+re-checked):
 
 - https://learn.microsoft.com/en-us/graph/api/user-sendmail?view=graph-rest-1.0
 - https://learn.microsoft.com/en-us/graph/permissions-reference#mail-send

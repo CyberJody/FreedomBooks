@@ -1,6 +1,6 @@
 //! fb-ids: UUIDv7 row ids, one Rust type per entity.
 //!
-//! Every row id is a UUIDv7 from day one (Jody 10/30). Ids are stored as lowercase hyphenated TEXT,
+//! Every row id is a UUIDv7 from day one (owner decision, 10/30). Ids are stored as lowercase hyphenated TEXT,
 //! whose byte order equals the UUID's numeric order, so `ORDER BY id` is creation order: the
 //! generator below is monotonic within a process (a later id always sorts after an earlier one),
 //! which is what the Python app's serial primary keys gave `order_by("pk")` / `order_by("-pk")`.

@@ -50,7 +50,7 @@ One problem per report, please. Short and specific is better than long.
 
 ## Running the tests
 
-If you build from source, running the tests is a good way to check your setup or to confirm a bug. See the [README](README.md#build-from-source) for what to install.
+If you build from source, running the tests is a good way to check your setup or to confirm a bug. See the [README](README.md#build-and-run-on-linux) for what to install.
 
 Rust core, from the repository root:
 
@@ -72,12 +72,12 @@ The end-to-end smoke test drives a real window with Playwright. On Linux without
 
     xvfb-run -a -s '-screen 0 1600x1200x24 -nolisten tcp' npm run smoke
 
-`scripts/gate.sh` is the full check the project runs before merging. Its last step, the screen diff, compares screens with the v1 app and needs PostgreSQL and a copy of the v1 reference app, so most people will not be able to run that part. The commands above cover everything else.
+`scripts/gate.sh` is the full check the project runs before a release.
 
 The gate has two tiers:
 
-- `scripts/gate.sh --quick` is for working on a change. It runs clippy, the tests of the crates you changed since your branch left `main` (set `FB_GATE_BASE` to compare with another branch) plus every crate that depends on them, and the check that `fb-core` stays free of Node and network crates. It skips the JSON feature run and the screen diff. Changes outside the crates (scripts, `electron/`, docs) test no crate; a change to the root `Cargo.toml`, `Cargo.lock` or another workspace-wide build file tests every crate. It prints which crates it tests and why. Its own tests: `python3 scripts/tests/test_gate_quick.py`.
-- `scripts/gate.sh` with no flag is the full gate. Run it once before a merge.
+- `scripts/gate.sh --quick` is for working on a change. It runs clippy, the tests of the crates you changed since your branch left `main` (set `FB_GATE_BASE` to compare with another branch) plus every crate that depends on them, and the check that `fb-core` stays free of Node and network crates. It skips the JSON feature run. Changes under `docs/`, `electron/` and `scripts/tests/`, Markdown files and the gate's own two scripts test no crate; any other file outside a crate, including the root `Cargo.toml` and `Cargo.lock`, tests every crate. It prints which crates it tests and why. Its own tests: `python3 scripts/tests/test_gate_quick.py`.
+- `scripts/gate.sh` with no flag is the full gate. It runs at the release boundary.
 
 If a test fails on a clean checkout, that is a bug worth reporting. Include the command you ran, the failing test's name and its output.
 

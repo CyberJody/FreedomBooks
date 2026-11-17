@@ -27,7 +27,7 @@ Only you and the maintainers can see the report. You need a free GitHub account 
 - What the problem is and what an attacker could do with it.
 - The steps to reproduce it, as short as you can make them.
 - The FreedomBooks version and your operating system.
-- Whether it needs access to the computer, the company file, the app lock passphrase, or a plugin account (for example a bank feed or ChatGPT connection).
+- Whether it needs access to the computer, the company file, the app lock passphrase, a plugin account (for example a bank feed or ChatGPT connection), or a computer on the same network or tailnet as a host that is sharing its books.
 - Any proof-of-concept code, logs or screenshots.
 
 Please use a test company file with made-up data. Never send real books, passwords, keys, bank credentials or tokens, even in a private report.

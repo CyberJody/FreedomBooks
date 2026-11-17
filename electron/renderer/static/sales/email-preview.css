@@ -1,0 +1,39 @@
+/* Preview chrome stays outside the email. No ledger table styles enter the message. */
+body { margin: 0; background: #f2f4f6; color: #222; font: 15px/1.5 Arial, Helvetica, sans-serif }
+.preview-header { padding: 20px 24px; background: #fff; border-bottom: 1px solid #d8dee5; overflow-wrap: anywhere }
+.preview-header h1 { margin: 0 0 12px; font-size: 24px }
+.preview-header p { margin: 8px 0 }
+.preview-header a { color: #286a9e }
+.preview-header dl { margin: 12px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px }
+.preview-header dt { font-weight: bold }
+.preview-header dd { margin: 0 }
+
+/* Static counterparts of the inline styles required by email clients. */
+.email-style-1{background:#f2f4f6}
+.email-style-2{padding:24px 10px}
+.email-style-3{max-width:600px;background:#ffffff;border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#222}
+.email-style-4{padding:28px 24px 6px}
+.email-style-5{display:block;max-height:96px;object-fit:contain;border:0}
+.email-style-6{padding:0 24px 20px;font-size:18px;font-weight:700;color:#333}
+.email-style-7{padding:0 24px 20px}
+.email-style-8{padding:0 24px 22px}
+.email-style-9{background:#eef3f8;border:1px solid #d5e1ec;border-radius:8px}
+.email-style-10{padding:20px}
+.email-style-11{font-size:12px;letter-spacing:.08em;color:#555;text-transform:uppercase}
+.email-style-12{font-size:13px;color:#555;margin-top:10px}
+.email-style-13{font-size:38px;font-weight:700;color:#111;line-height:1.15}
+.email-style-14{font-size:14px;color:#333}
+.email-style-15{font-size:24px;font-weight:700;color:#111}
+.email-style-16{font-size:13px;color:#666;margin-top:10px}
+.email-style-17{padding:0 24px 10px;font-size:18px;font-weight:700;color:#111}
+.email-style-18{padding:0 24px 14px}
+.email-style-19{border:1px solid #d8dee5;border-radius:8px}
+.email-style-20{padding:18px}
+.email-style-21{font-size:22px;font-weight:bold;color:#6d1ed4}
+.email-style-22{font-size:17px;font-weight:700;color:#111}
+.email-style-23{margin-bottom:0}
+.email-style-24{background:#3686c9;border-radius:6px}
+.email-style-25{display:inline-block;padding:12px 20px;color:#ffffff;text-decoration:none;font-weight:bold}
+.email-style-26{padding:0 24px 24px}
+.email-style-27{padding:16px 24px;border-top:1px solid #e4e8ed;color:#666;font-size:12px}
+.email-badge-cell{padding:0 14px 8px 0}.email-payment-disabled{display:inline-block;padding:12px 24px;color:#fff;font-weight:bold}.email-payment-note{font-size:12px;color:#87551c}.email-payment-marks{margin-top:16px}.email-payment-marks td{padding:0 6px 0 0}.email-payment-marks img{display:block;height:24px;width:auto;border:0}

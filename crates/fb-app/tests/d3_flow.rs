@@ -288,3 +288,101 @@ fn company_list_follows_creation_order_even_when_a_later_name_sorts_first() {
     assert_eq!(rows[0]["id"], first);
     assert_eq!(rows[1]["id"], data["id"]);
 }
+
+#[test]
+fn guided_sales_tax_is_atomic_scoped_and_preserves_existing_work() {
+    let (mut app,c)=fixture();
+    let company=c.parse().unwrap();
+    let o=app.open_mut().unwrap();
+    let before=fb_db::test_support::snapshot(o.book.connection()).unwrap();
+    let input=json!({"expected_revision":0,"charge_tax":true,"name":"Example state and local","rate":"7","authority_name":"Example tax authority"});
+    let mut invalid=input.clone();invalid["rate"]=json!("101");
+    assert!(fb_core::salestax::configure(&mut o.book,o.owner,company,&invalid).is_err());
+    assert_eq!(fb_db::test_support::snapshot(o.book.connection()).unwrap(),before);
+    let settings=fb_core::salestax::configure(&mut o.book,o.owner,company,&input).unwrap();
+    assert_eq!(settings["charge_tax"],true);
+    assert_eq!(settings["owed_basis"],"ACCRUAL");assert_eq!(settings["filing_frequency"],"MONTHLY");
+    let after=fb_db::test_support::snapshot(o.book.connection()).unwrap();
+    assert!(fb_core::salestax::configure(&mut o.book,o.owner,company,&input).is_err());
+    assert_eq!(fb_db::test_support::snapshot(o.book.connection()).unwrap(),after);
+    let (rates,vendors)=o.book.read(|tx|Ok::<_,fb_core::FbError>((fb_core::salestax::list(tx,company)?,directory::list(tx,company,Model::Vendor)?))).unwrap();
+    assert_eq!(rates.len(),1);assert_eq!(vendors.len(),1);assert_eq!(rates[0]["rate"],"7.0000");
+    // Same authority name uses the existing payee rather than creating duplicates.
+    let second=fb_core::salestax::configure(&mut o.book,o.owner,company,&json!({"expected_revision":1,"charge_tax":true,"name":"Another local rate","rate":"8.25","authority_name":"EXAMPLE TAX AUTHORITY"})).unwrap();
+    assert_eq!(second["revision"],2);
+    assert_eq!(o.book.read(|tx|directory::list(tx,company,Model::Vendor)).unwrap().len(),1);
+    // A new rate followed by invalid settings must roll back the payee, rate and audit.
+    let mut bad=input.clone();bad["expected_revision"]=json!(2);bad["name"]=json!("Another local rate");bad["authority_name"]=json!("New uncommitted authority");
+    let snapshot=fb_db::test_support::snapshot(o.book.connection()).unwrap();
+    assert!(fb_core::salestax::configure(&mut o.book,o.owner,company,&bad).is_err());
+    assert_eq!(fb_db::test_support::snapshot(o.book.connection()).unwrap(),snapshot);
+    let journals:i64=o.book.read(|tx|tx.query_row("SELECT count(*) FROM ledger_journal",[],|r|r.get(0))).unwrap();assert_eq!(journals,0);
+}
+
+#[test]
+fn first_company_home_asks_sales_tax_and_guided_form_sets_the_default() {
+    let (mut app,c)=fixture();
+    let home=screens::render(&mut app,&format!("/c/{c}/home/")).unwrap().html;
+    assert!(home.contains("Do you collect sales tax?"));
+    let start=screens::render(&mut app,&format!("/c/{c}/setup/start/")).unwrap().html;
+    assert!(start.contains("Do you collect sales tax?"));
+    let path=format!("/c/{c}/sales-tax/setup/");
+    let invalid=post(&mut app,&path,&[("expected_revision","0"),("charge_tax","yes"),("name","Example tax"),("rate","7"),("authority_name","")]);
+    let Outcome::Invalid{html}=invalid else {panic!("missing authority should stay on form")};assert!(html.contains("Enter a tax authority name"));
+    let location=saved(post(&mut app,&path,&[("expected_revision","0"),("charge_tax","yes"),("name","Example tax"),("rate","7"),("authority_name","Example authority")]));
+    assert_eq!(location,format!("/c/{c}/setup/start/"));
+    let invoice=screens::render(&mut app,&format!("/c/{c}/invoices/new/")).unwrap().html;
+    assert!(invoice.contains("Example tax · 7%"));assert!(!invoice.contains("tax is turned off"));
+    let home=screens::render(&mut app,&format!("/c/{c}/home/")).unwrap().html;assert!(!home.contains("Do you collect sales tax?"));
+}
+
+#[test]
+fn explicit_no_tax_requires_no_authority_and_wrong_company_rate_rolls_back() {
+    let (mut app,c)=fixture();let company=c.parse().unwrap();
+    let location=saved(post(&mut app,&format!("/c/{c}/sales-tax/setup/"),&[("expected_revision","0"),("charge_tax","no")]));assert!(location.ends_with("/setup/start/"));
+    let o=app.open_mut().unwrap();
+    assert!(o.book.read(|tx|directory::list(tx,company,Model::Vendor)).unwrap().is_empty());
+    let other=fb_core::services::create_company(&mut o.book,o.owner,"Other tax company","USD",false).unwrap();
+    let foreign=fb_core::salestax::save_rate(&mut o.book,o.owner,other.id,&json!({"name":"Foreign rate","description":"Sales tax","rate":"8","new_agency_name":"Other authority"})).unwrap();
+    let snapshot=fb_db::test_support::snapshot(o.book.connection()).unwrap();
+    assert!(fb_core::salestax::configure(&mut o.book,o.owner,company,&json!({"expected_revision":1,"charge_tax":true,"default_item_id":foreign["id"]})).is_err());
+    assert_eq!(fb_db::test_support::snapshot(o.book.connection()).unwrap(),snapshot);
+}
+
+#[test]
+fn guided_tax_failure_after_rate_creation_rolls_back_every_write() {
+    let (mut app,c)=fixture();let company=c.parse().unwrap();let o=app.open_mut().unwrap();
+    fb_core::salestax::save_settings(&mut o.book,o.owner,company,&json!({"expected_revision":0,"charge_tax":false,"default_item_id":null,"owed_basis":"ACCRUAL","filing_frequency":"MONTHLY"})).unwrap();
+    // Exhausted settings revisions fail after the new rate has been prepared.
+    o.book.write(|tx|tx.execute("UPDATE salestax_salestaxsettings SET revision=?1 WHERE company_id=?2",fb_db::rusqlite::params![i64::MAX,c])).unwrap();
+    let before=fb_db::test_support::snapshot(o.book.connection()).unwrap();
+    assert!(fb_core::salestax::configure(&mut o.book,o.owner,company,&json!({"expected_revision":i64::MAX,"charge_tax":true,"name":"Example tax","rate":"7","authority_name":"Example authority"})).is_err());
+    assert_eq!(fb_db::test_support::snapshot(o.book.connection()).unwrap(),before);
+    assert!(o.book.read(|tx|directory::list(tx,company,Model::Vendor)).unwrap().is_empty());
+    assert!(o.book.read(|tx|fb_core::salestax::list(tx,company)).unwrap().is_empty());
+}
+
+#[test]
+fn item_form_puts_type_first_and_asks_for_an_income_account_only_for_items_you_sell() {
+    let (mut app, c) = fixture();
+    let o = app.open_mut().unwrap();
+    let co = c.parse().unwrap();
+    let income = fb_core::services::save_account(&mut o.book, o.owner, co, fb_core::services::AccountInput::new("4000", "Sales").detail("INCOME")).unwrap().id.to_db();
+    let expense = fb_core::services::save_account(&mut o.book, o.owner, co, fb_core::services::AccountInput::new("5000", "Supplies").detail("EXPENSE")).unwrap().id.to_db();
+    let path = format!("/c/{c}/lists/items/new/");
+    let html = screens::render(&mut app, &path).unwrap().html;
+    let kind = html.find("name=\"kind\"").unwrap();
+    assert!(kind < html.find("name=\"code\"").unwrap() && kind < html.find("name=\"sale_rate\"").unwrap());
+    for gone in ["99999999999999", "Rounded half-up", "nonnegative", "Defaults do not post", "No balances or transactions are changed"] {
+        assert!(!html.contains(gone), "{gone}");
+    }
+    // A priced item without an income account is refused, and nothing is written.
+    let Outcome::Invalid { html } = post(&mut app, &path, &[("kind", "SERVICE"), ("code", "MOW"), ("sale_rate", "45.00"), ("income_account", ""), ("expense_account", "")]) else { panic!() };
+    assert!(html.contains("Choose the income account this item&#x27;s sales are recorded in.") || html.contains("Choose the income account this item's sales are recorded in."), "{html}");
+    assert!(html.contains("value=\"MOW\""));
+    let items = app.open_mut().unwrap().book.read(|tx| directory::list(tx, co, Model::Item)).unwrap();
+    assert!(items.is_empty());
+    // A sold item with its income account saves; so does an item you only buy.
+    saved(post(&mut app, &path, &[("kind", "SERVICE"), ("code", "MOW"), ("sale_rate", "45.00"), ("income_account", &income), ("expense_account", "")]));
+    saved(post(&mut app, &path, &[("kind", "NONSTOCK"), ("code", "GLOVES"), ("sale_rate", "0"), ("income_account", ""), ("expense_account", &expense)]));
+}

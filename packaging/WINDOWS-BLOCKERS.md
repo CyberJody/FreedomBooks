@@ -1,7 +1,7 @@
 # Windows native module and installer status
 
-The Linux worker did **not** produce a runnable Windows application or NSIS
-installer. It produced a hardened **incomplete unpacked Electron shell**, with
+The Linux build does **not** produce a runnable Windows application or NSIS
+installer. It produces a hardened **incomplete unpacked Electron shell**, with
 real Windows Electron binaries, ASAR, product icon, runtime license files,
 third-party notices, embedded ASAR integrity and the five fuse settings. The
 `INCOMPLETE-WINDOWS-NATIVE.txt` marker and ASAR metadata identify it as a developer
@@ -53,4 +53,4 @@ the final `.exe` with `verify-artifacts.py --release`, then complete both Window
 module load, DPAPI/password behavior, first run, lock/unlock/restart, both
 shortcuts/taskbar identity, offline/no-runtime install, reinstall/upgrade, and
 uninstall/reinstall preserving the book. None of those Windows results are
-claimed by this job.
+claimed yet.

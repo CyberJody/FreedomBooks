@@ -24,21 +24,24 @@ async function main(){
   async function signin(name,password=PASSWORD){
     await page.waitForURL(/\/desktop\/sign-in\/$/);await page.fill('#id_username',name);await page.fill('#id_password',password);await page.getByRole('button',{name:'Sign in',exact:true}).click();
   }
-  async function signout(){await page.getByRole('link',{name:'Switch user / sign out',exact:true}).click();await page.getByRole('button',{name:'Sign out / switch user',exact:true}).click();await page.waitForURL(/\/desktop\/sign-in\/$/);assert.equal((await state()).signed_in,false);}
-  async function users(){await page.getByRole('link',{name:'Switch user / sign out',exact:true}).click();await page.getByRole('link',{name:'Manage users',exact:true}).click();await page.waitForSelector('#id_role');}
+  // The signed-in person's title-bar menu (a <details> disclosure) holds Switch user and Sign out; Users is under Settings.
+  async function userMenu(){await page.locator('.operator details.menu > summary').click();}
+  async function signout(){await userMenu();await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.waitForURL(/\/desktop\/sign-in\/$/);assert.equal((await state()).signed_in,false);}
+  async function settings(){await page.click('nav.appnav a:has-text("Settings")');await page.waitForURL(/\/settings\/$/);}
+  async function users(){await settings();await page.locator('main').getByRole('link',{name:'Users',exact:true}).click();await page.waitForSelector('#id_role');}
   async function add(name,role){
     await users();await page.fill('#id_username',name);await page.selectOption('#id_role',role);await page.check('input[name="company"]');await page.fill('#id_password',PASSWORD);await page.fill('#id_password_repeat',PASSWORD);await page.getByRole('button',{name:'Save user and sign out',exact:true}).click();await page.waitForURL(/\/desktop\/sign-in\/$/);
   }
   try{
     await launch();await page.fill('#id_owner_name','Avery Owner');await page.fill('#id_company_name','Synthetic desktop team');await page.selectOption('#id_starter_chart','empty');await page.getByRole('button',{name:'Create books',exact:true}).click();
-    await page.waitForURL(/\/desktop\/sign-in\/$/);assert.equal((await state()).signed_in,false);assert.match(await page.locator('h1').innerText(),/owner/);
+    await page.waitForURL(/\/desktop\/sign-in\/$/);assert.equal((await state()).signed_in,false);assert.match(await page.locator('h1').innerText(),/owner|sign-in password/);
     await shot('users-01-owner-setup');
-    await page.fill('#id_password',PASSWORD);await page.fill('#id_password_repeat',PASSWORD);await page.check('input[name="confirm_owner"]');await page.getByRole('button',{name:'Set password and sign in',exact:true}).click();await page.waitForURL(/\/home\/$/);
+    await page.fill('#id_password',PASSWORD);await page.fill('#id_password_repeat',PASSWORD);if(await page.locator('input[name="confirm_owner"]').count())await page.check('input[name="confirm_owner"]');await page.getByRole('button',{name:'Set password and continue',exact:true}).click();await page.waitForURL(/\/home\/$/);
     assert.match(await page.locator('.operator').innerText(),/Avery Owner/);pass('first run requires explicit owner password enrollment before accounting access');
     await add('Pat Bookkeeper','bookkeeper');await signin('Pat Bookkeeper','wrong UI password');await page.waitForSelector('.errorlist');assert.equal((await state()).signed_in,false);pass('wrong per-user password refuses authentication');
     await signin('Pat Bookkeeper');await page.waitForURL(/\/home\/$/);assert.match(await page.locator('.operator').innerText(),/Pat Bookkeeper/);await shot('users-02-bookkeeper');
-    await page.getByRole('link',{name:'Switch user / sign out',exact:true}).click();assert.equal(await page.getByRole('link',{name:'Manage users',exact:true}).count(),0);pass('bookkeeper session shows actual name and lacks administration access');
-    await page.getByRole('button',{name:'Sign out / switch user',exact:true}).click();await signin('Avery Owner');await page.waitForURL(/\/home\/$/);
+    await settings();assert.equal(await page.locator('main').getByRole('link',{name:'Users',exact:true}).count(),0);pass('bookkeeper session shows actual name and lacks administration access');
+    await signout();await signin('Avery Owner');await page.waitForURL(/\/home\/$/);
     await add('Riley Reader','readonly');await signin('Riley Reader');await page.waitForURL(/\/home\/$/);assert.match(await page.locator('body').innerText(),/Read-only access/);await shot('users-03-readonly');
     const companies=JSON.parse(await native('query',[JSON.stringify({type:'Companies'})]));const company=companies[0].id;
     const tokenPage=JSON.parse(await native('render',[`/c/${company}/lists/customers/new/`]));

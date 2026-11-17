@@ -6,7 +6,8 @@ use super::*;
 pub(super) fn is_document(name: &str) -> bool {
     matches!(
         name,
-        "sales:print"
+        "invoices:email_preview"
+            | "sales:print"
             | "sales:print_revision"
             | "invoices:print"
             | "invoices:print_revision"
@@ -85,13 +86,13 @@ fn lines(app: &mut App, c: CompanyId, table: &str, field: &str, id: &str) -> App
     .collect()
 }
 
-pub(super) fn document(app: &mut App, r: &Route, target: &str) -> AppResult<(String, u16)> {
+pub(crate) fn view_model(app: &mut App, r: &Route) -> AppResult<Value> {
     let c = arg_company(r)?;
     let mut vm = ctx(app, r)?;
     if r.name == "prepayments:print" {
         vm["deposit"] = super::d5::records::source(app, c, &r.args["customer_deposit_id"], true)?;
         vm["printed_at"] = json!((app.now)().to_rfc3339());
-        return draw(app, "prepayments/print.html", &mut vm, target, "customer");
+        return Ok(vm);
     }
     let (
         kind,
@@ -214,6 +215,15 @@ pub(super) fn document(app: &mut App, r: &Route, target: &str) -> AppResult<(Str
             1,
         )
     };
+    let history = if kind == "invoice" {
+        let o=app.open_mut()?;
+        o.book.read(|tx|fb_core::sales::historical::presentation(tx,c,s(&root,"id"),&current,&line_rows))?
+    } else { Value::Null };
+    if history["matches_revision"]==true {
+        for (line,original) in line_rows.iter_mut().zip(history["source"]["lines"].as_array().unwrap()) {
+            line["source_item"]=original["item"].clone();
+        }
+    }
     let mut current = current;
     super::d4::fixed_document(&mut current, &mut line_rows);
     let identity = super::d5::records::identity(app, c, s(&root, "identity_id"))?;
@@ -238,18 +248,16 @@ pub(super) fn document(app: &mut App, r: &Route, target: &str) -> AppResult<(Str
         doc["second_date"] = current["expiry"].clone();
         doc["posting_note"] = json!("Estimate — not an invoice, not an amount owed.");
     } else if kind == "invoice" {
+        doc["source_history"] = history;
         doc["second_date_label"] = json!("Due date");
         doc["second_date"] = current["due_date"].clone();
         if let (Ok(start), Ok(end)) = (
             chrono::NaiveDate::parse_from_str(s(&current, "date"), "%Y-%m-%d"),
             chrono::NaiveDate::parse_from_str(s(&current, "due_date"), "%Y-%m-%d"),
         ) {
-            let days = (end - start).num_days();
-            doc["terms"] = json!(if days <= 0 {
-                "Due on receipt".into()
-            } else {
-                format!("Net {days}")
-            });
+            // Name the term only when the dates match one people choose; otherwise the due date says it.
+            let term = super::d4::doc_forms::term_for(Some(&start.to_string()), Some(&end.to_string()));
+            doc["terms"] = json!(super::d4::doc_forms::TERMS.iter().find(|(v, _)| !term.is_empty() && *v == term).map(|(_, l)| *l).unwrap_or(""));
         }
         if state == "Open" && !superseded {
             let o = app.open_mut()?;
@@ -278,7 +286,9 @@ pub(super) fn document(app: &mut App, r: &Route, target: &str) -> AppResult<(Str
                 doc["revision_total"] = json!(live_revision.max(revision_number));
             }
         }
-        doc["posting_note"] = json!(if state == "Voided" {
+        doc["posting_note"] = json!(if state == "Voided" && current["journal_id"].is_null() {
+            "Voided before posting — no accounting entry was created. No amount due."
+        } else if state == "Voided" {
             "Voided — the original posting is cancelled by its linked reversal. No amount due."
         } else if state == "Draft" {
             "Draft — not posted. No amount due."
@@ -298,16 +308,65 @@ pub(super) fn document(app: &mut App, r: &Route, target: &str) -> AppResult<(Str
             )
         });
     }
+    let preferences = app.open_mut()?.book.read(|q| fb_core::invoice_preferences::get(q,c))?;
+    doc["preferences"] = serde_json::to_value(preferences.settings).expect("preferences");
+    doc["can_pay"] = json!(kind == "invoice" && !doc["superseded"].as_bool().unwrap_or(false)
+        && state == "Open" && money(&doc["balance"]["due"]) > 0);
+    if app.invoice_delivery && doc["can_pay"]==true {
+        let o=app.open_mut()?; doc["payment_url"]=json!(o.book.read(|q|fb_core::invoice_stripe::payment_url(q,o.owner,c,s(&root,"id")))?);
+    }
+    // A draft preview describes the proposed document without asserting an amount
+    // owed or retrieving any live link. Delivery still requires the current OPEN invoice.
+    doc["payment_preview"] = json!(kind == "invoice" && state == "Draft" && !superseded && money(&current["total"]) > 0);
+    doc["show_payment_options"] = json!(doc["can_pay"]==true || doc["payment_preview"]==true);
+    doc["payment_amount"] = if doc["can_pay"]==true { doc["balance"]["due"].clone() } else { current["total"].clone() };
+    let mut images=json!({});
+    for (id,file) in [("zelle","zelle-badge-purple"),("stripe","powered-by-stripe-blurple"),("visa","visa"),("master","master"),("amex","american_express"),("discover","discover"),("bank","genericbank"),("apple","apple_pay")] {
+        images[id]=json!(format!("/static/sales/pay/{file}.png"));
+    }
+    doc["payment_images"]=images;
+    if let Some(url)=doc["payment_url"].as_str() {
+        let qr=qrcodegen::QrCode::encode_text(url,qrcodegen::QrCodeEcc::Medium).map_err(|_|AppError::Invalid("Payment link is too long for its QR code.".into()))?;
+        let mut path=String::new();use std::fmt::Write;
+        for y in 0..qr.size() { for x in 0..qr.size() { if qr.get_module(x,y) { write!(path,"M{},{}h1v1h-1z",x+4,y+4).expect("QR module"); } } }
+        let n=qr.size()+8;
+        doc["payment_qr"]=json!(format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {n} {n}" role="img" aria-label="Stripe payment link QR code" shape-rendering="crispEdges"><rect width="{n}" height="{n}" fill="#fff"/><path d="{path}" fill="#000"/></svg>"##));
+    }
+    if kind == "invoice" && state == "Open" && !doc["balance"].is_null() && money(&doc["balance"]["due"]) == 0 {
+        doc["mark"] = json!("PAID");
+    }
+    let tokens = [
+        ("invoice_number", s(&doc,"number").to_owned()),
+        ("business_name", s(&doc["company"],"name").to_owned()),
+        ("customer_name", s(&doc["party"],"display_name").to_owned()),
+        ("balance_due", if doc["balance"].is_null() { "No amount due".into() } else { format!("{} {}",s(&doc["balance"],"due"),s(&doc,"currency")) }),
+        ("due_date", s(&doc,"second_date").to_owned()),
+    ];
+    let fields: Vec<_> = tokens.iter().map(|(key,value)| (*key,value.as_str())).collect();
+    for key in ["footer", "email_subject", "email_greeting", "email_signature", "zelle_instructions"] {
+        doc["preferences"][key] = json!(fb_templates::invoice_email::expand(s(&doc["preferences"],key), &fields));
+    }
+    // The stock greeting is a bare "Hi,"; greet the customer's contact (else the customer) by name.
+    let greeting = s(&doc["preferences"], "email_greeting").to_owned();
+    if let Some(rest) = greeting.strip_prefix("Hi,") {
+        let contact = [s(&doc["party"], "contact_name"), s(&doc["party"], "display_name")].into_iter().find(|n| !n.trim().is_empty()).unwrap_or("");
+        if !contact.is_empty() {
+            doc["preferences"]["email_greeting"] = json!(format!("Hi {},{rest}", contact.trim()));
+        }
+    }
     vm["root"] = json!({"pk":root["id"]});
     vm["current"] = current;
     vm["doc"] = doc;
-    draw(
-        app,
-        "sales/print/document.html",
-        &mut vm,
-        target,
-        "customer",
-    )
+    Ok(vm)
+}
+
+pub(super) fn document(app:&mut App,r:&Route,target:&str)->AppResult<(String,u16)> {
+    let mut vm=view_model(app,r)?;
+    if r.name=="invoices:email_preview" {
+        vm["csrf_token"]=json!(token(app,target));
+        crate::invoice_email::preview(app,arg_company(r)?,&r.args["invoice_id"],&mut vm)?;
+    }
+    draw(app,if r.name=="prepayments:print" {"prepayments/print.html"} else if r.name=="invoices:email_preview" {"sales/email/preview.html"} else {"sales/print/document.html"},&mut vm,target,"customer")
 }
 
 /// `invoice_balances` payment state as the invoice page titles it.

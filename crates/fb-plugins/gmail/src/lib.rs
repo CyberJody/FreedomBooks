@@ -2,13 +2,17 @@
 //! opens authorization URLs in the system browser, and persists credentials encrypted.
 #![forbid(unsafe_code)]
 
+mod delivery;
 mod lifecycle;
 mod mime;
+pub use delivery::{
+    DeliveryContent, InlineImage, DeliveryMode, DeliveryOutcome, DeliveryReceipt, INLINE_LOGO_CID,
+};
 #[cfg(test)]
 mod tests;
 mod tokens;
 
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use fb_plugin_api::{oauth::*, *};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -20,6 +24,7 @@ use tokens::Tokens;
 use zeroize::Zeroizing;
 
 pub const SEND_SCOPE: &str = "https://www.googleapis.com/auth/gmail.send";
+pub const COMPOSE_SCOPE: &str = "https://www.googleapis.com/auth/gmail.compose";
 pub static MANIFEST: PluginManifest = PluginManifest {
     id: "gmail",
     name: "Gmail document sender",
@@ -56,6 +61,19 @@ pub static MANIFEST: PluginManifest = PluginManifest {
         "gmail.googleapis.com",
     ],
 };
+pub static COMPOSE_MANIFEST: PluginManifest = PluginManifest {
+    id: MANIFEST.id,
+    name: "Gmail invoice drafts and sending",
+    version: MANIFEST.version,
+    slots: MANIFEST.slots,
+    auth: MANIFEST.auth,
+    outside_account: MANIFEST.outside_account,
+    scopes: &[COMPOSE_SCOPE],
+    data_reads: MANIFEST.data_reads,
+    data_sends: MANIFEST.data_sends,
+    settings_fields: MANIFEST.settings_fields,
+    network_hosts: MANIFEST.network_hosts,
+};
 
 #[derive(Clone)]
 struct Endpoints {
@@ -63,6 +81,7 @@ struct Endpoints {
     token: String,
     revoke: String,
     send: String,
+    drafts: String,
 }
 impl Default for Endpoints {
     fn default() -> Self {
@@ -71,6 +90,7 @@ impl Default for Endpoints {
             token: "https://oauth2.googleapis.com/token".into(),
             revoke: "https://oauth2.googleapis.com/revoke".into(),
             send: "https://gmail.googleapis.com/gmail/v1/users/me/messages/send".into(),
+            drafts: "https://gmail.googleapis.com/gmail/v1/users/me/drafts".into(),
         }
     }
 }
@@ -87,6 +107,7 @@ pub struct GmailSender {
     client_secret: Option<SecretString>,
     endpoints: Endpoints,
     state: Arc<Mutex<State>>,
+    oauth_scope: &'static str,
 }
 
 /// One-shot attempt, bound to company, connection, client and cancellation epoch.
@@ -95,6 +116,7 @@ pub struct GmailAuthorization {
     flow: OAuthLoopback,
     scope: CredentialScope,
     client_id: String,
+    oauth_scope: &'static str,
     epoch: u64,
     from_address: String,
     cancellation: CancellationToken,
@@ -137,7 +159,40 @@ impl GmailSender {
             client_secret,
             endpoints: Endpoints::default(),
             state: Arc::new(Mutex::new(State::default())),
+            oauth_scope: SEND_SCOPE,
         })
+    }
+
+    /// Invoice delivery can save drafts as well as send; a prior send-only grant
+    /// cannot be silently upgraded. The user must authorize the compose scope.
+    pub fn with_drafts(mut self) -> Self {
+        self.oauth_scope = COMPOSE_SCOPE;
+        self
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn with_loopback_endpoints(mut self, base: &str) -> PluginResult<Self> {
+        let parsed = url::Url::parse(base).map_err(|_| PluginError::InvalidConfiguration)?;
+        if parsed.scheme() != "http"
+            || parsed.host_str() != Some("127.0.0.1")
+            || parsed.port().is_none()
+            || parsed.path() != "/"
+            || parsed.query().is_some()
+            || parsed.fragment().is_some()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+        {
+            return Err(PluginError::InvalidConfiguration);
+        }
+        let base = base.trim_end_matches('/');
+        self.endpoints = Endpoints {
+            authorize: format!("{base}/authorize"),
+            token: format!("{base}/token"),
+            revoke: format!("{base}/revoke"),
+            send: format!("{base}/send"),
+            drafts: format!("{base}/drafts"),
+        };
+        Ok(self)
     }
 
     fn check_scope(&self, cx: &PluginContext) -> PluginResult<()> {
@@ -161,7 +216,7 @@ impl GmailSender {
         let mut config = OAuthConfig::new(
             endpoints,
             self.client_id.clone(),
-            vec![SEND_SCOPE.into()],
+            vec![self.oauth_scope.into()],
             "/callback".into(),
         );
         // Offline grants are needed for refresh. Explicit consent makes reconnect
@@ -174,6 +229,7 @@ impl GmailSender {
             flow: OAuthLoopback::start(config)?,
             scope: cx.scope().clone(),
             client_id: self.client_id.clone(),
+            oauth_scope: self.oauth_scope,
             epoch: *epoch,
             from_address,
             cancellation: cx.cancellation().clone(),
@@ -181,7 +237,7 @@ impl GmailSender {
     }
 
     fn oauth_endpoints(&self) -> PluginResult<OAuthEndpoints> {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         if self.endpoints.authorize.starts_with("http://127.0.0.1:") {
             return OAuthEndpoints::loopback_for_tests(
                 &self.endpoints.authorize,
@@ -206,7 +262,10 @@ impl GmailSender {
             AuditPurpose::Connection,
             |stats| {
                 self.check_scope(cx)?;
-                if attempt.scope != *cx.scope() || attempt.client_id != self.client_id {
+                if attempt.scope != *cx.scope()
+                    || attempt.client_id != self.client_id
+                    || attempt.oauth_scope != self.oauth_scope
+                {
                     return Err(PluginError::WrongScope);
                 }
                 attempt.cancellation.check()?;
@@ -229,12 +288,13 @@ impl GmailSender {
                     None,
                     stats,
                 )?;
-                let tokens = Tokens::from_response(
+                let tokens = Tokens::from_response_scoped(
                     &response,
                     cx.clock().now(),
                     &self.client_id,
                     &attempt.from_address,
                     None,
+                    self.oauth_scope,
                 )?;
                 attempt.cancellation.check()?;
                 cx.check_active()?;
@@ -302,7 +362,7 @@ impl GmailSender {
                 return Err(PluginError::NeedsSignIn);
             }
         };
-        if old.client_id != self.client_id {
+        if old.client_id != self.client_id || old.scope != self.oauth_scope {
             return Err(PluginError::NeedsSignIn);
         }
         Ok(old)
@@ -335,12 +395,13 @@ impl GmailSender {
             None,
             stats,
         )?;
-        match Tokens::from_response(
+        match Tokens::from_response_scoped(
             &response,
             cx.clock().now(),
             &self.client_id,
             &old.from_address,
             Some(&old),
+            self.oauth_scope,
         ) {
             Ok(tokens) => {
                 cx.credentials().save(tokens.encode()?)?;
@@ -427,7 +488,11 @@ impl GmailSender {
 }
 impl Plugin for GmailSender {
     fn manifest(&self) -> &'static PluginManifest {
-        &MANIFEST
+        if self.oauth_scope == COMPOSE_SCOPE {
+            &COMPOSE_MANIFEST
+        } else {
+            &MANIFEST
+        }
     }
     fn connection_lifecycle(&self) -> Option<&dyn ConnectionLifecycle> {
         Some(self)

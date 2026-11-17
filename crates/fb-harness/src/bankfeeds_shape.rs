@@ -154,6 +154,9 @@ pub(crate) fn validate(dump: &Value) -> Result<(), std::string::String> {
             return Err(bad("forgotten state disagrees with the audit"));
         }
         let synced: Vec<_> = evs.iter().filter(|e| e["action"] == "bankfeed.synced").collect();
+        if synced.iter().enumerate().any(|(i, e)| !sync_audit_ok(&e["detail"], i as u64 + 1)) {
+            return Err(bad("sync audit has the wrong keys, types or sync number"));
+        }
         if c["sync_count"].as_u64() != Some(synced.len() as u64) || c["last_sync_at"].is_null() != synced.is_empty() || c["last_sync_ok"].is_null() != synced.is_empty() {
             return Err(bad("sync count disagrees with the audit"));
         }
@@ -440,6 +443,37 @@ fn exact_keys(v: &Value, keys: &[&str]) -> bool {
 fn audit_count(v: &Value) -> Option<u64> {
     v.as_u64().filter(|n| *n <= i64::MAX as u64)
 }
+/// Current sync audit contract, including explicitly enumerated optional evidence. Failed attempts have
+/// no pull counts or sync number; successful stored pulls carry their per-connection number.
+fn sync_audit_ok(v: &Value, number: u64) -> bool {
+    let timestamp = |v: &Value| v.as_str().is_some_and(|s| chrono::DateTime::parse_from_rfc3339(s).is_ok());
+    let required: &[&str] = if v["ok"] == true {
+        &["ok", "scheduled", "summary", "pending_dropped_ids", "accounts", "new", "updated", "posted", "unchanged", "skipped", "errors", "pending_dropped", "at", "sync"]
+    } else {
+        &["ok", "scheduled", "summary"]
+    };
+    let optional: &[&str] = if v["ok"] == true {
+        &["window_start", "missing_from", "missing_to", "already_recorded", "bank_changed", "removed_characters"]
+    } else {
+        &["removed_characters"]
+    };
+    let keys = v.as_object().is_some_and(|o| required.iter().all(|k| o.contains_key(*k)) && o.keys().all(|k| required.contains(&k.as_str()) || optional.contains(&k.as_str())));
+    keys && v["ok"].is_boolean() && v["scheduled"].is_boolean() && v["summary"].is_string()
+        && v.get("removed_characters").is_none_or(|n| audit_count(n).is_some_and(|n| n > 0))
+        && (v["ok"] == false || (
+            timestamp(&v["at"]) && audit_count(&v["sync"]) == Some(number)
+            && ["accounts", "new", "updated", "posted", "unchanged", "skipped", "errors", "pending_dropped"].iter().all(|k| audit_count(&v[k]).is_some())
+            && strings(&v["pending_dropped_ids"]).is_some()
+            && v.get("window_start").is_none_or(timestamp)
+            && ["already_recorded", "bank_changed"].iter().all(|k| v.get(k).is_none_or(|n| audit_count(n).is_some_and(|n| n > 0)))
+            && match (v.get("missing_from"), v.get("missing_to")) {
+                (None, None) => true,
+                (Some(from), Some(to)) => !from.is_null() && !to.is_null() && is_date(from) && is_date(to) && from.as_str() <= to.as_str(),
+                _ => false,
+            }
+        ))
+}
+
 /// What the replay knows after a company's pulls: the rows present, and every row a pull withdrew.
 struct Replay<'a> {
     present: BTreeSet<&'a str>,
@@ -633,18 +667,23 @@ fn result_ok(dump: &Value, m: &Manifest<'_>, q: &Query<'_>, v: &Value) -> bool {
         }
         "bankfeeds_items" => exact_keys(v, &["items"]) && strings(&v["items"]).is_some_and(|a| unique(&a) && a.iter().all(|t| named(t))) && list_ok(dump, m, q, v),
         "bankfeeds_sync" | "bankfeeds_store" => {
-            let fields = ["summary", "provider_errors", "reasons", "accounts", "new", "updated", "posted", "unchanged", "skipped", "errors", "pending_dropped"];
+            // auto_post_candidates is checked and removed by the runner (bankfeeds.rs) before this shape check.
+            let fields = ["summary", "provider_errors", "reasons", "accounts", "new", "updated", "posted", "unchanged", "skipped", "errors", "pending_dropped", "already_recorded", "bank_changed", "missing"];
+            let counts = ["accounts", "new", "updated", "posted", "unchanged", "skipped", "errors", "pending_dropped", "already_recorded", "bank_changed"];
             let n = |k: &str| audit_count(&v[k]);
             let listed = |k: &str| step[k].as_array().map_or(0, Vec::len) as u64;
             let (errors, reasons) = (strings(&v["provider_errors"]), strings(&v["reasons"]));
-            let upserts = [n("new"), n("updated"), n("posted"), n("unchanged")].into_iter().try_fold(0u64, |sum, x| sum.checked_add(x?));
+            let upserts = [n("new"), n("updated"), n("posted"), n("unchanged"), n("bank_changed")].into_iter().try_fold(0u64, |sum, x| sum.checked_add(x?));
             exact_keys(v, &fields)
                 && v["summary"].is_string()
-                && fields[3..].iter().all(|k| n(k).is_some())
+                && counts.iter().all(|k| n(k).is_some())
                 && n("accounts") == Some(listed("feeds"))
                 && upserts == Some(listed("transactions"))
                 && errors.is_some_and(|e| n("errors") == Some(e.len() as u64))
                 && reasons.is_some_and(|r| n("skipped") == Some(r.len() as u64))
+                && n("already_recorded") <= n("new")
+                && (v["missing"].is_null() || (exact_keys(&v["missing"], &["from", "to"]) && !v["missing"]["from"].is_null() && !v["missing"]["to"].is_null()
+                    && is_date(&v["missing"]["from"]) && is_date(&v["missing"]["to"]) && v["missing"]["from"].as_str() <= v["missing"]["to"].as_str()))
         }
         "bankfeeds_suggest" => {
             let kind = text(v, "kind");
@@ -840,6 +879,7 @@ pub(crate) fn kept_credentials(side: &Value) -> Vec<std::string::String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     /// FIX3: on every bank-feed scenario the replayed inventory equals every review list's members
     /// (FIX4: the replay is exact or an error, so there is no uncertain set left to check).
     #[test]
@@ -862,5 +902,49 @@ mod tests {
             }
         }
         assert!(lists >= 5, "review lists checked: {lists}");
+    }
+
+    #[test]
+    fn current_sync_contract_requires_the_new_keys_and_preserves_strict_counts() {
+        let scenario: Value = serde_json::from_str(include_str!("../scenarios/bankfeeds-pulls.json")).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let mut runner = crate::Runner::new(&scenario, &dir.path().join("shape.fbbook"));
+        runner.run();
+        let good = runner.dump();
+        assert!(crate::compare(&good, &good).ok());
+        let rejects = |bad: Value| assert!(!crate::compare(&bad, &bad).ok());
+        for key in ["already_recorded", "bank_changed", "missing"] {
+            let mut bad = good.clone();
+            bad["bankfeeds"]["results"]["overlap"].as_object_mut().unwrap().remove(key);
+            rejects(bad);
+            let mut bad = good.clone();
+            bad["bankfeeds"]["results"]["overlap"][key] = json!(false);
+            rejects(bad);
+        }
+        for (key, value) in [
+            ("extra", json!(0)),
+            ("bank_changed", json!(0)),
+            ("already_recorded", json!(i64::MAX)),
+            ("missing", json!({"from":"2026-10-02","to":"2026-10-01"})),
+            ("missing", json!({"from":"2026-10-01","to":"2026-10-02","extra":true})),
+        ] {
+            let mut bad = good.clone();
+            bad["bankfeeds"]["results"]["overlap"][key] = value;
+            rejects(bad);
+        }
+        let event = good["audit"].as_object().unwrap().values().flat_map(|events| events.as_array().unwrap())
+            .find(|e| e["action"] == "bankfeed.synced" && e["detail"]["ok"] == true).unwrap();
+        let detail = &event["detail"];
+        let number = detail["sync"].as_u64().unwrap();
+        assert!(sync_audit_ok(detail, number));
+        for key in ["at", "sync"] {
+            let mut bad = detail.clone();
+            bad.as_object_mut().unwrap().remove(key);
+            assert!(!sync_audit_ok(&bad, number));
+        }
+        let mut bad = detail.clone();
+        bad["extra"] = json!(0);
+        assert!(!sync_audit_ok(&bad, number));
+        assert!(!sync_audit_ok(detail, number + 1));
     }
 }

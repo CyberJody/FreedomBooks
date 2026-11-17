@@ -39,6 +39,8 @@ fn record(app: &mut App, path: &str, values: &Value) -> String {
     values.insert("action".into(), json!("review"));
     let html = match submit(app, path, &Value::Object(values.clone())) {
         Outcome::Page { html, status: 200 } => html,
+        // Sales receipts and credit memos review and record in one Save.
+        Outcome::Redirect { location } if path.ends_with("/sales-receipts/new/") || path.ends_with("/credit-memos/new/") => return location,
         other => panic!("expected review: {other:?}"),
     };
     assert!(html.contains("name=\"review_token\""), "no review: {html}");

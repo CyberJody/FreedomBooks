@@ -11,11 +11,12 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
+pub mod recurring;
 mod payments;
 mod queries;
 pub use queries::{bill_calendar, bill_tracker};
 mod receipt;
-pub use payments::{record_payment, reverse_payment, review_payment};
+pub use payments::{record_payment, record_payments, reverse_payment, review_payment};
 pub use receipt::{receipt_draft_input, save_receipt_draft};
 #[cfg(test)]
 mod tests;
@@ -737,61 +738,62 @@ pub fn post_bill(
     expected: Option<i64>,
     review: &Review,
 ) -> FbResult<Value> {
-    write(book, |tx| {
-        let u = services::access(tx, actor, co)?;
-        let mut b = bill(tx, co, bid)?;
-        let mut r = b["current"].clone();
-        let revision = stored_i64(&b, "revision")?;
-        if review.kind != "bill" {
-            return Err(err("Invalid review. Open a new posting review."));
-        }
-        if r["state"] == "OPEN"
-            && expected == Some(revision - 1)
-            && r["review_digest"] == review.digest
-        {
-            return money_display(b);
-        }
-        documents::check_revision(revision, expected)?;
-        let next_revision = documents::next_revision(revision)?;
-        let (mapping, entries, current) = posting(tx, actor, co, &b)?;
-        if current.digest != review.digest {
-            return Err(err(
-                "Posting mapping changed. Open a new review before posting.",
-            ));
-        }
-        documents::snapshot_source_accounts(tx, actor, co, s(&b, "identity_id"), &mapping)?;
-        let j = documents::post_source(
-            tx,
-            actor,
-            co,
-            s(&b, "identity_id"),
-            s(&r, "date"),
-            &py::py_truncate(&format!("{}: {}", s(&b, "number"), s(&r, "memo")), 240),
-            entries,
-        )?;
-        services::audit(
-            tx,
-            &u,
-            co,
-            "bill.journal_evidence",
-            format!("bill:{bid}"),
-            json!({"journal_id":j.id.to_db(),"memo":r["memo"],"reference":r["reference"],"total":Money::from_db(stored_i64(&r, "total")?).to_string()}),
-        )?;
-        b["revision"] = json!(next_revision);
-        tx.execute(
-            "UPDATE payables_bill SET revision=?,state='OPEN' WHERE id=?",
-            params![next_revision, bid],
-        )?;
-        r["state"] = json!("OPEN");
-        r["action"] = json!("posted");
-        r["reason"] = json!("");
-        r["journal_id"] = json!(j.id.to_db());
-        r["review_digest"] = json!(review.digest);
-        let lines = stored_lines(&r)?.clone();
-        append(tx, actor, co, &b, r, lines)?;
-        seal_journal(tx, &j.id.to_db())?;
-        money_display(bill(tx, co, bid)?)
-    })
+    write(book, |tx| post_bill_tx(tx, actor, co, bid, expected, review))
+}
+fn post_bill_tx(tx: &Writer<'_>, actor: UserId, co: CompanyId, bid: &str, expected: Option<i64>, review: &Review) -> FbResult<Value> {
+    let u = services::access(tx, actor, co)?;
+    let mut b = bill(tx, co, bid)?;
+    let mut r = b["current"].clone();
+    let revision = stored_i64(&b, "revision")?;
+    if review.kind != "bill" {
+        return Err(err("Invalid review. Open a new posting review."));
+    }
+    if r["state"] == "OPEN"
+        && expected == Some(revision - 1)
+        && r["review_digest"] == review.digest
+    {
+        return money_display(b);
+    }
+    documents::check_revision(revision, expected)?;
+    let next_revision = documents::next_revision(revision)?;
+    let (mapping, entries, current) = posting(tx, actor, co, &b)?;
+    if current.digest != review.digest {
+        return Err(err(
+            "Posting mapping changed. Open a new review before posting.",
+        ));
+    }
+    documents::snapshot_source_accounts(tx, actor, co, s(&b, "identity_id"), &mapping)?;
+    let j = documents::post_source(
+        tx,
+        actor,
+        co,
+        s(&b, "identity_id"),
+        s(&r, "date"),
+        &py::py_truncate(&format!("{}: {}", s(&b, "number"), s(&r, "memo")), 240),
+        entries,
+    )?;
+    services::audit(
+        tx,
+        &u,
+        co,
+        "bill.journal_evidence",
+        format!("bill:{bid}"),
+        json!({"journal_id":j.id.to_db(),"memo":r["memo"],"reference":r["reference"],"total":Money::from_db(stored_i64(&r, "total")?).to_string()}),
+    )?;
+    b["revision"] = json!(next_revision);
+    tx.execute(
+        "UPDATE payables_bill SET revision=?,state='OPEN' WHERE id=?",
+        params![next_revision, bid],
+    )?;
+    r["state"] = json!("OPEN");
+    r["action"] = json!("posted");
+    r["reason"] = json!("");
+    r["journal_id"] = json!(j.id.to_db());
+    r["review_digest"] = json!(review.digest);
+    let lines = stored_lines(&r)?.clone();
+    append(tx, actor, co, &b, r, lines)?;
+    seal_journal(tx, &j.id.to_db())?;
+    money_display(bill(tx, co, bid)?)
 }
 fn seal_journal(tx: &Writer<'_>, jid: &str) -> FbResult<()> {
     tx.execute("INSERT INTO fb_seal VALUES('payables_journal',?)", [jid])?;

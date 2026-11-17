@@ -2,18 +2,23 @@
 use super::*;
 use crate::protection::{KIT, RECOVERY, SETTINGS};
 pub const RESTORE: &str = "/settings/restore-backup/";
+/// A restored copy that is open: where it came from, and "Use this as my books".
+pub const RESTORED: &str = "/settings/restored-book/";
 
 pub(super) fn handles(path: &str) -> bool {
-    [SETTINGS, RECOVERY, KIT, RESTORE].contains(&path)
+    [SETTINGS, RECOVERY, KIT, RESTORE, RESTORED].contains(&path)
 }
 
 pub(super) fn render(app: &mut App, path: &str, errors: &[String]) -> AppResult<Rendered> {
-    let c = app.first_company()?;
+    let c = match frame_company(app) {
+        Some(c) => Some(c),
+        None => app.first_company()?,
+    };
     let mut vm = serde_json::to_value(shell(
         app,
         c,
         &Current {
-            route: "company_edit",
+            route: fb_templates::nav::desktop_route(path).unwrap_or(""),
             kind: None,
         },
     )?)
@@ -26,6 +31,7 @@ pub(super) fn render(app: &mut App, path: &str, errors: &[String]) -> AppResult<
     vm["os_store"] = json!(app.os_store_usable);
     vm["saved"] = json!(app.protection.as_ref().is_some_and(|r| r.recovery_saved));
     vm["authorized"] = json!(app.recovery_authorized);
+    vm["first_run"] = json!(app.first_run_owner);
     if path == SETTINGS && backups::has_pre_portable_backups(app) {
         vm["older_backups"] = json!(crate::protection::OLDER_BACKUPS);
     }
@@ -47,6 +53,22 @@ pub(super) fn render(app: &mut App, path: &str, errors: &[String]) -> AppResult<
             } else {
                 "desktop/recovery.html"
             }
+        }
+        RESTORED => {
+            let book = app.book_path().map(|p| p.to_path_buf());
+            let copy = app.backups.viewing_restored().map(str::to_owned);
+            let note = book.as_deref().and_then(crate::books::read_restored);
+            vm["copy"] = json!(copy);
+            vm["restored"] = json!(book.as_deref().is_some_and(crate::books::is_restored));
+            vm["book_file"] = json!(book.as_ref().map(|p| p.display().to_string()));
+            vm["changed"] = json!(book.as_deref().and_then(|p| std::fs::metadata(p).ok()?.modified().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| crate::books::shown_time(d.as_millis() as f64)));
+            vm["backup"] = json!(note.as_ref().map(|n| n.backup.clone()));
+            vm["restored_at"] = json!(note.as_ref().map(|n| n.restored_at.replace('T', " ").trim_end_matches('Z').to_owned()));
+            vm["set_aside"] = json!(app.set_aside_note.take());
+            vm["pending"] = json!(app.book_change_pending.take());
+            "desktop/restored-book.html"
         }
         RESTORE => {
             if app.backups.restore_pending.is_none() {
@@ -131,6 +153,15 @@ pub(super) fn submit(app: &mut App, path: &str, fields: Posted<'_>) -> AppResult
             }
             (RESTORE, "restore") => {
                 return backups::finish_portable_restore(app, get(fields, "secret").unwrap_or(""));
+            }
+            (RESTORED, "use") => {
+                app.check_use_restored()?;
+                if get(fields, "confirm") != Some("on") {
+                    return Err(AppError::Invalid("Tick the box to confirm that these become the books FreedomBooks opens.".into()));
+                }
+                // The shell asks fb-app to make the change (books::make_open_book_main), which sets
+                // the previous books aside and writes the audit event once the change is committed.
+                return Ok(Outcome::Done { data: json!({"desktop_keys":"use-restored"}) });
             }
             (RESTORE, "cancel") => {
                 app.backups.restore_pending = None;

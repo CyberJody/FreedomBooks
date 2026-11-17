@@ -1,5 +1,5 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}"><link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
-<div class="heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Reconcile</h1>
+<div class="heading"><div><h1>Reconcile</h1>
 <p>Match a bank or credit card account to its statement: enter the statement ending balance, tick the lines the statement shows, and reconcile when the difference is 0.00.</p></div></div>
 {% if request.GET.left %}<p class="notice" role="status">Your ticks are saved. Continue that reconciliation any time.</p>{% endif %}
 <section><table class="registers-list reconcile-list"><thead><tr><th scope="col">Account</th><th scope="col">Type</th><th scope="col">Last statement</th><th scope="col" class="amount">Last ending balance</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>

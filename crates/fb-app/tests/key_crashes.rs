@@ -47,6 +47,11 @@ fn crash_child() {
         match std::env::var("FB_CRASH_OPERATION").unwrap().as_str() {
             "prompt" => a.change_ask_password(PASSWORD, true).unwrap(),
             "saved" => { a.authorize_recovery(PASSWORD).unwrap(); a.recovery_saved().unwrap(); },
+            "rekey-refused" => {
+                let refused = a.change_protection(PASSWORD, (!own).then_some(PASSWORD)).unwrap_err().to_string();
+                assert!(refused.contains("Password protection was not changed") && refused.contains("“before-the-fix.pdf”"), "{refused}");
+                assert!(a.is_open(), "a refusal before the change leaves the books open");
+            }
             _ => a.change_protection(PASSWORD, (!own).then_some(PASSWORD)).unwrap(),
         }
     }
@@ -355,5 +360,168 @@ fn protection_publication_and_actor_audit_have_one_crash_boundary() {
                 }
             }
         }
+    }
+}
+
+// Review finding 8: a SIGKILL while the pre-change snapshot is being copied leaves the snapshot's own
+// rollback journal (`<book>.rekey-before-journal`). Recovery must remove it with the snapshot, or every
+// later protection change is refused for "existing SQLite sidecars".
+#[test]
+fn sigkill_while_copying_the_pre_change_snapshot_leaves_nothing_that_blocks_the_next_change() {
+    for own in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("books/default.fbbook");
+        let mut a = app(root.path());
+        a.create_protected_book(&path, "Crash owner", "Crash-safe synthetic books", own.then_some(PASSWORD)).unwrap();
+        support::sign_in(&mut a);
+        let old = Record::read(&path).unwrap().unwrap();
+        a.lock();
+        kill_at(root.path(), own, "rekey", "snapshot-in-progress");
+        let snapshot = protection::sidecar(&path, ".rekey-before");
+        assert!(protection::sidecar(&snapshot, "-journal").exists(), "the copy was interrupted with its journal open");
+        assert!(!protection::sidecar(&path, ".rekey.json").exists(), "no change had begun");
+        assert!(protection::recover_key_change(&path).unwrap());
+        for leftover in [snapshot.clone(), protection::sidecar(&snapshot, "-journal"), protection::sidecar(&snapshot, "-wal"), protection::sidecar(&snapshot, "-shm")] {
+            assert!(!leftover.exists(), "{} was left behind", leftover.display());
+        }
+        assert!(!protection::recover_key_change(&path).unwrap(), "recovery is idempotent");
+        assert_eq!(serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap(), serde_json::to_value(&old).unwrap());
+        // The next protection change goes through.
+        a.open_book(&path, &old.keys.unlock(PASSWORD).unwrap()).unwrap();
+        support::sign_in(&mut a);
+        a.os_store_usable = true;
+        a.change_protection(PASSWORD, (!own).then_some(PASSWORD)).unwrap();
+        assert_eq!(a.company_name_for_kit().unwrap(), "Crash-safe synthetic books");
+    }
+}
+
+// A journal left beside an already-removed snapshot (an error path that removed the file) is cleared too.
+#[test]
+fn a_stray_snapshot_journal_without_its_snapshot_is_cleared_at_recovery() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("books/default.fbbook");
+    let mut a = app(root.path());
+    a.create_protected_book(&path, "Crash owner", "Crash-safe synthetic books", Some(PASSWORD)).unwrap();
+    a.lock();
+    let journal = protection::sidecar(&protection::sidecar(&path, ".rekey-before"), "-journal");
+    fs::write(&journal, b"stray").unwrap();
+    assert!(protection::recover_key_change(&path).unwrap());
+    assert!(!journal.exists());
+}
+
+// ------------------------------------------------------------------------------------------------
+// Review finding 5: re-wrap before rekey is a property of the protection change itself.
+
+const PDF: &[u8] = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n";
+
+/// A first-run book holding one file attached the way the previous build's chooser did (its key wrapped
+/// under the master key), closed. Returns the book, its company and the attachment.
+fn book_with_an_older_attachment(root: &Path, own: bool) -> (PathBuf, fb_core::CompanyId, String) {
+    use fb_core::{attachments as at, services};
+    let path = root.join("books/default.fbbook");
+    let mut a = app(root);
+    a.create_protected_book(&path, "Crash owner", "Crash-safe synthetic books", own.then_some(PASSWORD)).unwrap();
+    support::sign_in(&mut a);
+    let co = a.first_company().unwrap().unwrap();
+    let master = MasterKey::new(**a.master_key().unwrap());
+    let o = a.open_mut().unwrap();
+    let cash = services::save_account(&mut o.book, o.owner, co, services::AccountInput::new("1000", "Synthetic cash").kind("ASSET")).unwrap().id;
+    let equity = services::save_account(&mut o.book, o.owner, co, services::AccountInput::new("3000", "Synthetic equity").kind("EQUITY")).unwrap().id;
+    let lines = vec![services::line(cash).debit("10").build(), services::line(equity).credit("10").build()];
+    let j = services::save_draft(&mut o.book, o.owner, co, services::DraftInput::new("2026-10-01", "Synthetic opening", lines)).unwrap();
+    let store = at::storage::Store::for_book(&path, &master).unwrap();
+    let id = at::add(&mut o.book, &store, o.owner, co, &at::Owner::Journal(j.id), PDF, "before-the-fix.pdf", &uuid::Uuid::new_v4().to_string(), &at::Limits::default()).unwrap().0["id"].as_str().unwrap().to_owned();
+    a.lock();
+    (path, co, id)
+}
+
+/// Open with whatever secret the record now takes (the password, or none after a switch to the built-in
+/// key) and read the attachment with the receipt key alone.
+fn read_with_receipt_key(root: &Path, path: &Path, co: fb_core::CompanyId, id: &str) -> Vec<u8> {
+    let record = Record::read(path).unwrap().unwrap();
+    let key = record.keys.unlock(PASSWORD).or_else(|_| record.keys.unlock("")).unwrap();
+    let mut a = app(root);
+    a.open_book(path, &key).unwrap();
+    support::sign_in(&mut a);
+    let store = fb_core::attachments::storage::Store::for_book(path, &a.receipt_key().unwrap()).unwrap();
+    let o = a.open_mut().unwrap();
+    fb_core::attachments::download(&mut o.book, &store, o.owner, co, id).unwrap()
+}
+
+fn run_child(root: &Path, own: bool, operation: &str, faults: &str) {
+    let status = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "crash_child", "--nocapture"])
+        .env("FB_CRASH_ROOT", root)
+        .env("FB_CRASH_OWN", if own { "1" } else { "0" })
+        .env("FB_CRASH_OPERATION", operation)
+        .env("FB_KEY_FAIL_AT", faults)
+        .status()
+        .unwrap();
+    assert!(status.success(), "{operation} with {faults}");
+}
+
+/// A safety backup that skipped its own re-wrap (or a future path that reuses or skips the backup) does
+/// not matter: the protection change moves the keys itself just before the master key changes.
+#[test]
+fn a_password_change_moves_attachment_keys_itself_even_when_its_backup_did_not() {
+    for own in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let (path, co, id) = book_with_an_older_attachment(root.path(), own);
+        let before = Record::read(&path).unwrap().unwrap();
+        run_child(root.path(), own, "rekey", "backup-skip-rewrap");
+        let after = Record::read(&path).unwrap().unwrap();
+        assert!(after.keys.mode != before.keys.mode, "the protection changed");
+        assert_eq!(read_with_receipt_key(root.path(), &path, co, &id), PDF);
+    }
+}
+
+/// The check at the point of change: with both re-wraps skipped, a key that only the outgoing master key
+/// opens stops the change before anything is changed, and the books keep working with the old password.
+#[test]
+fn the_change_stops_while_a_key_still_opens_only_under_the_outgoing_master_key() {
+    for own in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let (path, co, id) = book_with_an_older_attachment(root.path(), own);
+        let before = serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap();
+        run_child(root.path(), own, "rekey-refused", "backup-skip-rewrap,rekey-skip-rewrap");
+        assert_eq!(serde_json::to_value(Record::read(&path).unwrap().unwrap()).unwrap(), before, "the key record is unchanged");
+        assert!(!protection::sidecar(&path, ".rekey.json").exists() && !protection::sidecar(&path, ".rekey-before").exists(), "no change began");
+        let record = Record::read(&path).unwrap().unwrap();
+        let mut a = app(root.path());
+        a.open_book(&path, &record.keys.unlock(PASSWORD).unwrap()).unwrap();
+        support::sign_in(&mut a);
+        let changed: i64 = a.open_mut().unwrap().book.read(|q| q.query_row("SELECT count(*) FROM ledger_auditevent WHERE action='book.protection_changed'", [], |r| r.get(0))).unwrap();
+        assert_eq!(changed, 0);
+        let store = fb_core::attachments::storage::Store::for_book(&path, &a.receipt_key().unwrap()).unwrap().with_legacy(a.master_key().unwrap()).unwrap();
+        let o = a.open_mut().unwrap();
+        assert_eq!(fb_core::attachments::download(&mut o.book, &store, o.owner, co, &id).unwrap(), PDF);
+    }
+}
+
+/// Rekey crash recovery: a SIGKILL after the pages are rewritten rolls back to the old key and record,
+/// and an attachment added before the change still reads.
+#[test]
+fn a_rekey_killed_midway_with_an_older_attachment_rolls_back_and_the_file_reads() {
+    for own in [false, true] {
+        let root = tempfile::tempdir().unwrap();
+        let (path, co, id) = book_with_an_older_attachment(root.path(), own);
+        kill_at(root.path(), own, "rekey", "rekey-pages-written");
+        assert!(protection::recover_rekey(&path).unwrap());
+        let record = Record::read(&path).unwrap().unwrap();
+        let mut a = app(root.path());
+        a.open_book(&path, &record.keys.unlock(PASSWORD).unwrap()).unwrap();
+        support::sign_in(&mut a);
+        let store = fb_core::attachments::storage::Store::for_book(&path, &a.receipt_key().unwrap()).unwrap().with_legacy(a.master_key().unwrap()).unwrap();
+        let o = a.open_mut().unwrap();
+        assert_eq!(fb_core::attachments::download(&mut o.book, &store, o.owner, co, &id).unwrap(), PDF);
+        drop(a);
+        // The next change goes through and the file still reads after it, with the receipt key alone.
+        let mut a = app(root.path());
+        a.open_book(&path, &record.keys.unlock(PASSWORD).unwrap()).unwrap();
+        support::sign_in(&mut a);
+        a.os_store_usable = true;
+        a.change_protection(PASSWORD, (!own).then_some(PASSWORD)).unwrap();
+        a.lock();
+        assert_eq!(read_with_receipt_key(root.path(), &path, co, &id), PDF);
     }
 }

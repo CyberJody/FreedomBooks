@@ -13,7 +13,9 @@ pub struct BookCredentials {
     book: Mutex<Book>,
     actor: UserId,
     wrapping_key: Zeroizing<[u8; 32]>,
-    legacy_key: Option<Zeroizing<[u8; 32]>>,
+    /// Other keys a saved credential may have been written under (the old book-derived vault, or a
+    /// superseded connection key). Read with, then re-saved under `wrapping_key`; never written with.
+    legacy_keys: Vec<Zeroizing<[u8; 32]>>,
 }
 
 impl BookCredentials {
@@ -23,13 +25,14 @@ impl BookCredentials {
 
     /// The vault over an open book, from the session's already-derived subkey.
     pub(crate) fn with_wrapping_key(book: Book, actor: UserId, wrapping_key: Zeroizing<[u8; 32]>) -> Self {
-        Self { book: Mutex::new(book), actor, wrapping_key, legacy_key: None }
+        Self { book: Mutex::new(book), actor, wrapping_key, legacy_keys: vec![] }
     }
 
     /// Only an old book without a portable key record may migrate its former book-derived vault.
-    pub(crate) fn with_device_key(book: Book, actor: UserId, device: &[u8; 32], legacy: Option<&[u8; 32]>) -> PluginResult<Self> {
+    /// `alternates` are superseded connection keys this computer kept aside.
+    pub(crate) fn with_device_key(book: Book, actor: UserId, device: &[u8; 32], legacy: Option<&[u8; 32]>, alternates: &[&[u8; 32]]) -> PluginResult<Self> {
         let mut store = Self::new(book, actor, device)?;
-        store.legacy_key = legacy.map(wrapping_key).transpose()?;
+        store.legacy_keys = legacy.into_iter().chain(alternates.iter().copied()).filter(|k| *k != device).map(wrapping_key).collect::<PluginResult<_>>()?;
         Ok(store)
     }
 
@@ -61,10 +64,9 @@ impl BookCredentials {
             // Install masks for the entire file before ANY Writer is allowed. This internal
             // restore never exposes credentials or grants company access to the signed-in user.
             let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
-            let restored = book.authenticate_bankfeed_restore(&connection, &self.wrapping_key)
-                .or_else(|e| match &self.legacy_key {
-                    Some(key) => book.authenticate_bankfeed_restore(&connection, key),
-                    None => Err(e),
+            let restored = self.legacy_keys.iter()
+                .fold(book.authenticate_bankfeed_restore(&connection, &self.wrapping_key), |found, key| {
+                    found.or_else(|_| book.authenticate_bankfeed_restore(&connection, key))
                 })
                 .and_then(|record| book.restore_bankfeed_mask(&connection, &record, Vec::<String>::new()).map(|()| record));
             match restored {
@@ -104,6 +106,22 @@ impl BookCredentials {
         Ok(labels)
     }
 
+    /// The connection key is unavailable this session (no working keyring). Every active
+    /// connection's write guard is released for this open Book only, with a key that cannot read it,
+    /// so the books stay writable. Nothing durable changes: no "reconnect needed" flag, no audit,
+    /// no AI status, no envelope migration. Returns how many connections are waiting.
+    pub(crate) fn release_bankfeeds_unavailable(&self) -> PluginResult<usize> {
+        let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
+        let active = book.read(|tx| {
+            tx.prepare("SELECT id FROM bankfeeds_connection WHERE active=1 ORDER BY company_id,id")?
+                .query_map([], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()
+        }).map_err(|_| PluginError::CredentialStore)?;
+        for connection in &active {
+            book.release_unreadable_bankfeed(connection, &self.wrapping_key).map_err(|_| PluginError::CredentialStore)?;
+        }
+        Ok(active.len())
+    }
+
     fn restore_ai_credentials(&self) -> PluginResult<()> {
         let companies = self.book.lock().map_err(|_| PluginError::CredentialStore)?.read(|q| {
             q.prepare("SELECT company_id FROM assistant_connection WHERE status='connected' AND credential_present=1 AND company_id IN (SELECT company_id FROM ledger_company_members WHERE user_id=?1)")?
@@ -121,7 +139,7 @@ impl BookCredentials {
     }
 
     fn migrate_legacy_envelopes(&self) -> PluginResult<()> {
-        let Some(legacy) = &self.legacy_key else { return Ok(()) };
+        if self.legacy_keys.is_empty() { return Ok(()) }
         let scopes = self.book.lock().map_err(|_| PluginError::CredentialStore)?.read(|q| {
             q.prepare("SELECT company_id,plugin_id,connection_id FROM plugin_credential WHERE company_id IN (SELECT company_id FROM ledger_company_members WHERE user_id=?1) ORDER BY company_id,plugin_id,connection_id")?
                 .query_map([self.actor.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?
@@ -131,7 +149,9 @@ impl BookCredentials {
         for (company, plugin_id, connection) in scopes {
             let scope = CredentialScope { company_id: company.parse().map_err(|_| PluginError::WrongScope)?, plugin_id, connection_id: connection.parse().map_err(|_| PluginError::WrongScope)? };
             if self.load(&scope).is_ok() { continue; }
-            if let Ok(Some(value)) = self.load_key(&scope, legacy) { self.save(&scope, value)?; migrated = true; }
+            for legacy in &self.legacy_keys {
+                if let Ok(Some(value)) = self.load_key(&scope, legacy) { self.save(&scope, value)?; migrated = true; break; }
+            }
         }
         if migrated { self.book.lock().map_err(|_| PluginError::CredentialStore)?.compact_secret_pages().map_err(|_| PluginError::CredentialStore)?; }
         Ok(())

@@ -104,8 +104,8 @@ fn fields(app: &mut App, c: CompanyId, prior: Option<&Value>) -> AppResult<Vec<F
         Field::new("review_token", "Review token", Widget::Hidden),
         select(
             "bank",
-            "Deposit to designated bank",
-            "Choose a bank",
+            "Bank account",
+            "Choose…",
             opts,
             true,
         ),
@@ -137,13 +137,16 @@ fn form(
     let prior = prior(app, c, p)?;
     let fs = fields(app, c, prior.as_ref())?;
     let receipts = eligible(app, c, prior.as_ref())?;
+    let offered = banks(app, c, &[])?;
+    let bank = super::super::d6::default_bank(app, c, &offered, "SELECT bank_id FROM banking_deposit WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
+    put(&mut vm, "no_banks", offered.is_empty());
     put(
         &mut vm,
         "form",
         bind_fields(
             fs,
             p,
-            &json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string()}),
+            &json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string(),"bank":bank}),
             e,
             true,
         ),

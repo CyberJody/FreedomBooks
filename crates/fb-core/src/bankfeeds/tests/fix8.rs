@@ -223,10 +223,13 @@ fn fix8_every_write_goes_through_the_choke_point() {
             rest = &tail[1..];
         }
     }
+    let staging=include_str!("../staging.rs");
+    assert!(staging.contains("fn store_pull_mode(") && staging.contains("automatic: bool"));
+    assert!(staging.contains("super::automatic::enqueue(w, co, &id)?"));
     write_paths.sort();
     let expected = [
-        "accept", "connect", "forget", "ignore", "map_account", "move_rule", "record_sync_failure", "return_to_review", "save_mappings", "save_rule", "set_rule_active", "stage_bank_transactions",
-        "store_pull",
+        "accept", "auto_post", "connect", "forget", "ignore", "import_rules", "keep_recorded", "link_existing", "map_account", "move_rule", "record_sync_failure", "return_to_review", "review_sync_gap",
+        "save_mappings", "save_rule", "set_rule_active", "stage_bank_transactions", "store_pull_for_desktop", "turn_off_imported_auto_post", "undo_accept",
     ];
     assert_eq!(write_paths, expected, "the write paths changed: drive the new one in fix8_split_secrets_every_write_path_and_audit_action and list it here");
     assert_eq!(credential_paths, ["restore_connection_credentials", "flag_unreadable_credential"], "credential load paths changed: add public-admission, quarantine and later-writer regressions");
@@ -241,13 +244,26 @@ fn fix8_every_write_goes_through_the_choke_point() {
     let secrets = include_str!("../secrets.rs");
     assert!(!secrets.contains("pub fn masking_"));
 }
-const FIX8_ACTIONS: [&str; 11] = [
+impl Fx {
+    fn item_in_feed(&self, feed: &str, remote: &str) -> String {
+        self.book.connection().query_row("SELECT id FROM bankfeeds_transaction WHERE feed_account_id=?1 AND remote_id=?2", [feed, remote], |r| r.get(0)).unwrap()
+    }
+}
+const FIX8_ACTIONS: [&str; 19] = [
     "bankfeed.accepted",
+    "bankfeed.bank_change_kept",
+    "bankfeed.gap_reviewed",
+    "bankfeed.linked",
+    "bankfeed.recorded_again",
+    "bankfeed.undone",
     "bankfeed.connected",
     "bankfeed.forgotten",
     "bankfeed.ignored",
     "bankfeed.mapped",
     "bankfeed.returned",
+    "bankfeed.rule_auto_posted",
+    "bankfeed.rule_auto_post_disabled",
+    "bankfeed.rule_imported",
     "bankfeed.rule_created",
     "bankfeed.rule_edited",
     "bankfeed.rule_moved",
@@ -316,6 +332,16 @@ fn fix8_split_secrets_every_write_path_and_audit_action() {
     returned.push(format!("{:?}", save_rule(&mut f.book, f.u, f.c, &json!({"rule_id":rule.id,"name":password,"match_text":"edited","account_id":office}), &known).unwrap()));
     returned.push(format!("{:?}", move_rule(&mut f.book, f.u, f.c, &other.id, &json!("up"), &known).unwrap()));
     returned.push(format!("{:?}", set_rule_active(&mut f.book, f.u, f.c, &rule.id, &json!(false), &known).unwrap()));
+    // Imported source evidence and the desktop-only automatic queue use the same mask.
+    let row=qbo::parse_row(2,&format!("Imported {password}"),&json!({"ruleConditions":[{"ruleType":1,"value":format!("Automatic secret test {password}")},{"ruleType":10,"value":"-1"}],"isAndRule":true}).to_string(),r#"{"ruleActions":[{"actionType":0,"value":"Office"},{"actionType":8,"value":true}]}"#);
+    let source=qbo::Import{hash:"f".repeat(64),rows:vec![row]};
+    let selection=qbo::Selection{row:2,preserve_auto_post:true,account_id:office.clone(),scope:f.feed("ACT-checking"),kind:"EXPENSE".into(),payee_id:String::new(),payee_table:String::new()};
+    returned.push(qbo::import_rules(&mut f.book,f.u,f.c,&source,&[selection],true,&SecretSet::none()).unwrap().to_string());
+    let automatic=StagedPull{accounts:vec![acct("ACT-checking","Checking",vec![tx("SECRET-AUTO","2026-10-22",-17321,&format!("Automatic secret test {password}"))])],..StagedPull::default()};
+    returned.push(store_pull_for_desktop(&mut f.book,f.u,f.c,&f.conn.clone(),&automatic,NOW,false,None,&known).unwrap().to_string());
+    let auto_item=f.item("SECRET-AUTO");
+    assert!(auto_post(&mut f.book,f.u,f.c,&auto_item.id,&known).unwrap());
+    assert_eq!(turn_off_imported_auto_post(&mut f.book,f.u,f.c,None,&known).unwrap(),1);
     // The inline account-creation path must mask the user-entered name and its downstream audit.
     let card = f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE remote_id='ACT-card'", [], |r| r.get::<_,String>(0)).unwrap();
     for kind in [NewAccountKind::Checking, NewAccountKind::Savings, NewAccountKind::CreditCard] {
@@ -326,6 +352,38 @@ fn fix8_split_secrets_every_write_path_and_audit_action() {
     f.secrets = SecretSet::none();
     returned.push(f.map("ACT-checking", None).unwrap().to_string());
     returned.push(f.map("ACT-checking", Some("100")).unwrap().to_string());
+
+    // Review-safety writers (2026-11-10) with split secrets: a third connection downloads the checking account
+    // again; its copy of the accepted TX-1001 is linked, returned, confirmed as a second recording and undone.
+    // The bank revises the first connection's accepted TX-1001, kept as recorded; a capped window is reviewed.
+    let third = connect(&mut f.book, f.u, f.c, &json!("R8 third"), "third.test", &known).unwrap()["id"].as_str().unwrap().to_owned();
+    let mut again = pull.clone();
+    again.errors.clear();
+    returned.push(store_pull(&mut f.book, f.u, f.c, &third, &again, NOW, false, None, &known).unwrap().to_string());
+    let feed_of = |f: &Fx, conn: &str| -> String {
+        f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE connection_id=?1 AND remote_id='ACT-checking'", [conn], |r| r.get(0)).unwrap()
+    };
+    let (first_feed, third_feed) = (feed_of(&f, &f.conn), feed_of(&f, &third));
+    map_account(&mut f.book, f.u, f.c, &first_feed, &Value::Null, &known).unwrap();
+    let checking = json!(f.acc("100"));
+    returned.push(map_account(&mut f.book, f.u, f.c, &third_feed, &checking, &known).unwrap().to_string());
+    let copy: String = f.book.connection().query_row("SELECT id FROM bankfeeds_transaction WHERE feed_account_id=?1 AND remote_id='TX-1001'", [&third_feed], |r| r.get(0)).unwrap();
+    returned.push(format!("{:?}", link_existing(&mut f.book, f.u, f.c, &copy, None, &known).unwrap()));
+    returned.push(format!("{:?}", return_to_review(&mut f.book, f.u, f.c, &copy, &known).unwrap()));
+    let confirmed = json!({"kind":"CHECK","account_id":f.acc("500"),"record_again":true});
+    let twice = accept(&mut f.book, f.u, f.c, &copy, &confirmed, &known).unwrap();
+    returned.push(format!("{twice:?}"));
+    returned.push(format!("{:?}", undo_accept(&mut f.book, f.u, f.c, &copy, &known).unwrap()));
+    let mut revised = pull.clone();
+    revised.errors.clear();
+    revised.accounts[0].transactions[0].amount -= 100;
+    let conn = f.conn.clone();
+    returned.push(store_pull(&mut f.book, f.u, f.c, &conn, &revised, NOW, false, None, &known).unwrap().to_string());
+    let original = f.item_in_feed(&first_feed, "TX-1001");
+    keep_recorded(&mut f.book, f.u, f.c, &original, &known).unwrap();
+    let start = begin_sync(&mut f.book, f.u, f.c, &conn, "2027-06-01T12:00:00Z", 0, true).unwrap();
+    returned.push(store_pull(&mut f.book, f.u, f.c, &conn, &revised, "2027-06-01T12:00:00Z", false, Some(start), &known).unwrap().to_string());
+    review_sync_gap(&mut f.book, f.u, f.c, &conn, &known).unwrap();
 
     let mut st = f.book.connection().prepare("SELECT DISTINCT action FROM ledger_auditevent ORDER BY action").unwrap();
     let seen: Vec<String> = st.query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();

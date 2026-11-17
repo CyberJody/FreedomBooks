@@ -1,4 +1,6 @@
 use super::*;
+#[path = "recurring_tests.rs"]
+mod recurring_tests;
 #[path = "l3b_tests.rs"]
 mod l3b;
 #[path = "attacks.rs"]
@@ -8,7 +10,6 @@ mod read_tests;
 #[path = "rebase_tests.rs"]
 mod rebase_tests;
 use crate::{services::AccountInput, users};
-use std::sync::atomic::{AtomicUsize, Ordering};
 /// Returns the guard that refused a raw statement; 0130's `fb_valid` never counts.
 fn guard_of<T: std::fmt::Debug>(r: Result<T, fb_db::rusqlite::Error>) -> String {
     let e = r.unwrap_err();
@@ -26,7 +27,6 @@ fn assert_guard_set(hit: &BTreeSet<String>, expected: &[&str]) {
         hit.iter().map(|h| format!("    \"{h}\",")).collect::<Vec<_>>().join("\n")
     );
 }
-static NEXT: AtomicUsize = AtomicUsize::new(0);
 struct Fx {
     book: Book,
     actor: UserId,
@@ -35,15 +35,12 @@ struct Fx {
     expense: AccountId,
     ap: AccountId,
     bank: AccountId,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fx {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "payables-{}-{}.fbbook",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::SeqCst)
-        ));
-        let mut book = Book::create(&path, &[42; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("payables");
+        let mut book = file.book(&[42; 32]);
         let actor = users::create_user(&mut book, "bill-test", true).unwrap();
         let co = services::create_company(&mut book, actor, "Synthetic bills", "USD", false)
             .unwrap()
@@ -93,6 +90,7 @@ impl Fx {
             .unwrap()
             .into();
         Self {
+            _file: file,
             book,
             actor,
             co,

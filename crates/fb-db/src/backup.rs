@@ -89,6 +89,8 @@ impl Book {
             owner_empty_command,
             pending_credential_masks: Default::default(),
             retained_text_guards: Default::default(),
+            commits: 0,
+            connection: crate::next_connection(),
             retained_text_state: Default::default(),
         };
         book.read(|q| f(q, &installed))
@@ -154,6 +156,18 @@ impl Book {
                 hex(key)
             ))?;
             let backup = rusqlite::backup::Backup::new(&self.conn, &mut dest)?;
+            // Test builds only: stop part-way through the pre-change copy, while the destination's rollback journal
+            // exists, so a SIGKILL there leaves the snapshot and its `-journal` behind.
+            #[cfg(feature = "key-test-hooks")]
+            if std::env::var("FB_KEY_STOP_AT").ok().as_deref() == Some("snapshot-in-progress")
+                && path.as_os_str().as_encoded_bytes().ends_with(b".rekey-before")
+                && let Ok(marker) = std::env::var("FB_KEY_STOP_MARKER") {
+                backup.step(1)?;
+                std::fs::write(marker, "snapshot-in-progress").expect("test marker");
+                loop {
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+            }
             backup.run_to_completion(256, Duration::from_millis(10), None)?;
             drop(backup);
             dest.close().map_err(|(_, e)| e)?;

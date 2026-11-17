@@ -1,8 +1,23 @@
 [workspace]
 resolver = "2"
-members = ["crates/fb-money", "crates/fb-net", "crates/fb-ids", "crates/fb-db", "crates/fb-core", "crates/fb-harness", "crates/fb-node", "crates/fb-templates", "crates/fb-app", "crates/fb-screendiff", "crates/fb-plugin-api", "crates/fb-plugin-testkit", "crates/fb-plugins/openai", "crates/fb-plugins/simplefin", "crates/fb-plugins/smtp", "crates/fb-plugins/gmail", "crates/fb-plugins/m365"]
+members = ["crates/fb-money", "crates/fb-net", "crates/fb-ids", "crates/fb-db", "crates/fb-core", "crates/fb-harness", "crates/fb-node", "crates/fb-diag", "crates/fb-templates", "crates/fb-app", "crates/fb-plugin-api", "crates/fb-remote-proto", "crates/fb-remote", "crates/fb-host", "crates/fb-plugin-testkit", "crates/fb-plugins/openai", "crates/fb-plugins/simplefin", "crates/fb-plugins/smtp", "crates/fb-plugins/gmail", "crates/fb-plugins/m365"]
 
 [workspace.package]
 edition = "2021"
 version = "0.1.0"
 publish = false
+
+# Tests spend their time in SQLCipher, key derivation and hashing. Unoptimized, the fb-core library
+# tests alone took one to two hours. Dependencies build optimized; the two crates that sit under every
+# test (book storage and money) build at opt-level 2. Line tables keep backtraces useful and targets small.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev.package.fb-db]
+opt-level = 2
+
+[profile.dev.package.fb-money]
+opt-level = 2

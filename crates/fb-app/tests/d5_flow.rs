@@ -126,7 +126,7 @@ fn credit_and_deposit_lifecycles_through_forms_tie_out() {
     let c = f.c.clone();
     let p = f.credit_fields();
     let path = format!("/c/{c}/credit-memos/new/");
-    let cm = location(f.reviewed(&path, &p, "record"));
+    let cm = location(submit(&mut f.app, &path, &p));
     assert_eq!(count(&mut f.app, "credits_creditmemoline"), 1);
     let p = pairs(
         json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":"2026-10-03",format!("amount_{}",f.invoice):"5.00"}),
@@ -187,9 +187,12 @@ fn credit_and_deposit_lifecycles_through_forms_tie_out() {
 }
 #[test]
 fn stale_review_and_forged_capability_cannot_record_money() {
+    // Customer deposits still review before saving; a changed or forged review records nothing.
     let mut f = F::new();
-    let path = format!("/c/{}/credit-memos/new/", f.c);
-    let mut p = f.credit_fields();
+    let path = format!("/c/{}/customer-deposits/new/", f.c);
+    let mut p = pairs(
+        json!({"request_key":uuid::Uuid::new_v4().to_string(),"customer":f.customer,"date":"2026-10-02","amount":"30.00","method":"CHECK","destination":"UNDEPOSITED","reference":"","order_reference":"","memo":""}),
+    );
     let out = submit(&mut f.app, &path, &p);
     let Outcome::Page { html, .. } = out else {
         panic!("{out:?}")
@@ -197,8 +200,8 @@ fn stale_review_and_forged_capability_cannot_record_money() {
     p.push(("review_token".into(), field(&html, "review_token")));
     p.push(("action".into(), "record".into()));
     for (k, v) in &mut p {
-        if k == "lines-0-rate" {
-            *v = "11.00".into();
+        if k == "amount" {
+            *v = "31.00".into();
         }
     }
     let before = count(&mut f.app, "ledger_auditevent");
@@ -207,7 +210,6 @@ fn stale_review_and_forged_capability_cannot_record_money() {
         panic!("{out:?}")
     };
     assert!(html.contains("changed"));
-    assert_eq!(count(&mut f.app, "credits_creditmemo"), 0);
     assert_eq!(count(&mut f.app, "ledger_auditevent"), before);
     for (k, v) in &mut p {
         if k == "review_token" {
@@ -218,9 +220,97 @@ fn stale_review_and_forged_capability_cannot_record_money() {
     let Outcome::Invalid { html } = out else {
         panic!("{out:?}")
     };
-    assert!(html.contains("fresh credit memo review"));
+    assert!(html.contains("fresh customer deposit review"));
     assert_eq!(count(&mut f.app, "ledger_auditevent"), before);
 }
+
+#[test]
+fn credit_memo_saves_in_one_step_and_shows_its_entries_after() {
+    let mut f = F::new();
+    let path = format!("/c/{}/credit-memos/new/", f.c);
+    let html = screens::render(&mut f.app, &path).unwrap().html;
+    // The invoice editor's grid: one line to start, live totals, entries panel, one Save.
+    assert_eq!(html.matches("<fieldset class=\"invoice-row\"><legend>Line").count(), 1);
+    for part in ["invoice-tax-rates", "posting-accounts", "Show accounting entries", "name=\"editor_action\" value=\"save\">Save</button>", "data-total-bar"] {
+        assert!(html.contains(part), "{part}");
+    }
+    for gone in ["RECORD ONLY", "Synthetic data", "No credentials", "review_token", "books only"] {
+        assert!(!html.contains(gone), "{gone}");
+    }
+    let before = count(&mut f.app, "ledger_journal");
+    let p = f.credit_fields();
+    let cm = location(submit(&mut f.app, &path, &p));
+    assert_eq!(count(&mut f.app, "credits_creditmemo"), 1);
+    assert_eq!(count(&mut f.app, "ledger_journal"), before + 1);
+    let html = screens::render(&mut f.app, &cm).unwrap().html;
+    assert!(html.contains("class=\"status-chip open\">Credit available</span>"));
+    assert!(html.contains(">Apply to invoices</a>") && html.contains("Show accounting entries"));
+    assert!(!html.contains("RECORD ONLY") && !html.contains("Available credit ="));
+}
+
+#[test]
+fn credit_memo_refusal_keeps_what_was_entered_and_writes_nothing() {
+    let mut f = F::new();
+    let path = format!("/c/{}/credit-memos/new/", f.c);
+    // A description-only line needs an income account; nothing is recorded and the line stays.
+    let mut p = f.credit_fields();
+    p.retain(|(k, _)| k != "lines-0-income_account");
+    let before = count(&mut f.app, "ledger_auditevent");
+    let Outcome::Invalid { html } = submit(&mut f.app, &path, &p) else { panic!() };
+    assert!(html.contains("Choose the income account for this line."));
+    assert!(html.contains(">\nReturn</textarea>") && html.contains("value=\"10.00\""));
+    assert_eq!(count(&mut f.app, "ledger_auditevent"), before);
+    // The core refuses an inactive income account; the reason is plain and the entries stay.
+    run(&mut f.app, json!({"type":"SaveAccount","company_id":f.c,"account_id":f.income,"code":"4000","name":"4000","detail_type":"INCOME","active":false}));
+    let before = count(&mut f.app, "ledger_auditevent");
+    let p = f.credit_fields();
+    let Outcome::Invalid { html } = submit(&mut f.app, &path, &p) else { panic!() };
+    assert!(html.contains("Credit memo not saved."), "{html}");
+    assert!(html.contains("One of the accounts this would post to is inactive."), "{html}");
+    assert!(html.contains(">\nReturn</textarea>"));
+    assert_eq!(count(&mut f.app, "credits_creditmemo"), 0);
+    assert_eq!(count(&mut f.app, "ledger_auditevent"), before);
+}
+
+#[test]
+fn credit_memo_saved_twice_records_once_and_shows_the_first() {
+    let mut f = F::new();
+    let path = format!("/c/{}/credit-memos/new/", f.c);
+    let p = f.credit_fields();
+    let first = location(submit(&mut f.app, &path, &p));
+    let journals = count(&mut f.app, "ledger_journal");
+    assert_eq!(location(submit(&mut f.app, &path, &p)), first);
+    assert_eq!(count(&mut f.app, "credits_creditmemo"), 1);
+    assert_eq!(count(&mut f.app, "ledger_journal"), journals);
+    assert!(screens::render(&mut f.app, &first).unwrap().html.contains("This credit memo was already saved as CM-"));
+}
+
+#[test]
+fn a_credit_memo_line_with_an_item_uses_the_items_income_account() {
+    let mut f = F::new();
+    let item = run(&mut f.app, json!({"type":"SaveItem","company_id":f.c,"code":"RET","description":"Returned part","kind":"NONSTOCK","sale_rate":"7.00","income_account_id":f.income}))["id"].as_str().unwrap().to_owned();
+    let path = format!("/c/{}/credit-memos/new/", f.c);
+    let mut p = f.credit_fields();
+    p.retain(|(k, _)| k != "lines-0-income_account");
+    p.push(("lines-0-item".into(), item));
+    location(submit(&mut f.app, &path, &p));
+    let account: String = f.app.open_mut().unwrap().book.read(|tx| tx.query_row("SELECT income_account_id FROM credits_creditmemoline", [], |r| r.get(0))).unwrap();
+    assert_eq!(account, f.income);
+}
+
+#[test]
+fn customer_deposit_form_asks_for_a_bank_only_when_direct() {
+    let mut f = F::new();
+    let path = format!("/c/{}/customer-deposits/new/", f.c);
+    let html = screens::render(&mut f.app, &path).unwrap().html;
+    assert!(html.contains("<option value=\"UNDEPOSITED\" selected>Undeposited funds</option>"), "{html}");
+    assert!(html.contains("data-bank-field hidden") && html.contains(">Bank account:</label>"));
+    for gone in ["RECORD ONLY", "Designated bank", "credentials", "Never enter card numbers"] {
+        assert!(!html.contains(gone), "{gone}");
+    }
+    assert!(html.contains("id=\"deposit-entry\"") && !html.contains("Choose where deposits are held first"));
+}
+
 #[test]
 fn field_cleaning_collects_errors_without_writes() {
     let mut f = F::new();
@@ -300,7 +390,7 @@ fn company_scope_applies_to_each_document_and_application_route() {
     let p = f.credit_fields();
     let c = f.c.clone();
     let path = format!("/c/{c}/credit-memos/new/");
-    let cm = location(f.reviewed(&path, &p, "record"));
+    let cm = location(submit(&mut f.app, &path, &p));
     let other = run(
         &mut f.app,
         json!({"type":"SaveCompany","company_id":null,"name":"Other synthetic books","currency":"USD"}),

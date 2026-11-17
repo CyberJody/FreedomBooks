@@ -1,10 +1,11 @@
-use crate::SEND_SCOPE;
+use crate::{COMPOSE_SCOPE, SEND_SCOPE};
 use fb_plugin_api::*;
 use serde::{Deserialize, Serialize};
 
 // No Debug or Serialize on plaintext token owners. Secret fields deserialize
 // straight into zeroizing owners, including valid JSON-escaped token strings.
 pub(crate) struct Tokens {
+    pub scope: &'static str,
     pub client_id: String,
     pub from_address: String,
     pub access: SecretString,
@@ -22,6 +23,8 @@ struct Stored {
     #[serde(deserialize_with = "secret")]
     refresh_token: SecretString,
     expires_at: u64,
+    #[serde(default)]
+    scope: Option<String>,
 }
 #[derive(Deserialize)]
 struct Response {
@@ -48,8 +51,12 @@ impl Tokens {
     pub fn decode(raw: &SecretBytes) -> PluginResult<Self> {
         let stored: Stored =
             serde_json::from_slice(raw.expose()).map_err(|_| PluginError::NeedsSignIn)?;
-        if stored.version != 1
-            || stored.client_id.is_empty()
+        let scope = match (stored.version, stored.scope.as_deref()) {
+            (1, None) | (2, Some(SEND_SCOPE)) => SEND_SCOPE,
+            (2, Some(COMPOSE_SCOPE)) => COMPOSE_SCOPE,
+            _ => return Err(PluginError::NeedsSignIn),
+        };
+        if stored.client_id.is_empty()
             || crate::mime::mailbox(&stored.from_address, None).is_err()
             || !valid_token(stored.access_token.expose_secret())
             || !valid_token(stored.refresh_token.expose_secret())
@@ -57,6 +64,7 @@ impl Tokens {
             return Err(PluginError::NeedsSignIn);
         }
         Ok(Self {
+            scope,
             client_id: stored.client_id,
             from_address: stored.from_address,
             access: stored.access_token,
@@ -73,9 +81,11 @@ impl Tokens {
             access_token: &'a str,
             refresh_token: &'a str,
             expires_at: u64,
+            scope: &'a str,
         }
         serde_json::to_vec(&Store {
-            version: 1,
+            version: 2,
+            scope: self.scope,
             client_id: &self.client_id,
             from_address: &self.from_address,
             access_token: self.access.expose_secret(),
@@ -85,6 +95,7 @@ impl Tokens {
         .map(SecretBytes::new)
         .map_err(|_| PluginError::CredentialStore)
     }
+    #[cfg(test)]
     pub fn from_response(
         response: &HttpResponse,
         now: Timestamp,
@@ -92,6 +103,19 @@ impl Tokens {
         from_address: &str,
         old: Option<&Self>,
     ) -> PluginResult<Self> {
+        Self::from_response_scoped(response, now, client_id, from_address, old, SEND_SCOPE)
+    }
+    pub fn from_response_scoped(
+        response: &HttpResponse,
+        now: Timestamp,
+        client_id: &str,
+        from_address: &str,
+        old: Option<&Self>,
+        scope: &'static str,
+    ) -> PluginResult<Self> {
+        if ![SEND_SCOPE, COMPOSE_SCOPE].contains(&scope) {
+            return Err(PluginError::InvalidConfiguration);
+        }
         if response.status != 200 {
             #[derive(Deserialize)]
             struct Failure {
@@ -116,7 +140,7 @@ impl Tokens {
             || wire
                 .scope
                 .as_deref()
-                .is_some_and(|s| s.split_ascii_whitespace().collect::<Vec<_>>() != [SEND_SCOPE])
+                .is_some_and(|s| s.split_ascii_whitespace().collect::<Vec<_>>() != [scope])
         {
             return Err(PluginError::InvalidResponse);
         }
@@ -138,6 +162,7 @@ impl Tokens {
             .checked_add(wire.expires_in)
             .ok_or(PluginError::InvalidResponse)?;
         Ok(Self {
+            scope,
             client_id: client_id.into(),
             from_address: from_address.into(),
             access: wire.access_token,
@@ -152,11 +177,15 @@ mod token_trait_guard {
     use super::*;
     #[test]
     fn token_owners_cannot_be_serialized_or_debugged() {
-        trait AmbiguousIfSerialize<A> { fn check() {} }
+        trait AmbiguousIfSerialize<A> {
+            fn check() {}
+        }
         impl<T: ?Sized> AmbiguousIfSerialize<()> for T {}
         struct Serializes;
         impl<T: ?Sized + serde::Serialize> AmbiguousIfSerialize<Serializes> for T {}
-        trait AmbiguousIfDebug<A> { fn check() {} }
+        trait AmbiguousIfDebug<A> {
+            fn check() {}
+        }
         impl<T: ?Sized> AmbiguousIfDebug<()> for T {}
         struct Debugs;
         impl<T: ?Sized + std::fmt::Debug> AmbiguousIfDebug<Debugs> for T {}

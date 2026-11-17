@@ -10,6 +10,12 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 fb-app = { path = "../fb-app" }
+fb-diag = { path = "../fb-diag" }
+# Hosting (hosting.rs): the session-layer backend and the remote dispatcher. Neither links a
+# network or TLS stack; the TLS listener is the separate fb-remote process.
+fb-host = { path = "../fb-host" }
+fb-remote-proto = { path = "../fb-remote-proto" }
+serde = { version = "1", features = ["derive"] }
 napi = { version = "=3.16.0", default-features = false, features = ["napi8", "dyn-symbols"] }
 napi-derive = "=3.7.0"
 serde_json = { version = "1", features = ["preserve_order"] }
@@ -20,11 +26,21 @@ napi-build = "=2.6.0"
 
 [dev-dependencies]
 tempfile = "3"
+# Hosting tests drive a second computer through the real gateway (dev only: the gate's isolation
+# check covers fb-node's normal and build dependencies, which link no TLS).
+fb-remote = { path = "../fb-remote" }
+# CRASHLOG panic tests: an older-format book (one migration behind) and process-level stderr control.
+fb-db = { path = "../fb-db", features = ["test-support"] }
+libc = "0.2"
 
 [features]
+invoice-delivery = ["fb-app/invoice-delivery"]
 simplefin = ["fb-app/simplefin"]
 # Dev/test builds only: show the plugin surfaces (see fb-app `plugins`).
 plugins = ["fb-app/plugins"]
 # Smoke only: also allow the fake OAuth provider origin for Outcome::External.
-fake-network = ["plugins"]
+fake-network = ["plugins", "invoice-delivery"]
 key-test-hooks = ["fb-app/key-test-hooks"]
+# Test builds only: panics injected on request (FB_TEST_PANIC, see fb-app `test_panic`), to prove the
+# panic boundary. Refused in optimized builds (compile_error in lib.rs, fb-app and fb-db).
+panic-test = ["fb-app/panic-test"]

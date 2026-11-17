@@ -1,0 +1,3 @@
+{% extends 'ledger/base.html' %}{% block content %}<div class="heading"><h1>Reports</h1></div>
+<p class="hub-intro">Financial reports count posted work only; drafts never change them.</p>
+<div class="hub">{% for group in nav.menu %}<section class="hub-group" aria-labelledby="hub-{{ loop.index }}"><h2 id="hub-{{ loop.index }}">{{ group.label }}</h2><ul>{% for item in group.items %}<li><a href="{{ item.url }}">{{ item.label }}</a><span>{{ item.description }}</span></li>{% endfor %}</ul></section>{% endfor %}</div>{% endblock %}

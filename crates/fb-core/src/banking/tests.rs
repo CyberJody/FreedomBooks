@@ -8,8 +8,6 @@ mod dfix3;
 #[path = "dfix3b_validator_tests.rs"]
 mod dfix3b_validators;
 use crate::{services::AccountInput, users};
-use std::sync::atomic::{AtomicUsize, Ordering};
-static NEXT: AtomicUsize = AtomicUsize::new(0);
 #[test]
 fn statement_amounts_preserve_exact_python_decimal_text_and_reject_fractional_cents() {
     assert_eq!(cents(&json!("１２_３.４０")).unwrap(), 12340);
@@ -30,15 +28,13 @@ struct Fx {
     income: AccountId,
     expense: AccountId,
     customer: String,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fx {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "banking-{}-{}.fbbook",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::SeqCst)
-        ));
-        let mut book = Book::create(&path, &[87; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("banking");
+        let path = file.path().to_path_buf();
+        let mut book = file.book(&[87; 32]);
         let u = users::create_user(&mut book, "banking-test", true).unwrap();
         let c = services::create_company(&mut book, u, "Synthetic banking", "USD", false)
             .unwrap()
@@ -73,6 +69,7 @@ impl Fx {
             .unwrap()
             .into();
         Self {
+            _file: file,
             book,
             path,
             u,
@@ -162,7 +159,7 @@ impl Fx {
             .into_iter()
             .map(|t| {
                 let mut st = q
-                    .prepare(&format!("SELECT * FROM {t} ORDER BY 1,2"))
+                    .prepare(&fb_db::test_support::select_all_ordered(q, &t).unwrap())
                     .unwrap();
                 let n = st.column_count();
                 let rows = st

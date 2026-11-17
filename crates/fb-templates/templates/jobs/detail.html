@@ -1,0 +1,37 @@
+{% extends 'jobs/base.html' %}
+{% block crumb %}{{ crumb('Ticket ' ~ ticket.number) }}{% endblock %}
+{% block jobs_content %}
+<div class="heading"><div><h1>Ticket {{ ticket.number }} <span class="status-pill" id="ticket-status">{{ ticket.status_label }}</span></h1><p class="jobs-title">{{ ticket.title }}</p></div>
+{% if can_write %}<div class="jobs-actions">{% if ticket.unbilled_count and ticket.status != 'CLOSED' %}<a class="button" href="{{ url('jobs:invoice', company.pk, ticket.id) }}">Create invoice</a>{% endif %}{% if ticket.status == 'OPEN' %}<a class="button secondary" href="{{ url('time:new', company.pk) }}?ticket={{ ticket.id }}">Enter time</a>{% endif %}<a class="button secondary" href="{{ url('jobs:edit', company.pk, ticket.id) }}">Edit</a></div>{% endif %}</div>
+{% if errors %}<div class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+<dl class="jobs-facts">
+<dt>Customer</dt><dd>{{ ticket.customer_name }}</dd>
+<dt>Opened</dt><dd>{{ ticket.opened_date|date('Y-m-d') }}</dd>
+{% if ticket.due_date %}<dt>Due</dt><dd>{{ ticket.due_date|date('Y-m-d') }}</dd>{% endif %}
+{% if ticket.finished_date %}<dt>{% if ticket.status == 'CLOSED' %}Closed{% elif ticket.status == 'INVOICED' %}Invoiced{% else %}Completed{% endif %}</dt><dd>{{ ticket.finished_date|date('Y-m-d') }}</dd>{% endif %}
+<dt>Opened by</dt><dd>{{ ticket.created_by }}</dd>
+{% if ticket.description %}<dt>Description</dt><dd class="long-text">{{ ticket.description|linebreaksbr }}</dd>{% endif %}
+</dl>
+<section class="jobs-totals" aria-label="Ticket totals"><p><span>Hours</span><strong id="ticket-hours">{{ ticket.totals.hours }}</strong></p><p><span>Billable</span><strong>{{ ticket.totals.billable|money }}</strong></p><p><span>Unbilled</span><strong id="ticket-unbilled">{{ ticket.totals.unbilled|money }}</strong></p><p><span>On invoices</span><strong>{{ ticket.totals.billed|money }}</strong></p>{% if ticket.totals.nonbillable_hours != '0.00' %}<p><span>Not billable</span><strong>{{ ticket.totals.nonbillable_hours }} h</strong></p>{% endif %}</section>
+{% if ticket.status == 'INVOICED' and ticket.unbilled_count %}<p class="notice warning" role="status">Time on this ticket was released from an invoice (the invoice was voided or the time's line was removed), so {{ ticket.unbilled_count }} entr{{ ticket.unbilled_count|pluralize('y,ies') }} can be invoiced again.</p>{% endif %}
+<section aria-labelledby="time-title"><h2 id="time-title">Time</h2>
+<div class="table-scroll"><table class="jobs-table time-table"><thead><tr><th scope="col">Date</th><th scope="col">Service</th><th scope="col">Worked by</th><th scope="col">Notes</th><th scope="col" class="num">Hours</th><th scope="col" class="num">Rate</th><th scope="col" class="num">Amount</th><th scope="col">Billing</th>{% if can_write %}<th scope="col">Change</th>{% endif %}</tr></thead><tbody>
+{% for e in ticket.entries %}<tr data-entry="{{ e.id }}"><td>{{ e.date|date('Y-m-d') }}</td><td>{{ e.item_code }}</td><td>{{ e.worker_name }}</td><td>{{ e.notes }}</td><td class="num">{{ e.hours }}</td><td class="num">{{ e.rate|money }}{% if e.rate_override %} <span class="muted" title="Changed from the service price">*</span>{% endif %}</td><td class="num">{{ e.amount|money }}</td>
+<td>{% if not e.billable %}Not billable{% elif e.billed %}<a href="{{ url('invoices:detail', company.pk, e.invoice_id) }}">{{ e.invoice_number }}</a>{% if e.invoice_state == 'DRAFT' %} (draft){% endif %}{% else %}Unbilled{% endif %}</td>
+{% if can_write %}<td>{% if e.billed %}<span class="muted">Remove its invoice line or void the invoice to change</span>{% else %}<a href="{{ url('time:edit', company.pk, e.id) }}">Edit</a><form method="post" class="jobs-move">{{ e.move_token|safe }}<input type="hidden" name="action" value="move"><input type="hidden" name="entry" value="{{ e.id }}"><input type="hidden" name="expected_revision" value="{{ e.revision }}"><label class="sr-only" for="move-{{ e.id }}">Move to</label><select name="ticket" id="move-{{ e.id }}"><option value="">No ticket</option>{% for o in other_tickets %}<option value="{{ o.id }}">{{ o.number }} · {{ o.title }}</option>{% endfor %}</select><button type="submit" class="secondary">Move</button></form>{% endif %}</td>{% endif %}</tr>
+{% else %}<tr><td colspan="{% if can_write %}9{% else %}8{% endif %}">No time on this ticket yet.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% if time_form %}<section aria-labelledby="add-time-title" class="jobs-add-time"><h2 id="add-time-title">Add time</h2>
+<form method="post" id="add-time" class="jobs-inline" novalidate>{{ time_token|safe }}<input type="hidden" name="action" value="add_time">{% for hidden in time_form.hidden_fields %}{{ hidden.widget|safe }}{% endfor %}
+{% for name in ['date','item','hours','rate','worker','notes'] %}<div class="field field-{{ name }}">{{ time_form.f[name].label_tag|safe }}{{ time_form.f[name].widget|safe }}{{ time_form.f[name].errors|safe }}</div>{% endfor %}
+<div class="field field-billable">{{ time_form.f.billable.widget|safe }}{{ time_form.f.billable.label_tag|safe }}</div>
+<p class="form-actions"><button type="submit">Add time</button></p></form>
+<p class="helptext">Hours can be typed as 3.5, 3.5h, 3:30 or 90m. Leave the rate blank to use the service's price.</p></section>{% endif %}
+{% if ticket.invoices %}<section aria-labelledby="invoices-title"><h2 id="invoices-title">Invoices from this ticket</h2><ul class="jobs-invoices">{% for i in ticket.invoices %}<li><a href="{{ url('invoices:detail', company.pk, i.id) }}">{{ i.number }}</a> · {{ i.date|date('Y-m-d') }} · {{ i.entries }} entr{{ i.entries|pluralize('y,ies') }} · {{ i.amount|money }} {{ company.currency }} · {% if i.state == 'VOID' %}Voided (its time was released){% elif i.state == 'DRAFT' %}Draft{% else %}Posted{% endif %}</li>{% endfor %}</ul></section>{% endif %}
+{% if can_write %}<section aria-labelledby="status-title" class="jobs-status"><h2 id="status-title">Ticket status</h2>
+<form method="post" class="jobs-inline">{{ status_token|safe }}<input type="hidden" name="expected_revision" value="{{ ticket.revision }}">
+{% if ticket.status == 'OPEN' %}<label>Date <input type="date" name="date" value="{{ today }}" required></label><button type="submit" name="action" value="complete">Mark completed</button> <button type="submit" name="action" value="close" class="secondary">Close without billing</button>
+{% elif ticket.status == 'COMPLETED' %}<label>Date <input type="date" name="date" value="{{ today }}" required></label><button type="submit" name="action" value="close" class="secondary">Close without billing</button> <button type="submit" name="action" value="reopen" class="secondary">Reopen</button>
+{% else %}<button type="submit" name="action" value="reopen" class="secondary">Reopen ticket</button>{% endif %}
+</form><p class="helptext">Time can be added only to open tickets. Closing without billing leaves any unbilled time off invoices.</p></section>{% endif %}
+{% endblock %}

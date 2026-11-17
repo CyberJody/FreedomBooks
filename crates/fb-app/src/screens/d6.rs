@@ -41,12 +41,15 @@ fn expired() -> AppError {
 pub(crate) fn is_d6_command(c: &Command) -> bool {
     matches!(
         c,
-        Command::SaveBill { .. }
+        Command::SaveRecurringBill { .. }
+            | Command::ControlRecurringBill { .. }
+            | Command::SaveBill { .. }
             | Command::ReviewBill { .. }
             | Command::PostBill { .. }
             | Command::VoidBill { .. }
             | Command::ReviewBillPayment { .. }
             | Command::RecordBillPayment { .. }
+            | Command::RecordBillPayments { .. }
             | Command::ReverseBillPayment { .. }
             | Command::ReviewTransfer { .. }
             | Command::RecordTransfer { .. }
@@ -55,7 +58,13 @@ pub(crate) fn is_d6_command(c: &Command) -> bool {
 }
 pub(crate) fn run_d6_command(app: &mut App, cmd: Command) -> AppResult<Outcome> {
     let actor = app.open_mut()?.owner;
+    let today = (app.today)().to_string();
     let data = match cmd {
+        Command::SaveRecurringBill { company_id, values } => payables::recurring::save(&mut app.open_mut()?.book, actor, crate::session::company(&company_id)?, &serde_json::to_value(values).unwrap(), &today)?,
+        Command::ControlRecurringBill { company_id, template_id, expected_revision, action, confirmation, confirm_delete } => {
+            payables::recurring::control(&mut app.open_mut()?.book, actor, crate::session::company(&company_id)?, &template_id, &json!({"expected_revision":expected_revision,"action":action,"confirmation":confirmation,"confirm_delete":confirm_delete}), &today)?;
+            Value::Null
+        },
         Command::SaveBill { company_id, values } => payables::save_bill(
             &mut app.open_mut()?.book,
             actor,
@@ -152,6 +161,35 @@ pub(crate) fn run_d6_command(app: &mut App, cmd: Command) -> AppResult<Outcome> 
                 &r,
             )?
         }
+        Command::RecordBillPayments {
+            company_id,
+            payments,
+            review_tokens,
+        } => {
+            if payments.len() != review_tokens.len() {
+                return Err(FbError::validation("Each payment needs its own review.").into());
+            }
+            // Take every review first; a missing one refuses the whole run.
+            let mut reviews = vec![];
+            for t in &review_tokens {
+                reviews.push(app.d6_reviews.payments.remove(t).ok_or_else(|| {
+                    AppError::from(FbError::validation(
+                        "Invalid review. Open Pay bills again.",
+                    ))
+                })?);
+            }
+            let items = payments
+                .iter()
+                .zip(&reviews)
+                .map(|(p, r)| (serde_json::to_value(p).unwrap(), r))
+                .collect::<Vec<_>>();
+            json!(payables::record_payments(
+                &mut app.open_mut()?.book,
+                actor,
+                crate::session::company(&company_id)?,
+                &items,
+            )?)
+        }
         Command::ReverseBillPayment {
             company_id,
             payment_id,
@@ -230,7 +268,7 @@ pub(crate) fn run_d6_command(app: &mut App, cmd: Command) -> AppResult<Outcome> 
     Ok(Outcome::Done { data })
 }
 pub(super) fn is_route(name: &str) -> bool {
-    name.starts_with("bills:") || name.starts_with("payments:") || name.starts_with("transfers:")
+    name.starts_with("recurring:") || name.starts_with("bills:") || name.starts_with("payments:") || name.starts_with("transfers:")
 }
 pub(super) fn render(
     app: &mut App,
@@ -238,7 +276,9 @@ pub(super) fn render(
     p: Posted<'_>,
     path: &str,
 ) -> AppResult<(String, u16)> {
-    if r.name.starts_with("bills:") {
+    if r.name.starts_with("recurring:") {
+        bills::recurring::render(app, r, p, path)
+    } else if r.name.starts_with("bills:") {
         bills::render(app, r, p, path)
     } else if r.name.starts_with("payments:") {
         payments::render(app, r, p, path)
@@ -247,7 +287,9 @@ pub(super) fn render(
     }
 }
 pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
-    if r.name.starts_with("bills:") {
+    if r.name.starts_with("recurring:") {
+        bills::recurring::submit(app, r, path, p)
+    } else if r.name.starts_with("bills:") {
         bills::submit(app, r, path, p)
     } else if r.name.starts_with("payments:") {
         payments::submit(app, r, path, p)
@@ -266,6 +308,25 @@ pub(super) fn ctx(app: &mut App, r: &Route) -> AppResult<Value> {
         },
     )?)
     .unwrap())
+}
+/// The accounting entries a page displayed, as one canonical string. A one-step "Save and post"
+/// sends this back (`shown_entries`) and posts only when the server's own review produces the
+/// same string, so what posts is exactly what the user saw. Each entry is
+/// `account_id:debit:credit` with amounts as `0.00` text; entries are sorted bytewise and joined
+/// by `|`. The page scripts build the identical string (see `static/payables/entries.js`).
+pub(super) fn entries_signature(entries: &[Value]) -> String {
+    let mut rows = entries
+        .iter()
+        .map(|e| {
+            let amount = |k: &str| match &e[k] {
+                Value::String(t) if !t.is_empty() => t.clone(),
+                _ => "0.00".to_owned(),
+            };
+            format!("{}:{}:{}", s(e, "account"), amount("debit"), amount("credit"))
+        })
+        .collect::<Vec<_>>();
+    rows.sort();
+    rows.join("|")
 }
 pub(super) fn s<'a>(v: &'a Value, k: &str) -> &'a str {
     v[k].as_str().unwrap_or("")
@@ -365,6 +426,18 @@ pub(super) fn banks(app: &mut App, c: CompanyId, extra: &[&str]) -> AppResult<Ve
         a.sort_by(|a, b| a.code.cmp(&b.code).then(a.id.to_db().cmp(&b.id.to_db())));
         Ok(a)
     })?)
+}
+/// The bank account a new document starts on: the only one, else the one the last document of
+/// this kind used (`last_sql` returns one `bank_id` for the company, newest first: ids are time-ordered), else the first.
+pub(super) fn default_bank(app: &mut App, c: CompanyId, offered: &[Account], last_sql: &str) -> AppResult<Option<String>> {
+    if offered.len() <= 1 {
+        return Ok(offered.first().map(|a| a.id.to_db()));
+    }
+    let last = scoped_rows(app, c, last_sql, &[&c.to_db()])?;
+    let last = last.first().map(|r| s(r, "bank_id").to_owned());
+    Ok(last
+        .filter(|id| offered.iter().any(|a| a.id.to_db() == *id && a.active && a.postable))
+        .or_else(|| offered.iter().find(|a| a.active && a.postable).map(|a| a.id.to_db())))
 }
 pub(super) fn select(
     name: &str,

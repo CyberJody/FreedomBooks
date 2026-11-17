@@ -28,7 +28,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
     try {
       const page=await app.firstWindow();
       page.setDefaultTimeout(10000);
-      await page.waitForSelector('#review-tools:not([hidden])');
+      await page.waitForSelector('tr[data-review-row] .combo-input');
       const ids=JSON.parse(fs.readFileSync(path.join(dir,'input.json')));
       const row=id=>page.locator('[data-review-row="'+id+'"]');
       const field=(id,key)=>row(id).locator('[name="'+key+'_'+id+'"]');
@@ -42,7 +42,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       }
       for(const id of [ids.match,ids.receipt,ids.transfer,ids.ordinary]) await row(id).locator('[name=sel]').check();
       assert.equal(await page.inputValue('#bulk-kind'),'AUTO');
-      await page.selectOption('#bulk-category',ids.expense);
+      await page.locator('#bulk-category').evaluate((s, v) => { s.value = v; s.dispatchEvent(new Event('change', {bubbles:true})); }, ids.expense);
       await page.check('#bulk-set-payee');
       await page.fill('#bulk-payee','Bulk reviewed payee');
       for(const mode of ['AUTO','CHECK','JOURNAL','KEEP']) {

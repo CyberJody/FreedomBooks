@@ -10,11 +10,12 @@ pub(super) struct Fixture {
     pub(super) ar: AccountId,
     pub(super) liability: AccountId,
     pub(super) undeposited: AccountId,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fixture {
     pub(super) fn new() -> Self {
-        let path = std::env::temp_dir().join(format!("fb-prepayments-{}.fbbook", new_id()));
-        let mut book = Book::create(&path, &[72; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("prepayments");
+        let mut book = file.book(&[72; 32]);
         let actor = users::create_user(&mut book, "Prepayment tester", false).unwrap();
         let c = services::create_company(&mut book, actor, "Synthetic prepayments", "USD", false)
             .unwrap()
@@ -44,6 +45,7 @@ impl Fixture {
             .unwrap()
             .into();
         Self {
+            _file: file,
             book,
             actor,
             c,

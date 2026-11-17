@@ -35,7 +35,7 @@ async function main(){
   async function verify(value){await page.fill('#id_code',value);await page.getByRole('button',{name:'Verify and sign in',exact:true}).click();}
   try{
     await launch();await page.fill('#id_owner_name','Morgan MFA');await page.fill('#id_company_name','Synthetic MFA books');await page.selectOption('#id_starter_chart','empty');await page.getByRole('button',{name:'Create books',exact:true}).click();
-    await page.waitForURL(/\/desktop\/sign-in\/$/);await page.fill('#id_password',PASSWORD);await page.fill('#id_password_repeat',PASSWORD);await page.check('input[name="confirm_owner"]');await page.getByRole('button',{name:'Set password and sign in',exact:true}).click();await page.waitForURL(/\/home\/$/);
+    await page.waitForURL(/\/desktop\/sign-in\/$/);await page.fill('#id_password',PASSWORD);await page.fill('#id_password_repeat',PASSWORD);if(await page.locator('input[name="confirm_owner"]').count())await page.check('input[name="confirm_owner"]');await page.getByRole('button',{name:'Set password and continue',exact:true}).click();await page.waitForURL(/\/home\/$/);
     const company=JSON.parse(await native('query',[JSON.stringify({type:'Companies'})]))[0].id;
     const grant=JSON.parse(await native('aiGrant',[company,'Synthetic prior connection','read_only']));
     await page.goto('fb://app/desktop/session/');await page.getByRole('link',{name:'Multi-factor authentication',exact:true}).click();

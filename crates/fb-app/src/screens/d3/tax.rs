@@ -1,4 +1,6 @@
 use super::*;
+#[path = "tax_payments.rs"]
+mod payments;
 fn at(app: &mut App, route: &Route) -> AppResult<Option<Value>> {
     let Some(id) = route.args.get("item_id") else {
         return Ok(None);
@@ -31,7 +33,7 @@ fn context(app: &mut App, route: &Route) -> AppResult<Value> {
     put(
         &mut vm,
         "tab",
-        if route.name == "salestax:settings" || route.name == "salestax:bulk_step" {
+        if matches!(route.name.as_str(), "salestax:settings" | "salestax:bulk_step" | "salestax:setup") {
             "settings"
         } else {
             "rates"
@@ -177,7 +179,7 @@ fn item_fields(
         fs.push(Field::new("rate","Rate (%)",Widget::Text).required().attr("inputmode","decimal").attr("maxlength","20").help("0 to 100, up to 4 decimal places. Saved forms keep the rate they were saved with."));
         let opts = app.open_mut()?.book.read(|tx| -> Result<Vec<_>, FbError> {
             let map = labels(tx, c, Model::Vendor)?;
-            let mut opts = vec![(String::new(), "Choose a vendor".into())];
+            let mut opts = vec![(String::new(), "Choose an existing tax authority".into())];
             for v in directory::list(tx, c, Model::Vendor)? {
                 if v["active"] == true || item.is_some_and(|i| i["agency_id"] == v["id"]) {
                     let id = v["id"].as_str().unwrap();
@@ -199,17 +201,17 @@ fn item_fields(
         })?;
         fs.push(Field::new(
             "agency",
-            "Tax agency (vendor you pay)",
+            "Existing tax authority (optional)",
             Widget::Select { choices: opts },
         ));
         fs.push(
             Field::new(
                 "new_agency_name",
-                "…or add a new agency by name",
+                "Tax authority name",
                 Widget::Text,
             )
             .attr("maxlength", "120")
-            .help("Creates a vendor with just this name."),
+            .help("For example, New York State Department of Taxation and Finance. FreedomBooks adds it as a vendor, so you can record what you pay it under What you owe."),
         );
     }
     Ok(fs)
@@ -468,7 +470,11 @@ pub(super) fn render(
     p: Posted<'_>,
     path: &str,
 ) -> AppResult<(String, u16)> {
+    if payments::is_payment_route(&route.name) {
+        return payments::render(app, route, p, path);
+    }
     match route.name.as_str() {
+        "salestax:setup" => Ok((setup_page(app, route, None, &Errors::new())?, 200)),
         "salestax:settings" => Ok((settings(app, route, path, None, &Errors::new())?, 200)),
         "salestax:list" => list(app, route, p),
         "salestax:rate_new"
@@ -489,7 +495,7 @@ fn service_errors(errors: &mut Errors, messages: Vec<String>) {
             "name"
         } else if message == "Enter a rate from 0 to 100 percent with at most 4 decimal places." {
             "rate"
-        } else if message.contains("agency")
+        } else if message.contains("agency") || message.contains("tax authority")
             || message == "Choose an active vendor as the tax agency."
         {
             "agency"
@@ -520,8 +526,25 @@ pub(super) fn submit(
     path: &str,
     p: Posted<'_>,
 ) -> AppResult<Outcome> {
+    if payments::is_payment_route(&route.name) {
+        return payments::submit(app, route, path, p);
+    }
     let c = arg_company(route)?;
     let mut errors = Errors::new();
+    if route.name == "salestax:setup" {
+        let charge = match get(p,"charge_tax") { Some("yes") => true, Some("no") => false, _ => { error(&mut errors,"charge_tax","Choose Yes or No, or finish later."); false } };
+        let revision = integer_clean(p,"expected_revision",0,None,true,&mut errors);
+        if errors.is_empty() {
+            let o=app.open_mut()?;
+            let input=json!({"expected_revision":revision,"charge_tax":charge,"default_item_id":get(p,"default_item").filter(|s|!s.is_empty()),"name":get(p,"name").unwrap_or(""),"rate":get(p,"rate").unwrap_or(""),"authority_name":get(p,"authority_name").unwrap_or("")});
+            match salestax::configure(&mut o.book,o.owner,c,&input) {
+                Ok(_) => { app.messages.push("Sales tax saved. New sales forms use this default; existing documents keep their saved tax.".into()); return Ok(Outcome::Redirect { location:url("setup_start",&[&c.to_db()]) }); },
+                Err(FbError::Validation(messages)) => { for message in messages { error(&mut errors,"__all__",message); } },
+                Err(e) => return Err(e.into()),
+            }
+        }
+        return Ok(Outcome::Invalid {html:setup_page(app,route,Some(p),&errors)?});
+    }
     if route.name == "salestax:status" {
         let item = at(app, route)?.unwrap();
         let revision = integer_clean(p, "expected_revision", 1, None, true, &mut errors);
@@ -734,3 +757,37 @@ pub(super) fn submit(
         },
     })
 }
+
+pub(super) fn setup_context(app: &mut App, c: CompanyId, vm: &mut Value, posted: Option<Posted<'_>>, errors: &Errors) -> AppResult<()> {
+    let settings=app.open_mut()?.book.read(|tx|salestax::settings_for(tx,c))?;
+    if app.authenticated_session()?.role == crate::identity::Role::Readonly {
+        put(vm,"tax_setup_readonly",true);
+        put(vm,"tax_setup_needed",false);
+        put(vm,"tax_charged",settings["charge_tax"]==true);
+        return Ok(());
+    }
+    let mut options=vec![(String::new(),"Add a tax rate".into())];
+    for item in app.open_mut()?.book.read(|tx|salestax::list(tx,c))? {
+        if item["active"] == true { options.push((item["id"].as_str().unwrap().into(),app.open_mut()?.book.read(|tx|salestax::item_label(tx,c,&item))?)); }
+    }
+    let mut fields=vec![
+        Field::new("expected_revision","Revision",Widget::Hidden).value(settings["revision"].to_string()),
+        Field::new("charge_tax","Do you collect sales tax?",Widget::Select{choices:choices(&[("","Choose…"),("yes","Yes"),("no","No")])}).required().value(if settings["revision"]==0 {""}else if settings["charge_tax"]==true{"yes"}else{"no"}),
+        Field::new("default_item","Default rate",Widget::Select{choices:options}).value(settings["default_item_id"].as_str().unwrap_or("")),
+        Field::new("name","Tax name",Widget::Text).attr("maxlength","60").help("Include the state or local jurisdiction, for example NY — Warren County."),
+        Field::new("rate","Combined rate (%)",Widget::Text).attr("inputmode","decimal").attr("maxlength","20").help("Include applicable state and local tax. The rate can be changed on each invoice."),
+        Field::new("authority_name","Tax authority name",Widget::Text).attr("maxlength","120").help("Who receives the tax, for example New York State Department of Taxation and Finance."),
+    ];
+    for f in &mut fields { f.value=data_value(posted,&f.name,f.value.clone()); }
+    put(vm,"tax_setup_form",forms::bind(&decorate(fields,errors),&nonfield(errors,"__all__")));
+    put(vm,"tax_setup_token",token(app,&url("salestax:setup",&[&c.to_db()])));
+    put(vm,"tax_setup_needed",settings["revision"]==0);
+    Ok(())
+}
+fn setup_page(app: &mut App, route: &Route, posted: Option<Posted<'_>>, errors: &Errors) -> AppResult<String> {
+    let c=arg_company(route)?;let mut vm=context(app,route)?;
+    setup_context(app,c,&mut vm,posted,errors)?;
+    draw(app,"salestax/setup.html",&vm)
+}
+
+pub(crate) use payments::run_payment_command;

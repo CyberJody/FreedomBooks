@@ -24,21 +24,28 @@ module.exports = async ({ app, page, shots, shot, pass, heading }) => {
     const require = process.getBuiltinModule('module').createRequire(a.getAppPath() + '/package.json');
     return require(require('node:path').join(a.getAppPath(), 'native', 'fb-node.node')).pluginsEnabled();
   });
-  assert.equal(footer, `FreedomBooks · ${footer.split(' · ')[1]}${plugins ? ' · Bank feeds are read-only' : ''} · Report a problem`);
+  // The footer names no plugin in any build: "FreedomBooks · <currency> · Report a problem".
+  assert.match(footer, /^FreedomBooks( · [^·]+)? · Report a problem$/, `plugins=${plugins}`);
   await Promise.all([page.waitForURL('fb://app/help/report/'), page.click('footer a.report-problem')]);
   assert.equal(await heading(page), 'Report a problem');
   const expected = await app.evaluate(({ app: a }) => {
     const require = process.getBuiltinModule('module').createRequire(a.getAppPath() + '/package.json');
-    return { version: a.getVersion(), os: require(require('node:path').join(a.getAppPath(), 'main', 'about.cjs')).osLabel() };
+    const native = require(require('node:path').join(a.getAppPath(), 'native', 'fb-node.node'));
+    return { version: a.getVersion(), os: require(require('node:path').join(a.getAppPath(), 'main', 'about.cjs')).osLabel(), build: JSON.parse(native.buildInfo()) };
   });
   const main = await page.locator('main').innerText();
-  assert.equal(await page.locator('pre.report-details').innerText(), `FreedomBooks version: ${expected.version}\nOperating system: ${expected.os}`);
+  const details = await page.locator('pre.report-details').innerText();
+  assert.ok(details.startsWith(`FreedomBooks version: ${expected.version}`));
+  assert.ok(details.includes(`Operating system: ${expected.os}`));
+  assert.ok(details.includes(`Build: commit ${expected.build.commit}`));
+  assert.match(details, /Features: [^\n]+/);
+  assert.match(details, /Book format: \d+ schema migrations/);
   for (const text of ['GitHub issues are public.', 'Never paste real financial data, customer names, passwords, keys or bank details.',
     'Write the steps you took', 'Say what you expected to happen.', 'Say what actually happened.',
     'Attach a screenshot only after covering names, amounts and account numbers.'])
     assert.ok(main.includes(text), text);
   assert.doesNotMatch(main, /No report address|person who runs this copy|outside address|mailto|e-?mail/i);
-  assert.equal(await page.locator('main code').innerText(), ISSUE);
+  assert.equal(await page.locator('main code').filter({hasText: ISSUE}).innerText(), ISSUE);
   assert.doesNotMatch((await page.locator('footer').textContent()), /payroll/i);
   await shot(page, 'jody1-report-problem');
   await page.locator('footer').screenshot({ path: path.join(shots, 'jody1-footer.png') });

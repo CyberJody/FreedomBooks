@@ -12,11 +12,19 @@ pub(crate) mod d5;
 pub(crate) use d5::{is_d5_command, run_d5_command};
 pub(crate) mod d6;
 mod d8;
+mod expenses;
+mod jobs;
+pub(crate) use jobs::{is_command as is_jobs_command, run_command as run_jobs_command};
 pub mod backups;
-mod printing;
+/// CRASHLOG: what a resubmitted form could repeat, declared for every route.
+pub mod resubmit;
+pub use resubmit::desktop_route_name;
+pub(crate) mod printing;
 mod protection;
 mod identity;
+pub(crate) mod find;
 mod d9;
+mod home;
 pub(crate) use d8::export_report;
 pub(crate) use d6::{is_d6_command, run_d6_command};
 use crate::commands::{InvoiceLineValues, InvoiceValues, Outcome};
@@ -158,6 +166,8 @@ pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
         app.ai_select_company(company)?;
     }
     let name = route.name.clone();
+    #[cfg(feature = "panic-test")]
+    crate::test_panic::on_render(&name);
     let (html, status) = match name.as_str() {
         "home" | "company" | "company_new" | "company_edit" | "account_new" | "account_edit"
         | "journal" | "journal_new" | "journal_edit" | "history" | "trial_balance"
@@ -171,10 +181,21 @@ pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
         _ if d5::is_route(&name) => d5::render(app, &route, &params, path)?,
         _ if d6::is_route(&name) => d6::render(app, &route, &params, path)?,
         _ if d3::is_route(&name) => d3::render(app, &route, &params, path)?,
+        "expenses" => expenses::render(app, &route, &params, path)?,
+        _ if jobs::is_route(&name) => jobs::render(app, &route, &params, path)?,
         _ if d8::is_route(&name) => d8::render(app, &route, &params, path)?,
         _ if backups::is_route(&name) => backups::render(app, &route, &params, path)?,
         _ if d9::is_route(&name) => d9::render(app, &route, &params, path)?,
-        "company_home" => (home(app, &route)?, 200),
+        "stripe:payments" => {
+            let c=arg_company(&route)?; let mut vm=crate::invoice_stripe::view(app,c,get(&params,"review"))?;
+            let base=serde_json::to_value(shell(app,Some(c),&Current{route:"stripe:payments",kind:None})?).expect("shell");
+            vm.as_object_mut().unwrap().extend(base.as_object().unwrap().clone());
+            vm["csrf_token"]=json!(d2::token(app,path));
+            (app.screens.render("sales/stripe.html",&vm)?,200)
+        },
+        "company_home" => (home::render(app, &route)?, 200),
+        "find" => find::render(app, &route, &params)?,
+        "reports" | "settings" => (hub(app, &route)?, 200),
         "accounts" => (accounts(app, &route, &params)?, 200),
         "register" => register(app, &route, &params, path)?,
         "invoices:list" => invoice_list(app, &route, &params)?,
@@ -186,21 +207,30 @@ pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
 }
 
 fn shell(app: &mut App, company: Option<CompanyId>, current: &Current<'_>) -> AppResult<Shell> {
-    let today = (app.today)();
     // DESKTOP-BACKUPS: a restored book opened beside the main one says so on every page.
     // Built-in-key and auto-open books cannot lock, so they return to the main book by reopening the app.
     let back = if app.can_lock() { "Lock (File › Lock)" } else { "Quit and reopen FreedomBooks" };
     let mut banner = match (app.upgrade_notice.take(), app.backups.viewing_restored()) {
         (Some(notice), _) => notice,
-        (None, Some(name)) => format!("Restored book “{name}” is open. {back} to return to your main book."),
+        (None, Some(name)) if app.book_path().is_some_and(crate::books::is_restored) => format!("This is a restored copy, “{name}”, not your main books. Work saved here stays in this copy. To keep working in it, choose File › Use this copy as my books. {back} to return to your main books."),
+        (None, Some(name)) => format!("These books (“{name}”) are open as a copy: they are not saved as the books FreedomBooks opens at start. Work saved here stays in these books. To keep working in them, choose File › Use this copy as my books."),
         (None, None) => String::new(),
     };
     let role = app.authenticated_session()?.role;
     if role == crate::identity::Role::Readonly { banner.push_str(" Read-only access: view and print. Ask an administrator for permission to save changes."); }
     let plugins = app.plugins;
     let bankfeeds = app.bankfeeds_enabled();
+    let online_payments = app.invoice_delivery;
+    let signout_token = match app.signout_token.clone().filter(|t| app.tokens.valid(t, crate::identity::SESSION)) {
+        Some(token) => token,
+        None => {
+            let token = app.tokens.mint(crate::identity::SESSION);
+            app.signout_token = Some(token.clone());
+            token
+        }
+    };
     let open = app.open_mut()?;
-    let (owner, staff, username) = (open.owner, open.staff, open.owner_name.clone());
+    let (owner, username) = (open.owner, open.owner_name.clone());
     let company_vm = match company {
         Some(c) => {
             let row = open.book.read(|tx| {
@@ -212,13 +242,19 @@ fn shell(app: &mut App, company: Option<CompanyId>, current: &Current<'_>) -> Ap
         }
         None => None,
     };
-    let overdue = match company {
-        Some(c) => overdue_count(&mut open.book, owner, c, today)?,
-        None => 0,
+    let to_review = match company {
+        Some(c) if bankfeeds => open.book.read(|tx| fb_core::bankfeeds::review_count(tx, c))?,
+        _ => 0,
     };
+    if company.is_some() {
+        app.frame_company = company;
+    }
     let pk = company_vm.as_ref().map(|c| c.pk.clone());
-    let mut nav = nav::build(pk.as_deref(), current, staff, overdue).map_err(AppError::Render)?;
-    hide_plugin_nav(&mut nav, bankfeeds, plugins);
+    // A register opened through the banking screens is a bank register; the plain ledger register says
+    // `other` itself.
+    let current = Current { route: current.route, kind: current.kind.or((current.route == "register").then_some("bank")) };
+    let viewer = nav::Viewer { admin: role == crate::identity::Role::Administrator, write: role != crate::identity::Role::Readonly, bankfeeds, ai: plugins, online_payments, to_review };
+    let nav = nav::build(pk.as_deref(), &current, &viewer).map_err(AppError::Render)?;
     Ok(Shell {
         plugins,
         bankfeeds,
@@ -227,7 +263,20 @@ fn shell(app: &mut App, company: Option<CompanyId>, current: &Current<'_>) -> Ap
         nav,
         fb_local_preview: false,
         fb_banner: banner,
+        signout_token,
     })
+}
+
+/// The company frame for pages outside a company's routes (users, MFA, book protection, report a
+/// problem): the company shown last, while the signed-in person may still see it. Trusted shell
+/// integrations use this same selection rather than inferring a company from a global page's URL.
+pub fn frame_company(app: &mut App) -> Option<CompanyId> {
+    let c = app.frame_company?;
+    let allowed = app.authorize(Some(c), crate::identity::Permission::Read).is_ok();
+    if !allowed {
+        app.frame_company = None;
+    }
+    allowed.then_some(c)
 }
 
 /// Routes of the plugin surfaces hidden in release builds (attachments and backups are core).
@@ -235,37 +284,10 @@ pub fn plugin_route(name: &str) -> bool {
     name.starts_with("bankfeeds:") || name.starts_with("assistant:")
 }
 
-/// Nav entries of the bank-feed and AI plugin surfaces.
-pub const PLUGIN_NAV: [&str; 3] = ["bank_review", "bank_feeds", "ai_assistant"];
-
 fn plugin_allowed(app: &App, name: &str) -> bool {
     if name.starts_with("bankfeeds:") { app.bankfeeds_enabled() }
     else if name.starts_with("assistant:") { app.plugins }
     else { true }
-}
-
-fn hide_plugin_nav(nav: &mut nav::Nav, bankfeeds: bool, ai: bool) {
-    for group in &mut nav.groups {
-        group.items.retain(|item| match item.key.as_str() {
-            "bank_review" | "bank_feeds" => bankfeeds,
-            "ai_assistant" => ai,
-            _ => true,
-        });
-    }
-    nav.groups.retain(|group| !group.items.is_empty());
-    if nav.current.as_ref().is_some_and(|c| match c.key.as_str() {
-        "bank_review" | "bank_feeds" => !bankfeeds,
-        "ai_assistant" => !ai,
-        _ => false,
-    }) {
-        nav.current = None;
-    }
-}
-
-/// `reminders.queries.overdue_count`: overdue invoices + overdue bills for the nav badge.
-fn overdue_count(book: &mut Book, actor: UserId, c: CompanyId, today: chrono::NaiveDate) -> AppResult<i64> {
-    let count=fb_core::reminders::overdue_count(book,actor,c,&today.to_string())?;
-    i64::try_from(count).map_err(|_|AppError::Invalid("Reminder count overflow.".into()))
 }
 
 fn money(v: &Value) -> i128 {
@@ -300,29 +322,13 @@ fn account_vm(a: &Account) -> AccountVm {
     }
 }
 
-const HOME_BANK_LIMIT: usize = 6;
-
-/// `ledger.views.company_home`.
-fn home(app: &mut App, route: &Route) -> AppResult<String> {
+/// The Reports and Settings pages: every report, or every settings page the viewer may open, grouped
+/// with a line on each. The lists come from the navigation definition.
+fn hub(app: &mut App, route: &Route) -> AppResult<String> {
     let c = arg_company(route)?;
-    let shell = shell(app, Some(c), &Current { route: "company_home", kind: None })?;
-    let open = app.open_mut()?;
-    let banks: Vec<Account> = open.book.read(|tx| -> Result<Vec<Account>, FbError> {
-        let mut st = tx.prepare(
-            "SELECT a.id FROM documents_designatedbank d JOIN documents_accountingsetup s ON s.id=d.setup_id JOIN ledger_account a ON a.id=d.account_id
-             WHERE s.company_id=?1 AND a.company_id=?1 ORDER BY a.code COLLATE BINARY, a.id LIMIT ?2",
-        )?;
-        let ids = st.query_map(fb_db::rusqlite::params![c.to_db(), (HOME_BANK_LIMIT + 1) as i64], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
-        let mut out = Vec::new();
-        for id in ids {
-            if let Some(a) = AccountId::parse(&id).map(|a| fb_core::store::account(tx, a)).transpose()?.flatten() {
-                out.push(a);
-            }
-        }
-        Ok(out)
-    })?;
-    let vm = HomeVm { shell, more_banks: banks.len() > HOME_BANK_LIMIT, banks: banks.iter().take(HOME_BANK_LIMIT).map(account_vm).collect() };
-    Ok(app.screens.render("ledger/company_home.html", &vm)?)
+    let vm = shell(app, Some(c), &Current { route: &route.name, kind: None })?;
+    let template = if route.name == "reports" { "ledger/reports/index.html" } else { "ledger/settings.html" };
+    Ok(app.screens.render(template, &vm)?)
 }
 
 /// `ledger.views.accounts`: FX2 chart order (type, code, creation), or by code.
@@ -364,7 +370,7 @@ fn sources(book: &mut Book, c: CompanyId) -> AppResult<HashMap<String, (Option<S
                     (SELECT rc.id FROM sales_receipt rc WHERE rc.identity_id=i.id),
                     (SELECT json_extract(rc.data,'$.customer_snapshot.display_name') FROM sales_receipt rc WHERE rc.identity_id=i.id),
                     (SELECT rc.kind FROM sales_receipt rc WHERE rc.identity_id=i.id)
-             FROM ledger_journal j JOIN documents_documentidentity i ON i.id=j.source_id WHERE j.company_id=?1",
+             FROM ledger_journal j JOIN documents_displayidentity i ON i.id=j.source_id WHERE j.company_id=?1",
         )?;
         let rows = st.query_map([&cpk], |r| {
             Ok((
@@ -401,7 +407,7 @@ fn url(name: &str, args: &[&str]) -> String {
 fn register(app: &mut App, route: &Route, params: &[(String, String)], path: &str) -> AppResult<(String, u16)> {
     let c = arg_company(route)?;
     let account_id = route.args.get("account_id").and_then(|s| AccountId::parse(s)).ok_or_else(|| AppError::NotFound("account".into()))?;
-    let shell_vm = shell(app, Some(c), &Current { route: "register", kind: None })?;
+    let shell_vm = shell(app, Some(c), &Current { route: "register", kind: Some("other") })?;
     let open = app.open_mut()?;
     let owner = open.owner;
     let account = open.book.read(|tx| fb_core::store::account(tx, account_id))?.filter(|a| a.company_id == c).ok_or_else(|| AppError::NotFound("account".into()))?;
@@ -702,6 +708,7 @@ fn invoice_list(app: &mut App, route: &Route, params: &[(String, String)]) -> Ap
                     date: r["date"].as_str().unwrap_or_default().into(),
                     due_date: r["due_date"].as_str().unwrap_or_default().into(),
                     payment_state: r["payment_state"].as_str().unwrap_or_default().into(),
+                    overdue: invoice_overdue(r, &today_s),
                     total: r["total"].as_str().unwrap_or_default().into(),
                     currency: m.3,
                     outstanding: r["outstanding"].as_str().map(str::to_owned),
@@ -731,7 +738,7 @@ fn invoice_meta(book: &mut Book, c: CompanyId) -> AppResult<Meta> {
         let mut st = tx.prepare(
             "SELECT inv.id, i.number, coalesce(json_extract(r.data,'$.customer_snapshot.display_name'),''), coalesce(json_extract(r.data,'$.memo'),''),
                     coalesce(json_extract(r.data,'$.company_snapshot.currency'), i.currency), i.ordinal
-             FROM sales_invoice inv JOIN documents_documentidentity i ON i.id=inv.identity_id
+             FROM sales_invoice inv JOIN documents_displayidentity i ON i.id=inv.identity_id
              JOIN sales_invoicerevision r ON r.invoice_id=inv.id AND r.number=inv.revision WHERE inv.company_id=?1",
         )?;
         st.query_map([c.to_db()], |r| Ok((r.get::<_, String>(0)?, (r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))))?.collect()
@@ -926,30 +933,35 @@ pub fn render_gate(app: &App, mode: &str, needs_password: bool, password_reason:
     render_gate_with_chart(app, mode, needs_password, password_reason, errors, "standard")
 }
 
-pub fn render_gate_with_chart(app: &App, mode: &str, needs_password: bool, password_reason: &str,
+pub fn render_gate_with_chart(app: &App, mode: &str, _needs_password: bool, password_reason: &str,
     errors: &[String], starter_chart: &str) -> AppResult<String> {
+    let context = crate::books::GateContext { reason: password_reason.into(), ..Default::default() };
+    render_gate_in(app, mode, &context, errors, starter_chart)
+}
+
+/// The getting-in screens, without the app frame: first run ("setup"), the unlock screen ("unlock")
+/// with the reason it is showing and the book it opens, or "choose" when the saved choice of books
+/// can't be followed. `context` comes from the shell, which knows the files and the keyring.
+pub fn render_gate_in(app: &App, mode: &str, context: &crate::books::GateContext, errors: &[String], starter_chart: &str) -> AppResult<String> {
     if !["standard", "empty"].contains(&starter_chart) {
         return Err(AppError::Invalid("Choose a chart of accounts.".into()));
     }
-    #[derive(serde::Serialize)]
-    struct Vm<'a> {
-        #[serde(flatten)]
-        gate: GateVm,
-        mode: &'a str,
-        key_store: &'static str,
-        starter_chart: &'a str,
-    }
-    if mode != "setup" && mode != "unlock" {
+    if !["setup", "unlock", "choose", "error"].contains(&mode) {
         return Err(AppError::Invalid("Unknown gate screen.".into()));
     }
-    let shell = Shell {
-        nav: nav::build(None, &Current::default(), false, 0).map_err(AppError::Render)?,
-        plugins: app.plugins,
-        bankfeeds: app.bankfeeds_enabled(),
-        ..Shell::default()
-    };
-    let gate = GateVm { shell, errors: errors.to_vec(), needs_password, password_reason: password_reason.into(), ..GateVm::default() };
-    Ok(app.screens.render("desktop/gate.html", &Vm { gate, mode, key_store: key_store(std::env::consts::OS), starter_chart })?)
+    const REASONS: [&str; 8] = ["", "missing", "unreadable", "keyring", "ask", "locked", "idle", "choose"];
+    let reason = if REASONS.contains(&context.reason.as_str()) { context.reason.as_str() } else { "" };
+    let mut vm = context.view();
+    vm["reason"] = json!(reason);
+    vm["mode"] = json!(mode);
+    vm["errors"] = json!(errors);
+    vm["version"] = json!(app.host.version);
+    vm["starter_chart"] = json!(starter_chart);
+    vm["key_store"] = json!(key_store(std::env::consts::OS));
+    vm["issue_url"] = json!(crate::ISSUE_URL);
+    vm["owner_name"] = json!("");
+    vm["company_name"] = json!("");
+    Ok(app.screens.render("desktop/gate.html", &vm)?)
 }
 
 /// Where Electron's safeStorage keeps the sealed key: DPAPI under the Windows sign-in, the macOS
@@ -975,7 +987,29 @@ pub fn submit(app: &mut App, path: &str, fields: &[(String, String)]) -> AppResu
     if !plugin_allowed(app, &route.name) {
         return Err(AppError::NotFound(format!("no form at {path}")));
     }
+    #[cfg(feature = "panic-test")]
+    crate::test_panic::on_submit(&route.name);
     match route.name.as_str() {
+        "stripe:payments" => crate::invoice_stripe::submit(app,arg_company(&route)?,path,fields),
+        "company_edit" | "invoices:detail" if get(fields,"action").is_some_and(|s|s.starts_with("stripe_")) => crate::invoice_stripe::submit(app,arg_company(&route)?,path,fields),
+        "invoices:email_preview" => crate::invoice_email::submit(app,arg_company(&route)?,&route.args["invoice_id"],path,fields),
+        "company_edit" if get(fields,"action").is_some_and(|s|s.starts_with("gmail_")) => {
+            let c=arg_company(&route)?;
+            let revision=||get(fields,"gmail_revision").and_then(|s|s.parse::<i64>().ok()).filter(|n|*n>=0)
+                .ok_or_else(||AppError::Invalid("Reopen company settings before connecting Google.".into()));
+            match get(fields,"action") {
+                Some("gmail_connect")=>{
+                    let url=crate::net::gmail::begin(app,c,revision()?,get(fields,"gmail_client_id").unwrap_or(""),get(fields,"gmail_client_secret").unwrap_or(""),get(fields,"gmail_from").unwrap_or(""))?;
+                    return Ok(Outcome::External{url,location:path.into()});
+                },
+                Some("gmail_poll")=>{let connected=crate::net::gmail::poll(app,c)?;app.messages.push(if connected {"Google is connected for this company."}else{"Finish signing in with Google, then check again."}.into());},
+                Some("gmail_disconnect")=>{let revoked=crate::net::gmail::disconnect(app,c,revision()?)?;app.messages.push(if revoked {"Google is disconnected."}else{"Google is disconnected locally. Provider revocation was not confirmed; you can also remove access in your Google account."}.into());},
+                _=>return Err(AppError::Invalid("Unknown Google action.".into())),
+            }
+            Ok(Outcome::Redirect{location:path.into()})
+        },
+        "expenses" => d8::method_not_allowed(app, &route),
+        _ if jobs::is_route(&route.name) => jobs::submit(app, &route, path, fields),
         _ if d8::is_route(&route.name) => d8::method_not_allowed(app, &route),
         _ if d9::is_route(&route.name) => d9::submit(app, &route, path, fields),
         _ if d4::is_route(&route.name) => d4::submit(app, &route, path, fields),
@@ -1022,7 +1056,7 @@ mod tests {
         assert_eq!(key_store("linux"), "kept in this computer's keyring");
         let html = render_gate(&App::new(), "setup", false, "", &[]).unwrap();
         assert!(html.contains("Anyone who gets a copy of this file can open it."), "{html}");
-        assert!(html.contains("Protect these books with my own password"), "{html}");
+        assert!(html.contains("Protect these books with my own book password"), "{html}");
         assert!(!html.contains("its key is kept"), "built-in keys must not imply OS confidentiality");
         let html = render_gate(&App::new(), "setup", true, "reason", &[]).unwrap();
         assert!(html.contains("recovery key") && html.contains("id=\"own-password-fields\" hidden"), "{html}");

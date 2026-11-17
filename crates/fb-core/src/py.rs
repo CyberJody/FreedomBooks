@@ -369,6 +369,12 @@ pub(crate) fn input_text(v: &Value, max: usize, required: bool, previous: Option
         )))
 }
 
+/// Multiline document prose: line endings are allowed; other invisible controls are not.
+pub(crate) fn input_multiline_text(v: &Value, max: usize, required: bool, previous: Option<&str>) -> crate::FbResult<String> {
+    if let Some(raw) = v.as_str() && previous != Some(raw) { clean_multiline_free_text(raw)?; }
+    input_text(v, max, required, v.as_str())
+}
+
 /// The origin position identifies a retained line, even when the revision reorders it.
 pub(crate) fn retained_line_text<'a>(lines: Option<&'a Vec<Value>>, origin: &Value, key: &str) -> Option<&'a str> {
     let position = origin.as_u64()?;

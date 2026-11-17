@@ -1062,7 +1062,9 @@ fn raw_invoice_void_and_owner_seals_are_independently_guarded() {
         b.write::<_,FbError>(|tx| {
   let j=documents::reverse_source(tx,f.actor,f.c,s(&i,"identity_id"),dt,"void")?;
   tx.execute("UPDATE sales_invoice SET revision=3 WHERE id=?",[s(&i,"id")])?;
-  tx.execute("INSERT INTO sales_invoicerevision SELECT ?,invoice_id,3,customer_id,date,due_date,'VOID',total,journal_id,?,json_set(data,'$.state','VOID','$.action','voided','$.reason','void','$.reversal_id',?),actor_id FROM sales_invoicerevision WHERE id=?",params![new_id(),j.id.to_db(),j.id.to_db(),s(&i["current"],"id")])?;
+  // A well-formed void revision (its own id and number in the snapshot), so only the deposit guards
+  // can refuse it, whatever order SQLite fires the revision triggers in.
+  tx.execute("INSERT INTO sales_invoicerevision SELECT ?1,invoice_id,3,customer_id,date,due_date,'VOID',total,journal_id,?2,json_set(data,'$.id',?1,'$.number',3,'$.state','VOID','$.action','voided','$.reason','void','$.reversal_id',?2),actor_id FROM sales_invoicerevision WHERE id=?3",params![new_id(),j.id.to_db(),s(&i["current"],"id")])?;
   Ok(())
  })
     };

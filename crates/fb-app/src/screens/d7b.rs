@@ -1050,6 +1050,15 @@ pub(super) fn bank_register(
     let today = (app.today)();
     let (data, errors) = filter_data(p, today);
     let mut vm = ctx(app, r)?;
+    let destinations = app.open_mut()?.book.read(|q| -> Result<Vec<String>, FbError> {
+        let mut st = q.prepare("SELECT f.id FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1 AND c.active=1 AND f.active=1 AND f.ledger_account_id=?2 ORDER BY f.id LIMIT 2")?;
+        Ok(st.query_map(fb_db::rusqlite::params![c.to_db(),aid], |r| r.get(0))?.collect::<Result<Vec<_>,_>>()?)
+    })?;
+    if destinations.len() == 1 {
+        vm["matching_url"] = json!(format!("/c/{c}/bank-feeds/review/?account={}",destinations[0]));
+    } else {
+        vm["matching_unavailable"] = json!(if destinations.is_empty() {"No active bank feed is mapped to this account. Connect or map its feed to review downloaded transactions."} else {"More than one bank feed is mapped to this account. Check the feed mappings before opening transaction matching."});
+    }
     let card = a.section_balance() == fb_core::model::Side::Credit;
     merge(
         &mut vm,

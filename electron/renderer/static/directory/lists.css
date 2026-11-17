@@ -2,3 +2,5 @@
 
 .master-data .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .field input[type=checkbox]{width:auto;display:block;margin:6px 0 0}
+
+.record-fields .record-notes{grid-column:1/-1;border-top:1px solid var(--line,#dfd8e4);padding-top:18px}.record-notes dd{max-width:85ch;line-height:1.65;overflow-wrap:anywhere}.table-scroll{overflow:auto}

@@ -80,8 +80,7 @@ InvalidAmount codes.
 `SimpleFin::fetch_account_set` accepts `client::FetchOptions` and preserves the
 full tolerant protocol parser result, full transaction epochs and sanitized
 provider diagnostics without staging. It remains useful beyond the neutral slot;
-it is not a workaround to delete. See [FRAMEWORK-REQUESTS.md](FRAMEWORK-REQUESTS.md)
-for the remaining wave-4 host obligations.
+it is not a workaround to delete.
 
 ## Scopes and what leaves the machine
 
@@ -188,11 +187,11 @@ rather than silently blessing changed Rust outputs. The Python `test_http.py`
 Django views, advisory-lock races, matching and posting tests belong to the later
 host/core wave, not this outside-half crate.
 
-## Jody's later real connection
+## Connecting a real SimpleFIN account
 
-Only after wave-4 integration/security review and Jody's go: he creates a new,
-separate FreedomBooks app connection in his SimpleFIN account and supplies its
+Only after integration and security review: the account holder creates a new,
+separate FreedomBooks app connection in their SimpleFIN account and supplies its
 fresh one-time setup token. Do not reuse another application's token/access URL.
-If SimpleFIN refuses a token as used and he did not use it, disable that connection
+If SimpleFIN refuses a token as used and they did not use it, disable that connection
 at SimpleFIN and create a new one: someone else may have claimed it. No developer
-receives or types his bank password. No real sign-in was performed for this job.
+receives or types their bank password. No real sign-in was performed during development.

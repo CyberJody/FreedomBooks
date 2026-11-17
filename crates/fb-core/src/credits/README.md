@@ -80,7 +80,3 @@ metadata, multi-invoice application, exact check-number text validation,
 retries with alternate scenario aliases,
 receipts after credit settlement, and an
 exactly 500-command seeded random run (plus setup).
-
-See `REQUESTS.md` for changes reserved for the lead/other module owners. In
-particular the unmodified payables historical-copy fixture requires an empty-table
-inventory adaptation before the unrestricted workspace test gate can pass.

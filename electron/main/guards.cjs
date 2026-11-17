@@ -125,7 +125,34 @@ const setup = (p) => {
   return input;
 };
 const unlock = (p) => strings(p, ['password'], 'unlock');
+// Remote access: pairing with a host (the address and code are checked again by fb-remote).
+const remotePair = (p) => {
+  const input = strings(p, ['addr', 'code', 'device_name'], 'pairing');
+  if (input.addr.length > 300 || input.code.length > 40 || input.device_name.length > 60) throw new Error('Invalid pairing.');
+  return input;
+};
+// Hosting (fb-node checks the address scope and the Administrator again).
+const hostingOn = (p) => {
+  const input = strings(p, ['address', 'port'], 'hosting');
+  if (input.address.length > 64 || !/^[0-9a-fA-F.:]+$/.test(input.address) || !/^\d{1,5}$/.test(input.port)) throw new Error('Invalid address.');
+  return input;
+};
+const hostingRevoke = (p) => {
+  const input = strings(p, ['device'], 'revocation');
+  if (!/^[0-9a-f]{32}$/.test(input.device)) throw new Error('No such paired computer.');
+  return input;
+};
+const hostingRepair = (p) => {
+  const input = strings(p, ['kind'], 'repair');
+  if (!['audit-lost-key', 'audit-rolled-back', 'audit-damaged', 'devices-rolled-back', 'devices-damaged'].includes(input.kind)) throw new Error('Unknown repair.');
+  return input;
+};
 const restoreBook = (p) => strings(p, ['name', 'secret'], 'restore');
+const chooseBook = (p) => {
+  const input = strings(p, ['path'], 'book choice');
+  if (!input.path.startsWith('/') && !/^[A-Za-z]:\\/.test(input.path)) throw new Error('Invalid book choice.');
+  return input;
+};
 
 /** Only our own window's top frame, on our own scheme, may call. */
 function sender(event, win) {
@@ -181,7 +208,7 @@ function session(ses) {
   if (typeof ses.setSpellCheckerLanguages === 'function') ses.setSpellCheckerLanguages([]);
 }
 
-module.exports = { restoreBook, CSP, staticFile, command, query, target, setup, unlock, sender, window, session };
+module.exports = { restoreBook, chooseBook, CSP, staticFile, command, query, target, setup, unlock, remotePair, hostingOn, hostingRevoke, hostingRepair, sender, window, session };
 
 
 // SEC-FIX1: COMMANDS above is the historical app vocabulary, not IPC authorization.

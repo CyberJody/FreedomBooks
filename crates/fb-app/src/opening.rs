@@ -23,6 +23,10 @@ pub enum OpenError {
     UpgradeCopy { from: usize, to: usize, folder: String, reason: String },
     /// The file could not be reached (missing, no permission, disk error).
     Unavailable(String),
+    /// The book has no key record beside it, yet holds attached files that its own key does not open:
+    /// the record holding their key was left behind or lost when the book was copied or moved. Opening
+    /// it would replace that record with one that can never open those files.
+    KeyFileMissing { record: String, files: usize },
 }
 
 impl std::fmt::Display for OpenError {
@@ -33,6 +37,10 @@ impl std::fmt::Display for OpenError {
             OpenError::WrongKey => f.write_str(WRONG_SECRET),
             OpenError::UpgradeCopy { from, to, folder, reason } => write!(f, "These books need a one-time update for this version of FreedomBooks (book version {from} to {to}). A checked backup copy is made before every update, and it could not be made: {}. Nothing was changed: the books were not updated or opened. Free some disk space in the backup folder ({folder}) and try again. To keep backups in another folder, open these books in the version of FreedomBooks that saved them and choose another folder on the Backups page.", reason.trim_end_matches('.')),
             OpenError::Unavailable(detail) => write!(f, "These books couldn't be opened ({detail}). Nothing was changed. Check that the file is still there and that you can write to its folder, then try again."),
+            OpenError::KeyFileMissing { record, files } => {
+                let (what, them) = if *files == 1 { ("1 attached file".to_owned(), "it") } else { (format!("{files} attached files"), "them") };
+                write!(f, "These books' key file is missing. It is called “{record}” and belongs in the same folder as the book file. Without it, {what} in these books cannot be opened, so the books were not opened and nothing was changed. If you copied or moved these books, copy that key file from where they came from into the same folder, then open them again. If you no longer have it, choose “Restore a backup” and pick your most recent backup: your backups carry the key, and the restored books will open {them}.")
+            }
         }
     }
 }
@@ -57,6 +65,9 @@ pub fn check_book_file(path: &Path) -> AppResult<()> {
 impl App {
     /// Unlock from the gate with a password or recovery key (a built-in-key book needs neither).
     pub fn open_with_secret(&mut self, path: &Path, secret: &str) -> AppResult<()> {
+        // An interrupted move may have set the key record aside. Put it back before deciding
+        // whether this book needs a secret or uses the built-in key.
+        self.prepare_book_open()?;
         check_book_file(path)?;
         let record = Record::read(path)?;
         let key = match &record {
@@ -66,7 +77,10 @@ impl App {
             None => crate::protection::builtin_key(),
         };
         self.open_book(path, &key)?;
-        if record.is_none() { self.adopt_builtin_keys()?; }
+        if record.is_none() && let Err(e) = self.adopt_builtin_keys() {
+            self.lock();
+            return Err(e);
+        }
         // Existing books show their key only through the password-gated recovery action.
         self.recovery_authorized = false;
         Ok(())
@@ -83,25 +97,51 @@ impl App {
             }
             None => false,
         };
-        let old = match Book::open_staged(path, key).map_err(|e| open_error(e, proven))? {
-            Opened::Current(book) => return Ok((book, None)),
+        let mut old = match Book::open_staged(path, key).map_err(|e| open_error(e, proven))? {
+            Opened::Current(mut book) => {
+                if record.is_none() { refuse_lost_key_record(&mut book, path, key)?; }
+                return Ok((book, None));
+            }
             Opened::Behind(old) => old,
         };
+        // A lost receipt-key record is a refusal before any safety-copy rehearsal or schema change.
+        // Very old schemas with no attachment table cannot hold stranded attachment keys.
+        if record.is_none() {
+            let stranded = old.read(|q| -> fb_core::FbResult<_> {
+                let has: bool = q.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='attachments_attachment')", [], |r| r.get(0))?;
+                if has { fb_core::attachments::unopenable(q, key) } else { Ok(Vec::new()) }
+            })?;
+            refuse_stranded(path, stranded.len())?;
+        }
         let (from, to) = (old.from(), old.to());
-        let copy = self.upgrade_copy(&old, path, key, record).map_err(|reason| {
+        let (copy, incomplete) = self.upgrade_copy(&old, path, key, record).map_err(|reason| {
             let folder = self.backups.folder().map(|f| f.display().to_string()).unwrap_or_else(|_| "not set up".into());
             AppError::Open(OpenError::UpgradeCopy { from, to, folder, reason })
         })?;
         crate::protection::checkpoint("upgrade-copy-verified");
         // Page 1 decrypted, so the key is right: any failure from here is the file's.
-        let book = old.upgrade().map_err(|e| open_error(e, true))?;
-        Ok((book, Some(format!(
+        let mut book = old.upgrade().map_err(|e| open_error(e, true))?;
+        if record.is_none() { refuse_lost_key_record(&mut book, path, key)?; }
+        let mut notice = format!(
             "These books were updated for this version of FreedomBooks (book version {from} to {to}). A checked backup copy from before the update is in your backup folder: {}",
             copy.display()
-        ))))
+        );
+        if let Some(incomplete) = incomplete {
+            notice.push_str(&format!(" {incomplete}"));
+        }
+        Ok((book, Some(notice)))
     }
 
-    fn upgrade_copy(&self, old: &Unmigrated, path: &Path, key: &MasterKey, record: Option<&Record>) -> Result<PathBuf, String> {
+    /// The adopt paths' own check, on the open book: refuse to write a key record for these books when
+    /// their key would strand attached files (see [`OpenError::KeyFileMissing`]).
+    pub(crate) fn refuse_adopting_keys(&mut self) -> AppResult<()> {
+        let (path, key) = self.backups.open_book()?;
+        let (path, key) = (path.to_owned(), MasterKey::new(**key));
+        let open = self.open.as_mut().ok_or(AppError::Locked)?;
+        refuse_lost_key_record(&mut open.book, &path, &key)
+    }
+
+    fn upgrade_copy(&self, old: &Unmigrated, path: &Path, key: &MasterKey, record: Option<&Record>) -> Result<(PathBuf, Option<String>), String> {
         let receipt_key = match record {
             Some(r) => r.keys.receipts(key).map_err(|e| e.to_string())?,
             None => MasterKey::new(**key),
@@ -115,4 +155,18 @@ impl App {
         let suffix = format!("before-upgrade-{}-to-{}", old.from(), old.to());
         crate::screens::backups::verified_copy(&self.backups, old, path, key, &receipt_key, envelope, &suffix)
     }
+}
+
+/// A book without a key record is opened with its own key as its receipt key. If any attached file opens
+/// under no wrap with that key, the real receipt key is in a record that is not here (the book was copied
+/// or moved without it): refuse, so no new record replaces it. Only key wraps are checked; no file is read.
+fn refuse_lost_key_record(book: &mut Book, path: &Path, key: &MasterKey) -> AppResult<()> {
+    let stranded = book.read(|q| fb_core::attachments::unopenable(q, key))?;
+    refuse_stranded(path, stranded.len())
+}
+
+fn refuse_stranded(path: &Path, files: usize) -> AppResult<()> {
+    if files == 0 { return Ok(()); }
+    let record = crate::protection::record_path(path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    Err(AppError::Open(OpenError::KeyFileMissing { record, files }))
 }

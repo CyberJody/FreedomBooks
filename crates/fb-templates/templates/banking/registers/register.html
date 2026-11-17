@@ -1,7 +1,8 @@
-{% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}">{% endblock %}{% block content %}
-<div class="heading register-heading"><div><p class="eyebrow">{{ company.name }} · {{ account.get_detail_type_display }} register · {{ company.currency }}</p><h1>{{ account.label }}</h1>
+{% extends 'ledger/base.html' %}{% block crumb %}{{ crumb(account.label) }}{% endblock %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}">{% endblock %}{% block content %}
+<div class="heading register-heading"><div><h1>{{ account.label }}</h1>
 <p>Posted activity in posting order. Tick a line when it appears on your {% if labels.card %}card{% else %}bank{% endif %} statement.</p></div>
-<p class="register-actions"><a href="{{ url('registers:list', company.pk) }}">All registers</a>{% if not invalid %} · <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}output=print">Print</a> · <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}output=csv">CSV{{ export_token|safe }}</a>{% endif %}</p></div>
+<p class="register-actions"><a href="{{ url('registers:list', company.pk) }}">All bank accounts</a>{% if not invalid %} · <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}output=print">Print</a> · <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}output=csv">CSV{{ export_token|safe }}</a>{% endif %}</p></div>
+<section class="register-matching" aria-label="Account transaction matching">{% if bankfeeds %}{% if matching_url %}<a class="button" href="{{ matching_url }}">Match transactions for this account</a>{% else %}<p>{{ matching_unavailable }} <a href="{{ url('bankfeeds:list', company.pk) }}">Bank feed settings</a></p>{% endif %}{% endif %} <a href="{{ url('transfers:new', company.pk) }}">Record transfer</a></section>
 {% if errors %}<ul class="errorlist" role="alert">{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
 <form class="filters register-filters" method="get" aria-label="Register filters">
 <label>Dates <select name="preset">{% for value, text in presets %}<option value="{{ value }}"{% if controls.preset == value %} selected{% endif %}>{{ text }}</option>{% endfor %}</select></label>

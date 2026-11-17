@@ -25,6 +25,8 @@ zeroize = "1"
 # Deliberate escape hatch for integration attacks only. Never enable in product crates.
 test-support = []
 key-test-hooks = []
+# Test builds only: injected panics inside book transactions (see `test_panic`). Refused in release.
+panic-test = []
 
 [dev-dependencies]
 tempfile = "3"

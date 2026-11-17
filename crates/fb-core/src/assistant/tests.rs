@@ -269,8 +269,6 @@ fn fix1_expired_reading_cannot_finish_in_sql_without_claim() {
     assert_eq!(f.snapshot(), before);
 }
 use crate::{services::AccountInput, users};
-use std::sync::atomic::{AtomicUsize, Ordering};
-static NEXT: AtomicUsize = AtomicUsize::new(0);
 struct Fx {
     book: Book,
     actor: UserId,
@@ -279,15 +277,13 @@ struct Fx {
     vendor: String,
     expense: crate::AccountId,
     path: std::path::PathBuf,
+    _file: fb_db::test_support::TempBookPath,
 }
 impl Fx {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "fb-assistant-{}-{}.fbbook",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        let mut book = Book::create(&path, &[81; 32]).unwrap();
+        let file = fb_db::test_support::TempBookPath::new("assistant");
+        let path = file.path().to_path_buf();
+        let mut book = file.book(&[81; 32]);
         let actor = users::create_user(&mut book, "assistant-staff", true).unwrap();
         let member = users::create_user(&mut book, "assistant-member", false).unwrap();
         let co = services::create_company(&mut book, actor, "Synthetic receipts", "USD", false)
@@ -304,6 +300,7 @@ impl Fx {
         .id;
         let vendor=directory::save_record(&mut book,actor,co,directory::Model::Vendor,&json!({"display_name":"Northwind Supply","default_terms":"30","default_expense_account":expense.to_db()}),None).unwrap()["id"].as_str().unwrap().to_owned();
         Self {
+            _file: file,
             book,
             actor,
             member,

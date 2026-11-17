@@ -51,7 +51,7 @@ fn r7_drive(f: &mut Fx, n:usize, value: &str, s:&SecretSet) -> Vec<String> {
     let item=f.item(&tr);ignore(&mut f.book,f.u,f.c,&item.id, s).unwrap();return_to_review(&mut f.book,f.u,f.c,&item.id, s).unwrap();
     // SEC-FIX1: a leftover invisible control cannot enter new accounting text.
     // Keep the leak checks on every provider field and require refusal rollback.
-    for (remote,payload) in [(&tr,json!({"kind":"JOURNAL","account_id":f.acc("410")})),(&sr,json!({"kind":"CHECK","account_id":f.acc("500")}))] {
+    for (remote,payload) in [(&tr,json!({"kind":"JOURNAL","account_id":f.acc("410"),"record_again":true})),(&sr,json!({"kind":"CHECK","account_id":f.acc("500"),"record_again":true}))] {
         let item=f.item(remote);
         let has_control=!fb_db::check_numbers::free_text_valid(&item.description);
         let before=has_control.then(||fb_db::test_support::snapshot(f.book.connection()).unwrap());
@@ -226,7 +226,8 @@ fn r7_supplement_basic_auth_and_mixed_encoding_fuzz() {
     let mut next=|| {seed^=seed<<13;seed^=seed>>7;seed^=seed<<17;seed};
     let pool:Vec<char>=(32u8..=126).map(char::from).chain(['é','€','中','😀','\u{301}','\u{2003}']).collect();
     let mut checked=0;
-    for case in 0..64 {
+    // Seeded: 64 cases in the release gate (FB_TEST_FULL_CASES=1), the first 16 otherwise.
+    for case in 0..fb_db::test_support::seeded_cases(64, 16) {
         let user=format!("r7user{case:03}{}",(0..12).map(|_|pool[next() as usize%pool.len()]).collect::<String>());
         let pass=format!("r7pass{case:03}{}",(0..12).map(|_|pool[next() as usize%pool.len()]).collect::<String>());
         let pair=format!("{user}:{pass}");

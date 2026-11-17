@@ -33,7 +33,7 @@ carries closed codes, scoped ids, attempted request-body/received-body byte
 counts, duration and clock time, not addresses or contents. A network failure
 cannot establish how many attempted bytes actually reached Google.
 
-## Host integration (wave 4, not implemented here)
+## Host integration (not implemented in this crate)
 
 1. Show the manifest consent page and collect the connection's mailbox address.
    The user must use the authenticated Gmail address or an already authorized
@@ -74,7 +74,7 @@ cannot establish how many attempted bytes actually reached Google.
    document, scope, actor and timestamp. No second generic success audit is emitted.
    Accepted retains its receipt and independent recording_error even if either local
    step fails. The host must implement the typed sink and must not duplicate the
-   existing provider-owned history event. Atomic durability remains wave 4.
+   existing provider-owned history event. Atomic durability is host integration work.
 8. `disconnect` attempts upstream revocation with the refresh token and always
    attempts local forget, including after an upstream failure. The returned
    `DisconnectReceipt::revocation_confirmed` is true only for a Google 200.
@@ -98,7 +98,7 @@ interpreted as proof of non-delivery. Google acceptance is not recipient deliver
 The optional lifecycle adapter accepts secret JSON `{"from_address":"..."}` and
 returns scoped Connected/Disconnected status, expiry and Confirmed/Unknown
 revocation. It preserves epochs/mutexes and uses cancellable callback waiting.
-Host persists registry status and coordinates real unlocked-book leases in wave 4.
+Host persists registry status and coordinates real unlocked-book leases during host integration.
 
 Secret buffers and owned tokens are zeroized and never implement unredacted
 Debug. JSON token fields deserialize directly into secret owners. lettre and
@@ -106,15 +106,14 @@ HTTP/JSON libraries can allocate transient plaintext copies; this is not a claim
 that every byte of process memory is wiped or that a locked-book lease can stop
 an already-started network request. The host owns that lifecycle boundary.
 
-## Real Google sign-in checklist for Jody (later, on his go)
+## Real Google sign-in checklist (later)
 
-No Google Cloud project, consent screen, account connection, live mail or real
-network/API call was created or used in this job. Policy information below is
-**likely**, not freshly verified: this brief permits fake-server network work
-only. The linked Google documentation must be checked before registration and
+Development used fake servers only: no Google Cloud project, consent screen,
+account connection, live mail or real network/API call was involved. Policy
+information below is **likely**, not freshly verified. The linked Google documentation must be checked before registration and
 publication. Google's policies and console labels can change.
 
-1. In a Google Cloud project owned by Jody, enable the Gmail API. Set up Google
+1. In a Google Cloud project owned by the maintainer, enable the Gmail API. Set up Google
    Auth Platform/OAuth consent branding (app name, support/developer contacts),
    audience, requested data access and named test users. Use External for public
    users, not an Internal-only Workspace registration.
@@ -127,8 +126,8 @@ publication. Google's policies and console labels can change.
    Restricted**. Therefore plan for sensitive-scope OAuth app verification for a
    broadly distributed External app; do not assume a restricted-scope security
    assessment is needed solely for this scope. The current Google classification
-   has not been fetched/verified in this job.
-4. During Testing, explicitly add Jody's chosen account as a test user. Expect an
+   has not been verified.
+4. During Testing, explicitly add the maintainer's chosen account as a test user. Expect an
    unverified/testing warning and testing audience limits (likely up to 100 test
    users). External Testing refresh tokens with this Gmail scope likely expire
    after seven days. Testing is not a public release plan.
@@ -139,11 +138,11 @@ publication. Google's policies and console labels can change.
    Services User Data Policy/Limited Use requirements. Exact exemptions,
    requirements and review times remain unverified; do not promise a deadline.
 6. Workspace administrators may additionally block or require approval for the
-   app even after Google verification. Jody conducts the actual sign-in, alias
-   permission check, refresh and revocation test in wave 4, with test documents
-   and his explicit approval. No worker performs them automatically.
+   app even after Google verification. The maintainer conducts the actual sign-in, alias
+   permission check, refresh and revocation test before live use, with test documents
+   and their explicit approval. Nothing performs them automatically.
 
-Documentation to verify later (reference URLs, not fetched during this job):
+Documentation to verify later (reference URLs, not yet re-checked):
 
 - https://developers.google.com/workspace/gmail/api/auth/scopes
 - https://developers.google.com/identity/protocols/oauth2/native-app

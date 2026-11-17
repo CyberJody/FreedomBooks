@@ -1,5 +1,5 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/registers.css') }}"><link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
-<div class="heading register-heading"><div><p class="eyebrow">{{ company.name }} · Reconcile · {{ company.currency }}</p><h1>Reconciliations of {{ account.label }}</h1>
+<div class="heading register-heading"><div><h1>Reconciliations of {{ account.label }}</h1>
 <p>Completed statements, newest first. Only the most recent one can be undone.</p></div>
 <p class="register-actions"><a href="{{ url('reconcile:list', company.pk) }}">All accounts</a> · {% if current %}<a href="{{ url('reconcile:screen', company.pk, account.pk) }}">Continue statement {{ current.statement_date|date('Y-m-d') }}</a>{% else %}<a href="{{ url('reconcile:begin', company.pk, account.pk) }}">Begin next statement</a>{% endif %}</p></div>
 {% if request.GET.undone %}<p class="notice" role="status">The reconciliation was undone. Its lines are back to cleared (✓) and can be changed again.</p>{% endif %}

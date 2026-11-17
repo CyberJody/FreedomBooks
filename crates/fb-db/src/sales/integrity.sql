@@ -25,7 +25,7 @@ WHERE (l.item_id IS NOT NULL AND (t.id IS NULL OR t.company_id<>i.company_id))
  OR json_extract(l.data,'$.position') IS NOT l.position OR json_extract(l.data,'$.item_id') IS NOT l.item_id
  OR json_extract(l.data,'$.income_account_id') IS NOT l.income_account_id OR json_extract(l.data,'$.expense_account_id') IS NOT l.expense_account_id
  OR json_extract(l.data,'$.taxable') IS NOT l.taxable OR fb_sales_money(json_quote(json_extract(l.data,'$.amount'))) IS NOT l.amount
- OR NOT fb_sales_line_ok(l.data)
+ OR NOT fb_invoice_line_ok(l.data)
 UNION ALL
 SELECT 'receipt ownership: '||r.id FROM sales_receipt r
 LEFT JOIN documents_documentidentity d ON d.id=r.identity_id LEFT JOIN directory_customer c ON c.id=r.customer_id
@@ -67,4 +67,9 @@ WHERE a.id IS NULL OR a.company_id<>r.company_id OR a.kind<>'INCOME' OR (l.item_
  OR json_extract(l.data,'$.income_account_id') IS NOT l.income_account_id OR json_extract(l.data,'$.taxable') IS NOT l.taxable
  OR fb_sales_money(json_quote(json_extract(l.data,'$.amount'))) IS NOT l.amount OR NOT fb_sales_line_ok(l.data)
 UNION ALL SELECT 'sales account evidence: '||id FROM sales_reference_mismatch
-UNION ALL SELECT 'sales tax scope: '||company_id FROM sales_tax_scope_violations;
+UNION ALL SELECT 'sales tax scope: '||company_id FROM sales_tax_scope_violations
+
+UNION ALL
+SELECT 'invalid draft cancellation: '||r.id FROM sales_invoicerevision r
+WHERE (r.state='VOID' AND r.journal_id IS NULL AND (r.reversal_id IS NOT NULL OR json_extract(r.data,'$.action') IS NOT 'cancelled' OR json_extract(r.data,'$.review_digest') IS NOT '' OR json_type(r.data,'$.reason') IS NOT 'text' OR length(trim(json_extract(r.data,'$.reason'))) NOT BETWEEN 1 AND 500 OR json_type(r.data,'$.cancelled_date') IS NOT 'text' OR NOT fb_valid_date(json_extract(r.data,'$.cancelled_date')) OR json_extract(r.data,'$.cancelled_date')<r.date OR NOT EXISTS(SELECT 1 FROM sales_invoicerevision p WHERE p.invoice_id=r.invoice_id AND p.number=r.number-1 AND p.state='DRAFT')))
+ OR (NOT (r.state='VOID' AND r.journal_id IS NULL) AND json_type(r.data,'$.cancelled_date') IS NOT NULL);

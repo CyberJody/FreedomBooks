@@ -7,7 +7,7 @@
   },
   "scripts": {
     "package": "node package.cjs",
-    "test": "node --test asar.test.cjs fuses.test.cjs"
+    "test": "node --test asar.test.cjs native-build.test.cjs fuses.test.cjs"
   },
   "devDependencies": {
     "@electron/fuses": "2.1.3",

@@ -1,14 +1,22 @@
 {% extends 'ledger/base.html' %}
-{% block extra_head %}<link rel="stylesheet" href="{{ static('sales/estimates.css') }}"><script src="{{ static('sales/estimates.js') }}" defer></script><script src="{{ static('sales/line_tax.js') }}" defer></script>{% endblock %}
-{% block content %}<h1>{% if estimate %}Revise {{ estimate.identity.number }}{% else %}New estimate{% endif %}</h1>
-<p>Non-posting estimate · Not money owed. No accounts setup required. Up to 50 lines.</p>
-{% if current and current.state != 'DRAFT' %}<p class="errorlist">This estimate is {{ current.get_state_display }}. Reopen from its detail page before editing; cancelled estimates cannot be reopened.</p>{% endif %}
-<p>Customer and item names on saved documents stay as they were when you saved. Use Update on the form to pull current directory details. Replace archived customers or items before you post.</p>
-{% if form.has_errors or formset.total_error_count %}<p class="errorlist" role="alert">Estimate not saved. Review the errors below; your entered values are retained.</p>{% endif %}<form method="post" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{{ form.f.request_key.widget|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.f.request_key.errors|safe }}{{ form.f.expected_revision.errors|safe }}
-<div class="estimate-header">{% for field in form.visible_fields %}<div>{{ field.label_tag|safe }} {{ field.widget|safe }}{{ field.errors|safe }}</div>{% endfor %}</div><p class="customer-tax-note" id="customer-tax-note" hidden></p>
-<h2>Lines</h2><p>Choosing an item fills description and rate on that row. You can edit both. Picking a different item replaces those fields.</p>
+{% block extra_head %}<link rel="stylesheet" href="{{ static('sales/editor.css') }}"><link rel="stylesheet" href="{{ static('sales/sales-pages.css') }}"><link rel="stylesheet" href="{{ static('sales/invoices.css') }}"><link rel="stylesheet" href="{{ static('sales/document-forms.css') }}"><script src="{{ static('sales/invoices.js') }}" defer></script><script src="{{ static('sales/line_tax.js') }}" defer></script><script src="{{ static('sales/editor.js') }}" defer></script><script src="{{ static('sales/document-forms.js') }}" defer></script>{% endblock %}
+{% block content %}<div class="document-editor invoice-editor estimate-editor" data-document="estimate">
+<header class="document-title"><div class="title-line"><h1>{% if estimate %}Estimate {{ estimate.identity.number }}{% else %}New estimate{% endif %}</h1><span class="status-chip draft">Draft</span></div></header>
+{% if current and current.state != 'DRAFT' %}<p class="errorlist">This estimate is {{ current.get_state_display|lower }}. Reopen it as a draft from its page before editing. A cancelled estimate can't be reopened.</p>{% endif %}
+{% if form.has_errors or formset.total_error_count %}<p class="errorlist" role="alert">Estimate not saved. Fix the items marked below; everything you entered is kept.</p>{% endif %}
+<form method="post" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{% for field in form.hidden_fields %}{{ field.widget|safe }}{{ field.errors|safe }}{% endfor %}
+<div class="invoice-header">
+<section class="invoice-customer"><div class="document-field">{{ form.f.customer.label_tag|safe }}{{ form.f.customer.widget|safe }}{{ form.f.customer.errors|safe }}</div><div class="invoice-bill-to"><span>Bill to</span><p data-bill-to>Select a customer</p><p data-customer-email></p></div>
+{% for field in form.visible_fields %}{% if field.name == 'refresh_customer' or field.name == 'keep_archived' %}<p class="document-choice">{{ field.widget|safe }}{{ field.label_tag|safe }}{{ field.errors|safe }}</p>{% endif %}{% endfor %}</section>
+<section class="invoice-dates">{% for name in ['date', 'expiry'] %}<div class="document-field">{{ form.f[name].label_tag|safe }}{{ form.f[name].widget|safe }}{{ form.f[name].errors|safe }}</div>{% endfor %}</section>
+</div><p class="customer-tax-note" id="customer-tax-note" hidden></p>
+<div class="editor-lines-heading"><h2>Products &amp; services</h2><a href="{{ url('directory:list', company.pk, 'items') }}">Items ({{ item_count }})</a></div>
+{% if item_count == 0 %}<p class="invoice-help">No products or services yet. <a href="{{ url('directory:new', company.pk, 'items') }}">Add one</a> to pick it here, or type a description.</p>{% endif %}
 {{ formset.management_form|safe }}{{ formset.non_form_errors|safe }}
-<div id="estimate-lines">{% for line in formset.forms %}<fieldset class="estimate-line"><legend>Line {{ loop.index }}</legend>{{ line.as_p|safe }}</fieldset>{% endfor %}</div>
-<template id="empty-line"><fieldset class="estimate-line"><legend>Additional line</legend>{{ formset.empty_form.as_p|safe }}</fieldset></template>
-<button type="button" id="add-line">Add line</button><button type="submit">Save estimate</button>
-<a href="{{ url('sales:list', company.pk) }}">Estimate list</a></form>{{ catalog|json_script('estimate-catalog') }}{{ customer_tax|json_script('customer-tax') }}{% endblock %}
+<div class="invoice-grid-head" aria-hidden="true"><span>Product / service</span><span>Description</span><span>Qty</span><span>Rate</span><span>Tax</span><span>Amount</span><span></span></div>
+<div id="invoice-lines">{% for line in formset.forms %}<fieldset class="invoice-row"><legend>Line {{ loop.index }}</legend>{% include 'sales/invoices/line_fields.html' %}</fieldset>{% endfor %}</div>
+<template id="empty-line"><fieldset class="invoice-row"><legend>Additional line</legend>{% with line=formset.empty_form %}{% include 'sales/invoices/line_fields.html' %}{% endwith %}</fieldset></template>
+<div class="invoice-line-actions"><button type="button" id="add-line">Add line</button><span>Alt + Enter adds a line</span></div>
+<div class="invoice-bottom"><div class="document-field invoice-memo"><label for="id_memo">Message on estimate</label>{{ form.f.memo.widget|safe }}{{ form.f.memo.errors|safe }}</div><div class="invoice-totals"><p>Subtotal <strong data-subtotal>—</strong></p><div class="invoice-tax-choice">{{ form.f.tax_mode.label_tag|safe }}{{ form.f.tax_mode.widget|safe }}{{ form.f.tax_mode.errors|safe }}</div><p>Tax <strong data-tax>—</strong></p><p class="invoice-grand-total">Total <strong data-total>—</strong></p><small>{{ company.currency }}</small></div></div>
+<div class="editor-actions"><p class="editor-total">Total <strong data-total-bar>—</strong></p><a href="{% if estimate %}{{ url('sales:detail', company.pk, estimate.pk) }}{% else %}{{ url('sales:list', company.pk) }}{% endif %}">Cancel</a><button type="submit" name="editor_action" value="save">Save</button></div>
+</form>{{ catalog|json_script('invoice-catalog') }}{{ customer_tax|json_script('customer-tax') }}{{ invoice_customers|json_script('invoice-customers') }}{{ invoice_tax_rates|json_script('invoice-tax-rates') }}</div>{% endblock %}

@@ -1,5 +1,5 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/setup.css') }}">{% endblock %}{% block content %}
-<div class="heading"><div><p class="eyebrow">{{ company.name }}</p><h1>Review Accounting setup</h1><p>These choices come from your chart. Nothing is saved until you confirm.</p></div></div>
+<div class="heading"><div><h1>Review Accounting setup</h1><p>These choices come from your chart. Nothing is saved until you confirm.</p></div></div>
 {% for error in errors %}<p class="notice" role="alert">{{ error }}</p>{% endfor %}
 <ul class="setup-list">
 {% for row in proposal.rows %}

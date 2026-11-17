@@ -23,11 +23,24 @@ fn load(app: &mut App, r: &Route) -> AppResult<Value> {
 fn base(app: &mut App, r: &Route) -> AppResult<Value> {
     let mut vm = context(app, r)?;
     let inv = load(app, r)?;
-    put(&mut vm, "current", &inv["current"]);
+    if app.invoice_delivery {
+        let c=arg_company(r)?;let path=format!("/c/{c}/invoices/{}/",r.args["invoice_id"]);
+        vm["stripe_csrf"]=json!(token(app,&path));vm["invoice_delivery"]=json!(true);
+        let o=app.open_mut()?;vm["stripe_links"]=json!(o.book.read(|q|fb_core::invoice_stripe::links(q,o.owner,c))?.into_iter().filter(|l|l["invoice_id"]==r.args["invoice_id"]).collect::<Vec<_>>());
+        vm["stripe_mode"]=json!(o.book.read(|q|fb_core::invoice_preferences::get(q,c))?.settings.stripe_mode);
+    }
+    let mut current = inv["current"].clone();
+    current["terms_label"] = json!(terms_label(&current));
+    put(&mut vm, "current", current);
     put(&mut vm, "lines", &inv["lines"]);
     super::attachments(app, arg_company(r)?, inv["identity_id"].as_str().unwrap(), &mut vm)?;
     put(&mut vm, "invoice", inv);
     Ok(vm)
+}
+/// "Net 30" and the like when the invoice's dates match a standard term; empty otherwise.
+fn terms_label(h: &Value) -> &'static str {
+    let term = doc_forms::term_for(h["date"].as_str(), h["due_date"].as_str());
+    doc_forms::TERMS.iter().find(|(v, _)| !term.is_empty() && *v == term).map(|(_, l)| *l).unwrap_or("")
 }
 pub(super) fn render(
     app: &mut App,
@@ -61,6 +74,7 @@ pub(super) fn render(
             // Historical revisions have no current balance annotations.
             fixed_document(&mut rev, &mut lines);
             display_revision(&mut rev);
+            rev["terms_label"] = json!(terms_label(&rev));
             put(&mut vm, "current", rev);
             put(&mut vm, "lines", lines);
             Ok((draw(app, "sales/invoices/revision.html", &vm)?, 200))
@@ -80,7 +94,7 @@ pub(super) fn render(
                 &[],
             )
         }
-        "invoices:new" => doc_forms::page(
+        "invoices:new" => doc_forms::page_for(
             app,
             r,
             path,
@@ -89,6 +103,7 @@ pub(super) fn render(
             None,
             &Errors::new(),
             &[],
+            get(p, "customer"),
         ),
         _ => Err(AppError::NotFound(path.into())),
     }
@@ -97,6 +112,8 @@ fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> {
     let mut vm = base(app, r)?;
     let c = arg_company(r)?;
     let id = &r.args["invoice_id"];
+    let today = (app.today)().to_string();
+    vm["invoice_notices"] = json!(std::mem::take(&mut app.messages));
     let o = app.open_mut()?;
     let balances = fb_core::sales::invoice_balances(&mut o.book, o.owner, c)?;
     let b = balances.iter().find(|v| v["invoice_id"] == *id).unwrap();
@@ -105,33 +122,78 @@ fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> {
     }
     vm["invoice_open"] = json!(b["state"] == "OPEN" && money(&b["outstanding"]) > 0);
     vm["invoice_id"] = json!(id);
-    let rows=o.book.read(|tx|->Result<Vec<Value>,FbError>{let mut st=tx.prepare("SELECT a.amount,r.id,r.identity_id,EXISTS(SELECT 1 FROM sales_receiptreversal z WHERE z.receipt_id=r.id) FROM sales_receiptallocation a JOIN sales_receipt r ON r.id=a.receipt_id WHERE a.invoice_id=?1 ORDER BY a.id DESC LIMIT 50")?;let raw=st.query_map([id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,bool>(3)?)))?.collect::<Result<Vec<_>,_>>()?;raw.into_iter().map(|(n,id,source,reversed)|Ok(json!({"amount":cash(i128::from(n)),"receipt_id":id,"receipt":{"identity":identity(tx,&source)?,"reversed":reversed}}))).collect()})?;
-    put(
-        &mut vm,
-        "allocations_page",
-        Page::of(&rows, 25, get(p, "allocations_page")),
-    );
+    let overdue = b["state"] == "OPEN"
+        && money(&b["outstanding"]) > 0
+        && b["due_date"].as_str().is_some_and(|d| d < today.as_str());
+    vm["overdue"] = json!(overdue);
+    vm["status"] = status(&vm["current"], overdue);
+    // Payments, credits and customer deposits applied to this invoice, newest first, in one list.
+    let mut applied = o.book.read(|tx| -> Result<Vec<Value>, FbError> {
+        let mut out = vec![];
+        let mut st = tx.prepare("SELECT a.amount,r.date,r.id,r.identity_id,EXISTS(SELECT 1 FROM sales_receiptreversal z WHERE z.receipt_id=r.id) FROM sales_receiptallocation a JOIN sales_receipt r ON r.id=a.receipt_id WHERE a.invoice_id=?1 ORDER BY a.id DESC LIMIT 50")?;
+        let rows = st.query_map([id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, bool>(4)?)))?.collect::<Result<Vec<_>, _>>()?;
+        for (n, date, receipt, source, reversed) in rows {
+            out.push(json!({"date":date,"kind":"Payment","number":identity(tx,&source)?["number"],"route":"receipts:detail","target":receipt,"live":!reversed,"inactive":"Voided","amount":cash(i128::from(n))}));
+        }
+        let mut st = tx.prepare("SELECT l.amount,a.date,a.credit_memo_id,m.identity_id,NOT EXISTS(SELECT 1 FROM credits_creditunapplication u WHERE u.application_id=a.id) FROM credits_creditapplicationline l JOIN credits_creditapplication a ON a.id=l.application_id JOIN credits_creditmemo m ON m.id=a.credit_memo_id WHERE l.invoice_id=?1 ORDER BY l.id DESC")?;
+        let rows = st.query_map([id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, bool>(4)?)))?.collect::<Result<Vec<_>, _>>()?;
+        for (n, date, memo, source, live) in rows {
+            out.push(json!({"date":date,"kind":"Credit memo","number":identity(tx,&source)?["number"],"route":"credits:detail","target":memo,"live":live,"inactive":"Unapplied","amount":cash(i128::from(n))}));
+        }
+        let mut st = tx.prepare("SELECT a.amount,a.date,a.deposit_id,r.identity_id,NOT EXISTS(SELECT 1 FROM prepayments_depositunapplication u WHERE u.application_id=a.id) FROM prepayments_depositapplication a JOIN sales_receipt r ON r.id=a.deposit_id WHERE a.invoice_id=?1 ORDER BY a.id DESC LIMIT 50")?;
+        let rows = st.query_map([id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, String>(3)?, r.get::<_, bool>(4)?)))?.collect::<Result<Vec<_>, _>>()?;
+        for (n, date, deposit, source, live) in rows {
+            out.push(json!({"date":date,"kind":"Customer deposit","number":identity(tx,&source)?["number"],"route":"prepayments:detail","target":deposit,"live":live,"inactive":"Unapplied","amount":cash(i128::from(n))}));
+        }
+        Ok(out)
+    })?;
+    applied.sort_by(|a, b| b["date"].as_str().cmp(&a["date"].as_str()));
+    put(&mut vm, "applied", applied);
     let history = Page::of(
         vm["invoice"]["history"].as_array().unwrap(),
         20,
         get(p, "page"),
     );
     put(&mut vm, "history_page", history);
-    let (credits,deposits)=o.book.read(|tx|->Result<_,FbError>{
-      let mut st=tx.prepare("SELECT l.amount,a.date,a.credit_memo_id,m.identity_id,NOT EXISTS(SELECT 1 FROM credits_creditunapplication u WHERE u.application_id=a.id) FROM credits_creditapplicationline l JOIN credits_creditapplication a ON a.id=l.application_id JOIN credits_creditmemo m ON m.id=a.credit_memo_id WHERE l.invoice_id=?1 ORDER BY l.id DESC")?;
-      let rows=st.query_map([id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,bool>(4)?)))?.collect::<Result<Vec<_>,_>>()?;
-      let mut credits=vec![];for (n,date,memo,source,live) in rows{credits.push(json!({"amount":cash(i128::from(n)),"application":{"date":date,"credit_memo_id":memo,"credit_memo":{"identity":identity(tx,&source)?},"live":live}}));}
-      let mut st=tx.prepare("SELECT a.amount,a.date,a.identity_id,a.deposit_id,r.identity_id,NOT EXISTS(SELECT 1 FROM prepayments_depositunapplication u WHERE u.application_id=a.id) FROM prepayments_depositapplication a JOIN sales_receipt r ON r.id=a.deposit_id WHERE a.invoice_id=?1 ORDER BY a.id DESC LIMIT 50")?;
-      let rows=st.query_map([id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,String>(4)?,r.get::<_,bool>(5)?)))?.collect::<Result<Vec<_>,_>>()?;
-      let mut deposits=vec![];for (n,date,source,deposit,deposit_source,live) in rows{deposits.push(json!({"amount":cash(i128::from(n)),"date":date,"identity":identity(tx,&source)?,"deposit_id":deposit,"deposit":{"identity":identity(tx,&deposit_source)?},"live":live}));}Ok((credits,deposits))
-    })?;
-    put(
-        &mut vm,
-        "credits_page",
-        Page::of(&credits, 25, get(p, "credits_page")),
-    );
-    put(&mut vm, "invoice_deposit_applications", deposits);
+    if vm["current"]["state"] == "DRAFT" {
+        posting_panel(app, r, &mut vm)?;
+    }
+    vm["email_ready"] = json!(crate::invoice_email::gmail_ready(app, c)? && vm["current"]["customer_snapshot"]["email"].as_str().is_some_and(|e| !e.is_empty()));
     Ok((draw(app, "sales/invoices/detail.html", &vm)?, 200))
+}
+/// The chip beside an invoice's title.
+fn status(h: &Value, overdue: bool) -> Value {
+    let (label, class) = match (h["state"].as_str().unwrap_or(""), h["payment_state"].as_str().unwrap_or("")) {
+        ("DRAFT", _) => ("Draft", "draft"),
+        ("VOID", _) if h["journal_id"].is_null() => ("Deleted draft", "void"),
+        ("VOID", _) => ("Voided", "void"),
+        (_, "PAID") => ("Paid", "paid"),
+        (_, "PARTIAL") if overdue => ("Partly paid · Overdue", "overdue"),
+        (_, "PARTIAL") => ("Partly paid", "partial"),
+        _ if overdue => ("Overdue", "overdue"),
+        _ => ("Open", "open"),
+    };
+    json!({"label": label, "class": class})
+}
+/// A draft's Post button and its accounting entries. The page shows the core's review of this exact
+/// revision; its opaque token goes in the Post form, so posting refuses anything that changed since.
+fn posting_panel(app: &mut App, r: &Route, vm: &mut Value) -> AppResult<()> {
+    let c = arg_company(r)?;
+    let id = &r.args["invoice_id"];
+    let rev = vm["invoice"]["revision"].as_i64().unwrap_or(0);
+    let o = app.open_mut()?;
+    match fb_core::sales::review_invoice(&mut o.book, o.owner, c, id, Some(rev)) {
+        Ok(review) => {
+            vm["entries"] = review.display["entries"].clone();
+            vm["mapping"] = review.display["mapping"].clone();
+            let key = remember(app, review);
+            put(vm, "post_form", forms::bind(&post_fields(None, rev, &key, &Errors::new()), &[]));
+            put(vm, "post_csrf", token(app, &url("invoices:post", &[&c.to_db(), id])));
+        }
+        Err(FbError::Validation(messages)) => put(vm, "post_problems", messages),
+        Err(e) => return Err(e.into()),
+    }
+    Ok(())
 }
 pub(super) fn remember(app: &mut App, review: fb_core::sales::Review) -> String {
     if app.sales_reviews.len() >= 1024 {
@@ -211,14 +273,18 @@ fn void_page(
 ) -> AppResult<(String, u16)> {
     let mut vm = base(app, r)?;
     let rev = vm["invoice"]["revision"].as_i64().unwrap();
-    put(
-        &mut vm,
-        "form",
-        forms::bind(
-            &reversal_fields(p, rev, (app.today)(), false, e),
-            &nonfield(e, ""),
-        ),
-    );
+    let mut fields = reversal_fields(p, rev, (app.today)(), false, e);
+    // A draft never posted, so deleting it needs no date and the reason is optional.
+    if vm["current"]["state"] == "DRAFT" {
+        fields.retain(|f| f.name != "date");
+        for f in &mut fields {
+            if f.name == "reason" {
+                f.label = "Reason (optional)".into();
+                f.required = false;
+            }
+        }
+    }
+    put(&mut vm, "form", forms::bind(&fields, &nonfield(e, "")));
     put(&mut vm, "csrf_token", token(app, path));
     Ok((
         draw(app, "sales/invoices/void.html", &vm)?,
@@ -231,7 +297,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         let revision = clean_revision(p, 1, &mut e);
         let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
         let due_date = clean_date(p, "due_date", true, &mut e).unwrap_or_default();
-        if !matches!(get(p, "terms").unwrap_or(""), "" | "0" | "15" | "30") {
+        if !doc_forms::terms_valid(p) {
             error(
                 &mut e,
                 "terms",
@@ -286,8 +352,16 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     let revision = clean_revision(p, 1, &mut e);
     let cmd = match r.name.as_str() {
         "invoices:void" => {
-            let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
-            let reason = clean_text(p, "reason", 500, true, true, &mut e);
+            let current = load(app, r)?["current"].clone();
+            let (date, reason) = if current["state"] == "DRAFT" {
+                // Deleting a draft records the day it was deleted (never before the invoice date).
+                let today = (app.today)().to_string();
+                let dated = current["date"].as_str().unwrap_or_default().to_owned();
+                let reason = clean_text(p, "reason", 500, false, true, &mut e);
+                (today.max(dated), if reason.is_empty() { "No reason given.".into() } else { reason })
+            } else {
+                (clean_date(p, "date", true, &mut e).unwrap_or_default(), clean_text(p, "reason", 500, true, true, &mut e))
+            };
             Command::VoidInvoice {
                 company_id: c.to_db(),
                 invoice_id: id.clone(),
@@ -310,8 +384,14 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     if e.is_empty() {
         match app.run(cmd) {
             Ok(_) => {
+                // "Post and email" continues to the email preview, where sending is confirmed.
+                let next = if r.name == "invoices:post" && get(p, "then") == Some("email") {
+                    "invoices:email_preview"
+                } else {
+                    "invoices:detail"
+                };
                 return Ok(Outcome::Redirect {
-                    location: url("invoices:detail", &[&c.to_db(), id]),
+                    location: url(next, &[&c.to_db(), id]),
                 });
             }
             Err(AppError::Core(FbError::Validation(messages))) => {
@@ -325,16 +405,22 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             html: void_page(app, r, path, Some(p), &e)?.0,
         });
     }
-    let mut vm = base(app, r)?;
-    put(
-        &mut vm,
-        "form",
-        forms::bind(&post_fields(Some(p), revision, "", &e), &nonfield(&e, "")),
-    );
-    put(&mut vm, "failed", true);
+    // A refused post is explained on the invoice page, which shows a fresh review to post from.
+    let reasons = e.values().flatten().map(|m| plain_post(m)).collect::<Vec<_>>();
+    app.messages.push(format!("Not posted. {}", reasons.join(" ")));
+    let page = Route { name: "invoices:detail".into(), args: r.args.clone() };
     Ok(Outcome::Invalid {
-        html: draw(app, "sales/invoices/review.html", &vm)?,
+        html: detail(app, &page, &[])?.0,
     })
+}
+/// Posting refusals in plain words. Unknown messages pass through unchanged.
+pub(super) fn plain_post(message: &str) -> String {
+    match message {
+        "Posting mapping changed. Open a new review before posting." => "The accounts this invoice posts to changed after this page was opened. Check the accounting entries and post again.".into(),
+        "Invalid review. Open a new posting review." => "This page is out of date. Check the invoice and post again.".into(),
+        "This record changed since you opened it. Reload and review before saving." => "This invoice changed after this page was opened. Check it and post again.".into(),
+        m => m.into(),
+    }
 }
 
 fn conversion(
@@ -372,7 +458,7 @@ fn conversion(
                     "due_date",
                     (today + chrono::Duration::days(30)).to_string(),
                 )),
-            doc_forms::terms(p),
+            doc_forms::terms_with(p, Some("30")),
         ],
         e,
     );

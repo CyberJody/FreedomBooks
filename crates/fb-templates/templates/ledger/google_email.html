@@ -1,0 +1,13 @@
+{% if gmail_enabled %}<section class="narrow setup-connection" id="google-connection"><h2>Google email connection</h2>
+<p>Connect Gmail for this company. Invoices can be saved to Gmail Drafts for review or sent when you choose Send email.</p>
+{% if not gmail_keyring %}<p>Unlock or enable this computer’s keyring, then restart FreedomBooks to connect Google.</p>{% else %}
+<p class="setup-status">{% if gmail_connection %}Status: {{ gmail_connection.status }} · {{ gmail_connection.from_address }}{% else %}Not connected{% endif %}</p><ol><li>Enter your Google OAuth Desktop app client details and sending address.</li><li>Choose Connect Google and complete consent in your browser.</li><li>Return here to check the connection, then preview an invoice email.</li></ol>
+<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="gmail_connect"><input type="hidden" name="gmail_revision" value="{{ gmail_revision }}">
+<p><label for="gmail-client">Google OAuth desktop client ID</label><input id="gmail-client" name="gmail_client_id" maxlength="512" required value="{{ gmail_connection.client_id|default('') }}"></p>
+<p><label for="gmail-secret">Google OAuth client secret (if provided by Google)</label><input id="gmail-secret" type="password" name="gmail_client_secret" maxlength="10000" autocomplete="new-password"></p>
+<p><label for="gmail-from">Send from email</label><input id="gmail-from" type="email" name="gmail_from" maxlength="254" required value="{{ gmail_connection.from_address|default('') }}"></p>
+<p>Use a Google OAuth client registered as a Desktop app. Sign in with this address, or use an authorized Gmail sending alias. Google will ask for permission to manage drafts and send mail.</p>
+<button type="submit">Connect Google…</button></form>
+{% if gmail_connection.status == 'AUTHORIZING' %}<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="gmail_poll"><button type="submit">Check Google sign-in</button></form>{% endif %}
+{% if gmail_connection and gmail_connection.status != 'DISCONNECTED' %}<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="gmail_disconnect"><input type="hidden" name="gmail_revision" value="{{ gmail_revision }}"><button type="submit">Disconnect Google</button></form>{% endif %}
+{% endif %}</section>{% endif %}

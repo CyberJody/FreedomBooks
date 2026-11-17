@@ -99,7 +99,8 @@ function backupsBusy(kind) {
   };
   tick();
   const timer = setInterval(tick, 1000);
-  const stale = Array.from(main.querySelectorAll(':scope > p.errorlist, :scope > p.notice, form.backup-restored')).filter(m => !m.hidden);
+  const content = main.querySelector('.settings-body') || main;
+  const stale = Array.from(content.querySelectorAll(':scope > p.errorlist, :scope > p.notice, :scope > form.backup-restored')).filter(m => !m.hidden);
   stale.forEach(m => { m.hidden = true; });
   const at = main.querySelector('.backup-status');
   if (at) at.before(line); else main.prepend(line);
@@ -257,8 +258,26 @@ async function sendForm(form, submitter) {
       result = await call('app.createBook', { owner_name: get('owner_name'), company_name: get('company_name'), lock_password: get('lock_password'), lock_password2: get('lock_password2'), protect:get('protect'), starter_chart:get('starter_chart') });
     } else if (form.dataset.gate === 'restore') {
       result = await call('app.restoreBook', {name:get('name'),secret:get('secret')});
+    } else if (form.dataset.gate === 'choose') {
+      result = await call('app.chooseBook', {path:get('path')});
     } else if (form.dataset.gate === 'unlock') {
       result = await call('app.unlock', { password: get('password') });
+    } else if (form.dataset.gate === 'remote-pair') {
+      result = await call('remote.pair', { addr: get('addr'), code: get('code'), device_name: get('device_name') });
+    } else if (form.dataset.gate === 'remote-connect') {
+      result = await call('remote.connect', {});
+    } else if (form.dataset.gate === 'remote-disconnect') {
+      result = await call('remote.disconnect', {});
+    } else if (form.dataset.gate === 'remote-forget') {
+      result = await call('remote.forget', {});
+    } else if (form.dataset.gate === 'hosting-on') {
+      result = await call('hosting.on', { address: get('address'), port: get('port') });
+    } else if (form.dataset.gate === 'hosting-revoke') {
+      result = await call('hosting.revoke', { device: get('device') });
+    } else if (form.dataset.gate === 'hosting-repair') {
+      result = await call('hosting.repair', { kind: get('kind') });
+    } else if (['hosting-off', 'hosting-pair', 'hosting-cancel', 'hosting-restart'].includes(form.dataset.gate)) {
+      result = await call(`hosting.${form.dataset.gate.slice('hosting-'.length)}`, {});
     } else {
       const token = get('fb_command_token');
       result = await call('books.run', { type: 'SubmitForm', path: new URL(form.getAttribute('action') || window.location.pathname, window.location.href).pathname, token, fields: fields.filter(([k]) => k !== 'fb_command_token') });
@@ -270,18 +289,77 @@ async function sendForm(form, submitter) {
       const status = document.getElementById('recovery-copy-status');
       if (status) status.textContent = result.data.copied ? 'Recovery key copied. Paste it somewhere safe.' : result.data.copy_error;
     }
+    if (result.outcome === 'retry') showRetry(form, result);
     if (result.outcome === 'invalid' && get('action') === 'review') {
       try { window.sessionStorage.setItem(REVIEWED, new URL(result.reload, window.location.href).pathname); } catch {}
     }
+    if (result.outcome === 'done' && Array.isArray(result.data?.fragments)) applyFragments(form, result.data);
     follow(result);
     // A redirect or re-render is navigating away; the spent token must not be sent again meanwhile.
     if (result.outcome !== 'redirect' && result.outcome !== 'invalid') submitting.delete(form);
   } catch (e) {
     done();
     submitting.delete(form);
+    form.dispatchEvent(new Event('fb:submit-failed', { bubbles: true }));
     window.alert(String(e.message || e));
   }
 }
+
+// In-place replies (Review transactions): a 'done' outcome may carry server-rendered `fragments`, each
+// replacing the element of this page with the same id that opted in with `data-fragment`, and the form's
+// next single-use token (the one just spent was bound to this form's path). The page script learns of it
+// from the `fb:fragments` event; it never sees or sends a token itself.
+function applyFragments(form, data) {
+  const token = form.querySelector('input[name=fb_command_token]');
+  if (token && typeof data.next_token === 'string') token.value = data.next_token;
+  for (const fragment of data.fragments) {
+    if (!fragment || typeof fragment.id !== 'string' || typeof fragment.html !== 'string') continue;
+    const target = document.getElementById(fragment.id);
+    if (!target || !target.hasAttribute('data-fragment') || !form.contains(target)) continue;
+    const template = document.createElement('template');
+    template.innerHTML = fragment.html.trim();
+    const node = template.content.firstElementChild;
+    if (node && node.id === fragment.id && node.hasAttribute('data-fragment') && node.tagName === target.tagName) target.replaceWith(node);
+  }
+  form.dispatchEvent(new Event('fb:fragments', { bubbles: true }));
+}
+
+// CRASHLOG: a post that failed after spending the form's single-use token comes back as `retry`: the
+// page keeps what was typed, says why in plain words, and takes the fresh token for the next submit.
+// Without a token (something may already have been done) the message asks to reopen the page.
+function showRetry(form, { message, token }) {
+  const input = form.querySelector('input[name=fb_command_token]');
+  if (input && typeof token === 'string' && token) input.value = token;
+  let box = Array.from(form.children).find(el => el.classList.contains('form-retry'));
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'errorlist form-retry';
+    box.setAttribute('role', 'alert');
+    form.prepend(box);
+  }
+  box.textContent = String(message || 'This could not be finished. Nothing was saved.');
+  box.scrollIntoView({ block: 'nearest' });
+}
+
+// CRASHLOG: Report a problem (and the page shown after an internal error) can open the problem log's
+// folder and copy a short diagnostic summary. Both are fixed main-process calls with no arguments;
+// the main process checks the page and does the work, so no path or log text reaches the page.
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest && event.target.closest('#report-open-log, #report-copy-summary');
+  if (!button || event.defaultPrevented || event.button !== 0) return;
+  event.preventDefault();
+  const status = document.getElementById('report-copy-status');
+  try {
+    if (button.id === 'report-open-log') await call('app.openLogFolder', {});
+    else {
+      await call('app.copyDiagnostics', {});
+      if (status) status.textContent = 'Diagnostic summary copied. Paste it into the issue.';
+    }
+  } catch (e) {
+    if (status) status.textContent = String(e.message || e);
+    else window.alert(String(e.message || e));
+  }
+}, true);
 
 // Ported pages set the page icon with an inline `style` attribute, which the CSP blocks; apply the same
 // custom property through the CSSOM (allowed) so the markup stays identical to Django's.
@@ -383,4 +461,56 @@ function newFeedAccountFields() {
 document.addEventListener('DOMContentLoaded', newFeedAccountFields);
 document.addEventListener('change', event => {
   if (event.target.matches('#bankfeed-mapping select[name^="map_"]')) newFeedAccountFields();
+});
+
+// GO: the title bar's Back and Forward buttons ask the main process, which also serves the Go menu, the
+// keyboard and the mouse buttons (navigation.cjs). It sends this window's history state, so the buttons
+// are enabled only when there is somewhere to go, and asks for the Find field on Ctrl+F or Ctrl+K.
+let historyState = { back: false, forward: false };
+function applyHistory() {
+  for (const button of document.querySelectorAll('button[data-fb-nav]')) button.disabled = !historyState[button.dataset.fbNav];
+}
+ipcRenderer.on('fb:history', (_event, state) => {
+  historyState = { back: !!(state && state.back === true), forward: !!(state && state.forward === true) };
+  applyHistory();
+});
+document.addEventListener('DOMContentLoaded', applyHistory);
+document.addEventListener('click', (event) => {
+  const button = event.target.closest && event.target.closest('button[data-fb-nav]');
+  if (!button || event.defaultPrevented || event.button !== 0) return;
+  event.preventDefault();
+  const to = button.dataset.fbNav;
+  if (to === 'back' || to === 'forward') call('app.navigate', { to }).catch(() => {});
+}, true);
+ipcRenderer.on('fb:find', () => {
+  const field = document.getElementById('fb-find');
+  if (!field) return;
+  field.focus();
+  field.select();
+});
+// A page Chromium restores from its back-forward cache would still show spent single-use form tokens and
+// the messages of the earlier visit; load it fresh instead.
+window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
+// Back and Forward re-render a page from the books with fresh tokens, but Chromium would then fill its form
+// fields with what was typed on the earlier visit: an invoice already saved would look unsaved, ready to be
+// entered twice. Chromium keeps no field state for a form marked autocomplete=off, so mark every form that
+// saves; and should a visit from history still arrive with typed values, put them back to what the page
+// was sent with before page scripts read them. (The app offers no autofill, so nothing else changes.)
+document.addEventListener('DOMContentLoaded', () => {
+  const entry = performance.getEntriesByType('navigation')[0];
+  const fromHistory = !!entry && entry.type === 'back_forward';
+  for (const form of document.querySelectorAll('form')) {
+    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') continue;
+    form.setAttribute('autocomplete', 'off');
+    if (fromHistory) form.reset();
+  }
+});
+
+// Remote access: the connected-host bar (added by the main process to host pages) follows the link.
+ipcRenderer.on('fb:remote-link', (_event, state) => {
+  const bar = document.getElementById('fb-remote-bar');
+  const text = document.getElementById('fb-remote-state');
+  if (!bar || !text || typeof state !== 'string') return;
+  bar.dataset.state = state;
+  text.textContent = state === 'connected' ? '' : state === 'reconnecting' ? ' · reconnecting…' : ' · connection lost';
 });

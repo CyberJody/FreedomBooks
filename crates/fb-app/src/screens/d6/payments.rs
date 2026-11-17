@@ -23,168 +23,411 @@ fn record(app: &mut App, c: CompanyId, id: &str) -> AppResult<Value> {
     v["get_method_display"] = json!(match s(&v, "method") {
         "CHECK" => "Check",
         "CASH" => "Cash",
-        "CARD" => "Card (record only)",
-        "TRANSFER" => "Transfer (record only)",
+        "CARD" => "Card",
+        "TRANSFER" => "Bank transfer",
         "OTHER" => "Other",
         s => s,
     });
     Ok(v)
 }
-fn prior(app: &mut App, c: CompanyId, p: Option<Posted<'_>>) -> AppResult<Option<Value>> {
-    let key = p
-        .and_then(|p| get(p, "request_key"))
-        .and_then(py::py_uuid)
-        .map(|v| v.0)
-        .unwrap_or_default();
-    Ok(scoped_rows(app,c,"SELECT p.* FROM payables_billpayment p JOIN documents_documentidentity i ON i.id=p.identity_id WHERE p.company_id=? AND i.request_key=?",&[&c.to_db(),&key])?.pop())
+// ---------------------------------------------------------------- Pay bills
+//
+// One screen lists every open bill. The user ticks bills and amounts; on save the page's proposal
+// becomes one payment per vendor. Each payment goes through the same review the core has always
+// required (ReviewBillPayment), and is recorded only when the review's entries and check number
+// equal what the page showed (`shown-<vendor>`), so what posts is exactly what the user saw. All
+// payments of one run are recorded in one transaction: if any vendor's payment is refused, none is
+// recorded and the page explains why with the selections kept. Each vendor's request key is derived
+// from the run's key, so sending the same page twice records nothing new.
+const METHODS: [(&str, &str); 5] = [
+    ("CHECK", "Check"),
+    ("CASH", "Cash"),
+    ("CARD", "Card"),
+    ("TRANSFER", "Bank transfer"),
+    ("OTHER", "Other"),
+];
+/// A vendor's request key inside one Pay bills run: stable for the same run and vendor.
+fn vendor_key(run: &str, vendor: &str) -> String {
+    use sha2::Digest;
+    let digest = sha2::Sha256::digest(format!("fb-pay-bills:{run}:{vendor}").as_bytes());
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&digest[..16]);
+    bytes[6] = (bytes[6] & 0x0f) | 0x80;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    uuid::Uuid::from_bytes(bytes).to_string()
 }
-fn fields(app: &mut App, c: CompanyId, prior: Option<&Value>) -> AppResult<Vec<Field>> {
-    let extra = prior.map(|p| vec![s(p, "bank_id")]).unwrap_or_default();
-    let opts = banks(app, c, &extra)?
-        .iter()
-        .map(|a| (a.id.to_db(), a.label()))
-        .collect();
-    Ok(vec![Field::new("request_key","Request key",Widget::Hidden).required(),Field::new("review_token","Review token",Widget::Hidden),select("vendor","Vendor","Choose…",contacts(app,c,true,prior.map(|p|s(p,"vendor_id")),"short")?,true),Field::new("date","Payment date",Widget::Date).required(),Field::new("amount","Payment amount",Widget::Text).attr("inputmode","decimal").attr("maxlength","32").required(),Field::new("method","Method",Widget::Select{choices:vec![("CHECK".into(),"Check".into()),("CASH".into(),"Cash".into()),("CARD".into(),"Card (record only)".into()),("TRANSFER".into(),"Transfer (record only)".into()),("OTHER".into(),"Other".into())]}).required(),Field::new("reference","Check no. / reference",Widget::Text).help("When paying by check, this number shares this bank’s check numbers with Write checks and refunds. Do not enter card numbers or secrets."),Field::new("memo","Memo",Widget::Textarea{cols:40,rows:3}),select("bank","Designated bank","Choose a bank",opts,true)])
+/// Bill amounts typed by people: "1,234.5" or "$80". None when it is not a plain amount.
+fn typed_cents(text: &str) -> Option<i64> {
+    let t = py::py_strip(text).replace([',', '$', ' '], "");
+    if t.is_empty() || t.matches('.').count() > 1 || !t.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        return None;
+    }
+    let (whole, frac) = t.split_once('.').unwrap_or((&t, ""));
+    if frac.len() > 2 || (whole.is_empty() && frac.is_empty()) || whole.len() > 14 {
+        return None;
+    }
+    let whole = if whole.is_empty() { 0 } else { whole.parse::<i64>().ok()? };
+    let frac = format!("{frac:0<2}").parse::<i64>().ok()?;
+    whole.checked_mul(100)?.checked_add(frac)
 }
-fn allocation_choices(
-    app: &mut App,
-    c: CompanyId,
-    vendor: &str,
-    prior: Option<&Value>,
-) -> AppResult<Vec<(String, String)>> {
+fn cents_text(c: i64) -> String {
+    cash(c as i128)
+}
+/// Cents with thousands separators ("1,050.84"), as the page's own figures read.
+fn grouped(c: i64) -> String {
+    let t = cents_text(c);
+    let (whole, frac) = t.split_once('.').unwrap_or((&t, "00"));
+    let digits = whole.trim_start_matches('-');
+    let mut out = String::new();
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(ch);
+    }
+    format!("{}{out}.{frac}", if whole.starts_with('-') { "-" } else { "" })
+}
+/// Every posted bill with an open balance, with what the screen shows and the payables account
+/// its posting used (the account a payment debits).
+fn open_bills(app: &mut App, c: CompanyId, today: &str) -> AppResult<Vec<Value>> {
     let actor = app.open_mut()?.owner;
-    let mut bills = payables::current_bills(&mut app.open_mut()?.book, actor, c)?;
-    let retained = if let Some(p) = prior {
-        scoped_rows(
+    let bills = payables::current_bills(&mut app.open_mut()?.book, actor, c)?;
+    let names = labels(app, c)?;
+    let accounts = app.open_mut()?.book.read(|tx| fb_core::store::accounts(tx, c))?;
+    let mut out = vec![];
+    for b in bills {
+        if b["state"] != "OPEN" || !["OPEN", "PARTIAL"].contains(&s(&b, "payment_state")) {
+            continue;
+        }
+        let open = typed_cents(s(&b, "outstanding")).unwrap_or(0);
+        if open <= 0 {
+            continue;
+        }
+        let r = &b["current"];
+        let ap = scoped_rows(
             app,
             c,
-            "SELECT bill_id FROM payables_paymentallocation WHERE payment_id=?",
-            &[&s(p, "id")],
+            "SELECT account_id FROM documents_documentaccount WHERE source_id=? AND role='payables'",
+            &[&s(&b, "identity_id")],
         )?
-    } else {
-        vec![]
-    };
-    bills.retain(|b| {
-        b["vendor_id"] == vendor
-            && (["OPEN", "PARTIAL"].contains(&s(b, "payment_state"))
-                || retained.iter().any(|a| a["bill_id"] == b["id"]))
-    });
-    bills.sort_by(|a, b| {
-        s(&a["current"], "date")
-            .cmp(s(&b["current"], "date"))
-            .then(s(a, "id").cmp(s(b, "id")))
-    });
-    Ok(bills
-        .iter()
-        .map(|b| {
-            (
-                s(b, "id").into(),
-                format!(
-                    "{} · outstanding {}",
-                    s(b, "number"),
-                    b["outstanding"].as_str().unwrap_or("not open")
-                ),
-            )
-        })
-        .collect())
-}
-fn allocation_fields(prefix: &str, opts: &[(String, String)], required: bool) -> Vec<Field> {
-    let mut fs = vec![
-        select("bill", "Bill", "Choose…", opts.to_vec(), required),
-        Field::new("amount", "Amount", Widget::Text)
-            .attr("inputmode", "decimal")
-            .attr("maxlength", "32"),
-        Field::new("DELETE", "Delete", Widget::Checkbox { checked: false }),
-    ];
-    for f in &mut fs {
-        f.prefix = prefix.into();
-        if required && f.name == "amount" {
-            f.required = true;
-        }
+        .pop()
+        .map(|v| s(&v, "account_id").to_owned())
+        .unwrap_or_default();
+        let ap_label = accounts.iter().find(|a| a.id.to_db() == ap).map(|a| a.label()).unwrap_or_default();
+        let vendor = s(r, "vendor_id").to_owned();
+        let due = s(r, "due_date").to_owned();
+        // Days from the due date to today: positive when overdue.
+        let days = |from: &str, to: &str| -> i64 {
+            let d = |x: &str| chrono::NaiveDate::parse_from_str(x, "%Y-%m-%d").ok();
+            d(from).zip(d(to)).map(|(f, t)| (t - f).num_days()).unwrap_or(0)
+        };
+        let late = days(&due, today);
+        let status = if late > 0 {
+            format!("Overdue {late} day{}", if late == 1 { "" } else { "s" })
+        } else if late == 0 {
+            "Due today".to_owned()
+        } else {
+            let ahead = -late;
+            format!("Due in {ahead} day{}", if ahead == 1 { "" } else { "s" })
+        };
+        let vendor_label = names[&vendor].as_str().map(str::to_owned).unwrap_or_else(|| s(&r["vendor_snapshot"], "display_name").to_owned());
+        out.push(json!({
+            "id": b["id"], "number": b["number"], "vendor_id": vendor, "vendor": vendor_label,
+            "reference": r["reference"], "date": r["date"], "due_date": due,
+            "overdue": late > 0, "status": status,
+            "total": r["total"], "open": cents_text(open), "open_cents": open,
+            "payables_id": ap, "payables_label": ap_label, "revision_id": r["id"],
+        }));
     }
-    fs
+    out.sort_by(|a, b| s(a, "due_date").cmp(s(b, "due_date")).then(s(a, "vendor").cmp(s(b, "vendor"))).then(s(a, "number").cmp(s(b, "number"))));
+    Ok(out)
+}
+/// Check numbers for a run: the first vendor takes the number entered, the next vendor the next
+/// number, and so on, keeping leading zeros. Other methods use the reference as typed.
+fn references_for(method: &str, reference: &str, count: usize) -> Result<Vec<String>, String> {
+    let r = py::py_strip(reference).to_owned();
+    if method != "CHECK" || count <= 1 || r.is_empty() {
+        return Ok(vec![r; count]);
+    }
+    if !r.bytes().all(|b| b.is_ascii_digit()) || r.len() > 18 {
+        return Err("Enter the first check number as digits only; each vendor's check takes the next number.".into());
+    }
+    let start = r.parse::<u64>().map_err(|_| "Enter a shorter check number.".to_owned())?;
+    (0..count as u64)
+        .map(|i| start.checked_add(i).map(|n| format!("{n:0width$}", width = r.len())).ok_or_else(|| "Enter a shorter check number.".to_owned()))
+        .collect()
+}
+struct Run {
+    run: String,
+    bank: String,
+    date: String,
+    method: String,
+    reference: String,
+    memo: String,
+    ticked: Vec<String>,
+    amounts: HashMap<String, String>,
+}
+fn run_values(p: Posted<'_>) -> Run {
+    let get_all = |k: &str| p.iter().filter(|(n, _)| n == k).map(|(_, v)| v.clone()).collect::<Vec<_>>();
+    let mut ticked = get_all("pay");
+    ticked.dedup();
+    Run {
+        run: get(p, "request_key").unwrap_or("").to_owned(),
+        bank: get(p, "bank").unwrap_or("").to_owned(),
+        date: get(p, "date").unwrap_or("").to_owned(),
+        method: get(p, "method").unwrap_or("CHECK").to_owned(),
+        reference: get(p, "reference").unwrap_or("").to_owned(),
+        memo: get(p, "memo").unwrap_or("").to_owned(),
+        ticked,
+        amounts: p.iter().filter_map(|(k, v)| k.strip_prefix("amount-").map(|id| (id.to_owned(), v.clone()))).collect(),
+    }
+}
+#[derive(Default)]
+struct PayPage {
+    errors: Vec<String>,
+    row_errors: HashMap<String, String>,
+    field_errors: HashMap<String, String>,
 }
 #[allow(clippy::too_many_arguments)]
-fn form(
-    app: &mut App,
-    r: &Route,
-    query: Posted<'_>,
-    path: &str,
-    p: Option<Posted<'_>>,
-    e: &Errors,
-    non_form: &[String],
-    review: Option<Value>,
-) -> AppResult<String> {
+fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, posted: Option<&Run>, page: &PayPage) -> AppResult<String> {
     let c = arg_company(r)?;
+    let today = (app.today)().to_string();
     let mut vm = ctx(app, r)?;
-    let prior = prior(app, c, p)?;
-    let fs = fields(app, c, prior.as_ref())?;
-    let bs = banks(
-        app,
-        c,
-        &prior
-            .as_ref()
-            .map(|p| vec![s(p, "bank_id")])
-            .unwrap_or_default(),
-    )?;
+    let rows = open_bills(app, c, &today)?;
+    let offered = banks(app, c, &[])?;
+    let default = default_bank(app, c, &offered, "SELECT bank_id FROM payables_billpayment WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
     let mut next = json!({});
-    for b in &bs {
+    for b in &offered {
         let actor = app.open_mut()?.owner;
-        next[b.id.to_db()] = json!(fb_core::checks::next_number(
-            &mut app.open_mut()?.book,
-            actor,
-            c,
-            b.id
-        )?);
+        next[b.id.to_db()] = json!(fb_core::checks::next_number(&mut app.open_mut()?.book, actor, c, b.id)?);
     }
-    let vendor = get(p.unwrap_or(query), "vendor").unwrap_or("");
-    let mut initial = json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string(),"method":"CHECK","vendor":vendor});
-    if let Some(b) = bs.first() {
-        initial["bank"] = json!(b.id.to_db());
-        initial["reference"] = next[b.id.to_db()].clone();
+    // Arriving from a bill or a vendor: tick the given bills; filter to the given vendor, or to the
+    // one vendor all the given bills belong to.
+    let wanted = query.iter().filter(|(k, _)| k == "bill").map(|(_, v)| v.clone()).collect::<Vec<_>>();
+    let mut filter_vendor = get(query, "vendor").unwrap_or("").to_owned();
+    let filter_due = get(query, "due").filter(|d| fb_db::dates::parse_iso_date(d).is_some()).unwrap_or("").to_owned();
+    let given = rows.iter().filter(|b| wanted.iter().any(|w| w == s(b, "id"))).collect::<Vec<_>>();
+    if filter_vendor.is_empty() && !given.is_empty() && given.iter().all(|b| b["vendor_id"] == given[0]["vendor_id"]) {
+        filter_vendor = s(given[0], "vendor_id").to_owned();
     }
-    let choices = if let Widget::Select { choices } = &fs[2].widget {
-        choices.clone()
-    } else {
-        vec![]
-    };
-    put(&mut vm, "vendor_choices", choices);
-    put(&mut vm, "vendor_value", vendor);
-    put(&mut vm, "form", bind_fields(fs, p, &initial, e, true));
+    if posted.is_some() {
+        // After a refused save, show every bill so no ticked bill is out of sight.
+        filter_vendor = String::new();
+    }
+    let mut vendors: Vec<(String, String)> = vec![];
+    for b in &rows {
+        if !vendors.iter().any(|(id, _)| id == s(b, "vendor_id")) {
+            vendors.push((s(b, "vendor_id").into(), s(b, "vendor").into()));
+        }
+    }
+    vendors.sort_by(|a, b| a.1.cmp(&b.1));
+    let mut rows = rows;
+    for b in &mut rows {
+        let id = s(b, "id").to_owned();
+        let (ticked, amount) = match posted {
+            Some(run) => (run.ticked.contains(&id), run.amounts.get(&id).cloned().unwrap_or_default()),
+            None => {
+                let t = wanted.contains(&id);
+                (t, if t { s(b, "open").to_owned() } else { String::new() })
+            }
+        };
+        let shown = (filter_vendor.is_empty() || b["vendor_id"] == filter_vendor) && (filter_due.is_empty() || s(b, "due_date") <= filter_due.as_str());
+        b["ticked"] = json!(ticked);
+        b["amount"] = json!(amount);
+        b["hidden"] = json!(!shown && !ticked);
+        b["error"] = json!(page.row_errors.get(&id));
+    }
+    let run = posted;
+    let request_key = run.map(|r| r.run.clone()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let bank = run.map(|r| r.bank.clone()).or(default.clone()).unwrap_or_default();
+    let date = run.map(|r| r.date.clone()).unwrap_or(today.clone());
+    let method = run.map(|r| r.method.clone()).unwrap_or_else(|| "CHECK".into());
+    let reference = run.map(|r| r.reference.clone()).unwrap_or_else(|| default.as_ref().map(|b| s(&next, b).to_owned()).unwrap_or_default());
+    let memo = run.map(|r| r.memo.clone()).unwrap_or_default();
+    let values = json!({"request_key": request_key, "bank": bank, "date": date, "method": method, "reference": reference, "memo": memo});
+    put(&mut vm, "rows", &rows);
+    put(&mut vm, "values", &values);
+    put(&mut vm, "banks", offered.iter().map(|a| json!({"id":a.id.to_db(),"label":a.label()})).collect::<Vec<_>>());
+    put(&mut vm, "methods", METHODS.iter().map(|(v, l)| json!({"value":v,"label":l})).collect::<Vec<_>>());
+    put(&mut vm, "vendors", vendors.iter().map(|(id, l)| json!({"id":id,"label":l})).collect::<Vec<_>>());
+    put(&mut vm, "filter_vendor", &filter_vendor);
+    put(&mut vm, "filter_due", &filter_due);
+    put(&mut vm, "errors", &page.errors);
+    put(&mut vm, "field_errors", json!(page.field_errors));
+    put(&mut vm, "pay_data", json!({"next_numbers": next, "today": today}));
     put(&mut vm, "csrf_token", token(app, path));
-    let opts = allocation_choices(app, c, vendor, prior.as_ref())?;
-    let total = formset_count(p, "allocations", 0);
-    let forms = (0..total)
-        .map(|i| {
-            bind_fields(
-                allocation_fields(&format!("allocations-{i}"), &opts, false),
-                p,
-                &Value::Null,
-                e,
-                true,
-            )
-        })
-        .collect();
-    put(
-        &mut vm,
-        "formset",
-        FormsetVm {
-            management_form: management(p, "allocations", total, 0),
-            non_form_errors: formset_errors(non_form),
-            total_error_count: super::super::d2::formset_error_count(e, p, "allocations") + non_form.len(),
-            forms,
-            empty_form: bind_fields(
-                allocation_fields("allocations-__prefix__", &opts, false),
-                None,
-                &Value::Null,
-                &Errors::new(),
-                true,
-            ),
-        },
-    );
-    put(&mut vm, "review", review);
-    put(&mut vm, "next_numbers", next);
+    // After a successful run: the payments it recorded.
+    if let Some(done) = get(query, "paid").and_then(py::py_uuid) {
+        let keys = scoped_rows(app, c, "SELECT id FROM directory_vendor WHERE company_id=?", &[&c.to_db()])?
+            .iter()
+            .map(|v| vendor_key(&done.0, s(v, "id")))
+            .collect::<Vec<_>>();
+        let mut made = vec![];
+        for k in keys {
+            if let Some(found) = scoped_rows(app, c, "SELECT p.id FROM payables_billpayment p JOIN documents_documentidentity i ON i.id=p.identity_id WHERE p.company_id=? AND i.request_key=?", &[&c.to_db(), &k])?.pop() {
+                made.push(record(app, c, s(&found, "id"))?);
+            }
+        }
+        made.sort_by(|a, b| s(a, "number").cmp(s(b, "number")));
+        let total = made.iter().filter_map(|m| typed_cents(s(m, "amount"))).sum::<i64>();
+        let bills = made.iter().map(|m| scoped_rows(app, c, "SELECT count(*) AS n FROM payables_paymentallocation WHERE payment_id=?", &[&s(m, "id")]).map(|v| v[0]["n"].as_i64().unwrap_or(0))).sum::<AppResult<i64>>()?;
+        let labels = labels(app, c)?;
+        for m in &mut made {
+            let v = s(m, "vendor_id").to_owned();
+            m["vendor_label"] = labels[&v].clone();
+        }
+        put(&mut vm, "paid", json!({"payments": made, "total": grouped(total), "bills": bills}));
+    }
     draw(app, "payables/payments/form.html", &vm)
+}
+/// Whether any payment was recorded under this run's key (for any vendor).
+fn already_paid(app: &mut App, c: CompanyId, run: &str) -> AppResult<bool> {
+    for v in scoped_rows(app, c, "SELECT id FROM directory_vendor WHERE company_id=?", &[&c.to_db()])? {
+        let k = vendor_key(run, s(&v, "id"));
+        if !scoped_rows(app, c, "SELECT p.id FROM payables_billpayment p JOIN documents_documentidentity i ON i.id=p.identity_id WHERE p.company_id=? AND i.request_key=?", &[&c.to_db(), &k])?.is_empty() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
+    let c = arg_company(r)?;
+    let today = (app.today)().to_string();
+    let run = run_values(p);
+    let mut page = PayPage::default();
+    let mut fe = Errors::new();
+    let key = key(p, true, &mut fe);
+    let date = clean_date(p, "date", true, &mut fe).unwrap_or_default();
+    let reference = clean_text(p, "reference", 120, false, true, &mut fe);
+    super::super::d2::refuse_card_number(p, "reference", &mut fe);
+    let memo = clean_text(p, "memo", 2000, false, true, &mut fe);
+    super::super::d2::refuse_card_number(p, "memo", &mut fe);
+    let offered = banks(app, c, &[])?;
+    if run.bank.is_empty() || !offered.iter().any(|a| a.id.to_db() == run.bank) {
+        error(&mut fe, "bank", if offered.is_empty() { "Add a bank account to the chart of accounts first (account type Bank)." } else { "Choose the bank account to pay from." });
+    }
+    if !METHODS.iter().any(|(m, _)| *m == run.method) {
+        error(&mut fe, "method", "Choose how you are paying.");
+    }
+    for (k, v) in &fe {
+        if k != "request_key" {
+            page.field_errors.insert(k.clone(), v.join(" "));
+        } else {
+            page.errors.push("This page is out of date. Open Pay bills again.".into());
+        }
+    }
+    // Sent twice: the first send already recorded this run's payments, so show them instead of
+    // paying again (or reporting their bills as no longer open).
+    if !key.is_empty() && already_paid(app, c, &key)? {
+        return Ok(Outcome::Redirect { location: format!("{}?paid={key}", url("payments:new", &[&c.to_db()])) });
+    }
+    // The ticked bills, as the page showed them.
+    let rows = open_bills(app, c, &today)?;
+    let mut chosen: Vec<(&Value, i64)> = vec![];
+    for id in &run.ticked {
+        let Some(b) = rows.iter().find(|b| s(b, "id") == id) else {
+            page.errors.push("A ticked bill is no longer open: it was paid, voided or changed elsewhere. The list below is up to date; check your choices and pay again.".into());
+            continue;
+        };
+        let typed = run.amounts.get(id).map(String::as_str).unwrap_or("");
+        let amount = if py::py_strip(typed).is_empty() { Some(b["open_cents"].as_i64().unwrap_or(0)) } else { typed_cents(typed) };
+        match amount {
+            None => { page.row_errors.insert(id.clone(), "Enter an amount such as 125.00.".into()); }
+            Some(0) => { page.row_errors.insert(id.clone(), "Enter an amount more than zero, or untick this bill.".into()); }
+            Some(a) if a > b["open_cents"].as_i64().unwrap_or(0) => {
+                page.row_errors.insert(id.clone(), format!("This is more than the open balance of {}. Pay at most {}: a payment cannot leave credit with the vendor.", s(b, "open"), s(b, "open")));
+            }
+            Some(_) if !date.is_empty() && s(b, "date") > date.as_str() => {
+                page.row_errors.insert(id.clone(), format!("The payment date is before this bill's date ({}).", s(b, "date")));
+            }
+            Some(a) => chosen.push((b, a)),
+        }
+    }
+    if run.ticked.is_empty() {
+        page.errors.push("Tick at least one bill to pay.".into());
+    }
+    if !page.row_errors.is_empty() {
+        page.errors.push(format!("{} bill{} need{} a different amount or date; see the marked rows.", page.row_errors.len(), if page.row_errors.len() == 1 { "" } else { "s" }, if page.row_errors.len() == 1 { "s" } else { "" }));
+    }
+    // One payment per vendor, in vendor name order.
+    let mut vendors: Vec<(String, String)> = vec![];
+    for (b, _) in &chosen {
+        if !vendors.iter().any(|(id, _)| id == s(b, "vendor_id")) {
+            vendors.push((s(b, "vendor_id").into(), s(b, "vendor").into()));
+        }
+    }
+    vendors.sort_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
+    let refs = match references_for(&run.method, &reference, vendors.len()) {
+        Ok(r) => r,
+        Err(m) => {
+            page.field_errors.insert("reference".into(), m);
+            vec![]
+        }
+    };
+    let invalid = |page: &PayPage| !page.errors.is_empty() || !page.row_errors.is_empty() || !page.field_errors.is_empty();
+    if invalid(&page) {
+        return Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? });
+    }
+    let keys = vendors.iter().map(|(v, _)| vendor_key(&key, v)).collect::<Vec<_>>();
+    let mut payments = vec![];
+    let mut tokens = vec![];
+    let mut mismatch = false;
+    for (i, (vendor, label)) in vendors.iter().enumerate() {
+        let mine = chosen.iter().filter(|(b, _)| s(b, "vendor_id") == vendor).collect::<Vec<_>>();
+        let total = mine.iter().map(|(_, a)| a).sum::<i64>();
+        let values = BillPaymentValues {
+            request_key: keys[i].clone(),
+            vendor_id: vendor.clone(),
+            date: date.clone(),
+            amount: cents_text(total),
+            method: run.method.clone(),
+            reference: refs[i].clone(),
+            memo: memo.clone(),
+            bank_id: run.bank.clone(),
+            allocations: mine.iter().map(|(b, a)| BillAllocationValues { bill_id: s(b, "id").into(), amount: cents_text(*a) }).collect(),
+        };
+        match app.run(Command::ReviewBillPayment { company_id: c.to_db(), values: values.clone() }) {
+            Ok(Outcome::Done { data }) => {
+                let entries = data["entries"].as_array().cloned().unwrap_or_default();
+                let server = format!("{}||{}", refs[i], entries_signature(&entries));
+                let sent = get(p, &format!("shown-{vendor}")).unwrap_or("");
+                if sent != server {
+                    mismatch = true;
+                }
+                tokens.push(s(&data, "token").to_owned());
+                payments.push(values);
+            }
+            Err(AppError::Core(FbError::Validation(m))) => page.errors.push(format!("{label}: {}", m.join(" "))),
+            Err(e) => return Err(e),
+            Ok(_) => unreachable!(),
+        }
+    }
+    // A refused or unconfirmed run leaves no reviews behind (they would crowd out others).
+    let drop_reviews = |app: &mut App, tokens: &[String]| {
+        for t in tokens {
+            app.d6_reviews.payments.remove(t);
+        }
+    };
+    if !page.errors.is_empty() || mismatch {
+        drop_reviews(app, &tokens);
+    }
+    if !page.errors.is_empty() {
+        page.errors.insert(0, "Nothing was paid. Fix the problem below and choose Pay selected bills again; your choices are kept.".into());
+        return Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? });
+    }
+    if mismatch {
+        page.errors.push("Nothing was paid yet: the amounts, accounts or check numbers below changed since the page was shown. Check the payments and choose Pay selected bills again.".into());
+        return Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? });
+    }
+    match app.run(Command::RecordBillPayments { company_id: c.to_db(), payments, review_tokens: tokens }) {
+        Ok(Outcome::Done { .. }) => Ok(Outcome::Redirect { location: format!("{}?paid={key}", url("payments:new", &[&c.to_db()])) }),
+        Err(AppError::Core(FbError::Validation(m))) => {
+            page.errors.push(format!("Nothing was paid: {}", m.join(" ")));
+            Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? })
+        }
+        Err(e) => Err(e),
+        Ok(_) => unreachable!(),
+    }
 }
 fn listing(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> {
     let c = arg_company(r)?;
@@ -333,7 +576,7 @@ pub(super) fn render(
 ) -> AppResult<(String, u16)> {
     match r.name.as_str() {
         "payments:list" => listing(app, r, p),
-        "payments:new" => Ok((form(app, r, p, path, None, &Errors::new(), &[], None)?, 200)),
+        "payments:new" => Ok((pay_bills_page(app, r, path, p, None, &PayPage::default())?, 200)),
         "payments:detail" => Ok((detail(app, r)?, 200)),
         "payments:reverse" => Ok((reverse_form(app, r, path, None, &Errors::new())?, 200)),
         _ => Err(AppError::NotFound(r.name.clone())),
@@ -369,103 +612,5 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     if r.name != "payments:new" {
         return Err(AppError::NotFound(path.into()));
     }
-    let prior = prior(app, c, Some(p))?;
-    let fs = fields(app, c, prior.as_ref())?;
-    let key = key(p, true, &mut e);
-    let rt = clean_text(p, "review_token", 1000, false, true, &mut e);
-    let vendor = choice(p, &fs[2], &mut e, true);
-    let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
-    let amount = clean_text(p, "amount", 32, true, true, &mut e);
-    let method = choice(p, &fs[5], &mut e, false);
-    let reference = clean_text(p, "reference", 120, false, true, &mut e);
-    super::super::d2::refuse_card_number(p, "reference", &mut e);
-    let memo = clean_text(p, "memo", 2000, false, true, &mut e);
-    super::super::d2::refuse_card_number(p, "memo", &mut e);
-    let bank = choice(p, &fs[8], &mut e, true);
-    let opts = allocation_choices(app, c, get(p, "vendor").unwrap_or(""), prior.as_ref())?;
-    let count = formset_count(Some(p), "allocations", 0);
-    let initial = get(p, "allocations-INITIAL_FORMS")
-        .and_then(clean_integer)
-        .unwrap_or(0);
-    let mut allocations = vec![];
-    let mut any_error = false;
-    let mut meaningful=0;
-    for i in 0..count {
-        let prefix = format!("allocations-{i}");
-        let row = p
-            .iter()
-            .filter_map(|(k, v)| {
-                k.strip_prefix(&(prefix.clone() + "-"))
-                    .map(|k| (k.into(), v.clone()))
-            })
-            .collect::<Vec<_>>();
-        let changed = row.iter().any(|(k, v)| k != "DELETE" && !v.is_empty());
-        let deleted = checked(&row, "DELETE");
-        if !changed && i >= initial as usize && i >= 1 {
-            continue;
-        }
-        if !deleted && (changed || i < initial.max(0) as usize) {meaningful+=1;}
-        let mut le = Errors::new();
-        let bill = choice(&row, &allocation_fields("", &opts, true)[0], &mut le, true);
-        let amount = clean_text(&row, "amount", 32, true, true, &mut le);
-        any_error |= !deleted && !le.is_empty();
-        for (k, msg) in le {
-            e.insert(format!("{prefix}-{k}"), msg);
-        }
-        if deleted { continue; }
-        allocations.push(BillAllocationValues {
-            bill_id: bill,
-            amount,
-        });
-    }
-    let non_form = set_errors(p, "allocations", meaningful, any_error);
-    let mut review = None;
-    if super::super::d2::active_form_errors(&e, p) == 0 && non_form.is_empty() {
-        let values = BillPaymentValues {
-            request_key: key,
-            vendor_id: vendor,
-            date,
-            amount,
-            method,
-            reference,
-            memo,
-            bank_id: bank,
-            allocations,
-        };
-        let action = get(p, "action").unwrap_or("review");
-        if action == "record" {
-            if let Some(d) = result_error(
-                app.run(Command::RecordBillPayment {
-                    company_id: c.to_db(),
-                    values,
-                    review_token: rt,
-                }),
-                &mut e,
-            )? {
-                return Ok(Outcome::Redirect {
-                    location: url("payments:detail", &[&c.to_db(), s(&d, "id")]),
-                });
-            }
-        } else if action == "review" {
-            review = result_error(
-                app.run(Command::ReviewBillPayment {
-                    company_id: c.to_db(),
-                    values,
-                }),
-                &mut e,
-            )?;
-        } else {
-            error(&mut e, "__all__", "Choose Review or explicitly Record.");
-        }
-    }
-    let mut fields = p.to_vec();
-    if let Some(d) = &review {
-        fields.retain(|(k, _)| k != "review_token");
-        fields.push(("review_token".into(), s(d, "token").into()));
-    }
-    let status = if review.is_some() { 200 } else { 400 };
-    Ok(Outcome::Page {
-        html: form(app, r, &[], path, Some(&fields), &e, &non_form, review)?,
-        status,
-    })
+    pay_bills_submit(app, r, path, p)
 }

@@ -58,7 +58,8 @@ module.exports = async () => {
 
     await page.fill('#id_owner_name', 'Synthetic attachment owner');
     await page.fill('#id_company_name', 'Synthetic attachment company');
-    await Promise.all([page.waitForURL(/\/home\/$/), page.getByRole('button', {name:'Create books',exact:true}).click()]);
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/), page.getByRole('button', {name:'Create books',exact:true}).click()]);
+    await require('./smoke-identity.cjs').signIn(page, 'Synthetic attachment owner42');
     const company = /\/c\/([0-9a-f-]{36})\//.exec(page.url())[1];
     const baseUrl = `fb://app/c/${company}`;
     const income = await app.evaluate(({ app }, c) => {
@@ -74,9 +75,9 @@ module.exports = async () => {
     await page.selectOption('#id_customer',customer);
     await page.fill('#id_date','2026-11-06');await page.fill('#id_due_date','2026-12-06');
     await page.fill('#id_lines-0-description','Synthetic attachment service');
-    await page.selectOption('#id_lines-0-income_account',income);
+    if (await page.locator('select#id_lines-0-income_account').count()) await page.selectOption('#id_lines-0-income_account',income);
     await page.fill('#id_lines-0-quantity','1');await page.fill('#id_lines-0-rate','25.00');
-    await Promise.all([page.waitForURL(/\/invoices\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save invoice',exact:true}).click()]);
+    await Promise.all([page.waitForURL(/\/invoices\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save draft',exact:true}).click()]);
     pass('created an isolated synthetic book and invoice through desktop forms');
     const invoice = page.url();
     assert.match(invoice, /\/invoices\/[0-9a-f-]{36}\/$/);

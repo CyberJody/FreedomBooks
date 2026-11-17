@@ -141,16 +141,14 @@ fn ordinal_labels_stay_short_and_stable_across_edits_and_inactivation() {
     acct(&mut app, &c, "9000", "BANK");
     let income = acct(&mut app, &c, "1000", "INCOME");
     let item=command(&mut app,json!({"type":"SaveItem","company_id":c,"code":"MOW","description":"Mowing","kind":"SERVICE","sale_rate":"1","income_account_id":income}))["id"].as_str().unwrap().to_owned();
-    let path = format!("/c/{c}/invoices/new/");
+    // Since 5a65c381 the invoice editor is item-driven: items show their code alone and the income
+    // account is a hidden field; estimates, sales receipts and credit memos now share that editor.
+    // The check form still labels items with their ordinal; no current form lists income accounts with
+    // ordinals any more, so the account rename/inactivation part of this test went with the old forms.
+    let path = format!("/c/{c}/checks/new/");
     let html = screens::render(&mut app, &path).unwrap().html;
-    assert!(html.contains("1000 · 1000 · #2") && html.contains("MOW · #1"));
+    assert!(html.contains(&format!("<option value=\"{item}\">MOW · #1</option>")));
     assert!(!html.contains(&format!("#{income}")) && !html.contains(&format!("#{item}")));
-    command(
-        &mut app,
-        json!({"type":"SaveAccount","company_id":c,"account_id":income,"code":"0001","name":"Changed","detail_type":"INCOME","active":false}),
-    );
-    let html = screens::render(&mut app, &path).unwrap().html;
-    assert!(html.contains("0001 · Changed · #2 (unavailable"));
 }
 
 #[test]
@@ -213,18 +211,19 @@ fn audit_csv_has_bom_formula_guards_and_scope_and_rejects_invalid_filters() {
 }
 
 #[test]
-fn new_company_journal_landing_redirects_until_checklist_is_dismissed() {
+fn new_company_journal_list_reminds_until_checklist_is_dismissed() {
+    // The journal list opens as itself (it used to redirect to the checklist); the checklist is a
+    // reminder on it until dismissed.
     let (mut app, c) = fixture();
     let path = format!("/c/{c}/");
     let initial = screens::render(&mut app, &path).unwrap();
-    assert_eq!(
-        (initial.status, initial.html),
-        (302, format!("/c/{c}/setup/start/"))
-    );
+    assert_eq!(initial.status, 200);
+    assert!(initial.html.contains("Journal entries"));
+    assert!(initial.html.contains(&format!(r#"<a href="/c/{c}/setup/start/">Finish setting up</a>"#)));
     command(&mut app, json!({"type":"DismissSetup","company_id":c}));
     let ready = screens::render(&mut app, &path).unwrap();
     assert_eq!(ready.status, 200);
-    assert!(ready.html.contains("Journal entries"));
+    assert!(ready.html.contains("Journal entries") && !ready.html.contains("Finish setting up"));
 }
 
 #[test]

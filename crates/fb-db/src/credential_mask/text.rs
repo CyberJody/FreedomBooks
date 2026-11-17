@@ -450,7 +450,7 @@ fn strip_any_userinfo(s: &[char]) -> Vec<char> {
 
 /// Spellings of the URL delimiters the structural pass treats alike: ASCII, percent-encoded (any case,
 /// `@` also double-encoded) and every code point whose NFKC form is the delimiter (Python 3.13
-/// `unicodedata`: `staging/l4-fix3/nfkc.py`). `\` counts as a slash, as browsers read `https:\\host`.
+/// `unicodedata`). `\` counts as a slash, as browsers read `https:\\host`.
 const COLONS: &[&str] = &[":", "%3a", "\u{fe13}", "\u{fe55}", "\u{ff1a}"];
 const SLASHES: &[&str] = &["/", "\\", "%2f", "%5c", "\u{ff0f}"];
 const ATS: &[&str] = &["@", "%40", "%2540", "\u{fe6b}", "\u{ff20}"];

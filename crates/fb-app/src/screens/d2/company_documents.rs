@@ -73,5 +73,6 @@ pub(super) fn clean_post(
     }
     data.insert("logo_upload".into(), json!(upload));
     data.insert("remove_logo".into(), json!(checked(fields, "remove_logo")));
+    data.insert("invoice_preferences".into(), json!(super::invoice_preferences::clean_post(fields, errors)));
     serde_json::from_value(Value::Object(data)).expect("form values")
 }

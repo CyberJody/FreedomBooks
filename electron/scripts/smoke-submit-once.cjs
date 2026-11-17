@@ -71,7 +71,8 @@ const heading = async (page) => (await page.locator('main h1').first().textConte
     await page.fill('#id_company_name', 'Kettle Pond Supply');
     assert.equal(await page.isChecked('#id_protect'),false);
     await page.selectOption('#id_starter_chart', 'empty');
-    await nav('button:has-text("Create books")', /\/home\/$/);
+    await nav('button:has-text("Create books")', /\/desktop\/sign-in\/$/);
+    await require('./smoke-identity.cjs').signIn(page, 'Synthetic flow owner42');
     const company = /\/c\/([0-9a-f-]{36})\/home\/$/.exec(page.url())[1];
     const base = `fb://app/c/${company}`;
     assert.ok((await host()).renders.length > 0, 'host counter sees renders');
@@ -114,23 +115,22 @@ const heading = async (page) => (await page.locator('main h1').first().textConte
       await host();
     };
 
-    // 1. "Save estimate": aimed, then "Add line", then one click where the user saw it.
+    // 1. "Save": aimed, then "Add line", then one click where the user saw it.
     await estimateForm();
-    const save = await centre('button:has-text("Save estimate")');
+    const save = await centre('button[name="editor_action"][value="save"]');
     await page.mouse.click(...Object.values(await centre('#add-line')));
     await frame();
-    assert.equal(await page.inputValue('#id_lines-TOTAL_FORMS'), '4');
+    assert.equal(await page.inputValue('#id_lines-TOTAL_FORMS'), '2');
     assert.deepEqual((await host()).submits, [], 'Add line sends nothing');
-    const now = await centre('button:has-text("Save estimate")');
-    assert.ok(Math.abs(now.y - save.y) < 1 && Math.abs(now.x - save.x) < 1, `Save estimate stays under the pointer after Add line: ${JSON.stringify({ save, now })}`);
+    assert.ok(await page.evaluate(({x,y}) => document.elementFromPoint(x,y)?.closest('button') === document.querySelector('button[name="editor_action"][value="save"]'), save), 'the original pointer still hits Save after Add line');
     await Promise.all([page.waitForURL(/estimates\/[0-9a-f-]{36}\/$/), page.mouse.click(save.x, save.y)]);
     let seen = await host();
     assert.deepEqual(seen.submits, [{ path: `/c/${company}/estimates/new/`, action: '' }]);
     pass('Save estimate: one real click after Add line -> exactly one SubmitForm');
 
-    // 2. "Estimate list" (a link): same sequence -> exactly one GET of the list, no command.
+    // 2. "Cancel" (a link to the list): same sequence -> exactly one GET of the list, no command.
     await estimateForm();
-    const list = await centre('a:has-text("Estimate list")');
+    const list = await centre('.editor-actions a:has-text("Cancel")');
     await page.mouse.click(...Object.values(await centre('#add-line')));
     await frame();
     await host();
@@ -138,11 +138,11 @@ const heading = async (page) => (await page.locator('main h1').first().textConte
     seen = await host();
     assert.deepEqual(seen.submits, []);
     assert.deepEqual(seen.renders.filter((t) => t.startsWith(`/c/${company}/estimates/`)), [`/c/${company}/estimates/`]);
-    pass('Estimate list: one real click after Add line -> exactly one list render, no command');
+    pass('Cancel: one real click after Add line -> exactly one list render, no command');
 
     // 3. A double click on Save estimate still sends one command and shows no "form has expired" alert.
     await estimateForm();
-    const again = await centre('button:has-text("Save estimate")');
+    const again = await centre('button[name="editor_action"][value="save"]');
     await Promise.all([page.waitForURL(/estimates\/[0-9a-f-]{36}\/$/), page.mouse.dblclick(again.x, again.y)]);
     await page.waitForTimeout(500);
     seen = await host();
@@ -150,32 +150,23 @@ const heading = async (page) => (await page.locator('main h1').first().textConte
     assert.deepEqual(dialogs, []);
     pass('Save estimate double click -> exactly one SubmitForm, no expired-form alert');
 
-    // 4. Sales receipt: Review then "Record sales receipt — books only", one real click each.
+    // 4. Sales receipt: one Save, one real click -> exactly one SubmitForm, which records the sale.
     await page.goto(`${base}/sales-receipts/new/`);
     await page.selectOption('#id_customer', customer);
     await page.fill('#id_date', '2026-10-22');
     await page.selectOption('#id_method', 'CASH');
     await page.selectOption('#id_lines-0-item', item);
     await page.fill('#id_lines-0-quantity', '1');
-    await page.selectOption('#id_lines-0-income_account', income);
-    await page.locator('button:has-text("Review sales receipt")').scrollIntoViewIfNeeded();
+    await page.locator('button[name="editor_action"][value="save"]').scrollIntoViewIfNeeded();
     await host();
-    const review = await centre('button:has-text("Review sales receipt")');
-    await page.mouse.click(review.x, review.y);
-    await page.waitForSelector('#review-total');
-    seen = await host();
-    assert.deepEqual(seen.submits, [{ path: `/c/${company}/sales-receipts/new/`, action: 'review' }]);
-    pass('Review sales receipt: one real click -> exactly one SubmitForm (action=review)');
-    const recordSel = 'button:has-text("Record sales receipt — books only")';
-    assert.equal(await inView(recordSel), true, 'Record button is on screen after the review re-render');
-    assert.notEqual(await page.evaluate(() => document.activeElement && document.activeElement.value), 'record', 'focus not moved to Record');
-    await page.screenshot({ path: path.join(shots, 'sim-fix-01-sales-receipt-review.png') });
-    const record = await centre(recordSel);
+    await page.screenshot({ path: path.join(shots, 'sim-fix-01-sales-receipt-form.png') });
+    const record = await centre('button[name="editor_action"][value="save"]');
     await Promise.all([page.waitForURL(/sales-receipts\/[0-9a-f-]{36}\/$/), page.mouse.click(record.x, record.y)]);
     seen = await host();
-    assert.deepEqual(seen.submits, [{ path: `/c/${company}/sales-receipts/new/`, action: 'record' }]);
+    assert.equal(seen.submits.length, 1, JSON.stringify(seen.submits));
+    assert.equal(seen.submits[0].path, `/c/${company}/sales-receipts/new/`);
     assert.match(await heading(page), /Sales receipt/);
-    pass('Record sales receipt — books only: on screen after review; one real click -> exactly one SubmitForm (action=record)');
+    pass('Save sales receipt: one real click -> exactly one SubmitForm that records the sale');
     assert.deepEqual(dialogs, []);
 
     // SIM-FIX item 5 (same preload): a report preset fills From/To before Run; typed dates switch to

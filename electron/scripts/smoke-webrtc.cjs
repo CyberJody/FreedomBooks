@@ -1,5 +1,5 @@
 'use strict';
-// Regression from staging/r-desktop-d1/rtc_check.cjs (rtc.log: 4 packets before the fix).
+// Regression check for WebRTC ICE leaks (4 packets before the fix).
 // Use the actual page world and real Chromium ICE, without mocking or hiding RTCPeerConnection.
 const dgram = require('node:dgram');
 const fs = require('node:fs');

@@ -39,8 +39,27 @@ const USER_ACTIONS: [(&str, &str); 5] = [
     ("user.created", "User created"),
     ("user.changed", "User changed"),
 ];
+const SALES_TAX_PAYMENT_ACTIONS: [(&str, &str); 2] = [
+    ("salestax.payment.recorded", "Sales tax payment recorded"),
+    ("salestax.payment.voided", "Sales tax payment voided"),
+];
+const JOB_ACTIONS: [(&str, &str); 11] = [
+    ("job_ticket.created", "Job ticket opened"),
+    ("job_ticket.updated", "Job ticket changed"),
+    ("job_ticket.completed", "Job ticket completed"),
+    ("job_ticket.closed", "Job ticket closed without billing"),
+    ("job_ticket.reopened", "Job ticket reopened"),
+    ("job_ticket.invoiced", "Job ticket invoiced"),
+    ("job_ticket.time_released", "Time released from a draft invoice"),
+    ("time_entry.created", "Time recorded"),
+    ("time_entry.updated", "Time changed"),
+    ("time_entry.moved", "Time moved to another ticket"),
+    ("time_entry.deleted", "Time removed"),
+];
 fn action(code: &str) -> String {
+    if let Some((_, label)) = JOB_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if code == DOCUMENT_DETAILS_ACTION.0 { return DOCUMENT_DETAILS_ACTION.1.into(); }
+    if let Some((_, label)) = SALES_TAX_PAYMENT_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if let Some((_, label)) = USER_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if code=="numbering.changed" {return "Next document number changed".into();}
     LABELS["ACTION_LABELS"][code]
@@ -143,6 +162,18 @@ fn target(
                 Some(url("journal", &[&c.to_db(), raw])),
             ));
         }
+        if model == "job_ticket" {
+            let label = tx.query_row("SELECT number || ' · ' || title FROM jobs_ticket WHERE id=?1 AND company_id=?2", params![raw, c.to_db()], |r| r.get::<_, String>(0)).optional()?;
+            if let Some(label) = label {
+                return Ok((label, Some(url("jobs:detail", &[&c.to_db(), raw]))));
+            }
+        }
+        if model == "time_entry" {
+            let label = tx.query_row("SELECT 'Time ' || e.date || ' · ' || c.display_name FROM jobs_timeentry e JOIN directory_customer c ON c.id=e.customer_id WHERE e.id=?1 AND e.company_id=?2", params![raw, c.to_db()], |r| r.get::<_, String>(0)).optional()?;
+            if let Some(label) = label {
+                return Ok((label, Some(url("time:edit", &[&c.to_db(), raw]))));
+            }
+        }
         if model == "reconciliation" {
             let label=tx.query_row("SELECT a.code || ' · statement ' || r.statement_date FROM banking_reconciliation r JOIN ledger_account a ON a.id=r.account_id AND a.company_id=r.company_id WHERE r.id=?1 AND r.company_id=?2",params![raw,c.to_db()],|r|r.get::<_,String>(0)).optional()?;
             if let Some(label) = label {
@@ -150,6 +181,7 @@ fn target(
             }
         }
         let spec = match model {
+            "recurring_bill" => Some(("payables_recurring", "name", "recurring:detail", None)),
             "account" => Some((
                 "ledger_account",
                 "code || ' · ' || name",
@@ -216,13 +248,14 @@ fn target(
             "check" => Some(("checks_check", "checks:detail")),
             "deposit" => Some(("banking_deposit", "deposits:detail")),
             "transfer" => Some(("transfers_transfer", "transfers:detail")),
+            "salestaxpayment" => Some(("salestax_payment", "salestax:tax_payment")),
             "creditmemo" => Some(("credits_creditmemo", "credits:detail")),
             "creditrefund" => Some(("credits_creditrefund", "credits:refund_detail")),
             "depositrefund" => Some(("prepayments_depositrefund", "prepayments:refund_detail")),
             _ => None,
         };
         if let Some((table, mut route)) = spec {
-            let found=tx.query_row(&format!("SELECT i.number FROM {table} d JOIN documents_documentidentity i ON i.id=d.identity_id WHERE d.id=?1 AND d.company_id=?2"),params![raw,c.to_db()],|r|r.get::<_,String>(0)).optional()?;
+            let found=tx.query_row(&format!("SELECT i.number FROM {table} d JOIN documents_displayidentity i ON i.id=d.identity_id WHERE d.id=?1 AND d.company_id=?2"),params![raw,c.to_db()],|r|r.get::<_,String>(0)).optional()?;
             if let Some(label) = found {
                 if model == "receipt"
                     && tx.query_row("SELECT kind FROM sales_receipt WHERE id=?1", [raw], |r| {
@@ -256,6 +289,7 @@ fn events(app: &mut App, c: CompanyId) -> AppResult<Vec<Value>> {
         let raw=st.query_map([c.to_db()],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,String>(4)?,r.get::<_,String>(5)?,r.get::<_,String>(6)?)))?.collect::<Result<Vec<_>,_>>()?;
         raw.into_iter().map(|(id,actor_id,actor_name,occurred_at,code,key,detail)|{
             let detail:Value=fb_db::parse_unique_json(&detail).map_err(|e|FbError::validation(e.to_string()))?;
+            let detail=fb_core::attachments::public_audit_detail(tx,c,&code,&detail)?;
             let (number,url)=target(tx,c,&key,&detail)?;
             let detail=fb_core::card_numbers::mask_text_fields(&detail);
             let operator=UserId::parse(&actor_id).map(|id|store::user(tx,id)).transpose()?.flatten().map(|u|u.username).filter(|s|!s.trim().is_empty()).unwrap_or_else(||if actor_name.trim().is_empty(){"Unknown user".into()}else{actor_name.trim().into()});
@@ -420,6 +454,7 @@ pub(super) fn history(
         .map(|(k, v)| (k.clone(), v.as_str().unwrap().to_owned()))
         .chain(sim_fix_labels().map(|(k, v)| (k.to_owned(), v.to_owned())))
         .chain(USER_ACTIONS.into_iter().map(|(k, v)| (k.to_owned(), v.to_owned())))
+        .chain(JOB_ACTIONS.into_iter().map(|(k, v)| (k.to_owned(), v.to_owned())))
         .chain(std::iter::once((DOCUMENT_DETAILS_ACTION.0.to_owned(), DOCUMENT_DETAILS_ACTION.1.to_owned())))
         .collect();
     labels.sort_by(|a, b| a.1.cmp(&b.1));

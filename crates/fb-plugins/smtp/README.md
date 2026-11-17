@@ -122,7 +122,7 @@ protocol tracing or dump transport/message objects in the host.
   is the commit point; a stalled/missing QUIT cannot turn an accepted message into
   a failed send. No automatic retries, account deletion or password replacement.
 
-## CoreBridge integration (wave 4)
+## CoreBridge integration
 
 The synchronous slot expects an `OutgoingDocument` from the host's scoped
 `CoreBridge::rendered_document`. Run it off the UI thread. The host must verify
@@ -138,7 +138,7 @@ or cancelled/failed I/O after DATA starts (Uncertain). Accepted retains its rece
 when rich audit fails, with an independent recording_error. No id is invented.
 Legacy send still returns errors for uncertain/recording failures; that is not
 proof mail was not sent. Never automatically resend. Durable attempts, recovery,
-Message-ID ownership and atomic history/audit remain wave 4.
+Message-ID ownership and atomic history/audit remain host integration work.
 
 Cancellation is checked before connect/auth/DATA and every 20 ms during I/O;
 cancelling drops the future/socket but cannot undo a provider submission. The host
@@ -182,12 +182,12 @@ fragment sizes of 1/7/1,024 bytes, malformed framing and infinite generated inpu
 without allocating an attacker-sized fixture. The original newline-terminated
 `HugeGreeting` regression remains in the suite.
 
-## Real sign-in later — Jody only
+## Real sign-in later — account holder only
 
-Jody will need a mail account whose provider permits SMTP AUTH, its public SMTP
+The account holder will need a mail account whose provider permits SMTP AUTH, its public SMTP
 hostname, submission port/TLS mode, authorized From address, username and an app
 password. Some providers/organizations disable SMTP AUTH or app passwords; use
 the Gmail or Microsoft 365 OAuth plugin if required. No OAuth app registration
-or OAuth scopes are needed for SMTP. Jody enters secrets in the eventual secure
+or OAuth scopes are needed for SMTP. The account holder enters secrets in the eventual secure
 settings UI, never chat, logs, environment snapshots or test fixtures. No real
-sign-in or email was attempted for this job.
+sign-in or email was attempted during development.

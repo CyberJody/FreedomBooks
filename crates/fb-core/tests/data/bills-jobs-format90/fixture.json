@@ -1,0 +1,312 @@
+{
+  "source_commit": "5a8c4fd9c9b8fc06ee2ee7df810f20efd5e86148",
+  "book_format": 90,
+  "master_byte": 49,
+  "owner": "01a1e552-7de0-76a6-b436-6e7f8c6b9521",
+  "company": "01a1e552-7de6-7668-8a23-cb3e30d7fbd6",
+  "income": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+  "expense": "01a1e552-7dea-72d8-84db-db11c0da4e2c",
+  "first": "01a1e552-7def-70de-97ee-bbb54018e358",
+  "second": "01a1e552-7def-70de-97ee-bbb77c219edd",
+  "vendor": "01a1e552-7df1-71e3-94f1-d9e3fc8fb383",
+  "service": "01a1e552-7df2-77d0-98db-019402607e8b",
+  "replacement": "01a1e552-7df3-7189-bdcb-801a198849c7",
+  "invoices": [
+    {
+      "id": "01a1e552-7df4-7246-ae15-94dd5d28b03a",
+      "identity_id": "01a1e552-7df4-7246-ae15-94db26fc1a5e",
+      "revision": 1,
+      "creation_digest": "884a1dda10d917961d5776a6d2cd51ee090d6081b146c17cbf902cd12e255aca",
+      "current": {
+        "customer_id": "01a1e552-7def-70de-97ee-bbb54018e358",
+        "customer_snapshot": {
+          "id": "01a1e552-7def-70de-97ee-bbb54018e358",
+          "display_name": "Prior customer",
+          "business_name": "",
+          "contact_name": "",
+          "billing_address": "",
+          "email": "",
+          "phone": ""
+        },
+        "company_snapshot": {
+          "id": "01a1e552-7de6-7668-8a23-cb3e30d7fbd6",
+          "name": "Synthetic prior-build books",
+          "currency": "USD"
+        },
+        "date": "2026-11-15",
+        "due_date": "2026-12-15",
+        "memo": "",
+        "state": "DRAFT",
+        "action": "created",
+        "reason": "",
+        "tax_item_id": null,
+        "journal_id": null,
+        "reversal_id": null,
+        "review_digest": "",
+        "tax_mode": "NONE",
+        "tax_rate": "0.0000",
+        "tax_label": "No tax",
+        "tax_snapshot": {},
+        "subtotal": "3.13",
+        "taxable": "0.00",
+        "tax": "0.00",
+        "total": "3.13",
+        "id": "01a1e552-7df5-7254-988f-3a0217f6b71e",
+        "number": 1,
+        "actor_name": "Synthetic prior-build owner"
+      },
+      "lines": [
+        {
+          "position": 1,
+          "origin_position": null,
+          "origin_revision_id": null,
+          "item_id": "01a1e552-7df2-77d0-98db-019402607e8b",
+          "item_snapshot": {
+            "id": "01a1e552-7df2-77d0-98db-019402607e8b",
+            "code": "Prior service",
+            "description": "",
+            "kind": "SERVICE",
+            "sale_rate": "1.25"
+          },
+          "description": "Prior invoice service",
+          "quantity": "2.5000",
+          "rate": "1.25",
+          "taxable": false,
+          "amount": "3.13",
+          "income_account_id": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+          "expense_account_id": null,
+          "account_snapshot": {
+            "income_account": {
+              "id": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+              "code": "400",
+              "name": "Services income",
+              "kind": "INCOME"
+            }
+          }
+        }
+      ],
+      "source_history": null
+    },
+    {
+      "id": "01a1e552-7dfc-7017-8c13-ae9d8a41be49",
+      "identity_id": "01a1e552-7dfc-7017-8c13-ae9bab55ffcc",
+      "revision": 2,
+      "creation_digest": "884a1dda10d917961d5776a6d2cd51ee090d6081b146c17cbf902cd12e255aca",
+      "current": {
+        "customer_id": "01a1e552-7def-70de-97ee-bbb54018e358",
+        "customer_snapshot": {
+          "id": "01a1e552-7def-70de-97ee-bbb54018e358",
+          "display_name": "Prior customer",
+          "business_name": "",
+          "contact_name": "",
+          "billing_address": "",
+          "email": "",
+          "phone": ""
+        },
+        "company_snapshot": {
+          "id": "01a1e552-7de6-7668-8a23-cb3e30d7fbd6",
+          "name": "Synthetic prior-build books",
+          "currency": "USD"
+        },
+        "date": "2026-11-15",
+        "due_date": "2026-12-15",
+        "memo": "",
+        "state": "OPEN",
+        "action": "posted",
+        "reason": "",
+        "tax_item_id": null,
+        "journal_id": "01a1e552-7e04-7738-9e0a-f1232d2e8f09",
+        "reversal_id": null,
+        "review_digest": "919ece454b938901f71b617a014c7a6698be53331198e2a8dd5a2730350acf4f",
+        "tax_mode": "NONE",
+        "tax_rate": "0.0000",
+        "tax_label": "No tax",
+        "tax_snapshot": {},
+        "subtotal": "3.13",
+        "taxable": "0.00",
+        "tax": "0.00",
+        "total": "3.13",
+        "id": "01a1e552-7e07-710c-84b6-46b2be1d2849",
+        "number": 2,
+        "actor_name": "Synthetic prior-build owner"
+      },
+      "lines": [
+        {
+          "position": 1,
+          "origin_position": null,
+          "origin_revision_id": null,
+          "item_id": "01a1e552-7df2-77d0-98db-019402607e8b",
+          "item_snapshot": {
+            "id": "01a1e552-7df2-77d0-98db-019402607e8b",
+            "code": "Prior service",
+            "description": "",
+            "kind": "SERVICE",
+            "sale_rate": "1.25"
+          },
+          "description": "Prior invoice service",
+          "quantity": "2.5000",
+          "rate": "1.25",
+          "taxable": false,
+          "amount": "3.13",
+          "income_account_id": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+          "expense_account_id": null,
+          "account_snapshot": {
+            "income_account": {
+              "id": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+              "code": "400",
+              "name": "Services income",
+              "kind": "INCOME"
+            }
+          }
+        }
+      ],
+      "source_history": null
+    },
+    {
+      "id": "01a1e552-7e11-7417-881a-bd50691d1245",
+      "identity_id": "01a1e552-7e10-73ae-b36a-c2c27c72f9d1",
+      "revision": 3,
+      "creation_digest": "884a1dda10d917961d5776a6d2cd51ee090d6081b146c17cbf902cd12e255aca",
+      "current": {
+        "customer_id": "01a1e552-7def-70de-97ee-bbb54018e358",
+        "customer_snapshot": {
+          "id": "01a1e552-7def-70de-97ee-bbb54018e358",
+          "display_name": "Prior customer",
+          "business_name": "",
+          "contact_name": "",
+          "billing_address": "",
+          "email": "",
+          "phone": ""
+        },
+        "company_snapshot": {
+          "id": "01a1e552-7de6-7668-8a23-cb3e30d7fbd6",
+          "name": "Synthetic prior-build books",
+          "currency": "USD"
+        },
+        "date": "2026-11-15",
+        "due_date": "2026-12-15",
+        "memo": "",
+        "state": "VOID",
+        "action": "voided",
+        "reason": "Synthetic prior-build void",
+        "tax_item_id": null,
+        "journal_id": "01a1e552-7e18-7590-ab82-e9722d0ec8f2",
+        "reversal_id": "01a1e552-7e25-7703-956a-027e6efcc859",
+        "review_digest": "80aa8a01532aecf6d88fdd80a8623f9d17cfa0c3e8e5d00e9fbb1dec2a241fd8",
+        "tax_mode": "NONE",
+        "tax_rate": "0.0000",
+        "tax_label": "No tax",
+        "tax_snapshot": {},
+        "subtotal": "3.13",
+        "taxable": "0.00",
+        "tax": "0.00",
+        "total": "3.13",
+        "id": "01a1e552-7e28-75d5-8f4d-96e4a2c81eb7",
+        "number": 3,
+        "actor_name": "Synthetic prior-build owner"
+      },
+      "lines": [
+        {
+          "position": 1,
+          "origin_position": null,
+          "origin_revision_id": null,
+          "item_id": "01a1e552-7df2-77d0-98db-019402607e8b",
+          "item_snapshot": {
+            "id": "01a1e552-7df2-77d0-98db-019402607e8b",
+            "code": "Prior service",
+            "description": "",
+            "kind": "SERVICE",
+            "sale_rate": "1.25"
+          },
+          "description": "Prior invoice service",
+          "quantity": "2.5000",
+          "rate": "1.25",
+          "taxable": false,
+          "amount": "3.13",
+          "income_account_id": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+          "expense_account_id": null,
+          "account_snapshot": {
+            "income_account": {
+              "id": "01a1e552-7de7-74ab-8122-b3e519f35cfb",
+              "code": "400",
+              "name": "Services income",
+              "kind": "INCOME"
+            }
+          }
+        }
+      ],
+      "source_history": null
+    }
+  ],
+  "bill": {
+    "id": "01a1e552-7e33-72eb-9639-b1b256a7876f",
+    "company_id": "01a1e552-7de6-7668-8a23-cb3e30d7fbd6",
+    "identity_id": "01a1e552-7e32-7770-88d5-b4136ba6bdef",
+    "creation_digest": "f285dbf445b35e955d6159c4e200d5f7a7544ecdfb9d27968febb1220b92424b",
+    "revision": 1,
+    "vendor_id": "01a1e552-7df1-71e3-94f1-d9e3fc8fb383",
+    "reference_key": "supplier42",
+    "state": "DRAFT",
+    "number": "BILL-000001",
+    "current": {
+      "id": "01a1e552-7e33-72eb-9639-b1b3853e247c",
+      "bill_id": "01a1e552-7e33-72eb-9639-b1b256a7876f",
+      "number": 1,
+      "state": "DRAFT",
+      "action": "created",
+      "reason": "",
+      "actor_id": "01a1e552-7de0-76a6-b436-6e7f8c6b9521",
+      "actor_name": "Synthetic prior-build owner",
+      "created_at": "2026-11-16T17:05:51.155699Z",
+      "vendor_id": "01a1e552-7df1-71e3-94f1-d9e3fc8fb383",
+      "vendor_snapshot": {
+        "id": "01a1e552-7df1-71e3-94f1-d9e3fc8fb383",
+        "display_name": "Prior supplier",
+        "business_name": "",
+        "contact_name": "",
+        "billing_address": "",
+        "email": "",
+        "phone": ""
+      },
+      "company_snapshot": {
+        "id": "01a1e552-7de6-7668-8a23-cb3e30d7fbd6",
+        "name": "Synthetic prior-build books",
+        "currency": "USD"
+      },
+      "date": "2026-11-15",
+      "due_date": "2026-12-15",
+      "reference": "Supplier42",
+      "supersedes_id": null,
+      "reentry_reason": "",
+      "journal_id": null,
+      "reversal_id": null,
+      "review_digest": "",
+      "memo": "",
+      "total": "12.34",
+      "lines": [
+        {
+          "id": "01a1e552-7e34-75ca-b9cf-693c49374bfb",
+          "revision_id": "01a1e552-7e33-72eb-9639-b1b3853e247c",
+          "position": 1,
+          "item_id": null,
+          "item_snapshot": {},
+          "description": "Prior supplier cost",
+          "quantity": "1.0000",
+          "rate": "12.34",
+          "amount": "12.34",
+          "income_account_id": null,
+          "expense_account_id": "01a1e552-7dea-72d8-84db-db11c0da4e2c",
+          "account_snapshot": {
+            "expense_account": {
+              "id": "01a1e552-7dea-72d8-84db-db11c0da4e2c",
+              "code": "500",
+              "name": "Supplier expense",
+              "kind": "EXPENSE"
+            }
+          },
+          "origin_position": null
+        }
+      ]
+    }
+  }
+}

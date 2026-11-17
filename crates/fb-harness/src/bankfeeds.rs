@@ -327,7 +327,20 @@ impl Runner<'_> {
     fn bf_apply(&mut self, step: &Value, actor: UserId, op: &str) -> Result<(), StepError> {
         let c = find(&self.companies, s(step, "company"))?;
         let flag = |k: &str| step[k].as_bool().unwrap_or(false);
-        let store_result = |runner: &mut Self, v: Value| {
+        let store_result = |runner: &mut Self, mut v: Value| {
+            // auto_post_candidates (the rows this pull made new or posted, for imported automatic rules)
+            // postdates the frozen reference. Check its form against the counts, then leave it out of
+            // the dump the reference comparison reads.
+            if let Some(map) = v.as_object_mut()
+                && let Some(candidates) = map.remove("auto_post_candidates")
+            {
+                let ids: Vec<&str> = candidates.as_array().expect("auto_post_candidates is a list").iter()
+                    .map(|id| id.as_str().expect("auto_post_candidates holds transaction ids")).collect();
+                let distinct: std::collections::BTreeSet<&str> = ids.iter().copied().collect();
+                assert_eq!(distinct.len(), ids.len(), "auto_post_candidates repeats a transaction");
+                let changed = map["new"].as_i64().unwrap_or(0) + map["posted"].as_i64().unwrap_or(0);
+                assert!(ids.len() as i64 <= changed, "more auto_post_candidates than new or posted rows");
+            }
             if let Some(r) = step["result"].as_str() {
                 runner.bf.suggested.remove(r);
                 runner.bf.results.insert(r.into(), v);

@@ -21,6 +21,8 @@ use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, TryRecvError};
 use std::time::Duration;
 use zeroize::{Zeroize, Zeroizing};
+pub(crate) mod gmail;
+pub(crate) mod stripe;
 
 /// One network request to the fb-net process and its reply, as JSON. Secrets inside travel only
 /// between the two Rust processes over a private pipe, never through JavaScript or the renderer.
@@ -53,7 +55,7 @@ struct Signin {
     child: Child,
     lines: Receiver<Zeroizing<String>>,
 }
-const ENV_PASSED: [&str; 5] = ["SystemRoot", "SYSTEMROOT", "WINDIR", "FB_NET_FAKE_SIMPLEFIN_PORT", "FB_NET_FAKE_OPENAI"];
+const ENV_PASSED: [&str; 7] = ["SystemRoot", "SYSTEMROOT", "WINDIR", "FB_NET_FAKE_SIMPLEFIN_PORT", "FB_NET_FAKE_OPENAI", "FB_NET_FAKE_GMAIL", "FB_NET_FAKE_STRIPE"];
 const REPLY_TIMEOUT: Duration = Duration::from_secs(150);
 const MAX_REPLY: u64 = 64 * 1024 * 1024;
 
@@ -128,14 +130,14 @@ impl Drop for ProcessNet {
 impl NetHost for ProcessNet {
     fn call(&mut self, request: &Value) -> Result<Value, String> {
         let op = request["op"].as_str().unwrap_or("");
-        let key = request["company"].as_str().unwrap_or("").to_owned();
+        let key = format!("{}:{}",if op.starts_with("gmail_") {"gmail"}else{"chatgpt"},request["company"].as_str().unwrap_or(""));
         let mut forwarded = request.clone();
         if let Some(map) = forwarded.as_object_mut() {
             map.remove("company");
         }
         match op {
             // Local: the sign-in process's second line, if it has arrived.
-            "chatgpt_poll" => {
+            "chatgpt_poll" | "gmail_poll" => {
                 let Some(signin) = self.signins.get_mut(&key) else { return Ok(json!({"none": true})) };
                 match signin.lines.try_recv() {
                     Ok(line) => {
@@ -149,14 +151,15 @@ impl NetHost for ProcessNet {
                     }
                 }
             }
-            "chatgpt_cancel" => {
+            "chatgpt_cancel" | "gmail_cancel" => {
                 self.cancel(&key);
                 Ok(json!({"ok": true}))
             }
-            "chatgpt_begin" => {
+            "chatgpt_begin" | "gmail_begin" => {
                 self.cancel(&key);
-                let (mut child, lines) = self.spawn(&forwarded)?;
+                let spawned = self.spawn(&forwarded);
                 forwarded.zeroize_strings();
+                let (mut child, lines) = spawned?;
                 let first = match lines.recv_timeout(REPLY_TIMEOUT) {
                     Ok(line) => Self::parse(&line),
                     Err(_) => Err(HELPER_FAILED.into()),
@@ -170,8 +173,9 @@ impl NetHost for ProcessNet {
                 first
             }
             _ => {
-                let (mut child, lines) = self.spawn(&forwarded)?;
+                let spawned = self.spawn(&forwarded);
                 forwarded.zeroize_strings();
+                let (mut child, lines) = spawned?;
                 let reply = match lines.recv_timeout(REPLY_TIMEOUT) {
                     Ok(line) => Self::parse(&line),
                     Err(RecvTimeoutError::Timeout) => Err("The connection took too long. Check its outcome before trying again.".into()),
@@ -235,11 +239,71 @@ fn load(app: &mut App, scope: &CredentialScope) -> AppResult<Result<Option<Secre
     with_vault(app, |v| v.load(scope))
 }
 
-fn net_call(app: &mut App, request: &Value) -> Result<Value, String> {
-    match app.net.as_mut() {
+/// After this long without finishing, a browser sign-in job may be replaced by someone else's.
+pub(crate) const SIGNIN_JOB_STALE: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+const SIGNIN_JOB_TAKEN: &str = "Someone else is connecting this company's account right now. Try again after they finish, or in a few minutes.";
+
+/// The job key fb-net uses (`ProcessNet::call`) for a browser sign-in operation, if `op` is one.
+fn signin_job(request: &Value) -> Option<(String, &'static str)> {
+    let op = request["op"].as_str()?;
+    let (provider, step) = op.split_once('_')?;
+    let provider = match provider {
+        "chatgpt" => "chatgpt",
+        "gmail" => "gmail",
+        _ => return None,
+    };
+    let step = match step {
+        "begin" => "begin",
+        "poll" => "poll",
+        "cancel" => "cancel",
+        _ => return None,
+    };
+    Some((format!("{provider}:{}", request["company"].as_str().unwrap_or("")), step))
+}
+
+/// Whether a sign-in job for `provider` and `company` belongs to another session right now.
+pub(crate) fn signin_held_by_other(app: &App, provider: &str, company: CompanyId) -> bool {
+    let key = format!("{provider}:{}", company.to_db());
+    app.signin_jobs
+        .get(&key)
+        .is_some_and(|(owner, since)| *owner != app.session_generation() && since.elapsed() < SIGNIN_JOB_STALE)
+}
+
+/// Every call to fb-net. Browser sign-in jobs are keyed by provider and company in fb-net, so here
+/// each job is owned by the session generation that began it: only the owner polls or cancels it,
+/// and another session cannot replace it until it ends or goes stale.
+pub(crate) fn net_call(app: &mut App, request: &Value) -> Result<Value, String> {
+    let Some((key, step)) = signin_job(request) else {
+        return match app.net.as_mut() {
+            None => Err(UNAVAILABLE.into()),
+            Some(net) => net.call(request),
+        };
+    };
+    let me = app.session_generation();
+    let owner = app.signin_jobs.get(&key).copied();
+    let mine = owner.is_some_and(|(g, _)| g == me);
+    let others = owner.is_some_and(|(g, since)| g != me && since.elapsed() < SIGNIN_JOB_STALE);
+    match step {
+        "poll" if !mine => return Ok(json!({"none": true})),
+        "cancel" if owner.is_some() && !mine => return Ok(json!({"ok": true})),
+        "begin" if others => return Err(SIGNIN_JOB_TAKEN.into()),
+        _ => {}
+    }
+    let reply = match app.net.as_mut() {
         None => Err(UNAVAILABLE.into()),
         Some(net) => net.call(request),
+    };
+    match step {
+        "begin" if reply.as_ref().is_ok_and(|v| v["ok"] == true) => {
+            app.signin_jobs.insert(key, (me, std::time::Instant::now()));
+        }
+        "poll" if reply.as_ref().is_ok_and(|v| v["pending"] == true) => {}
+        // A finished, failed or cancelled job (and a begin that did not start one) is no one's.
+        _ => {
+            app.signin_jobs.remove(&key);
+        }
     }
+    reply
 }
 fn net_error(reply: &Value) -> String {
     reply["error"].as_str().unwrap_or(HELPER_FAILED).to_owned()
@@ -376,8 +440,17 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
     let failure = match reply {
         Ok(v) if v["ok"] == true => match serde_json::from_value::<StagedPull>(v["pull"].clone()) {
             Ok(pull) => {
-                return match bankfeeds::store_pull(&mut open.book, owner, co, connection_id, &pull, &now, false, Some(start), &secrets) {
-                    Ok(result) => Ok(Ok(result["summary"].as_str().unwrap_or("").to_owned())),
+                return match bankfeeds::store_pull_for_desktop(&mut open.book, owner, co, connection_id, &pull, &now, false, Some(start), &secrets) {
+                    Ok(result) => {
+                        let mut posted=0; let mut failed=0;
+                        let ids=match bankfeeds::pending_automatic(&mut open.book,owner,co,connection_id) {Ok(ids)=>ids,Err(e)=>return Ok(Err(refusal(e)?))};
+                        {
+                            for id in ids {
+                                match bankfeeds::auto_post(&mut open.book,owner,co,&id,&secrets) {Ok(true)=>posted+=1,Ok(false)=>(),Err(_)=>failed+=1}
+                            }
+                        }
+                        Ok(Ok(format!("{}; {posted} automatically posted by rules{}. Review downloaded transactions for any held items.",result["summary"].as_str().unwrap_or(""),if failed>0 {format!("; {failed} automatic attempts could not complete")}else{String::new()})))
+                    },
                     Err(e) => Ok(Err(refusal(e)?)),
                 };
             }
@@ -423,6 +496,9 @@ pub(crate) fn chatgpt_start(app: &mut App, co: CompanyId) -> AppResult<Result<St
     }
     if app.net.is_none() {
         return Ok(Err(UNAVAILABLE.into()));
+    }
+    if signin_held_by_other(app, "chatgpt", co) {
+        return Ok(Err(SIGNIN_JOB_TAKEN.into()));
     }
     if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn) {
         return Ok(Err("Add your own password in Book protection before saving a connection. User sign-in can use this computer's secure keyring.".into()));
@@ -555,5 +631,55 @@ pub(crate) fn chatgpt_disconnect(app: &mut App, co: CompanyId) -> AppResult<Resu
     match fb_core::assistant::disconnect(&mut open.book, owner, co, revoked) {
         Ok(_) => Ok(Ok(())),
         Err(e) => Ok(Err(refusal(e)?)),
+    }
+}
+
+#[cfg(test)]
+mod signin_job_tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct Recording(std::sync::Arc<std::sync::Mutex<Vec<String>>>);
+    impl NetHost for Recording {
+        fn call(&mut self, request: &Value) -> Result<Value, String> {
+            self.0.lock().unwrap().push(request["op"].as_str().unwrap_or("").to_owned());
+            Ok(if request["op"].as_str().unwrap_or("").ends_with("_poll") { json!({"pending": true}) } else { json!({"ok": true, "authorization_url": "https://synthetic.invalid/"}) })
+        }
+    }
+
+    /// B3: only the generation that began a provider sign-in job polls or cancels it, and no one else
+    /// starts another for that company until it ends or goes stale.
+    #[test]
+    fn signin_jobs_belong_to_the_generation_that_began_them() {
+        let calls = std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+        let mut app = App::new();
+        app.net = Some(Box::new(Recording(calls.clone())));
+        let company = CompanyId::new().to_db();
+        let op = |name: &str| json!({"op": name, "company": company});
+        for provider in ["chatgpt", "gmail"] {
+            calls.lock().unwrap().clear();
+            app.signin_jobs.clear();
+            app.identity = crate::identity::Identity::starting_at(1 << 40);
+            assert!(net_call(&mut app, &op(&format!("{provider}_begin"))).is_ok());
+            // Someone else: nothing reaches fb-net.
+            app.identity = crate::identity::Identity::starting_at(2 << 40);
+            assert_eq!(net_call(&mut app, &op(&format!("{provider}_poll"))).unwrap(), json!({"none": true}));
+            assert!(net_call(&mut app, &op(&format!("{provider}_cancel"))).is_ok());
+            assert_eq!(net_call(&mut app, &op(&format!("{provider}_begin"))).unwrap_err(), SIGNIN_JOB_TAKEN);
+            assert_eq!(calls.lock().unwrap().len(), 1, "{provider}: only the owner's begin reached fb-net");
+            // The owner still polls (pending keeps the job) and cancels it.
+            app.identity = crate::identity::Identity::starting_at(1 << 40);
+            assert_eq!(net_call(&mut app, &op(&format!("{provider}_poll"))).unwrap(), json!({"pending": true}));
+            assert!(net_call(&mut app, &op(&format!("{provider}_cancel"))).is_ok());
+            assert!(app.signin_jobs.is_empty());
+            // A stale job may be replaced; the old owner then polls nothing.
+            assert!(net_call(&mut app, &op(&format!("{provider}_begin"))).is_ok());
+            let key = format!("{provider}:{company}");
+            app.signin_jobs.get_mut(&key).unwrap().1 = std::time::Instant::now() - SIGNIN_JOB_STALE;
+            app.identity = crate::identity::Identity::starting_at(2 << 40);
+            assert!(net_call(&mut app, &op(&format!("{provider}_begin"))).is_ok());
+            app.identity = crate::identity::Identity::starting_at(1 << 40);
+            assert_eq!(net_call(&mut app, &op(&format!("{provider}_poll"))).unwrap(), json!({"none": true}));
+        }
     }
 }

@@ -1,0 +1,26 @@
+{% extends 'ledger/base.html' %}{% block content %}
+{% if errors %}<section class="errorlist" role="alert">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</section>{% endif %}
+{% if copy %}
+{% if restored %}<h1>You’re working in a restored copy</h1>
+<p>“<strong>{{ copy }}</strong>” is a copy restored from a backup. It is <strong>not</strong> the book FreedomBooks opens when it starts: after you quit or lock, your main books open again, and this copy stays on this computer.</p>
+{% else %}<h1>These books are open as a copy</h1>
+<p>“<strong>{{ copy }}</strong>” is <strong>not</strong> saved as the book FreedomBooks opens when it starts. They stay on this computer exactly as they are.</p>
+{% endif %}
+<section class="narrow">
+<p>Book file: <code>{{ book_file }}</code>{% if changed %} · last changed {{ changed }}{% endif %}</p>
+{% if backup %}<p>Restored from: <code>{{ backup }}</code>{% if restored_at %} on {{ restored_at }} UTC{% endif %}</p>{% endif %}
+</section>
+<h2>Use this as my books</h2>
+<p>If these are the books you want to keep working in, make them your books. From then on they open each time you start FreedomBooks.</p>
+<ul><li>Your current main books, if there are any, are <strong>set aside, not deleted</strong>: they move with their key record, saved key and receipts to a “set-aside” folder beside your books and can still be opened from the unlock screen.</li>
+<li>An entry in these books’ audit history records the change{% if backup %}, which backup they were restored from{% endif %} and where the previous books went.</li></ul>
+<form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="use">
+<p><label><input type="checkbox" name="confirm" required> Make “{{ copy }}” ({{ book_file }}{% if changed %}, last changed {{ changed }}{% endif %}) the books FreedomBooks opens</label></p>
+<button>Use this as my books</button></form>
+{% else %}
+<h1>{% if set_aside %}These are now your books{% else %}These are your books{% endif %}</h1>
+<p>FreedomBooks opens these books each time it starts.{% if book_file %} Book file: <code>{{ book_file }}</code>{% endif %}</p>
+{% if set_aside %}<p class="notice">Your previous books were set aside, not deleted: <code>{{ set_aside }}</code>. You can still open them from the unlock screen under “Open other books on this computer”.</p>{% endif %}
+{% if pending %}<p class="notice">{{ pending }}</p>{% endif %}
+{% endif %}
+{% endblock %}

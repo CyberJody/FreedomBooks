@@ -279,8 +279,7 @@ methods previously reached by Writer deref remain available as inherent methods.
 Schema version **8** keeps L1 0001–0003 unchanged and applies L2a 0004–0006, then L1-FIX3 0007 and L2a permanent identities 0008.
 The source-hook migration preserves the L1 all-key UPDATE collision guard and
 adds the partial original-per-source key. All definitions enter the exact-prefix
-versioned hash. The full API checklist relative to L3 base 3484921 is in
-`REBASE-L3.md`; do not use the older L2a migration numbers or callback signatures.
+versioned hash. Do not use the older L2a migration numbers or callback signatures.
 Synthetic books from the old unmerged L2a lineage are recreated; populated L1
 books upgrade normally. The populated v2 copy test now verifies through v8.
 
@@ -331,8 +330,7 @@ No old migration or static trusted-hash list is rewritten.
 Copy the permanent-PK guards onto every new protected table, including composite
 keys, and review all foreign identities using the inventory above. The populated
 v2 copy migration and the direct populated v3-to-v8 migration both compare every
-row/key and reopen. Rebase/cherry-pick only through the lead; this worker does not
-modify downstream worktrees.
+row/key and reopen.
 
 
 ## CORE-INT2: L2a permanent identity adoption

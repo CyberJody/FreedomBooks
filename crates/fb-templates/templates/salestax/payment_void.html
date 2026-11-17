@@ -1,0 +1,7 @@
+{% extends 'salestax/base.html' %}
+{% block crumb %}{{ crumb('Void ' ~ payment.number) }}{% endblock %}
+{% block salestax_content %}
+<div class="heading"><h1>Void sales tax payment {{ payment.number }}</h1></div>
+<p>This reverses the payment of {{ payment.total }} to {{ payment.agency_name }} on {{ payment.date|date('Y-m-d') }}. The payment stays in the books, marked Voided, and the amount is owed again.</p>
+<form method="post" class="tax-void" novalidate>{{ csrf_token|safe }}{{ form.as_p|safe }}<p class="form-actions"><button type="submit">Void payment</button> <a href="{{ url('salestax:tax_payment', company.pk, payment.id) }}">Cancel</a></p></form>
+{% endblock %}

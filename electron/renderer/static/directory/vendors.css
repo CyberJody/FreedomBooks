@@ -1,0 +1,7 @@
+.vendors .heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.vendors .heading p{margin:4px 0 0;color:#675d6b}.vendors .heading-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.vendors th a{color:inherit;text-decoration:underline dotted}.vendors td.overdue,.vendors tr.overdue .status{color:#9a1f2b;font-weight:650}
+.vendor-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:6px 0 18px}.vendor-summary>div{background:#fff;border:1px solid #ded8df;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}.vendor-summary span{font-size:12px;font-weight:650;color:#746879}.vendor-summary strong{font-size:20px;font-variant-numeric:tabular-nums}.vendor-summary small{font-size:12px;color:#746879}.vendor-summary .overdue strong{color:#9a1f2b}
+.vendors h2{font-size:17px;margin:8px 0 8px}.vendor-transactions{width:100%}.vendors .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.vendors :focus-visible{outline:3px solid #9271a6;outline-offset:2px}
+@media(max-width:900px){.vendor-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vendors th,.vendors td{overflow-wrap:normal;word-break:normal}.vendors td.email{overflow-wrap:anywhere}.vendors .nowrap,.vendors th{white-space:nowrap}
+@media(max-width:1100px){.vendors th,.vendors td{padding:7px 6px}}

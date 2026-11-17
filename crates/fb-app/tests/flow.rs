@@ -42,7 +42,7 @@ fn first_run_invoice_form_post_and_register() {
     assert!(app.create_book(&path, &key, "x", "y").is_err(), "never overwrites a book");
 
     let home = screens::render(&mut app, &format!("/c/{c}/home/")).unwrap();
-    assert!(home.html.contains("Signed in as Dana Owner") && home.html.contains("Needs setup"));
+    assert!(home.html.contains(r#"Signed in as </span><span class="menu-name">Dana Owner</span>"#) && home.html.contains("Finish setting up"));
 
     let acct = |app: &mut App, code: &str, name: &str, t: &str| run(app, json!({"type": "SaveAccount", "company_id": c, "code": code, "name": name, "detail_type": t}))["id"].as_str().unwrap().to_owned();
     let bank = acct(&mut app, "1000", "Checking", "BANK");
@@ -116,7 +116,7 @@ fn first_run_invoice_form_post_and_register() {
     support::sign_in(&mut app);
     assert_eq!(app.first_company().unwrap().unwrap().to_db(), c);
     let home = screens::render(&mut app, &format!("/c/{c}/home/")).unwrap();
-    assert!(home.html.contains("Signed in as Dana Owner") && home.html.contains("1000 · Checking"));
+    assert!(home.html.contains(r#"Signed in as </span><span class="menu-name">Dana Owner</span>"#) && home.html.contains("1000 · Checking"));
 }
 
 #[test]

@@ -6,7 +6,11 @@ Sign in with your individual user password and open the company you want the AI 
 
 The native dialog supplies an MCP server configuration and a **Copy MCP configuration** button. Paste that configuration into your MCP client's server settings. It contains the FreedomBooks launcher and the path to an OS-sealed connection file; it contains no token. Restart the MCP connection in that client. The desktop must remain open on this company. Linux needs a usable OS key store, such as an unlocked libsecret keyring; the `basic_text` backend is refused.
 
-**Settings → Manage AI connections…** lists active connection IDs, actors, companies and permissions. **Revoke all and stop local API** removes saved connection files, revokes all authority and stops the listener. Locking, closing the book, changing company or signing out invalidates connections. They also expire after eight hours. Connect again to obtain a fresh configuration. Connections never silently regain authority after unlock or restart. Sealed files from older sessions may remain, but their credentials are unusable.
+**Settings → Manage AI connections…** lists remembered approvals, users, companies and permissions. **Forget all approvals and stop local API** durably revokes approvals, removes connection files and stops the listener. Restoring an old connection file alone cannot undo Forget.
+
+The approval is remembered in the OS key store for the same physical book, company and named user on this computer. Lock, sign-out, company changes and normal restart invalidate every live session token. After you complete sign-in (including MFA) and open the approved company, the desktop creates a fresh session-bound token and updates the same sealed file. The client reloads that file before each operation, so normal restarts do not require another permission prompt or configuration copy. Current roles and company membership still apply; a read-only approval never becomes write access. A copied/replaced book and restored-book previews do not inherit approval.
+
+Older session-only connection files lack a saved approval scope and cannot be silently promoted. They need one initial connection in the updated desktop. Live native grants still expire after eight hours; a catalogue read refreshes the session token. The adapter preflights that read before a mutation and never automatically retries the mutation. A locked keyring or unavailable approval store pauses reconnection without blocking normal book pages.
 
 ## MCP and local API
 
@@ -42,6 +46,14 @@ To create an invoice, find the customer with `app_Directory` and the account wit
 
 Use the returned `data.id` with `app_Invoice` to read the current revision. Call `command_PostInvoice` with `invoice_id` and `expected_revision`; that operation reviews current accounting mappings and posts through the same service as the app. For an explicit preview use `app_ReviewInvoice`, then `command_PostReviewedInvoice` with its single-use `review_token` and the reviewed revision. Required company accounting setup must already be valid (`app_AccountingSetup`, `command_SaveSetup`).
 
+To record billable time, find the customer and a `SERVICE` item with `app_Directory`, and optionally an open ticket of that customer with `app_JobTickets`, then call:
+
+```json
+{"operation":"command_SaveTimeEntry","arguments":{"values":{"request_key":"5d0f3c1e-8f2b-4b7e-9a51-0c6f3b2a9e11","customer_id":"<customer UUID>","ticket_id":"<open ticket UUID or null>","item_id":"<service item UUID>","date":"2026-11-15","hours":"3.5h","notes":"On-site visit"}}}
+```
+
+Hours are exact text (`3.5`, `3.5h`, `3:30`, `90m`). A missing rate uses the item's price for new time (an edit that keeps the service keeps its recorded rate); `worker_id` defaults to the connected person. Time is a work record, not a posting; invoicing a ticket's time is a desktop action that creates an ordinary draft invoice.
+
 For bank review, call `app_PendingFeed` with optional `after` and `limit` (1–100). It lists undecided `NEW` rows, including rows still pending at the bank; these carry `pending:true` and cannot yet be accepted. `app_SuggestFeed` returns current matches, receipts and rule suggestions. Call `app_AcceptFeed` with a transaction ID and a typed category:
 
 ```json
@@ -56,12 +68,13 @@ Call `app_ImportApply` with that token. The entire batch is revalidated against 
 
 ## Coverage and boundaries
 
-The write catalogue contains 91 operations in this candidate: 4 existing queries, 22 dedicated read/review/import/feed adapters and 65 existing typed commands. Read-only connections expose 22 operations. The runtime catalogue is authoritative; future commands are not automatically granted access.
+The write catalogue contains 98 operations in this candidate: 4 existing queries, 27 dedicated read/review/import/feed adapters and 67 existing typed commands. Read-only connections expose 26 operations. The runtime catalogue is authoritative; future commands are not automatically granted access.
 
 | Area | Available |
 | --- | --- |
 | Queries/reports | Accounts, register, invoice balances/details, numbering, customer/vendor/item directory, journal snapshot, accounting setup, tax items, bills/checks and details, trial balance, profit/loss, balance-sheet totals, connection identity and paginated audit events |
 | Sales | Invoice save/edit/review/post/void, estimates and conversion, receipts, credit memos, deposits, applications and refunds with their existing review/revision flows |
+| Job tickets and time | `app_JobTickets` lists tickets (optional customer and status) with hours and unbilled amounts; `command_SaveTimeEntry` records billable time against a service item, optionally on that customer's open ticket. Opening, closing and invoicing tickets stay in the desktop |
 | Purchases/banking | Bills/payments, checks, transfers, bank deposits, reversals/voids, bank-line marks and reconciliation lifecycle through typed commands |
 | Setup | Accounts, directory records, tax configuration, accounting mappings, numbering, first-run mapping proposal |
 | Bank review | Undecided feed listing, suggestions, categorization/acceptance, ignore and return to review |
@@ -73,7 +86,7 @@ Ordinary audit events retain the actual operator's ID/name. Each event produced 
 
 ## Sessions and verification
 
-Sign-out, roster changes, lock/book changes and every new named session invalidate AI connections, including switching away and back to the same person. Company page rendering verifies membership and invalidates old authority on company change. Every API call independently checks the current actor, named session, company membership and live connection. Typed commands and dedicated adapters enforce the person's current permissions. Queued work and completed results are bound to the original session; a lock requested during an admitted atomic operation takes effect when it finishes and suppresses its response. There is no caller-selected actor.
+Sign-out, roster changes, lock/book changes and every new named session invalidate live AI capabilities, including switching away and back to the same person. Remembered consent is separate from those capabilities; it can create fresh authority only after a completed sign-in in its exact book/user/company scope. Company page rendering verifies membership and invalidates old authority on company change. Every API call independently checks the current actor, named session, company membership and live connection. Typed commands and dedicated adapters enforce the person's current permissions. Queued work and completed results are bound to the original session; a lock requested during an admitted atomic operation takes effect when it finishes and suppresses its response. There is no caller-selected actor.
 
 The real native API/MCP regression is `electron/scripts/test-ai-e2e.cjs`; its isolated book is generated by `cargo run -p fb-app --example ai_synthetic_fixture -- <isolated-directory>`. Run Cargo/native work through the lane's shared runner. `crates/fb-app/tests/ai_api.rs` covers accounting, scoping and atomic provenance. `electron/tests/ai-*.test.cjs` covers transport and desktop setup controls. Parent integration owns independent review and combined acceptance; these focused checks do not close release holds.
 

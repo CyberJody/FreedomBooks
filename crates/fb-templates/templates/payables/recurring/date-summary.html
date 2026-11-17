@@ -1,0 +1,2 @@
+{% if confirmation.omitted_count %}<p>{{ confirmation.count }} scheduled dates from <strong>{{ confirmation.first_date }}</strong> through <strong>{{ confirmation.last_date }}</strong> (inclusive). The first six and last six are listed; {{ confirmation.omitted_count }} intervening dates are included in this decision.</p>{% endif %}
+<ul>{% for d in confirmation.display_dates %}<li>{{ d }}</li>{% endfor %}</ul>

@@ -74,8 +74,10 @@ pub(super) fn prior_receipt(
     sale: bool,
     p: Option<Posted<'_>>,
 ) -> AppResult<Option<Value>> {
+    // Cleaned as the form field is (outer spaces stripped) before looking it up.
     let Some(key) = p
         .and_then(|p| get(p, "request_key"))
+        .map(fb_core::py::py_strip)
         .and_then(fb_core::py::py_uuid)
         .map(|v| v.0)
     else {

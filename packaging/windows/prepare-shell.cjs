@@ -1,5 +1,5 @@
 'use strict';
-// Explicit fallback required by the worker brief. No installer is emitted and
+// Explicit fallback while the Windows native build is blocked. No installer is emitted and
 // installers.cjs refuses to wrap this incomplete shell into a release artifact.
 const path = require('node:path');
 const {build} = require('../package.cjs');

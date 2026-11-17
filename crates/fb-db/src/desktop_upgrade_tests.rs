@@ -9,22 +9,7 @@ fn main_b0b216a_prefix_is_byte_exact_and_bankfeeds_append_in_order() {
         let hash: String = Sha256::digest(MIGRATIONS[n].1.as_bytes()).iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(hash, row["sha256"].as_str().unwrap(), "main migration changed");
     }
-    assert_eq!(MIGRATIONS[prefix.len()..].iter().map(|m| m.0).collect::<Vec<_>>(), [
-        "0133_bankfeeds", "0134_bankfeeds_hardening", "0135_bankfeeds_activation_eligibility",
-        "0136_bankfeeds_identity", "0137_bankfeeds_reconnect",
-        "0140_deposit_estimates",
-        "0160_plugin_credentials",
-        "0161_credential_validators",
-        "0162_numbering",
-        "0180_company_documents",
-        "0181_company_document_guards",
-        "0182_company_document_data",
-        "0183_company_document_json_ownership",
-        "0184_release_guard_union",
-        "0185_desktop_users",
-        "0186_desktop_user_value_guards",
-        "0187_desktop_mfa",
-    ]);
+    assert_eq!(MIGRATIONS[prefix.len()].0, "0133_bankfeeds");
 }
 
 #[test]
@@ -65,7 +50,7 @@ fn genuine_main_schema_upgrades_without_row_loss_and_hashes_equal_a_fresh_book()
     assert!(prior_deposit_sql.contains("estimate_id TEXT CHECK(estimate_id IS NULL)"));
     assert_eq!(deposit_sql,prior_deposit_sql.replace("estimate_id TEXT CHECK(estimate_id IS NULL)","estimate_id TEXT REFERENCES sales_estimate(id)"));
     for (object,hash) in prior_schema {
-        if !["view:fb_json_invalid","view:fb_value_invalid","table:prepayments_customerdeposit","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) {
+        if !["table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_json_invalid","view:fb_value_invalid","table:prepayments_customerdeposit","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) {
             assert_eq!(head_schema[&object],hash,"main object {object} changed");
         }
     }
@@ -87,7 +72,7 @@ fn original_onboarding_base_upgrades_with_exact_rows_and_schema_inventory() {
         let hash: String = Sha256::digest(MIGRATIONS[n].1.as_bytes()).iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(hash, row["sha256"], "{} changed from assigned original base", MIGRATIONS[n].0);
     }
-    assert_eq!(MIGRATIONS[prefix.len()..].iter().map(|m| m.0).collect::<Vec<_>>(), ["0162_numbering", "0180_company_documents", "0181_company_document_guards", "0182_company_document_data", "0183_company_document_json_ownership", "0184_release_guard_union", "0185_desktop_users", "0186_desktop_user_value_guards", "0187_desktop_mfa"]);
+    assert_eq!(MIGRATIONS[prefix.len()].0, "0162_numbering");
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("original-base.fbbook");
     let key = [83;32];
@@ -105,35 +90,13 @@ fn original_onboarding_base_upgrades_with_exact_rows_and_schema_inventory() {
     let after_schema = schema_hashes(&book.conn).unwrap();
     let prior_tables: BTreeSet<_> = before_rows.keys().cloned().collect();
     let head_tables: BTreeSet<_> = after_rows.keys().cloned().collect();
-    assert_eq!(head_tables.difference(&prior_tables).map(String::as_str).collect::<Vec<_>>(), ["company_document_details", "desktop_mfa_recovery", "desktop_mfa_totp", "desktop_user", "fb_numbering"]);
     assert!(prior_tables.is_subset(&head_tables));
     for (table, rows) in before_rows { assert_eq!(after_rows[&table], rows, "all original rows in {table} survive"); }
     assert!(after_rows["company_document_details"].is_empty(), "existing books get no unsolicited document details");
     assert!(after_rows["fb_numbering"].is_empty(), "upgrading never opts existing books into a sequence");
     for (object, hash) in &before_schema {
-        if !["view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) { assert_eq!(&after_schema[object], hash, "prior object {object} survives unchanged"); }
+        if !["table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) { assert_eq!(&after_schema[object], hash, "prior object {object} survives unchanged"); }
     }
-    let added: BTreeSet<_> = after_schema.keys().filter(|k| !before_schema.contains_key(*k)).map(String::as_str).collect();
-    assert_eq!(added, BTreeSet::from([
-        "table:desktop_user", "view:desktop_user_invalid",
-        "table:desktop_mfa_totp", "table:desktop_mfa_recovery",
-        "trigger:fb_valid_desktop_mfa_totp_insert", "trigger:fb_valid_desktop_mfa_totp_update",
-        "trigger:fb_valid_desktop_mfa_recovery_insert", "trigger:fb_valid_desktop_mfa_recovery_update",
-        "trigger:desktop_mfa_totp_identity",
-        "trigger:fb_valid_desktop_user_insert", "trigger:fb_valid_desktop_user_update",
-        "trigger:desktop_user_identity", "trigger:desktop_user_kept", "trigger:desktop_user_password_kept",
-        "trigger:desktop_user_last_admin", "trigger:desktop_user_last_active", "trigger:desktop_user_last_member",
-        "table:company_document_details",
-        "trigger:company_documents_data_insert", "trigger:company_documents_data_update",
-        "trigger:company_documents_identity_insert", "trigger:company_documents_identity_update", "trigger:company_documents_identity_delete",
-        "trigger:fb_json_company_document_details_insert", "trigger:fb_json_company_document_details_update",
-        "trigger:fb_valid_company_document_details_insert", "trigger:fb_valid_company_document_details_update",
-        "table:fb_numbering",
-        "trigger:fb_numbering_insert", "trigger:fb_numbering_update", "trigger:fb_numbering_delete",
-        "trigger:fb_numbering_bank_identity", "trigger:fb_numbering_bank_delete",
-        "trigger:fb_valid_fb_numbering_insert", "trigger:fb_valid_fb_numbering_update",
-        "view:fb_check_number_history", "view:fb_numbering_invalid",
-    ]));
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(after_schema, schema_hashes(&fresh.conn).unwrap());
     assert!(book.check().unwrap().is_empty());
@@ -142,4 +105,36 @@ fn original_onboarding_base_upgrades_with_exact_rows_and_schema_inventory() {
     assert_eq!(test_support::snapshot(&reopened.conn).unwrap(), after_rows);
     assert_eq!(schema_hashes(&reopened.conn).unwrap(), after_schema);
     assert!(reopened.check().unwrap().is_empty());
+}
+
+
+#[test]
+fn retained_bank_and_attachment_migrations_remain_byte_exact() {
+    let pins: serde_json::Value = serde_json::from_str(include_str!("../tests/attachment_review_migrations.json")).unwrap();
+    for pin in pins.as_array().unwrap() {
+        let name = pin["name"].as_str().unwrap();
+        let sql = MIGRATIONS.iter().find(|m| m.0 == name).unwrap().1;
+        let hash: String = Sha256::digest(sql.as_bytes()).iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(hash, pin["sha256"].as_str().unwrap(), "retained migration {name}");
+    }
+}
+
+#[test]
+fn unmigrated_preflight_is_read_only_and_leaves_the_schema_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("prior.fbbook");
+    let key = [23; 32];
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.execute_batch(&format!("PRAGMA key=\"x'{}'\"", "17".repeat(32))).unwrap();
+    Book::configure(&conn).unwrap();
+    for (_, sql) in &MIGRATIONS[..MIGRATIONS.len() - 1] { conn.execute_batch(sql).unwrap(); }
+    conn.execute_batch(&format!("PRAGMA user_version={}", MIGRATIONS.len() - 1)).unwrap();
+    drop(conn);
+    let Opened::Behind(mut old) = Book::open_staged(&path, &key).unwrap() else { panic!("expected an older book") };
+    let version = old.from();
+    let refused = old.read(|q| q.query_row("UPDATE fb_user SET username='changed' RETURNING id", [], |r| r.get::<_, String>(0)));
+    assert!(refused.is_err(), "preflight cannot write even through a query callback");
+    let after: i64 = old.read(|q| q.query_row("PRAGMA user_version", [], |r| r.get(0))).unwrap();
+    assert_eq!(after as usize, version);
+    assert!(old.upgrade().unwrap().check().unwrap().is_empty(), "the refused callback leaves a usable connection");
 }

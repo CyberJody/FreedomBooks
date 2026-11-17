@@ -203,7 +203,7 @@
       },
       "expect_error": true,
       "expect_kind": "ValidationError",
-      "expect_message": "500 · Expense is not an active designated bank account (Accounting setup). Transfers move money between two designated banks."
+      "expect_message": "500 · Expense is not an active bank account. Transfers move money between two bank accounts."
     },
     {
       "op": "transfers_record",

@@ -43,7 +43,7 @@ module.exports = async ({app,page,company,invoiceId,shot,pass}) => {
     const text=spawnSync('pdftotext',['-layout',file,'-'],{encoding:'utf8'});assert.equal(text.status,0,text.stderr);
     fs.writeFileSync(path.join(output,name+'.txt'),text.stdout);
     for(const pattern of checks)assert.match(text.stdout,pattern);
-    assert.doesNotMatch(text.stdout,/Print \/ Save as PDF|Back to (?:invoice|the report)/);
+    assert.doesNotMatch(text.stdout,/Print \/ Save as PDF|Back to (?:invoice|the report)|revision \d+ of \d+/i);
     const info=spawnSync('pdfinfo',[file],{encoding:'utf8'});assert.equal(info.status,0,info.stderr);
     assert.match(info.stdout,/Page size:\s+612 x 792 pts/);
     fs.writeFileSync(path.join(output,name+'-pdfinfo.txt'),info.stdout);
@@ -55,14 +55,14 @@ module.exports = async ({app,page,company,invoiceId,shot,pass}) => {
   try {
     await page.goto(`fb://app/c/${company}/invoices/${invoiceId}/`);
     const windows=(await app.windows()).length;
-    await page.getByRole('link',{name:'Print / Save as PDF',exact:true}).first().click();
+    await page.getByRole('link',{name:'Print or PDF',exact:true}).first().click();
     await page.waitForURL(/\/invoices\/[0-9a-f-]+\/print\/$/);
     assert.equal((await app.windows()).length,windows);
     assert.equal(await page.textContent('#print-total'),'180.00');
     assert.equal(await page.textContent('#print-balance'),'180.00');
     await shot(page,'print-live-invoice');
     assert.ok(await page.evaluate(()=>document.adoptedStyleSheets.some(s=>Array.from(s.cssRules).some(r=>r.cssText.startsWith('@page')))),'strict-CSP footer must be restored through CSSOM');
-    await save('invoice',['INV-000001','Total USD','Balance due','180.00','revision 2 of 2','Page 1 of 1'].map(s=>new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))));
+    await save('invoice',['INV-000001','Total USD','Balance Due','180.00','Page 1 of 1'].map(s=>new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))));
     // Reuse the button after cancellation and after printing: capabilities are single-use and renewed.
     const cancelled=path.join(output,'cancelled.pdf');fs.rmSync(cancelled,{force:true});
     await app.evaluate((_e,file)=>{globalThis.__printSmoke.cancel=true;globalThis.__printSmoke.file=file;},cancelled);

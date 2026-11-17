@@ -1,0 +1,15 @@
+{% extends 'jobs/base.html' %}
+{% block crumb %}{{ crumb('Invoice ' ~ ticket.number) }}{% endblock %}
+{% block jobs_content %}
+<div class="heading"><div><h1>Invoice ticket {{ ticket.number }}</h1><p>{{ ticket.customer_name }} · {{ ticket.title }}</p></div></div>
+<p><a href="{{ url('jobs:detail', company.pk, ticket.id) }}">Back to the ticket</a></p>
+{% if not unbilled %}<p class="notice">There is no unbilled billable time on this ticket.</p>{% else %}
+<form method="post" id="job-invoice-form" class="jobs-form" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{% for hidden in form.hidden_fields %}{{ hidden.widget|safe }}{% endfor %}
+<fieldset class="field field-entries"><legend>Time to invoice</legend>{{ form.f.entries.widget|safe }}{{ form.f.entries.errors|safe }}</fieldset>
+<fieldset class="field field-grouping"><legend>Invoice lines</legend>{{ form.f.grouping.widget|safe }}{{ form.f.grouping.errors|safe }}</fieldset>
+{% for name in ['date','due_date'] %}<div class="field field-{{ name }}">{{ form.f[name].label_tag|safe }}{{ form.f[name].widget|safe }}{{ form.f[name].errors|safe }}{% if form.f[name].help_text %}<p class="helptext">{{ form.f[name].help_text }}</p>{% endif %}</div>{% endfor %}
+<div class="field field-mark_invoiced">{{ form.f.mark_invoiced.widget|safe }}{{ form.f.mark_invoiced.label_tag|safe }}</div>
+<p class="helptext">This creates a draft invoice for {{ ticket.customer_name }} with the chosen time, at each entry's hours and rate. Edit, review and post it from Invoices as usual. Voiding the invoice later releases its time so it can be invoiced again.</p>
+<p class="form-actions"><button type="submit">Create draft invoice</button></p>
+</form>{% endif %}
+{% endblock %}

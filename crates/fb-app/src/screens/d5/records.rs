@@ -36,7 +36,7 @@ pub(in crate::screens) fn identity(app: &mut App, c: CompanyId, id: &str) -> App
     Ok(app
         .open_mut()?
         .book
-        .read(|tx| fb_core::documents::identity(tx, c, id))?)
+        .read(|tx| fb_core::documents::display_identity(tx, c, id))?)
 }
 pub(super) fn invoice(app: &mut App, c: CompanyId, id: &str) -> AppResult<Value> {
     let o = app.open_mut()?;
@@ -148,19 +148,13 @@ fn journal(app: &mut App, c: CompanyId, v: &mut Value) -> AppResult<()> {
     v["journal"] = json!({"label":format!("Journal J{:06}",j["number"].as_i64().unwrap())});
     Ok(())
 }
-pub(in crate::screens) fn method(s: &str, refund: bool) -> &str {
+pub(in crate::screens) fn method(s: &str, _refund: bool) -> &str {
     match s {
         "CHECK" => "Check",
         "CASH" => "Cash",
-        "CARD" => "Card (record only)",
-        "TRANSFER" => "Transfer (record only)",
-        _ => {
-            if refund {
-                "Other (record only)"
-            } else {
-                "Other"
-            }
-        }
+        "CARD" => "Card",
+        "TRANSFER" => "Bank transfer",
+        _ => "Other",
     }
 }
 pub(super) fn application(app: &mut App, c: CompanyId, id: &str, dep: bool) -> AppResult<Value> {
@@ -253,13 +247,13 @@ pub(super) fn listing(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(Str
         select(
             "customer",
             "Customer",
-            "Choose…",
+            "All customers",
             super::super::d4::customer_choices(&mut app.open_mut()?.book, c, true, None, false)?,
             false,
         ),
         select(
             "state",
-            "State",
+            "Status",
             if dep {
                 "All deposits"
             } else {
@@ -364,7 +358,10 @@ pub(super) fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(Stri
     let src = source(app, c, id, dep)?;
     let mut vm = ctx(app, r)?;
     put(&mut vm, "state_label", &src["state_label"]);
-    put(&mut vm, "lines", &src["lines"]);
+    // Rates and quantities as the invoice page shows them (two places for a rate).
+    let mut lines = src["lines"].as_array().cloned().unwrap_or_default();
+    super::super::d4::fixed_document(&mut json!({}), &mut lines);
+    put(&mut vm, "lines", lines);
     put(&mut vm, if dep { "deposit" } else { "memo" }, &src);
     let prefix = if dep {
         "prepayments_deposit"
@@ -423,6 +420,7 @@ pub(super) fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(Stri
     }
     evidence(app, c, &mut vm)?;
     attachments(app, c, s(&src, "identity_id"), &mut vm)?;
+    put(&mut vm, "notices", std::mem::take(&mut app.messages));
     Ok((draw(app, &format!("{}/detail.html", ns(r)), &vm)?, 200))
 }
 fn events(app: &mut App, c: CompanyId, id: &str, dep: bool) -> AppResult<Vec<Value>> {

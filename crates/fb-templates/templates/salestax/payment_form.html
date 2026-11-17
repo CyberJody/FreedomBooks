@@ -1,0 +1,22 @@
+{% extends 'salestax/base.html' %}
+{% block salestax_content %}
+<div class="heading"><h1>Record payment</h1></div>
+<p><a href="{{ url('salestax:what_you_owe', company.pk) }}">Back to What you owe</a></p>
+{% if no_agencies %}<p class="notice">There is no tax agency to pay yet. Add a tax rate with its agency in <a href="{{ url('salestax:list', company.pk) }}">Tax rates &amp; groups</a>.</p>{% endif %}
+{% if no_banks %}<p class="notice">Choose your bank accounts in <a href="{{ url('documents:setup', company.pk) }}">Accounting setup</a> first.</p>{% endif %}
+<form method="post" id="tax-payment" class="tax-payment-form" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{% for hidden in form.hidden_fields %}{{ hidden.widget|safe }}{% endfor %}
+<div class="tax-payment-fields">
+{% for name in ['agency','date','bank','tax_amount','period_start','period_end','reference'] %}<div class="field field-{{ name }}">{{ form.f[name].label_tag|safe }}{{ form.f[name].widget|safe }}{{ form.f[name].errors|safe }}{% if form.f[name].help_text %}<p class="helptext">{{ form.f[name].help_text }}</p>{% endif %}</div>{% endfor %}
+</div>
+<details class="tax-penalty"{% if form.f.penalty_amount.value or form.f.expense_account.errors %} open{% endif %}><summary>Penalty or interest included</summary>
+{% for name in ['penalty_amount','expense_account'] %}<div class="field field-{{ name }}">{{ form.f[name].label_tag|safe }}{{ form.f[name].widget|safe }}{{ form.f[name].errors|safe }}{% if form.f[name].help_text %}<p class="helptext">{{ form.f[name].help_text }}</p>{% endif %}</div>{% endfor %}
+</details>
+<div class="field field-memo">{{ form.f.memo.label_tag|safe }}{{ form.f.memo.widget|safe }}{{ form.f.memo.errors|safe }}</div>
+{% if review %}<section class="tax-review" id="tax-review" aria-labelledby="tax-review-title"><h2 id="tax-review-title">Check before recording</h2>
+<p>{{ review.total }} {{ company.currency }} to {{ review.agency.display_name }}. Owed to {{ review.agency.display_name }} on the payment date: {{ review.owed_to_agency }}; all agencies: {{ review.owed_on_date }}.</p>
+{% for w in review.warnings %}<p class="notice warning" role="alert">{{ w }}</p>{% endfor %}
+<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for e in review.entries %}<tr><td>{{ e.account }}</td><td class="amount">{% if e.debit %}{{ e.debit }}{% endif %}</td><td class="amount">{% if e.credit %}{{ e.credit }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<p class="helptext">If you change anything above, review again.</p></section>{% endif %}
+<p class="form-actions"><button type="submit" name="action" value="review"{% if review %} class="secondary"{% endif %}>Review</button>{% if review %} <button type="submit" name="action" value="record">Record payment</button>{% endif %}</p>
+</form>
+{% endblock %}

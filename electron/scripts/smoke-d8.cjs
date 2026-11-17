@@ -1,8 +1,3 @@
-async function finishRecovery(page) {
-  await page.getByRole('button', {name:'Remind me later'}).click();
-  await page.waitForURL(/\/settings\/book-protection\/$/);
-  await Promise.all([page.waitForURL(/\/home\/$/), page.locator('a[href$="/home/"]').first().click()]);
-}
 'use strict';
 // A second, isolated real-app flow, appended to the shared smoke without changing sibling steps.
 const {_electron:electron}=require('playwright');
@@ -21,8 +16,8 @@ module.exports=async()=>{
     await page.fill('#id_owner_name','Dana Whitfield');await page.fill('#id_company_name','D8 Report Supply');
     await page.selectOption('#id_starter_chart', 'empty');
     await page.check('#id_protect');await page.fill('#id_lock_password','d8-synthetic-lock');await page.fill('#id_lock_password2','d8-synthetic-lock');
-    await Promise.all([page.waitForURL(/\/settings\/recovery-key\/$/),page.click('button:has-text("Create books")')]);
-    await finishRecovery(page);
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/),page.click('button:has-text("Create books")')]);
+    await require('./smoke-identity.cjs').signIn(page, 'Synthetic reports owner42');
     pass('created an isolated encrypted book through first run');
     const company=/\/c\/([0-9a-f-]{36})\//.exec(page.url())[1];
     for (const [code,name,type] of [['100','Checking','BANK'],['400','Service income','INCOME']]) {
@@ -42,8 +37,12 @@ module.exports=async()=>{
     ids.journal=/journals\/([0-9a-f-]+)\/$/.exec(page.url())[1];
     await Promise.all([page.waitForURL(/journals\/[0-9a-f-]+\/$/),page.click('button:has-text("Post journal")')]);
     pass('seeded a posted journal through single-use forms');
-    // Start each report at its real navigation link, then run its actual GET form.
-    await page.click('a[href$="/reports/profit-and-loss/"]');
+    // The sidebar opens the Reports hub; choose a statement from that hub.
+    const openReport=async name=>{
+      await Promise.all([page.waitForURL(/\/reports\/$/),page.locator('nav.appnav a[href$="/reports/"]').click()]);
+      await Promise.all([page.waitForURL(new RegExp(`/reports/${name}/$`)),page.locator(`main a[href$="/reports/${name}/"]`).click()]);
+    };
+    await openReport('profit-and-loss');
     await page.selectOption('[name=preset]','custom');await page.fill('[name=start]','2026-10-01');await page.fill('[name=end]','2026-10-31');
     await Promise.all([page.waitForURL(/end=2026-10-31/),page.click('button:has-text("Run report")')]);
     assert.equal(await page.locator('main h1').innerText(),'Profit and loss');assert.match(await page.locator('.fin-final').innerText(),/1,234\.56/);
@@ -53,7 +52,7 @@ module.exports=async()=>{
     assert.equal(await page.inputValue('[name=account]'),ids.income);assert.match(await page.locator('.gl-report').innerText(),/REPORT-1/);
     await page.screenshot({path:path.join(shots,'d8-flow-general-ledger.png')});
     await page.locator('.gl-line .gl-num a').first().click();assert.match(page.url(),new RegExp(ids.journal));pass('an amount drills to its filtered GL, and the GL number opens the journal');
-    await page.click('a[href$="/reports/balance-sheet/"]');await page.fill('[name=as_of]','2026-10-31');
+    await openReport('balance-sheet');await page.fill('[name=as_of]','2026-10-31');
     await Promise.all([page.waitForURL(/as_of=2026-10-31/),page.click('button:has-text("Run report")')]);
     assert.match(await page.locator('.report-check').innerText(),/Assets equal liabilities and equity/);
     await page.screenshot({path:path.join(shots,'d8-flow-balance-sheet.png')});pass('balance sheet runs as of the selected date and displays the equality check');

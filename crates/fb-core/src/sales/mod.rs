@@ -5,8 +5,16 @@
 mod estimates;
 mod guards;
 mod invoices;
+pub mod historical;
 mod queries;
 mod receipts;
+pub(crate) use receipts::record_receipt_tx;
+pub(crate) use invoices::save_invoice_tx;
+pub(crate) use queries::invoice_balances_query;
+/// Receipts, credits and deposits applied to one invoice (cents), for Find's payment state.
+pub(crate) fn invoice_settled(conn: &(impl fb_db::Query + ?Sized), key: &str) -> crate::FbResult<i64> {
+    queries::settled(conn, key)
+}
 pub use estimates::{convert_estimate, estimate, save_estimate, transition_estimate};
 pub use guards::{check, initialize};
 pub use invoices::{post_invoice, review_invoice, save_invoice, void_invoice};
@@ -188,13 +196,14 @@ pub fn invoice(conn: &(impl Query + ?Sized), c: CompanyId, key: &str) -> FbResul
         if line.get("expense_account_id").is_none() {
             return Err(invalid_stored());
         }
-        let ok: bool = conn.query_row("SELECT fb_sales_line_ok(?1)", [line.to_string()], |r| {
+        let ok: bool = conn.query_row("SELECT fb_invoice_line_ok(?1)", [line.to_string()], |r| {
             r.get(0)
         })?;
         if !ok {
             return Err(invalid_stored());
         }
     }
+    v["source_history"] = historical::evidence(conn,c,key)?;
     Ok(v)
 }
 pub fn receipt(conn: &(impl Query + ?Sized), c: CompanyId, key: &str) -> FbResult<Value> {

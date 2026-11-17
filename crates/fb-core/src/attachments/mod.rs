@@ -384,9 +384,10 @@ pub fn add(
         })?
         .pop();
     let (file, fresh) = if let Some(row) = existing {
-        let file = stored(&row)?;
-        files.open_read(co, &file)?;
-        (file, false)
+        // Read through the effective wrap; the new row copies the row-level wrap its siblings share.
+        let current = book.read(|c| effective(c, &row))?;
+        files.open_read(co, &current)?;
+        (stored(&row)?, false)
     } else {
         (files.write_atomic(co, data.as_ref(), &t)?, true)
     };
@@ -553,11 +554,175 @@ pub fn download(
     co: CompanyId,
     id: &str,
 ) -> FbResult<Vec<u8>> {
-    let row = book.read(|tx| {
+    let file = book.read(|tx| {
         services::access(tx, actor, co)?;
-        get(tx, co, id)
+        effective(tx, &get(tx, co, id)?)
     })?;
-    files.open_read(co, &stored(&row)?)
+    files.open_read(co, &file)
+}
+
+/// The audit event of a re-wrap: who moved which files' keys, in one company. Its detail is exactly
+/// `{"attachments": [ids], "files": [stored names]}` of that company and never holds key material (the
+/// schema refuses anything else); the wraps themselves are rows of `attachments_keywrap` that refer to it.
+pub const REWRAPPED: &str = "attachment.key_rewrapped";
+
+fn has_keywraps(c: &(impl Query + ?Sized)) -> FbResult<bool> {
+    // Older snapshots (a pre-upgrade copy, an older backup) have no such table.
+    Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='attachments_keywrap')", [], |r| r.get(0))?)
+}
+
+/// Historical audit-wrap candidates, in the order the first attachment-backup build used them.
+/// That build could put another company's file in an event; names select candidates only. AEAD with
+/// the requested company/file remains the authority when any candidate is used.
+pub fn legacy_wraps(c: &(impl Query + ?Sized), stored_name: &str) -> FbResult<Vec<storage::Wrap>> {
+    let has: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='ledger_auditevent')", [], |r| r.get(0))?;
+    if !has { return Ok(Vec::new()); }
+    let mut stmt = c.prepare(
+        "SELECT json_extract(CASE WHEN f.type='object' THEN f.value ELSE '{}' END,'$.wrapped_key'),json_extract(CASE WHEN f.type='object' THEN f.value ELSE '{}' END,'$.wrap_nonce') FROM ledger_auditevent e,json_each(e.detail,'$.files') f
+         WHERE e.action='attachment.key_rewrapped' AND json_type(e.detail,'$.files[0]')='object' AND f.type='object' AND json_extract(CASE WHEN f.type='object' THEN f.value ELSE '{}' END,'$.stored_name')=?1 ORDER BY e.id DESC,f.key")?;
+    let found = stmt.query_map([stored_name], |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, Option<String>>(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+    Ok(found.into_iter().filter_map(|(key, nonce)| Some(storage::Wrap { wrapped_key: key?, wrap_nonce: nonce? })).collect())
+}
+
+/// Every further wrap recorded for one stored file of `co`: table rows newest first, then historical
+/// audit candidates. New repairs are always table rows; historical audit evidence stays unchanged.
+pub fn recorded_wraps(c: &(impl Query + ?Sized), co: CompanyId, stored_name: &str) -> FbResult<Vec<storage::Wrap>> {
+    let mut out = Vec::new();
+    if has_keywraps(c)? {
+        let mut stmt = c.prepare("SELECT wrapped_key,wrap_nonce FROM attachments_keywrap WHERE company_id=?1 AND stored_name=?2 ORDER BY position DESC")?;
+        out = stmt.query_map(params![co.to_db(), stored_name], |r| Ok(storage::Wrap { wrapped_key: r.get(0)?, wrap_nonce: r.get(1)? }))?.collect::<Result<Vec<_>, _>>()?;
+    }
+    for wrap in legacy_wraps(c, stored_name)? { if !out.contains(&wrap) { out.push(wrap); } }
+    Ok(out)
+}
+
+/// Non-secret, company-local presentation of attachment re-wrap audit evidence. Historical events
+/// remain byte-exact in the book; key wraps and another company's identifiers never leave this boundary.
+pub fn public_audit_detail(c: &(impl Query + ?Sized), co: CompanyId, action: &str, detail: &Value) -> FbResult<Value> {
+    if action != REWRAPPED { return Ok(detail.clone()); }
+    let own = rows(c, "SELECT id,stored_name FROM attachments_attachment WHERE company_id=?", &[&co.to_db()])?;
+    let ids: std::collections::BTreeSet<&str> = own.iter().filter_map(|r| r["id"].as_str()).collect();
+    let names: std::collections::BTreeSet<&str> = own.iter().filter_map(|r| r["stored_name"].as_str()).collect();
+    let attachments: std::collections::BTreeSet<&str> = detail["attachments"].as_array().into_iter().flatten().filter_map(Value::as_str).filter(|id| ids.contains(id)).collect();
+    let files: std::collections::BTreeSet<&str> = detail["files"].as_array().into_iter().flatten().filter_map(|f| f.as_str().or_else(|| f["stored_name"].as_str())).filter(|name| names.contains(name)).collect();
+    Ok(json!({"attachments": attachments, "files": files}))
+}
+
+/// A row's file reference with every recorded further wrap of its key (see [`Stored::wraps`]).
+fn effective(c: &(impl Query + ?Sized), r: &Value) -> FbResult<Stored> {
+    let mut file = stored(r)?;
+    let co = r["company_id"].as_str().and_then(CompanyId::parse).ok_or_else(|| FbError::refused("Invalid attachment company"))?;
+    file.rewraps = recorded_wraps(c, co, &file.stored_name)?;
+    Ok(file)
+}
+
+/// One stored file and which of the book's keys open its content key.
+#[derive(Clone, Debug)]
+pub struct FileKeys {
+    pub company: CompanyId,
+    pub stored_name: String,
+    /// The attachments that share this file, with their names, for people.
+    pub attachments: Vec<(String, String)>,
+    pub receipt_key: bool,
+    pub master_key: bool,
+    /// At least one distinct outgoing-master content key has no equal receipt-key candidate.
+    pub needs_rewrap: bool,
+}
+
+/// Every stored file of the book (all companies) and whether some wrap of its key opens under the receipt
+/// key and under the master key. Only wraps are checked; no file is read.
+pub fn key_status(c: &(impl Query + ?Sized), receipt_key: &[u8; 32], master_key: &[u8; 32]) -> FbResult<Vec<FileKeys>> {
+    let mut out: Vec<FileKeys> = Vec::new();
+    for row in rows(c, "SELECT * FROM attachments_attachment ORDER BY company_id,stored_name,id", &[])? {
+        let company = row["company_id"].as_str().and_then(CompanyId::parse).ok_or_else(|| FbError::refused("Invalid attachment company"))?;
+        let name = (row["id"].as_str().unwrap_or_default().to_owned(), row["original_name"].as_str().unwrap_or_default().to_owned());
+        if let Some(last) = out.last_mut().filter(|f| f.company == company && Some(f.stored_name.as_str()) == row["stored_name"].as_str()) {
+            last.attachments.push(name);
+            continue;
+        }
+        let file = effective(c, &row)?;
+        let receipt = storage::opens_under(receipt_key, company, &file)?;
+        let master = (receipt_key == master_key && receipt) || storage::opens_under(master_key, company, &file)?;
+        let needs_rewrap = receipt_key != master_key && master && storage::needs_rewrap(receipt_key, master_key, company, &file)?;
+        out.push(FileKeys { company, stored_name: file.stored_name, attachments: vec![name], receipt_key: receipt, master_key: master, needs_rewrap });
+    }
+    Ok(out)
+}
+
+/// The stored files whose key no wrap opens under any of `keys`: they cannot be read with what these books
+/// hold. A book whose key record was lost reports its receipt-key files here when checked with its master
+/// key alone.
+pub fn unopenable(c: &(impl Query + ?Sized), key: &[u8; 32]) -> FbResult<Vec<FileKeys>> {
+    Ok(key_status(c, key, key)?.into_iter().filter(|f| !f.receipt_key).collect())
+}
+
+/// Stored files with a content-key candidate held only by the master: removing it would discard that key.
+pub fn master_only(c: &(impl Query + ?Sized), receipt_key: &[u8; 32], master_key: &[u8; 32]) -> FbResult<Vec<FileKeys>> {
+    if receipt_key == master_key {
+        return Ok(Vec::new());
+    }
+    Ok(key_status(c, receipt_key, master_key)?.into_iter().filter(|f| f.needs_rewrap).collect())
+}
+
+/// Give every stored file whose key only the master key opens (files attached through the desktop chooser
+/// before the receipt-key fix) a further wrap under the receipt key, so a later password change cannot
+/// strand it. One atomic write; for each company with such files, one [`REWRAPPED`] audit event in that
+/// company naming its attachments and files, and a row for each missing content-key wrap referring to it.
+/// Only companies `actor` belongs to are changed (a file of another company is left as it is, and a
+/// password change then refuses: see [`master_only`]). Attachment rows and the files themselves are never
+/// touched, so each file stays readable before and after the commit. Returns the attachment ids whose
+/// files gained a wrap.
+pub fn rewrap_legacy(book: &mut Book, actor: UserId, receipt_key: &[u8; 32], master_key: &[u8; 32]) -> FbResult<Vec<String>> {
+    if receipt_key == master_key {
+        return Ok(Vec::new());
+    }
+    let pending = book.read(|c| {
+        let mut out: std::collections::BTreeMap<CompanyId, Vec<(storage::Rewrap, Vec<String>)>> = Default::default();
+        for f in master_only(c, receipt_key, master_key)? {
+            let row = rows(c, "SELECT * FROM attachments_attachment WHERE company_id=? AND stored_name=? ORDER BY id LIMIT 1", &[&f.company.to_db(), &f.stored_name])?
+                .pop()
+                .ok_or_else(|| FbError::missing("Attachment"))?;
+            let ids: Vec<String> = f.attachments.into_iter().map(|a| a.0).collect();
+            for change in storage::rewrap_all(receipt_key, master_key, f.company, &effective(c, &row)?)? {
+                out.entry(f.company).or_default().push((change, ids.clone()));
+            }
+        }
+        Ok::<_, FbError>(out)
+    })?;
+    if pending.is_empty() {
+        return Ok(Vec::new());
+    }
+    book.write(|tx| tx.atomic(|| {
+        let mut moved = Vec::new();
+        for (co, changes) in &pending {
+            let Ok(user) = services::access(tx, actor, *co) else { continue };
+            if !(user.is_staff || user.is_superuser) {
+                return Err(FbError::denied("Only the owner can repair attachment keys."));
+            }
+            let mut ids: Vec<String> = changes.iter().flat_map(|(_, ids)| ids.iter().cloned()).collect();
+            ids.sort();
+            ids.dedup();
+            let mut files: Vec<&str> = changes.iter().map(|(w, _)| w.stored_name.as_str()).collect();
+            files.sort();
+            files.dedup();
+            let detail = json!({"attachments": ids, "files": files});
+            services::audit(tx, &user, *co, REWRAPPED, "Attachment keys".into(), detail.clone())?;
+            // The event just written: the only one of this company and action with this exact detail that
+            // no wrap refers to yet.
+            let mut stmt = tx.prepare("SELECT id FROM ledger_auditevent e WHERE company_id=?1 AND action=?2 AND detail=?3 AND NOT EXISTS(SELECT 1 FROM attachments_keywrap w WHERE w.audit_id=e.id)")?;
+            let events = stmt.query_map(params![co.to_db(), REWRAPPED, detail.to_string()], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+            let [event] = events.as_slice() else { return Err(FbError::refused("The attachment key change could not be recorded.")) };
+            for (w, _) in changes {
+                tx.execute(
+                    "INSERT INTO attachments_keywrap(company_id,stored_name,position,wrapped_key,wrap_nonce,audit_id) VALUES(?1,?2,(SELECT coalesce(max(position),0)+1 FROM attachments_keywrap WHERE company_id=?1 AND stored_name=?2),?3,?4,?5)",
+                    params![co.to_db(), w.stored_name, w.wrap.wrapped_key, w.wrap.wrap_nonce, event],
+                )?;
+            }
+            moved.extend(ids);
+        }
+        moved.sort();
+        Ok(moved)
+    }))
 }
 
 struct Pending<'a> {

@@ -51,6 +51,7 @@ fn attachments_survive_backup_verify_and_restore_and_tampering_is_refused() {
         created_at: "2026-10-31T12:00:00Z",
         passphrase: None,
         keep: None,
+        allow_incomplete: false,
     };
     let created = backups::create_backup(&fx.book, &KEY, &options(&archive)).unwrap();
     // Every row, removed ones included, is inventoried; the two rows sharing bytes share one file.
@@ -88,6 +89,8 @@ fn attachments_survive_backup_verify_and_restore_and_tampering_is_refused() {
     fs::write(&tampered, bytes).unwrap();
     let again = out.join("tampered.fbbackup");
     let error = backups::create_backup(&fx.book, &KEY, &options(&again)).err().expect("tampered receipt refused");
-    assert!(error.to_string().contains("does not match its attachment record"), "{error}");
+    assert!(error.to_string().contains("(damaged)") && error.to_string().contains("attachment folder"), "{error}");
+    assert_eq!(error.absent().len(), 1, "the damaged file is named, its rows listed");
+    assert_eq!(error.absent()[0].problem, backups::DAMAGED);
     assert!(!again.exists());
 }

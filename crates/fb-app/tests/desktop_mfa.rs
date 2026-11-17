@@ -135,6 +135,7 @@ fn enrollment_is_optional_confirmed_and_password_only_cannot_grant_book_or_ai_ac
     f.app.sign_in(OWNER, PASSWORD).unwrap();
     assert!(f.app.mfa_pending());
     assert!(f.app.authenticated_session().is_err());
+    assert!(f.app.ai_context(f.company).is_err(), "remembered consent cannot bypass pending MFA");
     assert!(f.app.open_mut().is_err());
     assert!(f.app.query(Query::Companies).is_err());
     assert!(

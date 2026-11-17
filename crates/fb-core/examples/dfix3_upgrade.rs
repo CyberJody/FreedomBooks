@@ -104,7 +104,7 @@ fn main() {
         let archive_dir=dir.with_extension("backups");let restore_dir=dir.with_extension("restores");
         std::fs::create_dir_all(&archive_dir).unwrap();std::fs::create_dir_all(&restore_dir).unwrap();
         let archive=archive_dir.join("legacy.fbbackup");let work=dir.with_extension("private");let restored_path=restore_dir.join("restored.fbbook");
-        backups::create_backup(&book,&key,&BackupOptions {output:&archive,work_root:&work,receipts_root:None,verify_receipt:None,label:"Synthetic legacy",app_version:"FIX3-test",created_at:"2026-11-02T12:00:00Z",passphrase:None,keep:None}).unwrap();
+        backups::create_backup(&book,&key,&BackupOptions {output:&archive,work_root:&work,receipts_root:None,verify_receipt:None,label:"Synthetic legacy",app_version:"FIX3-test",created_at:"2026-11-02T12:00:00Z",passphrase:None,keep:None,allow_incomplete:false}).unwrap();
         backups::restore_backup(&archive,&key,&RestoreOptions {target:&restored_path,receipts_target:None,work_root:&work,protected:std::slice::from_ref(&path),passphrase:None,require_encrypted:false,verify_receipt:None}).unwrap();
         let restored=Book::open(&restored_path,&key).unwrap();assert_eq!(rows(&restored),after);assert_eq!(schema(&restored),schema(&book));drop(restored);
         println!("PASS backup and restore preserve every legacy row and the exact schema hash");

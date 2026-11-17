@@ -254,7 +254,18 @@ pub fn void_check(
     dt: &Value,
     reason: &Value,
 ) -> FbResult<Value> {
-    write(book, |tx| {
+    write(book, |tx| void_check_tx(tx, actor, co, cid, expected, dt, reason))
+}
+/// [`void_check`] inside a caller's writer (bank-feed Undo voids and returns the transaction in one writer).
+pub fn void_check_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    co: CompanyId,
+    cid: &str,
+    expected: Option<i64>,
+    dt: &Value,
+    reason: &Value,
+) -> FbResult<Value> {
         services::access(tx, actor, co)?;
         let mut b = check(tx, co, cid)?;
         let mut r = b["current"].clone();
@@ -288,7 +299,6 @@ pub fn void_check(
         advance(tx, actor, co, &mut b, r, next)?;
         seal_journal(tx, &j.id.to_db())?;
         Ok(money_display(check(tx, co, cid)?))
-    })
 }
 pub fn assign_number(
     book: &mut Book,

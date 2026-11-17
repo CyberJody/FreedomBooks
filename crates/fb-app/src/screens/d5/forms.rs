@@ -7,14 +7,14 @@ use super::*;
 const METHODS: &[(&str, &str)] = &[
     ("CHECK", "Check"),
     ("CASH", "Cash"),
-    ("CARD", "Card (record only)"),
-    ("TRANSFER", "Transfer (record only)"),
+    ("CARD", "Card"),
+    ("TRANSFER", "Bank transfer"),
     ("OTHER", "Other"),
 ];
 const REFUNDS: &[(&str, &str)] = &[
     ("CHECK", "Check"),
     ("CASH", "Cash"),
-    ("OTHER", "Other (record only)"),
+    ("OTHER", "Other"),
 ];
 fn choices(items: &[(&str, &str)]) -> Widget {
     Widget::Select {
@@ -116,8 +116,10 @@ fn prior(
     r: &Route,
     p: Option<Posted<'_>>,
 ) -> AppResult<Option<Value>> {
+    // The key is cleaned as the form field is (outer spaces stripped) before looking it up.
     let k = p
         .and_then(|p| get(p, "request_key"))
+        .map(py::py_strip)
         .and_then(py::py_uuid)
         .map(|u| u.0)
         .unwrap_or_default();
@@ -217,9 +219,11 @@ fn header(app: &mut App, c: CompanyId, r: &Route, prior: Option<&Value>) -> AppR
         fs.push(date_field(if deposit(r) {
             "Deposit date"
         } else {
-            "Credit date"
+            "Date"
         }));
         if !deposit(r) {
+            // One Save reviews and records in the same request; there is no review to carry.
+            fs.retain(|f| f.name != "review_token");
             fs.push(memo(3));
             let ch = credit_choices(app, c, prior)?;
             fs.push(
@@ -229,21 +233,20 @@ fn header(app: &mut App, c: CompanyId, r: &Route, prior: Option<&Value>) -> AppR
             fs.extend([
                 money_field("amount", "Deposit amount"),
                 Field::new("method", "Payment method", choices(METHODS)).required(),
-                Field::new("reference", "Reference", Widget::Text)
-                    .help("Check or reference number only. Never enter card numbers or secrets."),
+                Field::new("reference", "Check or reference no.", Widget::Text),
                 Field::new(
                     "destination",
                     "Deposit to",
                     choices(&[
-                        ("BANK", "Direct to designated bank"),
                         ("UNDEPOSITED", "Undeposited funds"),
+                        ("BANK", "Bank account"),
                     ]),
                 )
                 .required(),
                 select(
                     "bank",
-                    "Designated bank (direct-to-bank only)",
-                    "None",
+                    "Bank account",
+                    "Choose a bank account",
                     bank_options(
                         app,
                         c,
@@ -424,6 +427,7 @@ pub(super) fn page(
     e: &Errors,
     non: &[String],
     review: Option<Value>,
+    problems: &[String],
 ) -> AppResult<String> {
     let c = arg_company(r)?;
     let dep = deposit(r);
@@ -472,8 +476,16 @@ pub(super) fn page(
         let ch = credit_choices(app, c, pr.as_ref())?;
         initial["tax_mode"] = json!(ch.tax_initial);
         put(&mut vm, "formset", credit_formset(&ch, p, e, non));
+        let (customers, rates) = doc_forms::editor_data(app, c, None)?;
+        put(&mut vm, "invoice_customers", customers);
+        put(&mut vm, "invoice_tax_rates", rates);
+        put(&mut vm, "posting_accounts", doc_forms::posting_accounts(app, c, "CM", &ch)?);
+        put(&mut vm, "item_count", ch.catalog.as_object().map_or(0, |m| m.len()));
         put(&mut vm, "catalog", ch.catalog);
         put(&mut vm, "customer_tax", ch.customer_tax);
+        put(&mut vm, "problems", problems);
+        put(&mut vm, "setup_hint", problems.iter().any(|m| m.contains("Accounting setup")));
+        put(&mut vm, "has_errors", super::super::d2::active_form_errors(e, p.unwrap_or(&[])) > 0 || !non.is_empty() || !problems.is_empty());
     }
     let mut form = json!(bind_fields(fs.clone(), p, &initial, e, true));
     if !dep && a == "apply" {
@@ -574,10 +586,8 @@ pub(super) fn reverse_page(
     let mut fs = reversal_fields();
     fs[1].label = if a == "unapply" {
         "Unapply date"
-    } else if deposit(r) {
-        "Void date"
     } else {
-        "Reversal date"
+        "Void date"
     }
     .into();
     put(
@@ -719,6 +729,9 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         return Err(AppError::NotFound(path.into()));
     }
     let pr = prior(app, c, r, Some(p))?;
+    if a == "new" && !dep {
+        return credit_submit(app, r, path, p, pr);
+    }
     let src = if a != "new" && a != "invoice_apply" {
         Some(source(app, c, &r.args[source_arg(r)], dep)?)
     } else {
@@ -773,6 +786,12 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         }
         values["customer_id"] = values["customer"].clone();
         values.as_object_mut().unwrap().remove("customer");
+        // The bank account applies only to a deposit made straight to the bank; the field is
+        // hidden otherwise and anything left in it is not part of the deposit.
+        if values["destination"] != "BANK" {
+            values["bank_id"] = Value::Null;
+            e.remove("bank");
+        }
     }
     if a == "new" && !dep {
         values["customer_id"] = values["customer"].clone();
@@ -951,10 +970,69 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         posted.retain(|(k, _)| k != "review_token");
         posted.push(("review_token".into(), s(d, "token").into()));
     }
-    let html = page(app, r, path, &[], Some(&posted), &e, &non, review.clone())?;
+    let html = page(app, r, path, &[], Some(&posted), &e, &non, review.clone(), &[])?;
     Ok(if review.is_some() {
         Outcome::Page { html, status: 200 }
     } else {
         Outcome::Invalid { html }
     })
+}
+
+/// A credit memo's one Save. The core reviews exactly the entered credit and records it with that
+/// review in this same request, so what is recorded is what passed review. A form whose credit memo
+/// is already recorded (a second click, or Back and Save again) shows that credit memo instead.
+fn credit_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>, prior: Option<Value>) -> AppResult<Outcome> {
+    let c = arg_company(r)?;
+    if let Some(prior) = prior {
+        app.messages.push(format!(
+            "This credit memo was already saved as {}. Nothing new was recorded.",
+            s(&prior["identity"], "number")
+        ));
+        return Ok(Outcome::Redirect { location: url("credits:detail", &[&c.to_db(), s(&prior, "id")]) });
+    }
+    let mut e = Errors::new();
+    let fs = header(app, c, r, None)?;
+    let mut values = clean(p, &fs, &mut e);
+    let ch = credit_choices(app, c, None)?;
+    let cleaned_lines = credit_line_data(p, &ch);
+    let (lines, mut non) = credit_clean_lines(&cleaned_lines, &ch, &mut e);
+    // Django validates min_num after the management form and replaces its nonform error.
+    if get(p, "lines-TOTAL_FORMS")
+        .and_then(super::super::d2::clean_integer)
+        .unwrap_or(0)
+        <= 0
+    {
+        non = vec!["Please submit at least 1 form.".into()];
+    }
+    values["lines"] = json!(lines);
+    let mode = s(&values, "tax_mode").to_owned();
+    values["tax_item_id"] = json!(mode.strip_prefix('T'));
+    values["tax_mode"] = json!(if mode.starts_with('T') { "ITEM" } else { "NONE" });
+    values["customer_id"] = values["customer"].clone();
+    values.as_object_mut().unwrap().remove("customer");
+    let mut problems = vec![];
+    if super::super::d2::active_form_errors(&e, p) == 0 && non.is_empty() {
+        let values: CreditMemoValues =
+            serde_json::from_value(values).map_err(|e| AppError::Invalid(e.to_string()))?;
+        let reviewed = app.run(Command::ReviewCreditMemo { company_id: c.to_db(), values: values.clone() });
+        let recorded = match reviewed {
+            Ok(Outcome::Done { data }) => app.run(Command::RecordCreditMemo {
+                company_id: c.to_db(),
+                values,
+                review_token: s(&data, "token").to_owned(),
+            }),
+            other => other,
+        };
+        match recorded {
+            Ok(Outcome::Done { data }) => {
+                return Ok(Outcome::Redirect { location: url("credits:detail", &[&c.to_db(), s(&data, "id")]) });
+            }
+            Err(AppError::Core(FbError::Validation(messages))) => {
+                problems.extend(messages.iter().map(|m| doc_forms::plain_sale(m)));
+            }
+            Err(err) => return Err(err),
+            _ => unreachable!(),
+        }
+    }
+    Ok(Outcome::Invalid { html: page(app, r, path, &[], Some(p), &e, &non, None, &problems)? })
 }

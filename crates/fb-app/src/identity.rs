@@ -1,6 +1,7 @@
 //! Named desktop sessions and the central authorization boundary. A book key opens the file;
 //! a verified individual password and any enabled MFA grant application authority. No renderer-selected actor.
 use crate::{App, AppError, AppResult};
+use crate::keys::MasterKey;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
 use fb_core::{CompanyId, UserId};
 use fb_db::rusqlite::{OptionalExtension, params};
@@ -59,6 +60,26 @@ pub(crate) struct Identity {
     failures: u32,
     retry_after: Option<Instant>,
     pub(crate) pending_signins: std::collections::HashMap<CompanyId, u64>,
+    /// Set when the session host could not give this identity unused generations: every sign-in is
+    /// refused with this message until the app restarts (`multiuser::SessionHost::into_app`).
+    restart_required: Option<String>,
+}
+impl Identity {
+    /// A signed-out identity whose generations start at `generation` (the session host gives each
+    /// session its own block, so one session's generation never validates in another).
+    pub(crate) fn starting_at(generation: u64) -> Identity {
+        Identity { generation, ..Default::default() }
+    }
+    pub(crate) fn restart_required(message: &str) -> Identity {
+        Identity { restart_required: Some(message.to_owned()), ..Default::default() }
+    }
+    pub(crate) fn generation(&self) -> u64 {
+        self.generation
+    }
+    /// The password step succeeded and an unexpired second-factor step is waiting.
+    pub(crate) fn mfa_pending(&self) -> bool {
+        self.mfa.pending.as_ref().is_some_and(|p| p.expires > Instant::now())
+    }
 }
 fn invalid(s: &str) -> AppError {
     AppError::Invalid(s.into())
@@ -92,13 +113,28 @@ impl App {
     /// Invalidates form, review, dialog, recovery and agent capabilities. Monotonic for this App's
     /// entire lifetime, including book close/reopen. Never cache authority across this generation.
     pub(crate) fn invalidate_identity(&mut self) {
+        let gmail: Vec<CompanyId> = self.email.signins.keys().copied().collect();
+        for company in gmail {
+            let _ = crate::net::net_call(self, &json!({"op":"gmail_cancel","company":company.to_db()}));
+        }
+        self.email=Default::default();
+        self.stripe=Default::default();
         self.ai.invalidate();
         self.identity.mfa=Default::default();
+        self.frame_company = None;
         // A browser callback begun by this person must never attach to the next person's session.
-        for (company, _) in self.identity.pending_signins.drain() {
-            if let Some(net) = self.net.as_mut() {
-                let _ = net.call(&json!({"op":"chatgpt_cancel","company":company.to_db()}));
+        let chatgpt: Vec<CompanyId> = self.identity.pending_signins.drain().map(|(company, _)| company).collect();
+        for company in chatgpt {
+            let _ = crate::net::net_call(self, &json!({"op":"chatgpt_cancel","company":company.to_db()}));
+        }
+        // Jobs this generation still owns (begun, never polled to the end) go with it.
+        let generation = self.identity.generation;
+        let owned: Vec<String> = self.signin_jobs.iter().filter(|(_, (g, _))| *g == generation).map(|(k, _)| k.clone()).collect();
+        for key in owned {
+            if let Some((provider, company)) = key.split_once(':') {
+                let _ = crate::net::net_call(self, &json!({"op":format!("{provider}_cancel"),"company":company}));
             }
+            self.signin_jobs.remove(&key);
         }
         self.identity.actor = None;
         self.identity.generation = self
@@ -110,9 +146,11 @@ impl App {
         self.d7a_reviews = Default::default();
         self.d5_reviews = Default::default();
         self.d6_reviews = Default::default();
+        self.salestax_reviews.clear();
         self.sales_reviews.clear();
         self.attachment_notes.clear();
         self.messages.clear();
+        self.recurring_notices.clear();
         self.recovery_authorized = false;
         self.backups.invalidate_identity();
     }
@@ -211,8 +249,13 @@ impl App {
             Ok::<_,fb_core::FbError>(())
         })?;
         // Enrollment sets a credential, then uses the same verification path as subsequent sign-ins.
+        // On first run the owner typed the new book password moments ago in this same session, so
+        // step 3 can show the recovery key without asking for that password again.
+        let keep_recovery = self.first_run_owner && self.recovery_authorized;
         let name = self.bootstrap_name(owner)?;
-        self.sign_in(&name, password)
+        self.sign_in(&name, password)?;
+        if keep_recovery && self.authenticated_session().is_ok() { self.recovery_authorized = true; }
+        Ok(())
     }
     fn bootstrap_name(&mut self, user: UserId) -> AppResult<String> {
         Ok(self.open.as_mut().ok_or(AppError::Locked)?.book.read(|q| {
@@ -224,6 +267,9 @@ impl App {
         })?)
     }
     pub fn sign_in(&mut self, username: &str, password: &str) -> AppResult<()> {
+        if let Some(message) = &self.identity.restart_required {
+            return Err(invalid(message));
+        }
         if self.identity.actor.is_some() {
             return Err(invalid("Sign out before switching to another user."));
         }
@@ -256,6 +302,10 @@ impl App {
         self.finish_sign_in(actor,name)
     }
     pub(crate) fn finish_sign_in(&mut self, actor: UserId, name: String) -> AppResult<()> {
+        // The one place an actor is set: nobody signs in on an identity that needs a restart.
+        if let Some(message) = &self.identity.restart_required {
+            return Err(invalid(message));
+        }
         self.invalidate_identity();
         self.identity_success();
         self.identity.actor = Some(actor);
@@ -348,6 +398,7 @@ impl App {
         })?;
         // Any roster change revokes outstanding authority, including self-demotion and password reset.
         self.invalidate_identity();
+        if !self.roster_changed.contains(&id) { self.roster_changed.push(id); }
         Ok(id)
     }
 }
@@ -355,30 +406,41 @@ impl App {
 impl App {
     pub(crate) fn restore_connections_for(&mut self, actor: UserId) -> AppResult<()> {
         let open = self.open.take().ok_or(AppError::Locked)?;
-        let device = self
-            .device_key
-            .as_ref()
-            .ok_or_else(|| invalid("Connection key storage is unavailable."))?;
+        let failed = || invalid("The stored connection credentials could not be restored.");
+        let key = match (self.connection_keys, self.device_key.as_ref()) {
+            (crate::session::ConnectionKeys::Unavailable, _) | (_, None) => None,
+            (_, Some(k)) => Some(MasterKey::new(**k)),
+        };
+        let Some(device) = key else {
+            // The keyring can't be used this launch: nothing is read, flagged or migrated. Writes
+            // still need every active connection's mask released for this session only.
+            let throwaway = crate::keys::new_master_key().map_err(|e| invalid(&e.to_string()))?;
+            let vault = crate::credentials::BookCredentials::new(open.book, actor, &throwaway).map_err(|_| failed())?;
+            let waiting = vault.release_bankfeeds_unavailable().map_err(|_| failed())?;
+            let book = vault.into_book().map_err(|_| failed())?;
+            self.open = Some(crate::session::Open { book, ..open });
+            self.vault_key = None;
+            if waiting > 0 && self.bankfeeds_enabled() {
+                self.messages.push(crate::session::CONNECTIONS_WAITING.into());
+            }
+            return Ok(());
+        };
         let legacy = if self.legacy_credentials {
             Some(&**self.backups.open_book()?.1)
         } else {
             None
         };
-        let vault =
-            crate::credentials::BookCredentials::with_device_key(open.book, actor, device, legacy)
-                .map_err(|_| invalid("The stored connection credentials could not be restored."))?;
-        let reconnect = vault
-            .restore_bankfeeds()
-            .map_err(|_| invalid("The stored connection credentials could not be restored."))?;
-        let book = vault
-            .into_book()
-            .map_err(|_| invalid("The stored connection credentials could not be restored."))?;
+        let alternates: Vec<&[u8; 32]> = self.device_alternates.iter().map(|k| &**k).collect();
+        let vault = crate::credentials::BookCredentials::with_device_key(open.book, actor, &device, legacy, &alternates)
+            .map_err(|_| failed())?;
+        let reconnect = vault.restore_bankfeeds().map_err(|_| failed())?;
+        let book = vault.into_book().map_err(|_| failed())?;
         self.open = Some(crate::session::Open { book, ..open });
-        self.vault_key = self
-            .device_key
-            .as_ref()
-            .and_then(|k| crate::credentials::wrapping_key(k).ok());
+        self.vault_key = crate::credentials::wrapping_key(&device).ok();
         if self.bankfeeds_enabled() {
+            if !reconnect.is_empty() && self.connection_keys == crate::session::ConnectionKeys::Replaced {
+                self.messages.push(crate::session::CONNECTIONS_REPLACED.into());
+            }
             for name in reconnect {
                 self.messages.push(crate::session::reconnect_notice(&name));
             }
@@ -444,6 +506,7 @@ impl App {
             crate::protection::RECOVERY,
             crate::protection::KIT,
             "/settings/restore-backup/",
+            "/settings/restored-book/",
         ]
         .contains(&path)
         {

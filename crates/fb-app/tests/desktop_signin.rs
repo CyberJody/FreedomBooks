@@ -187,14 +187,16 @@ fn unified_signin_backup_restores_without_original_keyring_using_password_or_rec
             screens::backups::restore_from_gate(&mut other, &archive, "Restored books", secret)
                 .unwrap();
         assert!(other.query(Query::Companies).is_err());
-        assert!(!Record::read(&restored).unwrap().unwrap().ask_password);
+        // On another computer there is no book with the same key record to take the setting from,
+        // so the copy asks for its password (the keyring review fix: a copy never opens by itself).
+        assert!(Record::read(&restored).unwrap().unwrap().ask_password);
         assert!(other.can_lock(), "missing keyring keeps the password/recovery fallback");
         other.sign_in(OWNER, USER_PASSWORD).unwrap();
         assert_eq!(
             other.company_name_for_kit().unwrap(),
             "Synthetic desktop company"
         );
-        assert!(!Record::read(&restored).unwrap().unwrap().ask_password);
+        assert!(Record::read(&restored).unwrap().unwrap().ask_password);
         assert!(other.can_lock(), "missing keyring keeps the password/recovery fallback");
         other.lock();
         other.open_with_secret(&restored, secret).unwrap();

@@ -42,6 +42,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_ROOTS = [
     "fb-node",
+    "fb-remote",
+    "fb-net",
     "fb-plugin-openai",
     "fb-plugin-simplefin",
     "fb-plugin-smtp",

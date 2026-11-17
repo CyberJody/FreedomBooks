@@ -58,7 +58,7 @@ fn settings_row_validation_save_collision_staleness_and_history_are_real_form_fl
     let html = screens::render(&mut app, &path).unwrap().html;
     assert!(html.contains("Document numbering"));
     assert!(html.contains("INV-000001"));
-    assert!(html.contains("Designate a bank account"));
+    assert!(html.contains("Add an account of type Bank to the chart of accounts"));
     let invalid = app
         .run(Command::SubmitForm {
             path: path.clone(),

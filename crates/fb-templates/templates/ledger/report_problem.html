@@ -9,9 +9,20 @@
 <li>Write the steps you took, one at a time, starting from Home.</li>
 <li>Say what you expected to happen.</li>
 <li>Say what actually happened. Copy any error message word for word.</li>
-<li>Copy your FreedomBooks version and operating system into the issue:
+<li>Copy your FreedomBooks version and operating system into the issue{% if problem_log %}, or use <strong>Copy diagnostic summary</strong> below{% endif %}:
 <pre class="report-details">FreedomBooks version: {{ about.version }}
-Operating system: {{ about.os }}</pre></li>
+Operating system: {{ about.os }}
+{% for line in about.build %}{{ line }}
+{% endfor %}</pre></li>
 <li>Attach a screenshot only after covering names, amounts and account numbers.</li>
 </ol>
+<h2 id="problem-log">Problem log</h2>
+{% if problem_log %}
+<p>When something goes wrong inside FreedomBooks, it writes a short technical note to a problem log on this computer: when it happened, which build, which screen and where in FreedomBooks’ own code. It never records your names, amounts, memos, documents, passwords or keys.</p>
+<p>Log folder: <code class="report-log-folder">{{ problem_log }}</code></p>
+<p class="report-log-actions"><button type="button" class="secondary" id="report-open-log">Open log folder</button> <button type="button" class="secondary" id="report-copy-summary">Copy diagnostic summary</button> <span id="report-copy-status" role="status"></span></p>
+<p class="help">The summary has the version, build, book format, operating system and the times of the last few problems, and nothing from the log itself. Paste it into the issue. Attach the log file only if you choose to; open it first to see what it holds.</p>
+{% else %}
+<p>This copy of FreedomBooks has no problem log.</p>
+{% endif %}
 {% endblock %}

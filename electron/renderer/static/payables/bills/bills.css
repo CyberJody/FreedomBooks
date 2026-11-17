@@ -18,3 +18,8 @@ th.num {text-align:right;font-variant-numeric:tabular-nums}
 /* Canonical memo/reason text must wrap, including unbroken pasted text. */
 main p, .bill-history td:nth-child(4) {overflow-wrap:anywhere}
 .bill-history td:not(:nth-child(4)) {white-space:nowrap}
+
+/* Bills list: pay ticked bills. */
+.bill-pay-bar {display:flex;align-items:center;gap:12px;margin:12px 0 8px}
+.bill-list .overdue {color:#9b3743}
+.bill-list input[type=checkbox] {width:20px;height:20px}

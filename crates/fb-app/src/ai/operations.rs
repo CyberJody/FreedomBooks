@@ -30,6 +30,12 @@ pub enum FeedCategory {
     },
 }
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct HistoricalInvoice {
+    pub invoice: crate::commands::InvoiceValues,
+    pub source: Value,
+}
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "type", deny_unknown_fields)]
 pub enum Operation {
     ConnectionInfo,
@@ -51,6 +57,8 @@ pub enum Operation {
     },
     AccountingSetup,
     TaxItems,
+    TaxSettings,
+    InvoiceSettings,
     Bills,
     Bill {
         bill_id: String,
@@ -58,6 +66,13 @@ pub enum Operation {
     Checks,
     Check {
         check_id: String,
+    },
+    /// Job tickets with hours and unbilled amounts. `status`: OPEN, COMPLETED, INVOICED, CLOSED, ACTIVE (open and completed) or ALL.
+    JobTickets {
+        #[serde(default)]
+        customer_id: Option<String>,
+        #[serde(default)]
+        status: Option<String>,
     },
     Journal {
         journal_id: String,
@@ -93,6 +108,12 @@ pub enum Operation {
     ReturnFeed {
         transaction_id: String,
     },
+    InvoiceImportPreview {
+        invoices: Vec<HistoricalInvoice>,
+    },
+    InvoiceImportApply {
+        preview_token: String,
+    },
     ImportPreview {
         #[schemars(length(min = 1, max = 100))]
         journals: Vec<super::import::Journal>,
@@ -110,7 +131,7 @@ pub fn item(i: &bankfeeds::Item) -> Value {
 pub fn is_write(name: &str) -> bool {
     matches!(
         name,
-        "AcceptFeed" | "IgnoreFeed" | "ReturnFeed" | "ImportApply"
+        "AcceptFeed" | "IgnoreFeed" | "ReturnFeed" | "ImportApply" | "InvoiceImportApply"
     )
 }
 fn date(s: &str) -> AppResult<chrono::NaiveDate> {
@@ -168,6 +189,7 @@ pub fn execute(app: &mut App, co: fb_core::CompanyId, operation: Operation) -> A
                 let raw=st.query_map(fb_db::rusqlite::params![co.to_db(),(limit+1) as i64,after as i64],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,String>(4)?,r.get::<_,String>(5)?,r.get::<_,String>(6)?)))?.collect::<Result<Vec<_>,_>>()?;
                 raw.into_iter().map(|(id,user,name,at,action,target,detail)|{
                     let detail:Value=fb_db::parse_unique_json(&detail).map_err(|_|fb_core::FbError::validation("Invalid audit evidence."))?;
+                    let detail=fb_core::attachments::public_audit_detail(tx,co,&action,&detail)?;
                     Ok(json!({"id":id,"actor_id":user,"actor_name":name,"occurred_at":at,"action":action,"target":target,"detail":fb_core::card_numbers::mask_text_fields(&detail)}))
                 }).collect()
             })?;
@@ -177,6 +199,14 @@ pub fn execute(app: &mut App, co: fb_core::CompanyId, operation: Operation) -> A
             services::access(tx, actor, co)?;
             fb_core::documents::setup_snapshot(tx, co)
         })?,
+        Operation::InvoiceSettings => book.read(|tx| {
+            services::access(tx,actor,co)?;
+            let preferences=fb_core::invoice_preferences::get(tx,co)?;
+            let gmail=fb_core::invoice_email::connection(tx,co)?;
+            let stripe=fb_core::invoice_stripe::current_connection(tx,co,&preferences.settings.stripe_mode)?;
+            Ok::<_,fb_core::FbError>(json!({"details":fb_core::company_documents::get(tx,co)?,"logo":fb_core::company_documents::logo_json(tx,actor,co)?,"preferences":preferences,"google_connected":gmail.is_some_and(|c|c.status=="CONNECTED"),"stripe_connected":stripe.is_some_and(|c|c["status"]=="CONNECTED")}))
+        })?,
+        Operation::TaxSettings => book.read(|tx| { services::access(tx, actor, co)?; fb_core::salestax::settings_for(tx, co) })?,
         Operation::TaxItems => book
             .read(|tx| {
                 services::access(tx, actor, co)?;
@@ -186,6 +216,12 @@ pub fn execute(app: &mut App, co: fb_core::CompanyId, operation: Operation) -> A
         Operation::Bills => Value::Array(fb_core::payables::current_bills(book, actor, co)?),
         Operation::Bill { bill_id } => fb_core::payables::get_bill(book, actor, co, &bill_id)?,
         Operation::Checks => Value::Array(fb_core::checks::current_checks(book, actor, co)?),
+        Operation::JobTickets { customer_id, status } => book
+            .read(|tx| {
+                services::access(tx, actor, co)?;
+                fb_core::jobs::tickets(tx, co, &fb_core::jobs::TicketFilter { customer_id, status: Some(status.unwrap_or_else(|| "ALL".into())) })
+            })
+            .map(Value::Array)?,
         Operation::Check { check_id } => fb_core::checks::get_check(book, actor, co, &check_id)?,
         Operation::Invoice { invoice_id } => book.read(|tx| {
             services::access(tx, actor, co)?;

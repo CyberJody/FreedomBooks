@@ -1,15 +1,66 @@
-{% extends 'ledger/base.html' %}{% block content %}
-{% if mode == 'setup' %}<h1>Set up your books</h1><p>Name the owner and your first company. Next, set the owner’s individual user password.</p>{% else %}<h1>Unlock these books on this computer</h1><p>Enter the book password or recovery key, then sign in with your user name and password. The secure system keyring normally opens the book for you. This prompt is needed when its saved key is unavailable or the extra book-password prompt is enabled.</p>{% endif %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FreedomBooks · {% if mode == 'error' %}Books can’t be opened{% elif mode == 'setup' %}Set up your books{% elif mode == 'choose' %}Choose your books{% else %}Books locked{% endif %}</title><link rel="stylesheet" href="{{ static('ledger/app.css') }}"><link rel="stylesheet" href="{{ static('ledger/hybrid.css') }}"><link rel="stylesheet" href="{{ static('desktop/gate.css') }}"><script src="{{ static('ledger/shell.js') }}" defer></script></head>
+<body class="shell gate-page"><a class="skip-link" href="#main">Skip to content</a>
+<header class="titlebar"><span class="brand">FreedomBooks <small>{{ version }}</small></span><div class="operator">{% if mode == 'error' %}Books can’t be opened{% elif mode == 'setup' %}First-time setup{% elif mode == 'choose' %}Choose your books{% else %}Books locked{% endif %}</div></header>
+<main id="main" class="gate"><div class="gate-card">
+{% if mode == 'error' %}
+<h1>FreedomBooks can’t open your books right now</h1>
+<p class="gate-version">You’re running FreedomBooks {{ version }}.</p>
 {% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
-{% if mode == 'setup' %}
-<form class="narrow" method="post" data-gate="setup" novalidate>
-<p><label for="id_owner_name">Owner name:</label><input type="text" name="owner_name" maxlength="150" required id="id_owner_name" value="{{ owner_name }}" autocomplete="off"></p>
-<p><label for="id_company_name">Company name:</label><input type="text" name="company_name" maxlength="200" required id="id_company_name" value="{{ company_name }}" autocomplete="off"></p>
-<p><label for="id_starter_chart">Chart of accounts:</label> <select name="starter_chart" id="id_starter_chart" required><option value="standard"{% if starter_chart != "empty" %} selected{% endif %}>Standard small-business chart (recommended)</option><option value="empty"{% if starter_chart == "empty" %} selected{% endif %}>Start with an empty chart (for accountants)</option></select></p>
-<p><label><input type="checkbox" name="protect" id="id_protect"> Protect these books with my own password</label></p>
-<p class="notice" id="built-in-warning">Without your own password, these books use FreedomBooks’ built-in key. Anyone who gets a copy of this file can open it.</p>
-<div id="own-password-fields" hidden><p><label for="id_lock_password">Password:</label><input type="password" name="lock_password" id="id_lock_password" autocomplete="new-password" disabled></p>
-<p><label for="id_lock_password2">Repeat the password:</label><input type="password" name="lock_password2" id="id_lock_password2" autocomplete="new-password" disabled></p><p>Use at least 8 characters. We will give you a recovery key to keep somewhere safe.</p></div><button>Create books</button></form>
-{% else %}<form class="narrow" method="post" data-gate="unlock" novalidate><p><label for="id_password">Password or recovery key:</label><input type="password" name="password" required id="id_password" autocomplete="current-password"></p><button>Unlock</button></form>{% endif %}
-<details class="narrow"><summary>Restore a backup</summary><p>This backup is from another computer. Enter your password or recovery key. Built-in-key backups need neither.</p><form method="post" data-gate="restore"><p><label for="id_restore_name">Name for the restored book</label><input name="name" id="id_restore_name" value="Recovered books" maxlength="60" required></p><p><label for="id_restore_secret">Password or recovery key, if protected</label><input type="password" name="secret" id="id_restore_secret" autocomplete="off"></p><button>Choose a backup to restore…</button></form></details>
-{% endblock %}
+<p>Your books may well be on this computer, so FreedomBooks won’t open any book on a guess and won’t offer to set up new books. Quit, fix what is described above if you can, and start FreedomBooks again.</p>
+<p>If this keeps happening, <a href="{{ issue_url }}">report a problem</a> and describe what happened.</p>
+{% elif mode == 'setup' %}
+<ol class="gate-steps" aria-label="Setting up"><li aria-current="step"><span aria-hidden="true">1</span> Your books</li><li><span aria-hidden="true">2</span> Your sign-in</li><li><span aria-hidden="true">3</span> Recovery key</li></ol>
+<p class="gate-step-label">Step 1 of 3</p>
+<h1>Set up your books</h1>
+<p>Name yourself and your first company. Next you choose your own sign-in password.</p>
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
+<form method="post" data-gate="setup" novalidate>
+<p><label for="id_owner_name">Your name</label><input type="text" name="owner_name" maxlength="150" required id="id_owner_name" value="{{ owner_name }}" autocomplete="off" aria-describedby="owner-help" autofocus></p>
+<p class="help" id="owner-help">This is also your <strong>user name</strong> for signing in to FreedomBooks. Write it down exactly as you type it here.</p>
+<p><label for="id_company_name">Company name</label><input type="text" name="company_name" maxlength="200" required id="id_company_name" value="{{ company_name }}" autocomplete="off"></p>
+<p><label for="id_starter_chart">Chart of accounts</label> <select name="starter_chart" id="id_starter_chart" required><option value="standard"{% if starter_chart != "empty" %} selected{% endif %}>Standard small-business chart (recommended)</option><option value="empty"{% if starter_chart == "empty" %} selected{% endif %}>Start with an empty chart (for accountants)</option></select></p>
+<fieldset class="gate-protect"><legend>Book password</legend>
+<p><label><input type="checkbox" name="protect" id="id_protect"> Protect these books with my own book password</label></p>
+<p class="notice" id="built-in-warning">Without your own book password, these books use FreedomBooks’ built-in key. Anyone who gets a copy of this file can open it.</p>
+<div id="own-password-fields" hidden><p><label for="id_lock_password">Book password</label><input type="password" name="lock_password" id="id_lock_password" autocomplete="new-password" disabled></p>
+<p><label for="id_lock_password2">Repeat the book password</label><input type="password" name="lock_password2" id="id_lock_password2" autocomplete="new-password" disabled></p><p class="help">Use at least 8 characters. This protects the book file and its backups; it is separate from your sign-in password. Step 3 gives you a recovery key to keep somewhere safe.</p></div></fieldset>
+<button>Create books</button></form>
+<details class="gate-more"><summary>Restore a backup instead</summary>
+<p>Moving to this computer? Choose a FreedomBooks backup file (.fbbackup) and enter the book password or recovery key that was in use when the backup was made. Backups of books with the built-in key need neither.</p>
+<form method="post" data-gate="restore"><p><label for="id_restore_name">Name for the restored books</label><input name="name" id="id_restore_name" value="Recovered books" maxlength="60" required></p><p><label for="id_restore_secret">Book password or recovery key, if protected</label><input type="password" name="secret" id="id_restore_secret" autocomplete="off"></p><button class="secondary">Choose a backup to restore…</button></form></details>
+{% else %}
+<ol class="gate-steps" aria-label="Getting in"><li aria-current="step"><span aria-hidden="true">1</span> Unlock books</li><li><span aria-hidden="true">2</span> Sign in</li></ol>
+<h1>{% if mode == 'choose' %}Choose your books{% else %}Unlock your books{% endif %}</h1>
+<p class="gate-version">You’re running FreedomBooks {{ version }}. Nothing is wrong with your copy.</p>
+{% if mode == 'choose' %}
+<p><strong>FreedomBooks can’t tell which books to open.</strong> The books it opened last aren’t where they were, or the note of which books to open is damaged. Choose your books below. Nothing has been changed or deleted. The books you choose open as a copy; once they are open and you have signed in, you can make them your books.</p>
+{% else %}
+{% if reason == 'missing' %}<p>Your books are protected with a <strong>book password</strong>. Normally this computer remembers it for you. <strong>This time it doesn’t have the saved key.</strong> That usually happens after the operating system is reinstalled, the system keyring is reset, or the books are moved to another computer.</p>
+{% elif reason == 'unreadable' %}<p>Your books are protected with a <strong>book password</strong>. Normally this computer remembers it for you. <strong>This time the key saved on this computer can’t be read.</strong> That usually happens after the operating system is reinstalled or the system keyring is reset.</p>
+{% elif reason == 'keyring' %}<p>Your books are protected with a <strong>book password</strong>. Normally this computer remembers it for you. <strong>This computer’s keyring isn’t available right now</strong>, so the saved key can’t be used. The saved key is kept; nothing was changed.</p>
+{% elif reason == 'ask' %}<p>Your books are protected with a <strong>book password</strong>. <strong>You’ve set FreedomBooks to ask for the book password each time it opens.</strong></p>
+{% elif reason == 'locked' %}<p>Your books are protected with a <strong>book password</strong>. <strong>You locked FreedomBooks.</strong></p>
+{% elif reason == 'idle' %}<p>Your books are protected with a <strong>book password</strong>. <strong>FreedomBooks locked itself after a period of inactivity</strong>, or when the computer went to sleep or its screen was locked.</p>
+{% else %}<p>Your books are protected with a <strong>book password</strong>. Enter it to open them.</p>{% endif %}
+{% if book %}<p class="gate-file">{% if book.copy %}<strong>Restored copy “{{ book.name }}”</strong>, not your main books.<br>{% endif %}Book file: <code>{{ book.shown }}</code>{% if book.changed %} · last changed {{ book.changed }}{% endif %}</p>{% endif %}
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
+<form method="post" data-gate="unlock" novalidate>
+<p><label for="id_password">Book password or recovery key</label><input type="password" name="password" required id="id_password" autocomplete="current-password" aria-describedby="password-help" autofocus></p>
+<p class="help" id="password-help"><strong>Not your sign-in password.</strong> This is the password you chose for Book protection, or the recovery key from your Emergency Kit (it looks like <code>XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX</code>).</p>
+<button>Unlock books</button></form>
+<p class="gate-next">After this you’ll sign in with your <strong>user name</strong> and password as usual.{% if reason == 'missing' or reason == 'unreadable' %} FreedomBooks will save the key on this computer again, so you shouldn’t see this screen next time.{% elif reason == 'keyring' %} When the keyring is available again, FreedomBooks opens your books by itself.{% endif %}</p>
+<details class="gate-more"><summary>I don’t have the book password or recovery key</summary>
+<p>Without one of them these books can’t be opened. They are the only keys to the book file, and nobody, including FreedomBooks, can reset them. Your user name and sign-in password don’t open the file.</p>
+<p>If you have a backup and the book password or recovery key that was in use when it was made, restore it below. Otherwise, <a href="{{ issue_url }}">report a problem</a> and describe what happened.</p></details>
+{% endif %}
+{% if errors and mode == 'choose' %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
+{% if other_books or mode == 'choose' %}<details class="gate-more"{% if mode == 'choose' %} open{% endif %}><summary>{% if mode == 'choose' %}Books on this computer{% else %}Open other books on this computer{% endif %}</summary>
+<ul class="gate-books">{% for b in books %}<li><div><strong>{{ b.label }}</strong><br><code>{{ b.shown }}</code>{% if b.changed %} · last changed {{ b.changed }}{% endif %}</div>{% if b.current and mode != 'choose' %}<span class="gate-tag">Shown above</span>{% else %}<form method="post" data-gate="choose"><input type="hidden" name="path" value="{{ b.path }}"><button class="secondary">Open these</button></form>{% endif %}</li>{% endfor %}</ul>
+<p class="help">The books you choose ask for their own book password (books with the built-in key need none) and, unless they are your main books, open as a copy. While a copy is open you can choose to use it as your books from then on.</p></details>{% endif %}
+<details class="gate-more"><summary>Restore a backup instead</summary>
+<p>Choose a FreedomBooks backup file (.fbbackup). It is restored as a separate copy beside your books; nothing is overwritten. Enter the book password or recovery key that was in use when the backup was made. Backups of books with the built-in key need neither.</p>
+<form method="post" data-gate="restore"><p><label for="id_restore_name">Name for the restored copy</label><input name="name" id="id_restore_name" value="Recovered books" maxlength="60" required></p><p><label for="id_restore_secret">Book password or recovery key, if protected</label><input type="password" name="secret" id="id_restore_secret" autocomplete="off"></p><button class="secondary">Choose a backup to restore…</button></form></details>
+{% endif %}
+</div></main>
+<footer>FreedomBooks {{ version }}</footer></body></html>

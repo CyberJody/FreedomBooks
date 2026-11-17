@@ -549,7 +549,9 @@ struct Line {
 
 /// Every posted line of the company through `end` (`posted_lines` + `_within`), with the cash-basis exclusion
 /// (`cash_excluded()`: a deferred document's journal, or the A/R / A/P control line of a settlement journal).
-fn posted_lines(tx: &(impl Query + ?Sized), company: CompanyId, end: NaiveDate) -> FbResult<Vec<Line>> {
+/// `start` bounds the read from below for callers that need only one period (the accrual period P&L); the
+/// reports pass None and read every line through `end`.
+fn posted_lines(tx: &(impl Query + ?Sized), company: CompanyId, start: Option<NaiveDate>, end: NaiveDate) -> FbResult<Vec<Line>> {
     let mut stmt = tx.prepare(
         "SELECT l.id, l.account_id, l.debit, l.credit, l.description, l.name, l.position, j.id, j.number, j.date, j.memo,
                 j.entry_number, j.source_id, j.reversal_of_id IS NOT NULL,
@@ -563,11 +565,11 @@ fn posted_lines(tx: &(impl Query + ?Sized), company: CompanyId, end: NaiveDate) 
                                               WHERE d.identity_id = j.source_id AND d.receivables_id = l.account_id))
          FROM ledger_journalline l JOIN ledger_journal j ON j.id = l.journal_id JOIN ledger_account a ON a.id = l.account_id
          LEFT JOIN documents_documentidentity s ON s.id = j.source_id
-         WHERE j.company_id = ?1 AND a.company_id = ?1 AND j.status = 'POSTED' AND j.date <= ?2
+         WHERE j.company_id = ?1 AND a.company_id = ?1 AND j.status = 'POSTED' AND j.date <= ?2 AND (?3 IS NULL OR j.date >= ?3)
          ORDER BY j.date, j.number, l.position, l.id",
     )?;
     let rows = stmt
-        .query_map(params![company.to_db(), end.to_string()], |r| {
+        .query_map(params![company.to_db(), end.to_string(), start.map(|d| d.to_string())], |r| {
             Ok((
                 r.get::<_, String>(0)?,
                 r.get::<_, String>(1)?,
@@ -623,7 +625,7 @@ pub struct Books {
 
 impl Books {
     pub fn load(tx: &(impl Query + ?Sized), company: CompanyId, basis: Basis, end: NaiveDate) -> FbResult<Books> {
-        let lines = posted_lines(tx, company, end)?;
+        let lines = posted_lines(tx, company, None, end)?;
         let (mut events, mut docs, mut unconverted) = (Vec::new(), HashMap::new(), 0);
         if basis == Basis::Cash {
             events = self::events(tx, company, end)?;
@@ -820,6 +822,16 @@ pub fn profit_and_loss(book: &mut Book, actor: UserId, company: CompanyId, basis
         let books = Books::load(tx, company, basis, end)?;
         pl_from(&books, &sorted_accounts(tx, company)?, start, end)
     })
+}
+
+/// Accrual profit and loss for one period, reading only that period's posted lines through the journal date
+/// index. Accrual nets depend on nothing outside the period, so this equals
+/// `profit_and_loss(Accrual, Some(start), end)` without loading the company's whole history (Home uses it
+/// for "This month"). The caller checks company access.
+pub fn accrual_period(tx: &(impl Query + ?Sized), company: CompanyId, start: NaiveDate, end: NaiveDate) -> FbResult<ProfitAndLoss> {
+    let lines = posted_lines(tx, company, Some(start), end)?;
+    let books = Books { basis: Basis::Accrual, end, events: Vec::new(), documents: HashMap::new(), unconverted: 0, lines };
+    pl_from(&books, &sorted_accounts(tx, company)?, Some(start), end)
 }
 
 #[derive(Clone, Debug, PartialEq)]

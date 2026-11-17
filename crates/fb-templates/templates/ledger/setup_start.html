@@ -1,6 +1,7 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/setup.css') }}">{% endblock %}{% block content %}
-<div class="heading"><div><p class="eyebrow">{{ company.name }} · {{ company.currency }}</p><h1>Finish setting up</h1><p>A few things to set before you send invoices and pay bills. Do them in any order. You can come back later.</p></div></div>
+<div class="heading"><div><h1>Finish setting up</h1><p>A few things to set before you send invoices and pay bills. Do them in any order. You can come back later.</p></div></div>
 {% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+{% if tax_setup_needed %}{% include 'salestax/setup_fields.html' %}{% endif %}
 <ul class="setup-list">
 {% for item in items %}
 <li>

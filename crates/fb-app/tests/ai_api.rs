@@ -22,6 +22,28 @@ fn bad(app: &mut App, token: &str, name: &str, args: Value) {
 }
 
 #[test]
+fn trusted_approval_context_requires_named_signin_and_does_not_create_agent_authority() {
+    let mut f=Fixture::new();
+    let before=f.app.ai.generation();
+    let context=f.app.ai_context(f.company).unwrap();
+    assert_eq!(context["company_id"],f.company.to_db());
+    assert_eq!(context["company_name"],"Synthetic local AI");
+    assert_eq!(context["actor_name"],"Synthetic operator");
+    assert_eq!(context["role"],"administrator");
+    assert_eq!(context["book_path"],f.path.canonicalize().unwrap().to_str().unwrap());
+    assert_eq!(context["restored"],false);
+    assert_eq!(f.app.ai.generation(),before);
+    assert_eq!(f.app.ai_connections(),json!([]));
+    f.app.sign_out();
+    assert!(f.app.ai_context(f.company).is_err());
+    f.app.sign_in("Synthetic operator",ai_support::PASSWORD).unwrap();
+    let next=f.app.ai_context(f.company).unwrap();
+    assert_eq!(next["actor_id"],context["actor_id"]);
+    assert_ne!(next["session_generation"],context["session_generation"]);
+    assert_eq!(f.app.ai_connections(),json!([]));
+}
+
+#[test]
 fn directory_api_round_trips_multiline_notes_and_keeps_control_rejections_atomic() {
     let mut f = Fixture::new();
     let grant = f.app.ai_grant(f.company, "Synthetic notes agent", Permission::AccountingWrite).unwrap();
@@ -57,7 +79,7 @@ fn catalogue_is_exact_scoped_and_dispatches_invoice_feed_import_and_reports() {
         .iter()
         .map(|v| v["name"].as_str().unwrap())
         .collect::<Vec<_>>();
-    assert_eq!(names.len(), 91, "{names:?}");
+    assert_eq!(names.len(), 98, "{names:?}");
     for name in [
         "command_SaveInvoice",
         "command_PostInvoice",
@@ -66,6 +88,9 @@ fn catalogue_is_exact_scoped_and_dispatches_invoice_feed_import_and_reports() {
         "app_ImportPreview",
         "app_ImportApply",
         "app_ReviewInvoice",
+        "app_TaxSettings",
+        "app_InvoiceSettings",
+        "command_SaveCompanyDetails",
     ] {
         assert!(names.contains(&name), "{name}");
     }
@@ -254,6 +279,9 @@ fn permission_scope_duplicate_keys_actor_switch_lock_and_revocation_fail_closed(
         .ai_grant(f.company, "Read agent", Permission::ReadOnly)
         .unwrap();
     let t = g["token"].as_str().unwrap();
+    let settings=call(&mut f.app,t,"app_TaxSettings",json!({}));
+    assert_eq!(settings["charge_tax"],false);
+    assert_eq!(settings["revision"],0);
     assert!(
         !f.app.ai_catalogue(t).unwrap()["operations"]
             .as_array()
@@ -637,4 +665,85 @@ fn feed_rows_still_pending_at_the_bank_cannot_post() {
         json!({"transaction_id":staged[0],"category":{"kind":"JOURNAL","account_id":f.expense}}),
     );
     assert_eq!(f.count("ledger_journal"), 0);
+}
+
+#[test]
+fn historical_invoice_api_keeps_adjustments_and_binds_preview_to_writer_connection() {
+    let mut f=Fixture::new();
+    let writer=f.app.ai_grant(f.company,"Synthetic invoice importer",Permission::AccountingWrite).unwrap();let token=writer["token"].as_str().unwrap();
+    let customer=call(&mut f.app,token,"command_SaveCustomer",json!({"display_name":"Imported synthetic customer"}))["data"]["id"].clone();
+    let id=uuid::Uuid::new_v4().to_string();
+    let rows=json!([{"invoice":{"request_key":id,"customer_id":customer,"date":"2026-10-01","due_date":"2026-10-02","memo":"Original memo","tax_mode":"NONE","tax_rate":"0","lines":[{"description":"Service","quantity":"1","rate":"10","taxable":false,"income_account_id":f.income},{"line_kind":"DISCOUNT","description":"Credit","quantity":"1","rate":"2","taxable":false,"income_account_id":f.income}]},"source":{"id":id,"number":42,"display_number":"SOURCE-42","status":"draft","issue_date":"2026-10-01","due_date":"2026-10-02","created_at":"2026-10-01T10:00:00Z","updated_at":"2026-10-01T10:00:00Z","notes":"Original memo","bill_to":"Original billing address","tax_rate":0,"tax_amount":0,"subtotal":8,"gc_discount":0,"total":8,"amount_paid":0,"lines":[{"description":"Service","quantity":1,"unit_price":10,"amount":10,"taxable":0},{"description":"Credit","quantity":1,"unit_price":-2,"amount":-2,"taxable":0}],"payments":[]}}]);
+    let before=f.count("sales_invoice");let audits=f.count("ledger_auditevent");
+    let preview=call(&mut f.app,token,"app_InvoiceImportPreview",json!({"invoices":rows}));
+    assert_eq!(f.count("sales_invoice"),before);assert_eq!(f.count("ledger_auditevent"),audits);
+    let reader=f.app.ai_grant(f.company,"Synthetic reader",Permission::ReadOnly).unwrap();
+    bad(&mut f.app,reader["token"].as_str().unwrap(),"app_InvoiceImportApply",json!({"preview_token":preview["preview_token"]}));
+    let second=f.app.ai_grant(f.company,"Other writer",Permission::AccountingWrite).unwrap();
+    bad(&mut f.app,second["token"].as_str().unwrap(),"app_InvoiceImportApply",json!({"preview_token":preview["preview_token"]}));
+    let saved=call(&mut f.app,token,"app_InvoiceImportApply",json!({"preview_token":preview["preview_token"]}));
+    assert_eq!(saved["invoices"][0]["total"],"8.00");assert_eq!(f.count("sales_invoice"),before+1);
+    let invoice=call(&mut f.app,token,"app_Invoice",json!({"invoice_id":saved["invoices"][0]["invoice_id"]}));
+    assert_eq!(invoice["lines"][1]["line_kind"],"DISCOUNT");
+    assert_eq!(call(&mut f.app,token,"app_InvoiceImportApply",json!({"preview_token":preview["preview_token"]}))["already_imported"],true);
+    for route in [format!("/c/{}/invoices/?q=SOURCE-42",f.company),format!("/c/{}/invoices/{}/",f.company,saved["invoices"][0]["invoice_id"].as_str().unwrap()),format!("/c/{}/invoices/{}/print/",f.company,saved["invoices"][0]["invoice_id"].as_str().unwrap())] {
+        let page=fb_app::screens::render(&mut f.app,&route).unwrap();
+        assert!(page.html.contains("SOURCE-42"),"original number missing from {route}");
+    }
+    f.app.ai_revoke(writer["id"].as_str().unwrap());
+    bad(&mut f.app,token,"app_InvoiceImportApply",json!({"preview_token":preview["preview_token"]}));
+}
+
+#[test]
+fn company_presentation_api_is_scoped_atomic_and_does_not_expose_connections() {
+    let mut f=Fixture::new();let grant=f.app.ai_grant(f.company,"Presentation migration",Permission::AccountingWrite).unwrap();let t=grant["token"].as_str().unwrap();
+    let before=call(&mut f.app,t,"app_InvoiceSettings",json!({}));
+    assert_eq!(before["preferences"]["revision"],0);
+    assert_eq!(before["google_connected"],false);assert_eq!(before["stripe_connected"],false);
+    let mut preferences=before["preferences"]["settings"].clone();preferences["expected_revision"]=json!(0);preferences["zelle_enabled"]=json!(true);preferences["zelle_recipient"]=json!("seller@example.test");
+    call(&mut f.app,t,"command_SaveCompanyDetails",json!({"name":"Synthetic presentation","currency":"USD","values":{"email":"seller@example.test","phone":"555-555-0100","invoice_preferences":preferences}}));
+    let saved=call(&mut f.app,t,"app_InvoiceSettings",json!({}));assert_eq!(saved["details"]["email"],"seller@example.test");assert_eq!(saved["preferences"]["settings"]["zelle_enabled"],true);
+    let snapshot=fb_db::test_support::snapshot(f.app.open_mut().unwrap().book.connection()).unwrap();
+    bad(&mut f.app,t,"command_SaveCompanyDetails",json!({"name":"Stale change","currency":"USD","values":{"email":"other@example.test","invoice_preferences":preferences}}));
+    assert_eq!(fb_db::test_support::snapshot(f.app.open_mut().unwrap().book.connection()).unwrap(),snapshot);
+    bad(&mut f.app,t,"app_InvoiceSettings",json!({"company_id":f.other.to_db()}));
+}
+
+#[test]
+fn agents_list_job_tickets_and_record_time_only_with_accounting_write() {
+    let mut f = Fixture::new();
+    let write = f.app.ai_grant(f.company, "Synthetic agent", Permission::AccountingWrite).unwrap();
+    let token = write["token"].as_str().unwrap().to_owned();
+    let customer = call(&mut f.app, &token, "command_SaveCustomer", json!({"display_name":"Harbor Lane Tavern"}))["data"]["id"].as_str().unwrap().to_owned();
+    let item = call(&mut f.app, &token, "command_SaveItem", json!({"code":"On-Site Support","description":"","kind":"SERVICE","sale_rate":"125.00","income_account_id":f.income}))["data"]["id"].as_str().unwrap().to_owned();
+    // Tickets are opened on the desktop; agents list them and record time.
+    let ticket = {
+        let o = f.app.open_mut().unwrap();
+        fb_core::jobs::save_ticket(&mut o.book, o.owner, f.company, &json!({"request_key":uuid::Uuid::new_v4().to_string(),"customer_id":customer,"title":"Network outage","opened_date":"2026-11-01"})).unwrap()
+    };
+    let listed = call(&mut f.app, &token, "app_JobTickets", json!({"status":"OPEN"}));
+    assert_eq!(listed[0]["number"], "JT-000001", "{listed}");
+    let key = uuid::Uuid::new_v4().to_string();
+    let values = json!({"request_key":key,"customer_id":customer,"ticket_id":ticket["id"],"item_id":item,"date":"2026-11-03","hours":"3.5h","notes":"Agent-recorded"});
+    let saved = call(&mut f.app, &token, "command_SaveTimeEntry", json!({"values":values}));
+    assert_eq!((saved["data"]["hours"].as_str(), saved["data"]["amount"].as_str()), (Some("3.50"), Some("437.50")), "{saved}");
+    // A retry with the same request key returns the same entry.
+    let again = call(&mut f.app, &token, "command_SaveTimeEntry", json!({"values":values}));
+    assert_eq!(again["data"]["id"], saved["data"]["id"]);
+    let listed = call(&mut f.app, &token, "app_JobTickets", json!({"customer_id":customer}));
+    assert_eq!(listed[0]["unbilled"], "437.50");
+    // Each time event carries its agent provenance in the same transaction.
+    let provenance: i64 = f.app.open_mut().unwrap().book.read(|q| q.query_row(
+        "SELECT count(*) FROM ledger_auditevent p JOIN ledger_auditevent e ON p.target='audit:'||e.id WHERE p.action='agent.provenance' AND e.action='time_entry.created'", [], |r| r.get(0))).unwrap();
+    assert_eq!(provenance, 1);
+    // Read-only connections list tickets but cannot record time; the company is fixed by the host.
+    let read = f.app.ai_grant(f.company, "Synthetic reader", Permission::ReadOnly).unwrap();
+    let reader = read["token"].as_str().unwrap().to_owned();
+    let names = f.app.ai_catalogue(&reader).unwrap()["operations"].as_array().unwrap().iter().map(|o| o["name"].as_str().unwrap().to_owned()).collect::<Vec<_>>();
+    assert!(names.contains(&"app_JobTickets".into()) && !names.contains(&"command_SaveTimeEntry".into()));
+    assert_eq!(names.len(), 26, "read-only catalogue: 4 queries and 22 read adapters, including app_JobTickets");
+    let mut fresh = values.clone();
+    fresh["request_key"] = json!(uuid::Uuid::new_v4().to_string());
+    bad(&mut f.app, &reader, "command_SaveTimeEntry", json!({"values":fresh}));
+    bad(&mut f.app, &token, "command_SaveTimeEntry", json!({"company_id":f.company.to_db(),"values":fresh}));
 }

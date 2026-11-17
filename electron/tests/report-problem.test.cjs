@@ -38,9 +38,9 @@ test('only the exact issue URL is allowed to open externally', () => {
 test('main process opens it via shell.openExternal behind the guard; renderer has no page API', () => {
   const main = read('main/main.cjs');
   assert.match(main, /'app\.openExternal': async \(payload\) => \{\n {4}await shell\.openExternal\(guards\.external\(payload\)\);/);
-  // Two call sites: this link, and the ChatGPT sign-in (signIn), which a release build refuses first.
+  // Two call sites: this link and an enabled provider's validated sign-in URL.
   assert.equal(main.match(/openExternal\(/g).length, 2, 'two call sites');
-  assert.match(main, /if \(outcome\.outcome === 'external'\) \{\n {6}if \(!PLUGINS\) throw new Error\('Refused: link not allowed\.'\);\n(?: {6}\/\/[^\n]*\n)? {6}const url = guards\.signIn\(/);
+  assert.match(main, /if \(outcome\.outcome === 'external'\) \{\n {6}if \(!PLUGINS && !INVOICE_DELIVERY\) throw new Error\('Refused: link not allowed\.'\);\n(?: {6}\/\/[^\n]*\n)? {6}const url = guards\.signIn\(/);
   assert.match(main, /await shell\.openExternal\(url\);/);
   // The window still refuses every navigation and new window outside fb://app.
   const guardText = read('main/guards.cjs');

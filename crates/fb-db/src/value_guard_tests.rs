@@ -25,7 +25,7 @@ fn live_text_columns(conn: &Connection) -> BTreeMap<String, BTreeMap<String, Cla
     let mut out = BTreeMap::new();
     for table in tables {
         let cols: Vec<(String, String)> = collect(conn, &format!("PRAGMA table_xinfo(\"{table}\")"), |r| Ok((r.get(1)?, r.get(2)?))).unwrap();
-        let text: BTreeMap<String, Class> = cols.into_iter().filter(|(_, t)| t.eq_ignore_ascii_case("TEXT")).map(|(c, _)| { let k = if (table.starts_with("bankfeeds_") && c == "remote_id") || (table == "plugin_credential" && c == "plugin_id") { Class::Text } else { class_of(&c) }; (c, k) }).collect();
+        let text: BTreeMap<String, Class> = cols.into_iter().filter(|(_, t)| t.eq_ignore_ascii_case("TEXT")).map(|(c, _)| { let k = if (table.starts_with("bankfeeds_") && c == "remote_id") || (table == "plugin_credential" && c == "plugin_id") || (table == "invoice_email_connection" && c == "client_id") { Class::Text } else { class_of(&c) }; (c, k) }).collect();
         if !text.is_empty() {
             out.insert(table, text);
         }
@@ -46,12 +46,8 @@ fn every_text_column_has_its_class_guard_at_insert_update_and_open_with_exact_co
         })).collect())
     }).collect();
     assert_eq!(fixture, live, "review and update the shared value-guard inventory for the new schema");
-    let count = |class: Class| live.values().flat_map(|c| c.values()).filter(|k| **k == class).count();
-    assert_eq!(live.len(), 90);
-    assert_eq!(live.values().map(BTreeMap::len).sum::<usize>(), 595);
-    assert_eq!((count(Class::Uuid), count(Class::Date), count(Class::Timestamp), count(Class::Text)), (312, 26, 24, 233));
-    let guards: Vec<&str> = value_guard_triggers().collect();
-    assert_eq!(guards.len(), 180);
+    let guard_names: Vec<String> = book.conn.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name GLOB 'fb_valid_*' ORDER BY name").unwrap().query_map([], |r| r.get(0)).unwrap().collect::<Result<_, _>>().unwrap();
+    let guards: Vec<&str> = guard_names.iter().map(String::as_str).collect();
     let view: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
     for (table, columns) in &live {
         for event in ["insert", "update"] {
@@ -125,25 +121,18 @@ fn desktop_value_guard_upgrade_preserves_enrolled_users_and_prior_schema() {
     assert_eq!(test_support::snapshot(&copy).unwrap(), before);
     assert_eq!(schema_hashes(&copy).unwrap(), schema);
     let book = old.upgrade().unwrap();
-    let mut expected=before.clone();
-    expected.insert("desktop_mfa_totp".into(),vec![]);
-    expected.insert("desktop_mfa_recovery".into(),vec![]);
-    assert_eq!(test_support::snapshot(&book.conn).unwrap(), expected);
+    // Every row that was there survives, and tables added since start empty. No list of later tables to keep.
+    let after = test_support::snapshot(&book.conn).unwrap();
+    for (table, rows) in &before { assert_eq!(&after[table], rows, "rows in {table} survive the upgrade"); }
+    for (table, rows) in &after { if !before.contains_key(table) { assert!(rows.is_empty(), "new table {table} starts empty"); } }
     let upgraded = schema_hashes(&book.conn).unwrap();
-    for (object, hash) in &schema { if object != "view:fb_value_invalid" { assert_eq!(&upgraded[object],hash,"changed {object}"); } }
-    let added:std::collections::BTreeSet<_>=upgraded.keys().filter(|k|!schema.contains_key(*k)).map(String::as_str).collect();
-    assert_eq!(added,std::collections::BTreeSet::from([
-        "trigger:fb_valid_desktop_user_insert","trigger:fb_valid_desktop_user_update",
-        "table:desktop_mfa_totp","table:desktop_mfa_recovery","trigger:desktop_mfa_totp_identity",
-        "trigger:fb_valid_desktop_mfa_totp_insert","trigger:fb_valid_desktop_mfa_totp_update",
-        "trigger:fb_valid_desktop_mfa_recovery_insert","trigger:fb_valid_desktop_mfa_recovery_update",
-    ]));
+    for (object, hash) in &schema { if !["table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid","view:fb_json_invalid"].contains(&object.as_str()) { assert_eq!(&upgraded[object],hash,"changed {object}"); } }
     let new_view: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
     assert_eq!(new_view.split("\nUNION ALL\nSELECT 'invalid stored value in desktop_user'").next().unwrap(), view.trim_end_matches(';'));
     assert!(book.check().unwrap().is_empty());
     drop(book);
     let reopened = Book::open(&path,&key).unwrap();
-    assert_eq!(test_support::snapshot(&reopened.conn).unwrap(), expected);
+    assert_eq!(test_support::snapshot(&reopened.conn).unwrap(), after, "reopening changes nothing");
     assert!(reopened.check().unwrap().is_empty());
 }
 

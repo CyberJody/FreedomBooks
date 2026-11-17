@@ -16,6 +16,8 @@ pub struct Shell {
     /// Plugin surfaces shown (dev/test builds); release builds hide them.
     pub plugins: bool,
     pub bankfeeds: bool,
+    /// Command token for the title bar's Sign out (empty before sign-in).
+    pub signout_token: String,
 }
 
 /// The shell banner the desktop app shows (the frozen app's `ALPHA_BANNER`).
@@ -95,14 +97,6 @@ pub struct AccountVm {
 }
 
 #[derive(Clone, Debug, Serialize)]
-pub struct HomeVm {
-    #[serde(flatten)]
-    pub shell: Shell,
-    pub banks: Vec<AccountVm>,
-    pub more_banks: bool,
-}
-
-#[derive(Clone, Debug, Serialize)]
 pub struct AccountsVm {
     #[serde(flatten)]
     pub shell: Shell,
@@ -174,6 +168,7 @@ pub struct InvoiceRowVm {
     pub date: String,
     pub due_date: String,
     pub payment_state: String,
+    pub overdue: bool,
     pub total: String,
     pub currency: String,
     pub outstanding: Option<String>,

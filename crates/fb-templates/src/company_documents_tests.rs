@@ -11,7 +11,7 @@ fn company_document_empty_fields_are_byte_identical_to_the_prior_print_template(
             include_str!("../tests/fixtures/company_document_before.html"),
         )
         .unwrap();
-    for kind in ["invoice", "estimate", "sales_receipt"] {
+    for kind in ["estimate", "sales_receipt"] {
         for mark in ["", "DRAFT", "VOID", "Earlier version"] {
             let mut vm = fixture();
             vm["doc"]["kind"] = json!(kind);
@@ -32,6 +32,7 @@ fn company_document_empty_fields_are_byte_identical_to_the_prior_print_template(
 fn company_document_filled_fields_escape_plain_text_and_omit_blank_labels() {
     let screens = Screens::new();
     let mut vm = fixture();
+    vm["doc"]["kind"] = json!("estimate");
     vm["doc"]["business"] = json!({"street1":"<street> & company","tax_id":"<tax>","payment_instructions":"Pay <check>\nThank you & co."});
     vm["doc"]["company_logo_url"] = json!("/c/synthetic/document-logo/");
     let html = screens.render("sales/print/document.html", &vm).unwrap();

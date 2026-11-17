@@ -1,0 +1,17 @@
+{% extends 'jobs/base.html' %}
+{% block crumb %}{% if entry %}{{ crumb('Time entry') }}{% else %}{{ crumb('Enter time') }}{% endif %}{% endblock %}
+{% block jobs_content %}
+<div class="heading"><h1>{% if entry %}Time entry{% else %}Enter time{% endif %}</h1></div>
+{% if entry and entry.billed %}<p class="notice" role="status">This time is on invoice <a href="{{ url('invoices:detail', company.pk, entry.invoice_id) }}">{{ entry.invoice_number }}</a>. Remove its line from the draft invoice, or void that invoice, to change or move it.</p>
+<dl class="jobs-facts"><dt>Customer</dt><dd>{{ entry.customer_name }}</dd><dt>Ticket</dt><dd>{{ entry.ticket_number or '—' }}</dd><dt>Service</dt><dd>{{ entry.item_code }}</dd><dt>Date</dt><dd>{{ entry.date|date('Y-m-d') }}</dd><dt>Hours</dt><dd>{{ entry.hours }}</dd><dt>Rate</dt><dd>{{ entry.rate|money }}</dd><dt>Amount</dt><dd>{{ entry.amount|money }}</dd><dt>Worked by</dt><dd>{{ entry.worker_name }}</dd>{% if entry.notes %}<dt>Notes</dt><dd class="long-text">{{ entry.notes|linebreaksbr }}</dd>{% endif %}</dl>
+{% elif not can_write %}<p class="notice">Read-only access: you can view time but not change it.</p>
+{% else %}
+<form method="post" id="time-form" class="jobs-form" novalidate>{{ csrf_token|safe }}{{ form.non_field_errors|safe }}{% for hidden in form.hidden_fields %}{{ hidden.widget|safe }}{% endfor %}
+{% for name in ['customer','ticket','item','date','hours','rate','worker','notes'] %}<div class="field field-{{ name }}">{{ form.f[name].label_tag|safe }}{{ form.f[name].widget|safe }}{{ form.f[name].errors|safe }}{% if form.f[name].help_text %}<p class="helptext" id="{{ form.f[name].id_for_label }}_helptext">{{ form.f[name].help_text }}</p>{% endif %}</div>{% endfor %}
+<div class="field field-billable">{{ form.f.billable.widget|safe }}{{ form.f.billable.label_tag|safe }}</div>
+<p class="helptext">Type hours as 3.5, 3.5h, 3:30 or 90m. Time is a work record: nothing posts to your books until it is invoiced.</p>
+<p class="form-actions"><button type="submit" name="action" value="save">Save time</button>{% if not entry %} <button type="submit" name="action" value="more" class="secondary">Save and enter more</button>{% endif %}</p>
+</form>
+{% if delete_token %}<form method="post" class="jobs-delete">{{ delete_token|safe }}<input type="hidden" name="action" value="delete"><input type="hidden" name="expected_revision" value="{{ entry.revision }}"><button type="submit" class="secondary">Remove this time</button></form>{% endif %}
+{% endif %}
+{% endblock %}

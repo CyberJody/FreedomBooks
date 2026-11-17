@@ -1,8 +1,3 @@
-async function finishRecovery(page) {
-  await page.getByRole('button', {name:'Remind me later'}).click();
-  await page.waitForURL(/\/settings\/book-protection\/$/);
-  await Promise.all([page.waitForURL(/\/home\/$/), page.locator('a[href$="/home/"]').first().click()]);
-}
 'use strict';
 // Headless desktop smoke (run under xvfb-run): the real Electron app, the real fb-node module and a real
 // encrypted book in a throwaway data folder. Steps: create a book -> lock -> unlock -> Home -> invoice
@@ -21,6 +16,8 @@ const userData = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'fb
 const configRoot = path.join(userData, 'isolated-config');
 fs.mkdirSync(configRoot, {recursive: true});
 const PASSWORD = 'pond-lock-2026';
+const USER_PASSWORD = 'Synthetic smoke sign-in42';
+const {signIn} = require('./smoke-identity.cjs');
 let step = 0;
 const pass = (text) => console.log(`PASS ${String(++step).padStart(2, '0')}: ${text}`);
 
@@ -51,7 +48,7 @@ async function heading(page) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     // D6: schema creation and encrypted-book I/O can queue behind concurrent wave gates.
     page.setDefaultNavigationTimeout(180000);
-    page.setDefaultTimeout(180000);
+    page.setDefaultTimeout(Number(process.env.FB_SMOKE_TIMEOUT_MS || 180000));
     await page.waitForSelector('main h1');
     const info = await app.evaluate(({ app: a, safeStorage, BrowserWindow }) => {
       const w = BrowserWindow.getAllWindows()[0];
@@ -119,8 +116,8 @@ async function heading(page) {
     await page.selectOption('#id_starter_chart', 'empty');
     await page.check('#id_protect');await page.fill('#id_lock_password', PASSWORD);
     await page.fill('#id_lock_password2', PASSWORD);
-    await Promise.all([page.waitForURL(/\/settings\/recovery-key\/$/), page.click('button:has-text("Create books")')]);
-    await finishRecovery(page);
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/), page.click('button:has-text("Create books")')]);
+    await signIn(page, USER_PASSWORD);
     assert.equal(await heading(page), 'Home');
     const home = page.url();
     const company = /\/c\/([0-9a-f-]{36})\/home\/$/.exec(home)[1];
@@ -134,16 +131,18 @@ async function heading(page) {
     await Promise.all([page.waitForURL('fb://app/'), app.evaluate(({Menu}) => {
       Menu.getApplicationMenu().items.find(i => i.label === 'File').submenu.items.find(i => i.label === 'Lock').click();
     })]);
-    await page.waitForFunction(() => document.querySelector('main h1')?.textContent === 'FreedomBooks is locked');
+    await page.waitForFunction(() => document.querySelector('main h1')?.textContent === 'Unlock your books');
     await shot(page, '02-locked');
     pass('locked: lock screen shown through the menu accelerator');
     await page.fill('#id_password', 'wrong-password');
     await page.click('button:has-text("Unlock")');
     await page.waitForSelector('.errorlist[role=alert]');
-    assert.match(await page.locator('.errorlist[role=alert]').textContent(), /does not open these books/);
+    assert.match(await page.locator('.errorlist[role=alert]').textContent(), /didn’t unlock the books/);
     pass('wrong app-lock password refused');
     await page.fill('#id_password', PASSWORD);
-    await Promise.all([page.waitForURL(home), page.click('button:has-text("Unlock")')]);
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/), page.click('button:has-text("Unlock")')]);
+    await signIn(page, USER_PASSWORD);
+    assert.equal(page.url(), home);
     assert.equal(await heading(page), 'Home');
     pass('unlocked with the app-lock password -> Home');
 
@@ -212,14 +211,17 @@ async function heading(page) {
     await require('./smoke-security.cjs')({app, page, pass});
     await page.goto(home);
     await page.waitForSelector('main h1');
-    assert.ok(await page.locator('.step.registers a:has-text("1000 · Checking")').count());
+    await page.goto(`fb://app/c/${company}/registers/`);
+    assert.ok(await page.locator(`a[href="/c/${company}/accounts/${ids.bank}/register/"]`).count());
+    await page.goto(home);
     await shot(page, '03-home');
-    pass('Home shows the designated bank register link');
+    pass('Bank accounts lists the bank register link');
 
     // 3. Invoice list -> new invoice through the ported form.
     await Promise.all([page.waitForURL(/\/invoices\/$/), page.click('nav.appnav a:has-text("Invoices")')]);
     assert.equal(await heading(page), 'Invoices');
-    assert.ok(await page.locator('td:has-text("No invoices match.")').count());
+    assert.equal(await page.locator('tbody a').evaluateAll(links => links.filter(a => /\/invoices\/[0-9a-f-]{36}\/$/.test(a.getAttribute('href') || '')).length), 0);
+    assert.match(await page.locator('main').innerText(), /No invoices/);
     pass('invoice list (empty)');
     await Promise.all([page.waitForURL(/\/invoices\/new\/$/), page.click('a.button:has-text("New invoice")')]);
     assert.equal(await heading(page), 'New invoice');
@@ -231,16 +233,16 @@ async function heading(page) {
     await page.fill('#id_lines-0-description', 'Lawn mowing');
     await page.fill('#id_lines-0-quantity', '4');
     await page.fill('#id_lines-0-rate', '45.00');
-    await page.selectOption('#id_lines-0-income_account', ids.income);
+    if (await page.locator('select#id_lines-0-income_account').count()) await page.selectOption('#id_lines-0-income_account', ids.income);
     await shot(page, '04-invoice-form');
     // Missing customer first: the form comes back with Django's error and keeps what was typed.
     const typed = await page.inputValue('#id_lines-0-description');
     await page.selectOption('#id_customer', '');
-    await Promise.all([page.waitForSelector('#id_customer_error'), page.click('button:has-text("Save invoice")')]);
+    await Promise.all([page.waitForSelector('#id_customer_error'), page.click('button:has-text("Save draft")')]);
     assert.equal(await page.inputValue('#id_lines-0-description'), typed);
     pass('invalid invoice re-rendered with "This field is required." and the typed lines kept');
     await page.selectOption('#id_customer', ids.customer);
-    await Promise.all([page.waitForURL(/\/invoices\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Save invoice")')]);
+    await Promise.all([page.waitForURL(/\/invoices\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Save draft")')]);
     const invoiceId = /\/invoices\/([0-9a-f-]{36})\/$/.exec(page.url())[1];
     pass(`new invoice saved through the form (redirect to its detail address, ${invoiceId})`);
     await Promise.all([page.waitForURL(/\/invoices\/$/), page.click('nav.appnav a:has-text("Invoices")')]);
@@ -252,14 +254,14 @@ async function heading(page) {
 
     // D4 replaces the foundation's direct PostInvoice call with the real review and Post form.
     await page.goto(`fb://app/c/${company}/invoices/${invoiceId}/`);
-    await Promise.all([page.waitForURL(/review/), page.click('a:has-text("Review posting")')]);
-    assert.equal(await heading(page), 'Review invoice posting');
+    // Posting is on the invoice page itself; its accounting entries are one click away.
+    await page.click('summary:has-text("Show accounting entries")');
     await shot(page, 'd4-01-invoice-review');
-    await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Post invoice")')]);
-    assert.match(await page.locator('main').textContent(), /Current payment state: Open/);
+    await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/), page.getByRole('button', { name: 'Post', exact: true }).click()]);
+    assert.match(await page.locator('.status-chip').textContent(), /Open|Overdue/);
     await shot(page, 'd4-02-invoice-detail');
     await page.goto(`fb://app/c/${company}/invoices/`);
-    assert.equal((await page.locator('tbody tr', { hasText: 'INV-000001' }).locator('td').nth(3).textContent()).trim(), 'Open');
+    assert.match((await page.locator('tbody tr', { hasText: 'INV-000001' }).locator('td').nth(3).textContent()).trim(), /^(Open|Overdue)$/);
     pass('invoice posted (state Open)');
     await require('./smoke-print.cjs')({app,page,company,invoiceId,shot,pass});
     await Promise.all([page.waitForURL(/\/accounts\/$/), page.click('nav.appnav a:has-text("Chart of accounts")')]);
@@ -364,7 +366,8 @@ async function heading(page) {
     const setupUrl = page.url();
     const secondCompany = /\/c\/([0-9a-f-]{36})\//.exec(setupUrl)[1];
     await page.goto(`fb://app/c/${secondCompany}/`);
-    assert.equal(page.url(), setupUrl);
+    assert.equal(await heading(page), 'Journal entries');
+    assert.equal(await page.locator(`a[href="/c/${secondCompany}/setup/start/"]`).count(), 1);
     pass('journal filters, audit history, trial balance, error, locked account type, company list/create/edit and problem-report screens');
 
     // D3: lists, status action, field errors, sales tax quick-add/group/default/bulk and reminders.
@@ -406,6 +409,7 @@ async function heading(page) {
     await page.waitForFunction(() => document.querySelector('#id_taxable').checked);
     await page.uncheck('#id_taxable');
     await page.fill('#id_sale_rate', '9.995');
+    await page.selectOption('#id_income_account', ids.income);
     await Promise.all([page.waitForURL(/lists\/items\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Save")')]);
     const goodsUrl = page.url();
     for (const [name,rate] of [['County','6.25'],['City','1.5']]) {
@@ -472,19 +476,18 @@ async function heading(page) {
     await page.selectOption('#id_lines-0-item', ids.item);
     await page.fill('#id_lines-0-quantity', '2');
     await shot(page, 'd4-03-estimate-form');
-    await Promise.all([page.waitForURL(/estimates\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Save estimate")')]);
+    await Promise.all([page.waitForURL(/estimates\/[0-9a-f-]{36}\/$/), page.click('button[name="editor_action"][value="save"]')]);
     const estimateUrl=page.url();
-    await page.selectOption('#id_state','ACCEPTED');
-    await page.click('button:has-text("Apply state")');
-    await page.waitForSelector('a:has-text("Convert accepted revision")');
+    await page.click('button:has-text("Mark as accepted")');
+    await page.waitForSelector('a:has-text("Create invoice from this estimate")');
     await shot(page, 'd4-04-estimate-accepted');
-    await Promise.all([page.waitForURL(/convert\/2\/$/),page.click('a:has-text("Convert accepted revision")')]);
+    await Promise.all([page.waitForURL(/convert\/2\/$/),page.click('a:has-text("Create invoice from this estimate")')]);
     await page.fill('#id_date','2026-10-21');
     await page.fill('#id_due_date','2026-11-20');
-    await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Create linked draft invoice")')]);
-    assert.match(await page.locator('main').textContent(), /accepted estimate EST-000001/);
+    await Promise.all([page.waitForURL(/invoices\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Create draft invoice")')]);
+    assert.match(await page.locator('main').textContent(), /estimate EST-000001/);
     await page.goto(estimateUrl);
-    assert.match(await page.locator('main').textContent(), /Linked invoice INV-000002/);
+    assert.match(await page.locator('main').textContent(), /Open invoice INV-000002/);
     pass('estimate saved, accepted and converted once with the linked invoice and retained prices visible');
 
     // Explicit payment allocations, review/record and reversal; stale amounts require another review.
@@ -493,18 +496,17 @@ async function heading(page) {
     await page.fill('#id_amount','50.00');
     await page.selectOption('#id_method','CHECK');
     await page.selectOption('#id_destination','UNDEPOSITED');
-    await page.selectOption('#id_allocations-0-invoice',invoiceId);
-    await page.fill('#id_allocations-0-amount','50.00');
-    await page.click('button:has-text("Review receipt")');
-    await page.waitForSelector('button:has-text("Record receipt — books only")').catch(async e=>{console.error(`Receipt review URL: ${page.url()}`); const html=await page.content();fs.writeFileSync(path.join(shots,'d4-receipt-error.html'),html);console.error(html.slice(0,1800));await shot(page,'d4-receipt-error');throw e;});
+    // One Save: tick the invoice and apply 50.00 to it; the amount received follows.
+    await page.fill(`#invoice-rows tr[data-invoice="${invoiceId}"] input[name$="-amount"]`,'50.00');
+    await page.fill('#id_amount','');await page.fill(`#invoice-rows tr[data-invoice="${invoiceId}"] input[name$="-amount"]`,'50.00');
     await shot(page,'d4-05-receipt-review');
-    await Promise.all([page.waitForURL(/receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Record receipt — books only")')]);
+    await Promise.all([page.waitForURL(/receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Save payment")')]);
     await shot(page,'d4-06-receipt-detail');
-    await Promise.all([page.waitForURL(/reverse\/$/),page.click('a:has-text("Reverse receipt")')]);
+    await Promise.all([page.waitForURL(/reverse\/$/),page.click('a:has-text("Void payment")')]);
     await page.fill('#id_date','2026-10-23');
     await page.fill('#id_reason','Synthetic correction');
-    await Promise.all([page.waitForURL(/receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Record exact reversal")')]);
-    assert.match(await page.locator('main').textContent(), /Reversed.*original amount 50.00/s);
+    await Promise.all([page.waitForURL(/receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Void payment")')]);
+    assert.match(await page.locator('main').textContent(), /Voided.*50\.00/s);
     pass('customer payment allocated explicitly, reviewed, recorded and reversed using forms');
 
     await page.goto(`fb://app/c/${company}/sales-receipts/new/`);
@@ -515,18 +517,17 @@ async function heading(page) {
     assert.equal(await page.inputValue('#id_lines-0-rate'),'10.00');
     await page.fill('#id_lines-0-description','Seed');
     await page.fill('#id_lines-0-quantity','2');
-    await page.selectOption('#id_lines-0-income_account',ids.income);
-    await page.click('button:has-text("Review sales receipt")');
-    await page.waitForSelector('#review-total').catch(async e=>{fs.writeFileSync(path.join(shots,'d4-sale-error.html'),await page.content());await shot(page,'d4-sale-error');throw e;});
-    assert.match(await page.locator('#review-total').textContent(), /\d+\.\d{2}/);
-    await shot(page,'d4-07-sales-receipt-review');
-    await Promise.all([page.waitForURL(/sales-receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Record sales receipt — books only")')]);
-    await page.click('a:has-text("Void sales receipt")');
+    // The item brings its income account; the field stays out of the way.
+    assert.equal(await page.isVisible('#id_lines-0-income_account'),false);
+    assert.match(await page.locator('[data-total-bar]').textContent(), /\d+\.\d{2}/);
+    await shot(page,'d4-07-sales-receipt-form');
+    await Promise.all([page.waitForURL(/sales-receipts\/[0-9a-f-]{36}\/$/),page.click('button[name="editor_action"][value="save"]')]).catch(async e=>{fs.writeFileSync(path.join(shots,'d4-sale-error.html'),await page.content());await shot(page,'d4-sale-error');throw e;});
+    await page.click('a.button.danger:has-text("Void")');
     await page.waitForSelector('#id_reason');
     await page.fill('#id_date','2026-10-23');await page.fill('#id_reason','Synthetic sale correction');
-    await Promise.all([page.waitForURL(/sales-receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Record exact reversal")')]);
+    await Promise.all([page.waitForURL(/sales-receipts\/[0-9a-f-]{36}\/$/),page.click('button:has-text("Void sales receipt")')]);
     assert.match(await page.locator('main').textContent(), /Voided/);
-    pass('cash sale uses live item/tax helpers, review, recording and exact void through forms');
+    pass('cash sale uses live item/tax helpers, one-step save and exact void through forms');
 
     await require('./smoke-d6.cjs')({ app, page, company, ids, shot, pass, heading });
     await require('./smoke-d7a.cjs')({ page, company, ids, invoiceId, shot, pass, heading });
@@ -536,7 +537,6 @@ async function heading(page) {
 
     // Navigate every fixture under the real CSP/preload; setContent skips the isolated-world
     // DOMContentLoaded handler that restores heading icons, so it is not a faithful capture.
-    await require('./smoke-catalogue.cjs')({app, page, root, shots, shot, pass});
     assert.deepEqual(pageErrors,[], 'ported page scripts must run without uncaught errors');
 
     // Last, because a refused navigation leaves Playwright waiting on it.

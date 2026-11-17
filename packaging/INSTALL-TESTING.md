@@ -40,7 +40,7 @@ database server or separate runtime installation is part of the customer path.
   `licenses/electron/LICENSES.chromium.html`, and `THIRD-PARTY-NOTICES.md`.
   A publication build must also contain `licenses/freedombooks/LICENSE`.
 
-These Windows results must be recorded by the lead or Jody. A Linux cross-build,
+These Windows results must be recorded by a maintainer. A Linux cross-build,
 PE inspection, NSIS compilation or fuse readback does not prove any Windows UI,
 DPAPI/keyring, ACL, shortcut, SmartScreen, upgrade or uninstaller behavior.
 

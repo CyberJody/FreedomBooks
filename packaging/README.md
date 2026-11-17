@@ -69,7 +69,7 @@ PowerShell does not expand that final wildcard for Python; pass the actual
 filename (the CI driver discovers it itself). Both native MSVC and cross-builds
 statically link the CRT, avoiding a redistributable prerequisite. The native
 module uses Node-API 8. The Windows CI runner is configured to build it on
-Windows; it cannot pass until the core is portable. No VM is used by this worker.
+Windows; it cannot pass until the core is portable. No VM is used.
 
 Attempted Linux cross-build route (currently blocked; see `WINDOWS-BLOCKERS.md`):
 
@@ -91,7 +91,7 @@ not supported here: napi-build's GNU helper requires `libnode.dll`, which is not
 the Electron runtime. MSVC cross-compilation additionally hits OpenSSL's Windows
 Perl requirement, and the existing core has Unix-only attachment storage that
 needs a Windows backend. The native Windows CI route also waits for that core
-port. The worker's explicit fallback can be reproduced with:
+port. The explicit fallback can be reproduced with:
 
 ```sh
 node packaging/windows/prepare-shell.cjs
@@ -126,13 +126,24 @@ Developer references: [electron-builder prepackaged CLI](https://www.electron.bu
 ## Internal SimpleFIN build
 
 Build `fb-node` with its `simplefin` feature and build `fb-net` without test features.
-Pass the native library as `build({native, netHelper, out, version})` to
-`packaging/package.cjs`, with `netHelper` pointing to that production `fb-net`.
-The packager includes the helper as an executable unpacked resource;
-`verify-tree.cjs` checks it against the declared SimpleFIN capability. Omitting
-`netHelper` keeps the default package offline. AI remains disabled unless the
-separate full `plugins` feature is selected. `FB_SIMPLEFIN=1` also selects the
-SimpleFIN-only native build in `electron/scripts/build-native.cjs`.
+The native build writes `electron/native/build-manifest.json` with its commit,
+feature selection and SHA-256 hashes. Packaging requires a clean committed tree
+and validates that manifest against the native binaries and current commit.
+The helper is automatically included as an executable unpacked resource when the
+manifest declares SimpleFIN; `verify-tree.cjs` checks both hashes and capabilities.
+The desktop AI connector remains independent; the in-app assistant is `plugins`-only.
+`FB_SIMPLEFIN=1` selects the SimpleFIN-only native build and asserts that capability
+at package time:
+
+```sh
+FB_SIMPLEFIN=1 npm --prefix electron run build:native
+FB_SIMPLEFIN=1 npm --prefix electron run package
+```
+
+Omitting the package-time switch preserves the native build's capabilities.
+Packaging refuses missing or changed helpers, stale native builds, modified source
+trees, and plugins, invoice-delivery, fake-network or panic-test native builds.
+Use `node packaging/installers.cjs linux --wrap-only` to wrap the verified package.
 
 Test with synthetic providers before delivery. Fake-network helper builds are
 for isolated verification only and must not be delivered to users.

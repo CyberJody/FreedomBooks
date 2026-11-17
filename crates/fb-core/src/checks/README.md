@@ -83,25 +83,8 @@ number suggestions and the existing ledger/reports. Six scenarios cover check
 and transfer workflows, payment collisions and 500 seeded random operations.
 Strict-comparer tests reject identical malformed dumps and altered audit leaves.
 
-## Integration requests (not applied to other owners' code)
+## Shared check numbers
 
-1. Historical-copy fixtures must compare the exact prefix's existing tables and
-   assert that any later tables in the current source are empty, then compare the
-   complete upgraded snapshot. The current whole-map assertion fails solely
-   because five new empty tables do not exist at the old prefix. Affected tests:
-   `payables::tests::rebase_tests::populated_payables_copy_migration_preserves_every_row_and_reopens`
-   and harness `core_l3_tests::{combined_book_copy_upgrade_preserves_rows_reports_and_both_callback_families,
-   open_reports_both_sales_and_payables_integrity_violations_with_intact_schema}`.
-   The module's own populated-copy test demonstrates the required comparison.
-2. Payables should call `checks::refuse_conflict` in its shared-number preflight
-   under the writer, or route clients through this module's compatibility entry
-   points. Direct payables recording is already protected by the new SQL guard;
-   direct review currently lacks the friendly written-check collision message.
-3. Credits and prepayments owners must add their refund tables to `next_number`
-   and `refuse_conflict`, including self-exclusions and symmetric SQL collision
-   guards, when those schemas are integrated. They do not exist at base fdd2fa6.
-   The frozen Python number pool spans all four holders; this branch covers
-   written checks and bill payments. Refund schemas remain an integration request.
-
-Stop before merge; cross-module fixture and number-pool integration belong to
-the lead and owning workers.
+Written checks and bill payments share one number pool: both call
+`check_numbers::refuse_conflict` before recording (`checks/numbering.rs` wraps it for checks),
+with SQL collision guards behind the service-level checks.

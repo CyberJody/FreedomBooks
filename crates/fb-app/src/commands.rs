@@ -93,6 +93,9 @@ pub struct BeginReconciliationValues {
 #[derive(Debug, Clone, Default, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct CompanyDocumentValues {
+    /// Absent for older API clients: preserve the existing invoice preferences.
+    #[serde(default)]
+    pub invoice_preferences: Option<Box<InvoicePreferenceValues>>,
     #[serde(default)]
     pub street1: String,
     #[serde(default)]
@@ -118,6 +121,40 @@ pub struct CompanyDocumentValues {
     pub logo_upload: Option<String>,
     #[serde(default)]
     pub remove_logo: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct InvoicePreferenceValues {
+    pub expected_revision: i64,
+    pub footer: String,
+    pub zelle_enabled: bool,
+    pub zelle_name: String,
+    pub zelle_recipient: String,
+    pub zelle_instructions: String,
+    pub stripe_enabled: bool,
+    pub stripe_mode: String,
+    pub email_mode: String,
+    pub email_subject: String,
+    pub email_greeting: String,
+    pub email_signature: String,
+    pub reply_to: String,
+}
+
+impl InvoicePreferenceValues {
+    pub fn into_change(self) -> fb_core::invoice_preferences::Change {
+        fb_core::invoice_preferences::Change {
+            expected_revision: self.expected_revision,
+            settings: fb_core::invoice_preferences::Settings {
+                footer:self.footer, zelle_enabled:self.zelle_enabled,
+                zelle_name:self.zelle_name, zelle_recipient:self.zelle_recipient,
+                zelle_instructions:self.zelle_instructions, stripe_enabled:self.stripe_enabled,
+                stripe_mode:self.stripe_mode, email_mode:self.email_mode,
+                email_subject:self.email_subject, email_greeting:self.email_greeting,
+                email_signature:self.email_signature, reply_to:self.reply_to,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, JsonSchema, PartialEq, Eq)]
@@ -234,16 +271,35 @@ pub enum Command {
         date: String,
         reason: String,
     },
+    SaveRecurringBill { company_id: Id, values: RecurringBillValues },
+    ControlRecurringBill { company_id: Id, template_id: Id, expected_revision: i64, action: String, #[serde(default)] confirmation: Option<RecurringConfirmation>, #[serde(default)] confirm_delete: bool },
     SaveBill { company_id: Id, values: BillValues },
     ReviewBill { company_id: Id, bill_id: Id, expected_revision: i64 },
     PostBill { company_id: Id, bill_id: Id, expected_revision: i64, review_token: String },
     VoidBill { company_id: Id, bill_id: Id, expected_revision: i64, date: String, reason: String },
     ReviewBillPayment { company_id: Id, values: BillPaymentValues },
     RecordBillPayment { company_id: Id, values: BillPaymentValues, review_token: String },
+    /// Pay bills: record several reviewed payments (one per vendor) in one transaction.
+    RecordBillPayments { company_id: Id, payments: Vec<BillPaymentValues>, review_tokens: Vec<String> },
     ReverseBillPayment { company_id: Id, payment_id: Id, expected_revision: i64, date: String, reason: String },
     ReviewTransfer { company_id: Id, values: TransferValues },
     RecordTransfer { company_id: Id, values: TransferValues, review_token: String },
     VoidTransfer { company_id: Id, transfer_id: Id, expected_revision: i64, date: String, reason: String },
+    ReviewSalesTaxPayment { company_id: Id, values: SalesTaxPaymentValues },
+    RecordSalesTaxPayment { company_id: Id, values: SalesTaxPaymentValues, review_token: String },
+    VoidSalesTaxPayment { company_id: Id, payment_id: Id, expected_revision: i64, date: String, reason: String },
+    /// Job tickets: open or edit a ticket for one customer. Not an accounting posting.
+    SaveJobTicket { company_id: Id, values: JobTicketValues },
+    /// Complete, close without billing, or reopen a ticket (`COMPLETED`, `CLOSED`, `OPEN`).
+    SetJobTicketStatus { company_id: Id, ticket_id: Id, expected_revision: i64, status: String, #[serde(default)] date: Option<String> },
+    /// Record or edit billable time. Hours are exact text (`3.5`, `3.5h`, `3:30`); a blank rate uses the service item's price.
+    SaveTimeEntry { company_id: Id, values: TimeEntryValues },
+    /// Attach time to one of its customer's open tickets, move it, or take it off a ticket (`ticket_id` null).
+    MoveTimeEntry { company_id: Id, entry_id: Id, expected_revision: i64, ticket_id: Option<Id> },
+    /// Remove time that was never on an invoice.
+    DeleteTimeEntry { company_id: Id, entry_id: Id, expected_revision: i64 },
+    /// Create a draft invoice from a ticket's unbilled billable time and mark that time billed.
+    InvoiceJobTicket { company_id: Id, values: InvoiceJobTicketValues },
 
 
     SaveDirectoryRecord {
@@ -457,6 +513,9 @@ pub struct InvoiceValues {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct InvoiceLineValues {
+    /// Invoice-only adjustment. Missing means the original charge semantics.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_kind: Option<String>,
     #[serde(default)]
     pub origin_position: Option<i64>,
     #[serde(default)]
@@ -505,6 +564,11 @@ pub enum Outcome {
     /// Open `url` (an https address fb-app built, e.g. the ChatGPT sign-in) in the system browser, then
     /// go to `location`. Only the main process acts on it; the renderer never navigates outside fb://.
     External { url: String, location: String },
+    /// CRASHLOG: a form post failed after it spent its single-use token, for a reason the form
+    /// cannot show itself (refused, not found, an integrity or database error). The page keeps what
+    /// was typed, shows `message`, and takes `token` for the next submit. `token` is None when a
+    /// resubmit could repeat something (see `App::run_desktop`); the page must then be reopened.
+    Retry { message: String, token: Option<String> },
 }
 
 /// The command and query contract as JSON Schema.
@@ -580,6 +644,14 @@ pub struct BillPaymentValues {
     pub method: String, pub reference: String, pub memo: String, pub bank_id: Id,
     pub allocations: Vec<BillAllocationValues>,
 }
+/// A sales tax payment to an agency: tax paid down plus optional penalty and interest to an expense account.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SalesTaxPaymentValues {
+    pub request_key: String, pub agency_id: Id, pub date: String, pub bank_id: Id,
+    pub tax_amount: String, pub penalty_amount: String, pub expense_account_id: Option<Id>,
+    pub period_start: String, pub period_end: String, pub reference: String, pub memo: String,
+}
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct TransferValues {
@@ -629,3 +701,76 @@ pub struct DepositApplicationValues { pub request_key: String, pub date: String,
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct CustomerRefundValues { pub request_key: String, pub date: String, pub amount: String, pub bank_id: Id, pub method: String, pub check_number: String, pub memo: String }
+
+pub type RecurringConfirmation = String;
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct RecurringBillValues {
+    #[serde(default)] pub source_bill_id: Option<Id>,
+    #[serde(default)] pub confirmation: Option<RecurringConfirmation>,
+    pub id: Option<Id>, pub request_key: String, pub expected_revision: i64,
+    pub name: String, pub vendor_id: Id, pub memo: String, pub terms_days: i64,
+    pub frequency: String, pub start_date: String, pub end_date: Option<String>,
+    pub occurrence_limit: Option<i64>, pub active: bool, pub auto_post: bool,
+    pub lines: Vec<BillLineValues>,
+}
+
+/// A job ticket. `ticket_id` and `expected_revision` identify an edit; a new ticket needs a stable `request_key`.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct JobTicketValues {
+    #[serde(default)]
+    pub ticket_id: Option<Id>,
+    #[serde(default)]
+    pub expected_revision: Option<i64>,
+    pub request_key: String,
+    pub customer_id: Id,
+    pub title: String,
+    #[serde(default)]
+    pub description: String,
+    pub opened_date: String,
+    #[serde(default)]
+    pub due_date: Option<String>,
+}
+/// Billable time. `worker_id` defaults to the person signed in; `rate` blank or absent uses the service item's price.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct TimeEntryValues {
+    #[serde(default)]
+    pub entry_id: Option<Id>,
+    #[serde(default)]
+    pub expected_revision: Option<i64>,
+    pub request_key: String,
+    pub customer_id: Id,
+    #[serde(default)]
+    pub ticket_id: Option<Id>,
+    pub item_id: Id,
+    pub date: String,
+    pub hours: String,
+    #[serde(default)]
+    pub rate: Option<String>,
+    #[serde(default = "yes")]
+    pub billable: bool,
+    #[serde(default)]
+    pub notes: String,
+    #[serde(default)]
+    pub worker_id: Option<Id>,
+}
+/// Invoice a ticket's unbilled billable time. `grouping` is `ENTRY` (one line per entry) or `SERVICE` (one line per service and rate).
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct InvoiceJobTicketValues {
+    pub ticket_id: Id,
+    pub expected_revision: i64,
+    pub request_key: String,
+    pub date: String,
+    #[serde(default)]
+    pub due_date: Option<String>,
+    pub grouping: String,
+    /// The entries to invoice; absent means every unbilled billable entry on the ticket.
+    #[serde(default)]
+    pub entry_ids: Option<Vec<Id>>,
+    #[serde(default = "yes")]
+    pub mark_invoiced: bool,
+}

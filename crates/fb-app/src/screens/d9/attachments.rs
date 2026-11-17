@@ -3,7 +3,7 @@
 //! Adding a file (deliberate divergence, DESKTOP-WAVES.md): the page never sends file bytes. The add POST
 //! returns a one-time `pick-attachment` ticket to the main process, which shows the native file chooser
 //! and hands the chosen path back (`backups::dialog_result`); this module reads the file, size-limited,
-//! and stores it with `fb_core::attachments::add` under the open book's key.
+//! and stores it with `fb_core::attachments::add` under the book's receipt key.
 use super::*;
 use fb_core::attachments as a;
 use std::io::Read;
@@ -123,7 +123,7 @@ fn pick(app: &mut App, r: &Route, c: CompanyId, p: Posted<'_>) -> AppResult<Outc
 }
 
 /// The chosen file: a regular file of at most `max` bytes, read with a bounded reader (it may grow).
-fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, String> {
+pub(super) fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, String> {
     let too_large = || format!("The file is larger than {} MB, so it was not attached.", max / (1024 * 1024));
     let mut options = std::fs::OpenOptions::new();
     options.read(true);
@@ -153,7 +153,9 @@ fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, String> {
 
 /// After the chooser (`chosen` is empty when it was cancelled): `attachments.views._add` on the picked file,
 /// then back to the owner's page with the panel note. A cancel is silent, like closing a browser chooser.
-pub(crate) fn picked(app: &mut App, pick: Pick, chosen: Option<&Path>, book: &Path, key: &[u8; 32]) -> AppResult<Outcome> {
+/// `receipt_key` wraps the new file's key; `master_key` only reads an identical file attached before the
+/// receipt-key fix, whose key it may still wrap.
+pub(crate) fn picked(app: &mut App, pick: Pick, chosen: Option<&Path>, book: &Path, receipt_key: &[u8; 32], master_key: &[u8; 32]) -> AppResult<Outcome> {
     let Pick { company: c, owner: o, request_key } = pick;
     if let Some(path) = chosen {
         let limits = a::Limits::default();
@@ -164,13 +166,23 @@ pub(crate) fn picked(app: &mut App, pick: Pick, chosen: Option<&Path>, book: &Pa
                 let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                 let open = app.open_mut()?;
                 let actor = open.owner;
-                let result = a::storage::Store::for_book(book, key)
+                let result = a::storage::Store::for_book(book, receipt_key)
+                    .and_then(|files| files.with_legacy(master_key))
                     .and_then(|files| a::add(&mut open.book, &files, actor, c, &o, &data, &name, &request_key, &limits));
                 match result {
                     Ok((row, created)) => {
                         if created {
                             app.attachment_notes.push(("success".into(), format!("Attached {}.", row["original_name"].as_str().unwrap_or(""))));
                         }
+                    }
+                    // The same file is already attached in this company and that copy cannot be read.
+                    Err(e) if a::storage::ReadError::of(&e).is_some() => {
+                        let why = match a::storage::ReadError::of(&e) {
+                            Some(a::storage::ReadError::Missing) => "is missing from this book's attachment folder",
+                            Some(a::storage::ReadError::NoKey) => "cannot be opened with the keys these books hold (their key file may have been replaced)",
+                            _ => "is damaged in this book's attachment folder",
+                        };
+                        app.attachment_notes.push(("error".into(), format!("This file is already attached in this company, but that copy {why}, so it was not attached again. Nothing was changed. Making a backup on the Backups page lists every attached file that needs attention and what to do about it.")));
                     }
                     // `storage.StoreError` in Django: the encrypted store itself failed.
                     Err(FbError::Refused(m)) if m.starts_with("Attachment store:") => app.attachment_notes.push((

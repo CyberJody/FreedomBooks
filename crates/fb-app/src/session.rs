@@ -64,10 +64,17 @@ pub struct Open {
 
 /// Single-use tokens for rendered forms (Django's CSRF token, replaced). A token is minted per render,
 /// bound to the form's path, consumed by the first submission, and all are dropped on lock.
+///
+/// Each token also remembers `stamp`, the session host's write sequence when it was minted (always 0
+/// on the standalone desktop), so the host can tell whether someone else changed the record after the
+/// page was rendered (`multiuser`).
 #[derive(Default)]
 pub struct Tokens {
-    by_token: HashMap<String, String>,
+    by_token: HashMap<String, (String, u64)>,
     order: VecDeque<String>,
+    pub(crate) stamp: u64,
+    /// Forms withdrawn by a hosting change (`retire_where`), so their submit can say why.
+    retired: std::collections::HashSet<String>,
 }
 
 const MAX_LIVE_TOKENS: usize = 1024;
@@ -79,12 +86,12 @@ impl Tokens {
         }
         let token = crate::keys::to_hex(&crate::keys::random_bytes::<32>().expect("system random source"));
         self.order.push_back(token.clone());
-        self.by_token.insert(token.clone(), path.to_owned());
+        self.by_token.insert(token.clone(), (path.to_owned(), self.stamp));
         token
     }
     pub fn consume(&mut self, token: &str, path: &str) -> bool {
         match self.by_token.get(token) {
-            Some(p) if p == path => {
+            Some((p, _)) if p == path => {
                 self.by_token.remove(token);
                 self.order.retain(|t| t != token);
                 true
@@ -93,11 +100,36 @@ impl Tokens {
         }
     }
     pub fn valid(&self, token: &str, path: &str) -> bool {
-        self.by_token.get(token).is_some_and(|p| p == path)
+        self.by_token.get(token).is_some_and(|(p, _)| p == path)
+    }
+    /// The write sequence a live token was minted at.
+    pub(crate) fn stamp_of(&self, token: &str, path: &str) -> Option<u64> {
+        self.by_token.get(token).filter(|(p, _)| p == path).map(|(_, stamp)| *stamp)
+    }
+    /// The oldest live token's stamp: writes before it can no longer make any of these forms stale.
+    pub(crate) fn oldest_stamp(&self) -> Option<u64> {
+        self.order.front().and_then(|t| self.by_token.get(t)).map(|(_, stamp)| *stamp)
     }
     pub fn clear(&mut self) {
         self.by_token.clear();
         self.order.clear();
+        self.retired.clear();
+    }
+    /// Withdraw every live form whose path matches `which`: it can no longer be submitted.
+    pub(crate) fn retire_where(&mut self, which: impl Fn(&str) -> bool) {
+        let gone: Vec<String> = self.by_token.iter().filter(|(_, (path, _))| which(path)).map(|(t, _)| t.clone()).collect();
+        if self.retired.len() + gone.len() > MAX_LIVE_TOKENS {
+            // Bounded: older retired forms then just read as expired.
+            self.retired.clear();
+        }
+        for token in gone {
+            self.by_token.remove(&token);
+            self.order.retain(|t| *t != token);
+            self.retired.insert(token);
+        }
+    }
+    pub(crate) fn retired(&self, token: &str) -> bool {
+        self.retired.contains(token)
     }
 }
 
@@ -150,20 +182,38 @@ pub struct App {
     pub os_store_usable: bool,
     /// Installation key supplied by the OS store, independent of every book key.
     pub device_key: Option<MasterKey>,
+    /// What this launch knows about `device_key` (see [`ConnectionKeys`]).
+    pub connection_keys: ConnectionKeys,
+    /// Earlier connection keys this computer kept aside (an older version's plaintext key, superseded
+    /// by a readable sealed one). Saved connections they can read are read with them and re-saved under
+    /// `device_key`; nothing is ever saved under them.
+    pub device_alternates: Vec<MasterKey>,
+    /// First run made these books and their only owner in this session: the owner's sign-in setup
+    /// needs no "existing owner" confirmation. Cleared on lock.
+    pub(crate) first_run_owner: bool,
+    /// Where the previous main book was set aside after "Use this as my books" (shown once).
+    pub set_aside_note: Option<String>,
+    /// After a committed change of main books whose saved choice a restart still has to finish.
+    pub(crate) book_change_pending: Option<String>,
     /// Plugin surfaces (bank feeds, AI assistant, receipt reader): shown only in builds with the
     /// `plugins` feature. Release builds hide them from every page and refuse their routes.
     pub plugins: bool,
     /// Enable bank feeds independently of the AI plugin surfaces.
     pub simplefin: bool,
+    pub invoice_delivery: bool,
+    pub(crate) email: crate::invoice_email::State,
+    pub(crate) stripe: crate::invoice_stripe::State,
     /// DESKTOP-BACKUPS: backup folder, open-book path and key copy for `fb_core::backups`.
     pub backups: screens::backups::Host,
     pub(crate) d7a_reviews: screens::d7a::Reviews,
     pub(crate) d5_reviews: screens::d5::Reviews,
     pub(crate) d6_reviews: screens::d6::Reviews,
+    pub(crate) salestax_reviews: HashMap<String, fb_core::salestax_payments::Review>,
     pub screens: Screens,
     pub open: Option<Open>,
     pub tokens: Tokens,
     pub messages: Vec<String>,
+    pub(crate) recurring_notices: std::collections::HashSet<String>,
     pub(crate) sales_reviews: HashMap<String, fb_core::sales::Review>,
     /// The local date screens treat as "today" (overdue, default dates); injectable for tests.
     pub today: fn() -> chrono::NaiveDate,
@@ -178,6 +228,20 @@ pub struct App {
     pub(crate) attachment_notes: Vec<(String, String)>,
     /// After an upgrade on open: where the pre-upgrade copy is. Shown once, in the next page's banner.
     pub upgrade_notice: Option<String>,
+    /// The company whose page was shown last: account, Settings and help pages keep its frame
+    /// (sidebar, title-bar name) while it stays open and the signed-in person may see it.
+    pub(crate) frame_company: Option<fb_core::CompanyId>,
+    /// The title bar's Sign out command token: one per session, minted again only after it is used or
+    /// evicted, so a page renders the same twice and pages do not use up the token ring.
+    pub(crate) signout_token: Option<String>,
+    /// Users whose roster entry an administrator changed during the current request (role, password,
+    /// active, memberships). The session host signs their other sessions out; the desktop ignores it.
+    pub(crate) roster_changed: Vec<UserId>,
+    /// Who owns each browser sign-in job in fb-net ("chatgpt:<company>", "gmail:<company>"): the
+    /// session generation that began it and when. fb-net keys jobs by provider and company only, so
+    /// only the owning generation may poll or cancel one, and nobody else may start another until it
+    /// ends or goes stale (`net::SIGNIN_JOB_STALE`). One owner on the standalone desktop.
+    pub(crate) signin_jobs: HashMap<String, (u64, std::time::Instant)>,
 }
 
 impl Default for App {
@@ -197,6 +261,38 @@ pub struct Created {
     pub company_id: CompanyId,
 }
 
+/// The installation's connection key (bank feeds, Stripe, Gmail, AI), as the shell found it.
+/// Sign-in flags a saved connection "reconnect needed" only when no key on this computer (the
+/// connection key or a superseded one kept aside) can read it, and never while `Unavailable`;
+/// `Replaced` adds the explanation that the keyring is new.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConnectionKeys {
+    /// The saved key opened, or a new installation saved its first key.
+    Ready,
+    /// A working keyring proved the saved key unreadable (sealed by another keyring, after a
+    /// reinstall). A new key replaces it; saved connections must be connected again, once.
+    Replaced,
+    /// The keyring can't be used right now. Saved connections are left exactly as they are and are
+    /// unavailable for this session only.
+    Unavailable,
+}
+
+impl ConnectionKeys {
+    pub fn parse(state: &str) -> Option<Self> {
+        match state {
+            "ready" | "created" => Some(Self::Ready),
+            "replaced" => Some(Self::Replaced),
+            "unavailable" => Some(Self::Unavailable),
+            _ => None,
+        }
+    }
+}
+
+/// Shown once after sign-in when saved connections can't be used this session.
+pub const CONNECTIONS_WAITING: &str = "Bank feeds, Stripe and Gmail are unavailable right now because this computer's keyring can't be used. Nothing was changed: your saved connections will work again once the keyring is available and FreedomBooks is restarted.";
+/// Shown once after sign-in when a reinstalled keyring could not read the old connection key.
+pub const CONNECTIONS_REPLACED: &str = "This computer's keyring is new (for example after the operating system was reinstalled), so FreedomBooks started a new key for saved connections. Connect each bank, Stripe and Gmail connection again; your books and downloaded transactions are fine.";
+
 impl App {
     pub fn bankfeeds_enabled(&self) -> bool {
         self.simplefin || self.plugins
@@ -207,21 +303,33 @@ impl App {
             ai: Default::default(),
             identity: Default::default(),
             legacy_credentials: false,
+            frame_company: None,
+            signout_token: None,
             host: Host::default(),
             protection: None,
             recovery_authorized: false,
             os_store_usable: false,
             device_key: Some(MasterKey::new(**TOOL_DEVICE_KEY)),
+            connection_keys: ConnectionKeys::Ready,
+            device_alternates: vec![],
+            first_run_owner: false,
+            set_aside_note: None,
+            book_change_pending: None,
             plugins: cfg!(feature = "plugins"),
             simplefin: cfg!(feature = "simplefin"),
+            invoice_delivery: cfg!(feature = "invoice-delivery"),
+            email: Default::default(),
+            stripe: Default::default(),
             backups: Default::default(),
             d7a_reviews: Default::default(),
             d5_reviews: Default::default(),
+            salestax_reviews: Default::default(),
             d6_reviews: Default::default(),
             screens: Screens::new(),
             open: None,
             tokens: Tokens::default(),
             messages: vec![],
+            recurring_notices: Default::default(),
             sales_reviews: HashMap::new(),
             today: local_today,
             now: chrono::Utc::now,
@@ -229,11 +337,19 @@ impl App {
             vault_key: None,
             attachment_notes: vec![],
             upgrade_notice: None,
+            roster_changed: vec![],
+            signin_jobs: HashMap::new(),
         }
     }
 
     pub fn is_open(&self) -> bool {
         self.open.is_some()
+    }
+
+    /// The session's credential subkey, or None while the connection key is unavailable.
+    pub(crate) fn connection_vault_key(&self) -> Option<zeroize::Zeroizing<[u8; 32]>> {
+        if self.connection_keys == ConnectionKeys::Unavailable { return None; }
+        self.device_key.as_ref().and_then(|k| crate::credentials::wrapping_key(k).ok())
     }
 
     /// First run (ARCHITECTURE 7): a new encrypted book, its owner account and the first company.
@@ -264,15 +380,29 @@ impl App {
         book.write(|tx| tx.execute("INSERT INTO desktop_user(user_id,role) VALUES(?1,'administrator')", [owner.to_db()]))?;
         let company = fb_core::services::create_company_with_chart(&mut book, owner, company_name, "USD", true, chart.into())?;
         self.lock();
-        self.vault_key = self.device_key.as_ref().and_then(|k| crate::credentials::wrapping_key(k).ok());
+        self.vault_key = self.connection_vault_key();
         self.open = Some(Open { book, owner, owner_name: owner_name.to_owned(), staff: true });
+        self.first_run_owner = true;
         self.backups.opened(path, key);
         Ok(Created { company_id: company.id })
     }
 
+    /// Close the current book and settle any interrupted move before inspecting book files or keys.
+    pub(crate) fn prepare_book_open(&mut self) -> AppResult<()> {
+        self.lock();
+        // A change of main books ("Use this as my books") that failed and could not be undone in place
+        // leaves its journal behind. Finish or undo it before any book opens, whichever book this is;
+        // if that can't be done, nothing opens (review 2026-11-11: a half-moved book opened without its
+        // write-ahead log, and putting the log back later damaged it).
+        if let Ok(root) = self.backups.root().map(Path::to_owned) {
+            crate::books::recover_before_open(&root)?;
+        }
+        Ok(())
+    }
+
     /// Unlock: open the book with its key and find its owner (the one account).
     pub fn open_book(&mut self, path: &Path, key: &MasterKey) -> AppResult<()> {
-        self.lock();
+        self.prepare_book_open()?;
         let record = crate::protection::Record::read(path)?;
         let (book, upgraded) = self.open_and_upgrade(path, key, record.as_ref())?;
         // Unlocking proves access to the file, never a named user's identity.
@@ -300,7 +430,11 @@ impl App {
         self.d5_reviews = Default::default();
         self.d6_reviews = Default::default();
         self.messages.clear();
+        self.recurring_notices.clear();
         self.sales_reviews.clear();
+        self.first_run_owner = false;
+        self.set_aside_note = None;
+        self.book_change_pending = None;
     }
 
     pub fn open_mut(&mut self) -> AppResult<&mut Open> {
@@ -336,6 +470,51 @@ impl App {
         self.run(command)
     }
 
+    /// The desktop's entry for renderer commands (fb-node `run`): [`App::run_renderer`], except that
+    /// a form post that fails after spending its token gets the form back ([`Outcome::Retry`])
+    /// instead of an error that leaves an expired form on the screen.
+    ///
+    /// A fresh token is issued only when a resubmit cannot repeat anything: this post spent a token
+    /// that was live, no write transaction committed during it (the same connection's commit
+    /// counter is unchanged), the books are still open for the same session, and the form's route
+    /// is declared to write only the book ([`screens::resubmit`]; a route nobody declared gets no
+    /// token). Otherwise the message says to reopen the page and check, and no token is issued.
+    /// Typed forms that save documents also carry request keys and expected revisions, so even an
+    /// exact resubmit of a saved document is answered with the same document or a revision refusal.
+    pub fn run_desktop(&mut self, command: Command) -> AppResult<Outcome> {
+        let form = match &command {
+            Command::SubmitForm { path, token, fields } => {
+                let outside = screens::resubmit::form(path, fields) == screens::resubmit::Resubmit::Outside;
+                Some((path.clone(), self.tokens.valid(token, path), outside))
+            }
+            _ => None,
+        };
+        let commits = |app: &App| app.open.as_ref().map(|o| (o.book.connection_id(), o.book.commits()));
+        let before = commits(self);
+        let generation = self.session_generation();
+        let token = match &command { Command::SubmitForm { token, .. } => token.clone(), _ => String::new() };
+        let result = self.run_renderer(command);
+        let Some((path, live, outside)) = form else { return result };
+        let error = match result {
+            Ok(outcome) => return Ok(outcome),
+            Err(error) => error,
+        };
+        let spent = live && !self.tokens.valid(&token, &path);
+        if !spent || matches!(error, AppError::Locked) || !self.is_open() || self.session_generation() != generation {
+            return Err(error);
+        }
+        // A different connection (the post replaced the open book) cannot be compared: treat it
+        // as saved.
+        let committed = commits(self) != before;
+        note_form_error(&path, &error);
+        if committed || outside {
+            let check = if committed { "Part of it may already have been saved." } else { "It may already have been done." };
+            let message = format!("{} {check} Open this page again and check before trying again.", retry_message(&error, false));
+            return Ok(Outcome::Retry { message, token: None });
+        }
+        Ok(Outcome::Retry { message: retry_message(&error, true), token: Some(self.tokens.mint(&path)) })
+    }
+
     pub fn run(&mut self, command: Command) -> AppResult<Outcome> {
         self.authorize_command(&command)?;
         if let Command::SubmitForm { path, token, fields } = command {
@@ -344,6 +523,11 @@ impl App {
                 return Err(AppError::Invalid("This form could not be sent. Nothing was saved. Open the screen again; if it happens again, use Report a problem.".into()));
             }
             if !self.tokens.consume(&token, &path) {
+                if self.tokens.retired(&token) {
+                    return Err(AppError::Invalid(
+                        "Hosting changed while this record was open, so nothing was saved. Open the record again to see any changes, then make yours.".into(),
+                    ));
+                }
                 return Err(AppError::Invalid("This form has expired. Open the screen again and resubmit.".into()));
             }
             return screens::submit(self, &path, &fields);
@@ -371,6 +555,7 @@ impl App {
         if screens::is_d7b_command(&command) { return screens::run_d7b_command(self, command); }
         if screens::is_d5_command(&command) { return screens::run_d5_command(self, command); }
         if screens::is_d6_command(&command) { return screens::run_d6_command(self, command); }
+        if screens::is_jobs_command(&command) { return screens::run_jobs_command(self, command); }
         let open = self.open_mut()?;
         let actor = open.owner;
         let book = &mut open.book;
@@ -380,9 +565,11 @@ impl App {
                 let mut data = serde_json::to_value(&values).expect("values");
                 data.as_object_mut().unwrap().remove("logo_upload");
                 data.as_object_mut().unwrap().remove("remove_logo");
+                data.as_object_mut().unwrap().remove("invoice_preferences");
                 let details = serde_json::from_value(data).map_err(|e| AppError::Invalid(e.to_string()))?;
-                fb_core::company_documents::save(book, actor, c, &name, &currency,
-                    fb_core::company_documents::Changes { details, logo_upload:values.logo_upload, remove_logo:values.remove_logo })?;
+                fb_core::company_documents::save_with_preferences(book, actor, c, &name, &currency,
+                    fb_core::company_documents::Changes { details, logo_upload:values.logo_upload, remove_logo:values.remove_logo },
+                    values.invoice_preferences.map(|preferences| preferences.into_change()))?;
                 json!({"id":company_id})
             }
             Command::SetNextNumber { company_id, kind, bank_id, next, expected_next, expected_revision } => {
@@ -545,6 +732,35 @@ impl App {
     }
 }
 
+/// Plain words for a failed form post. Refusals and validation already speak to the owner;
+/// database, template and file problems never show their technical text.
+/// `nothing_saved` adds that reassurance where the error's own words do not already speak to it.
+fn retry_message(error: &AppError, nothing_saved: bool) -> String {
+    let nothing = if nothing_saved { " Nothing was saved." } else { "" };
+    match error {
+        AppError::Core(FbError::Validation(messages)) => messages.join(" "),
+        AppError::Core(FbError::Refused(m) | FbError::PermissionDenied(m)) | AppError::Invalid(m) => m.clone(),
+        AppError::Core(FbError::DoesNotExist(_)) | AppError::NotFound(_) => {
+            format!("That record is no longer there. It may have been changed or deleted in another window.{nothing}")
+        }
+        AppError::Core(FbError::Integrity { .. }) => format!("The books refused this change because it would break one of their rules.{nothing}"),
+        _ if nothing_saved => "FreedomBooks couldn't finish this. Nothing was saved. Try again; if it happens again, use Report a problem.".into(),
+        _ => "FreedomBooks couldn't finish this.".into(),
+    }
+}
+
+/// Database, template and file problems on a form post go to the problem log (kind and route only).
+fn note_form_error(path: &str, error: &AppError) {
+    let kind = match error {
+        AppError::Core(e @ (FbError::Integrity { .. } | FbError::Db(_))) => e.kind(),
+        AppError::Render(_) => "Render",
+        AppError::Open(_) => "Open",
+        _ => return,
+    };
+    let route = screens::resolve(path).map(|r| r.name).unwrap_or_else(|| "unresolved".into());
+    fb_diag::record(fb_diag::Entry { source: "rust", op: "form".into(), route: Some(route), kind: format!("error:{kind}"), outcome: vec!["form returned for retry"], book_open: Some(true), ..Default::default() });
+}
+
 /// Shown after unlock for each connection whose saved sign-in couldn't be read.
 pub fn reconnect_notice(label: &str) -> String {
     format!("The saved sign-in for {label} couldn't be read. Your books are fine. Reconnect or forget this connection on the Bank feeds page.")
@@ -558,21 +774,27 @@ pub fn company(id: &str) -> AppResult<CompanyId> {
 
 /// `sales.services.save_invoice` with the form's values (shared by the typed command and the form post).
 pub fn save_invoice(book: &mut Book, actor: UserId, c: CompanyId, values: &InvoiceValues, invoice_id: Option<&str>, expected_revision: i64) -> AppResult<Value> {
+    let mut input = invoice_input(values)?;
+    input["expected_revision"]=json!(expected_revision);
+    if let Some(id)=invoice_id { input["invoice_id"]=json!(id); }
+    Ok(fb_core::sales::save_invoice(book, actor, c, &input)?)
+}
+
+/// Canonical typed invoice adapter shared by the editor and historical import.
+pub(crate) fn invoice_input(values:&InvoiceValues)->AppResult<Value> {
     let mut input = serde_json::to_value(values).map_err(|e| AppError::Invalid(e.to_string()))?;
     let lines: Vec<Value> = values
         .lines
         .iter()
         .map(|l| {
-            json!({"origin_position": l.origin_position, "item_id": l.item_id, "description": l.description, "quantity": l.quantity,
+            let mut row = json!({"origin_position": l.origin_position, "item_id": l.item_id, "description": l.description, "quantity": l.quantity,
                    "rate": l.rate, "taxable": l.taxable, "refresh_item": l.refresh_item, "keep_archived": l.keep_archived,
-                   "income_account_id": l.income_account_id})
+                   "income_account_id": l.income_account_id});
+            if let Some(kind) = &l.line_kind { row["line_kind"] = json!(kind); }
+            row
         })
         .collect();
     input["lines"] = Value::Array(lines);
-    input["expected_revision"] = json!(expected_revision);
-    if let Some(id) = invoice_id {
-        input["invoice_id"] = json!(id);
-    }
     // Absent optional keys stay absent, as the Python form's `values()` leaves them.
     if let Some(map) = input.as_object_mut() {
         for key in ["due_date", "tax_rate", "tax_label", "tax_item_id"] {
@@ -581,7 +803,7 @@ pub fn save_invoice(book: &mut Book, actor: UserId, c: CompanyId, values: &Invoi
             }
         }
     }
-    Ok(fb_core::sales::save_invoice(book, actor, c, &input)?)
+    Ok(input)
 }
 
 #[cfg(test)]

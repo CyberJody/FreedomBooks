@@ -39,7 +39,7 @@ It is intentionally informational; those differences would fail a harness order
 comparison. The six pairs above record the FIX1/FIX2 findings, not an exhaustive
 enumeration of Unicode differences or a claim that all exotic differences are ties.
 
-Dev Master's decision adopts ICU4X order as the v2 contract: ignorable-punctuation
+The project's decision adopts ICU4X order as the v2 contract: ignorable-punctuation
 tie ordering is not meaningful book data, glibc also changes it between releases,
 and portable installations need reproducible embedded tables. The frozen Python
 answer key remains unchanged.

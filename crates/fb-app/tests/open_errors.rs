@@ -167,7 +167,7 @@ fn damaged_files_are_damaged_whatever_secret_is_typed() {
     // The unlock screen shows the words and keeps the restore route.
     let html = screens::render_gate(&app, "unlock", true, "", &[message(AppError::Open(OpenError::Damaged))]).unwrap();
     assert!(html.contains("This file is damaged or isn&#x27;t a FreedomBooks book.") || html.contains("This file is damaged or isn't a FreedomBooks book."), "{html}");
-    assert!(html.contains("<summary>Restore a backup</summary>"));
+    assert!(html.contains("<summary>Restore a backup instead</summary>"));
 }
 
 #[test]

@@ -27,6 +27,7 @@ struct Grant {
     permission: Permission,
     expires: Instant,
     previews: HashMap<String, Vec<import::Journal>>,
+    invoice_previews: HashMap<String, (Vec<Value>, String)>,
 }
 #[derive(Default)]
 pub struct Authority {
@@ -64,6 +65,22 @@ struct Call {
 }
 
 impl App {
+    /// Trusted desktop only: remembered consent is bound to this named user and book.
+    /// This does not create authority and is deliberately absent from the agent catalogue.
+    pub fn ai_context(&mut self, company: CompanyId) -> AppResult<Value> {
+        let session = self.authorize(Some(company), UserPermission::Read)?;
+        let path = self.book_path().ok_or_else(denied)?.canonicalize().map_err(|_| denied())?;
+        let path = path.to_str().ok_or_else(denied)?;
+        let restored = self.backups.viewing_restored().is_some();
+        let open = self.open_mut()?;
+        let name = open.book.read(|tx| fb_core::store::company(tx, company))?
+            .ok_or_else(denied)?.name;
+        Ok(json!({"company_id":company.to_db(),"company_name":name,
+            "actor_id":session.actor.to_db(),"actor_name":open.owner_name,
+            "role":session.role.as_str(),"book_path":path,"restored":restored,
+            "session_generation":session.generation}))
+    }
+
     pub fn ai_select_company(&mut self, company: CompanyId) -> AppResult<()> {
         self.authorize(Some(company), UserPermission::Read)?;
         if self.ai.company != Some(company) {
@@ -84,6 +101,7 @@ impl App {
             Permission::AccountingWrite => UserPermission::Write,
         })?;
         self.ai_select_company(company)?;
+        self.ai.grants.retain(|g| g.expires > Instant::now());
         fb_core::py::clean_free_text(name)?;
         if name.trim().is_empty() || name.chars().count() > 80 || self.ai.grants.len() >= 32 {
             return Err(denied());
@@ -102,6 +120,7 @@ impl App {
             permission,
             expires: Instant::now() + Duration::from_secs(8 * 3600),
             previews: HashMap::new(),
+            invoice_previews: HashMap::new(),
         });
         Ok(
             json!({"id":id,"token":token,"company_id":company.to_db(),"actor_id":actor.to_db(),"generation":self.ai.generation,"permission":permission,"expires_in_seconds":8*3600}),
@@ -149,7 +168,7 @@ impl App {
         let i = self.ai_authorize(token)?;
         let g = &self.ai.grants[i];
         Ok(
-            json!({"version":1,"company_id":g.company.to_db(),"actor_id":g.actor.to_db(),"session_generation":g.session_generation,"authority_generation":g.generation,"permission":g.permission,"operations":catalogue(g.permission),"limitations":["No arbitrary SQL, filesystem, backup/protection, user management or provider-network operations.","Import supports structured posted journals only (1–100 per batch); preview IDs are provisional and apply revalidates current accounting setup and accounts.","Grants expire after eight hours and are revoked by lock, company change, sign-out or session invalidation."]}),
+            json!({"version":1,"company_id":g.company.to_db(),"actor_id":g.actor.to_db(),"session_generation":g.session_generation,"authority_generation":g.generation,"permission":g.permission,"operations":catalogue(g.permission),"limitations":["No arbitrary SQL, filesystem, backup/protection, user management or provider-network operations.","Import supports structured posted journals only (1–100 per batch); preview IDs are provisional and apply revalidates current accounting setup and accounts.","Live grants expire after eight hours and are revoked by lock, company change, sign-out or session invalidation. A remembered desktop approval can create a fresh grant only after completed sign-in to the same approved book, user and company."]}),
         )
     }
     /// Transport-safe validation feedback, only after authenticating the connection. Database/internal
@@ -236,6 +255,21 @@ impl App {
                     json!({"company_id":co.to_db(),"company_name":company.name,"currency":company.currency,"actor_id":actor.to_db(),"actor_name":user.username,"generation":self.ai.generation}),
                 )
             }
+            operations::Operation::InvoiceImportPreview { invoices } => {
+                if self.ai.grants[index].invoice_previews.len() >= 8 {return Err(AppError::Invalid("At most eight invoice import previews per connection.".into()));}
+                let rows=invoices.iter().map(|v|Ok(json!({"invoice":crate::session::invoice_input(&v.invoice)?,"source":v.source}))).collect::<AppResult<Vec<_>>>()?;
+                let open=self.open_mut()?;
+                let mut result=fb_core::sales::historical::run(&mut open.book,open.owner,co,&rows,true,None)?;
+                let token=uuid::Uuid::new_v4().to_string();
+                let hash=result["review_digest"].as_str().unwrap_or("").to_owned();
+                self.ai.grants[index].invoice_previews.insert(token.clone(),(rows,hash));
+                result["preview_token"]=json!(token);Ok(result)
+            }
+            operations::Operation::InvoiceImportApply { preview_token } => {
+                let (rows,hash)=self.ai.grants[index].invoice_previews.get(&preview_token).ok_or_else(denied)?.clone();
+                let open=self.open_mut()?;
+                Ok(fb_core::sales::historical::run(&mut open.book,open.owner,co,&rows,false,Some(&hash))?)
+            }
             operations::Operation::ImportPreview { journals } => {
                 if self.ai.grants[index].previews.len() >= 8 {
                     return Err(AppError::Invalid(
@@ -271,6 +305,7 @@ impl App {
 fn commands() -> &'static [&'static str] {
     &[
         "SaveAccount",
+        "SaveCompanyDetails",
         "SaveCustomer",
         "SaveItem",
         "SaveSetup",
@@ -335,6 +370,7 @@ fn commands() -> &'static [&'static str] {
         "SaveReconciliationTicks",
         "FinishReconciliation",
         "UndoReconciliation",
+        "SaveTimeEntry",
     ]
 }
 fn variants(schema: Value, kind: &str, allow: impl Fn(&str) -> bool) -> Vec<Value> {
@@ -367,7 +403,11 @@ fn description(name: &str) -> String {
     match name {
         "PostInvoice"=>"Review the current invoice mapping/revision and post through the normal accounting service. No human prompt.".into(),
         "SaveInvoice"=>"Create an invoice draft. Use a stable UUID request_key; then PostInvoice with its current revision.".into(),
+        "SaveTimeEntry"=>"Record billable time for a customer: service item_id (a SERVICE item), date, hours as exact text (\"3.5\", \"3.5h\", \"3:30\"), optional ticket_id of that customer's open job ticket, optional rate (blank uses the item's price), billable and notes. worker_id defaults to the connected person. Use a stable UUID request_key. Time is not an accounting posting.".into(),
+        "JobTickets"=>"List job tickets with customer, status, hours and unbilled billable amount. Optional customer_id and status (OPEN, COMPLETED, INVOICED, CLOSED, ACTIVE or ALL).".into(),
         "AcceptFeed"=>"Categorize/accept one feed transaction through existing CHECK, JOURNAL, TRANSFER, DEPOSIT or MATCH service; retries use the feed decision identity.".into(),
+        "InvoiceImportPreview"=>"Preview mapped CyberBrain invoices with original source evidence, discounts, taxes, statuses and recorded payments. Uses real Writer services and rolls everything back.".into(),
+        "InvoiceImportApply"=>"Apply a connection-bound invoice preview atomically, preserving source history and preventing duplicate invoices/payments. Does not call payment or email providers.".into(),
         "ImportPreview"=>"Validate a structured journal batch using real save/post services, roll back, and return a connection-bound preview_token. Provisional IDs can change.".into(),
         "ImportApply"=>"Revalidate and atomically post the previewed journal batch. Repeat with the same token is idempotent through stable journal request keys.".into(),
         _=>format!("{name}: validated FreedomBooks operation in the connected company. Money values use exact decimal strings. Review tokens/revisions, when required, come from the matching Review operation.")

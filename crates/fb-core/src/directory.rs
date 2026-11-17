@@ -206,6 +206,15 @@ pub fn save_record_tx(
         }
         full_clean(model, &obj)?;
         validate(conn, company, model, &obj)?;
+        if model == Model::Item
+            && before.as_ref().is_some_and(|b| b["kind"] == "SERVICE")
+            && obj["kind"] != "SERVICE"
+            && conn.query_row("SELECT EXISTS(SELECT 1 FROM jobs_timeentry WHERE item_id=?1 AND company_id=?2)", params![obj["id"].as_str(), company.to_db()], |r| r.get::<_, bool>(0))?
+        {
+            return Err(FbError::validation(
+                "Time is recorded against this service, so it stays a service. Create a separate product instead.",
+            ));
+        }
         if let Err(error) = persist(conn, model, &obj, before.is_some()) {
             if error.constraint() == Some("unique:index 'item_code_ci_per_company'") {
                 return Err(FbError::validation(

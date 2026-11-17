@@ -169,7 +169,35 @@ pub fn record_payment(
     p: &Value,
     review: &Review,
 ) -> FbResult<Value> {
+    write(book, |tx| record_payment_tx(tx, actor, co, p, review))
+}
+/// Pay bills: record several reviewed payments (one per vendor) in one transaction. Each payment
+/// is recorded exactly as `record_payment` records it, with its own review, request key, journal
+/// and audit entry; if any one is refused, none is recorded.
+pub fn record_payments(
+    book: &mut Book,
+    actor: UserId,
+    co: CompanyId,
+    payments: &[(Value, &Review)],
+) -> FbResult<Vec<Value>> {
+    if payments.is_empty() || payments.len() > 50 {
+        return Err(err("Pay between 1 and 50 vendors at a time."));
+    }
     write(book, |tx| {
+        payments
+            .iter()
+            .map(|(p, review)| record_payment_tx(tx, actor, co, p, review))
+            .collect()
+    })
+}
+fn record_payment_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    co: CompanyId,
+    p: &Value,
+    review: &Review,
+) -> FbResult<Value> {
+    {
         let u = services::access(tx, actor, co)?;
         let d = normalize(p)?;
         let creation = digest(&d);
@@ -241,7 +269,7 @@ pub fn record_payment(
             json!({"number":identity["number"],"amount":Money::from_db(d["amount"].as_i64().unwrap()).to_string(),"memo":d["memo"],"allocations":d["allocations"].as_array().unwrap().iter().map(|a|json!({"bill_id":a["bill_id"],"amount":Money::from_db(a["amount"].as_i64().unwrap()).to_string()})).collect::<Vec<_>>()}),
         )?;
         Ok(r)
-    })
+    }
 }
 pub fn reverse_payment(
     book: &mut Book,

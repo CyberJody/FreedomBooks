@@ -1,11 +1,10 @@
-//! fb-harness: the differential "answer key" harness for layer 1.
+//! fb-harness: a scenario runner for tests.
 //!
-//! A scenario (JSON) lists users and steps in the ledger command vocabulary. `py/run_scenario.py` applies
-//! it through the frozen Python services; `run_scenario` here applies it to a fresh SQLCipher book through
-//! fb-core. Both dump the same normalized JSON (natural keys = the scenario's refs, money in cents), and
-//! `compare` reports every difference. Failures: any money, status, line, register-order or outcome
-//! (ok vs refused, and the exception kind) difference. Warnings: error wording.
-//! Order inversions pass only under the shared ICU4X punctuation-tie predicate; see README.md.
+//! A scenario (JSON) lists users and steps in the ledger command vocabulary. `run_scenario` applies it to a
+//! fresh SQLCipher book through fb-core and dumps normalized JSON (natural keys = the scenario's refs,
+//! money in cents). Other crates' tests use it to build books. This crate began as a differential harness
+//! against the earlier Python app; that comparison is retired and its Python side is gone. `compare` and
+//! the shape checks remain for the tests that pin expected results.
 
 mod journal_aliases;
 mod backups;

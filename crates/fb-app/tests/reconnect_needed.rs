@@ -196,12 +196,11 @@ fn frozen_0140_book_with_an_active_connection_opens_with_reconnect_needed() {
         let o = app.open.as_mut().unwrap();
         fb_db::test_support::populated_copy(o.book.connection(), &prior, &key, "0140_deposit_estimates", true).unwrap()
     };
-    let mut expected_before = copy.expected.clone();
-    for table in ["plugin_credential", "company_document_details", "fb_numbering", "desktop_user", "desktop_mfa_totp", "desktop_mfa_recovery"] {
-        let later=expected_before.remove(table).unwrap();
-        if table!="desktop_user" { assert!(later.is_empty(),"the later {table} table must be empty"); }
-        assert!(!copy.before.contains_key(table), "{table} did not exist at the frozen boundary");
-    }
+    // Tables added after 0140 are derived from the schemas: empty, except desktop_user's 0185 backfill.
+    let expected_before = {
+        let o = app.open.as_mut().unwrap();
+        copy.expected_at_boundary(o.book.connection(), &["plugin_credential", "company_document_details", "fb_numbering", "desktop_user", "desktop_mfa_totp", "desktop_mfa_recovery"])
+    };
     assert_eq!(copy.before, expected_before);
     app.lock();
     app.open_book(&prior, &key).expect("a pre-vault book with a connection must open");

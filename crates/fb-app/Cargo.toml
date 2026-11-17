@@ -8,8 +8,10 @@ description = "Transport-neutral application layer: the session, commands and qu
 [dependencies]
 fb-core = { path = "../fb-core" }
 fb-db = { path = "../fb-db" }
+fb-diag = { path = "../fb-diag" }
 fb-ids = { path = "../fb-ids" }
 fb-money = { path = "../fb-money" }
+base64 = "0.22"
 fb-templates = { path = "../fb-templates" }
 fb-plugin-api = { path = "../fb-plugin-api", default-features = false }
 hkdf = "0.12"
@@ -34,12 +36,16 @@ percent-encoding = "2.3.2"
 libc = "0.2"
 
 [features]
+invoice-delivery = []
 simplefin = []
 # Bank feeds, AI assistant and receipt reader (plugins). Off in release builds: hidden, refused.
 plugins = []
 key-test-hooks = ["fb-db/key-test-hooks"]
+# Test builds only: panics injected on request (see `test_panic`). Refused in optimized builds.
+panic-test = ["fb-db/panic-test"]
 
 [dev-dependencies]
+cfb = "=0.14.0"
 tempfile = "3"
 fb-harness = { path = "../fb-harness" }
 sha2 = "0.10"

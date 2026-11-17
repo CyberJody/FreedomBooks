@@ -2,16 +2,16 @@
 
 FreedomBooks is a desktop accounting application for small businesses, built with Rust, SQLCipher and Electron. Your books stay on your computer. Bank downloads use your own SimpleFIN Bridge account.
 
-## Source preview — November 8, 2026
+## Source preview — November 17, 2026
 
-This is a **code-only preview** of the version being used and tested internally on Linux. It includes SimpleFIN bank downloads, named desktop users, local AI access through an API and MCP, and optional authenticator-app MFA with QR setup. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
+This is a **code-only preview** of the version being used and tested internally on Linux. New since the November 8 preview: an Expenses page, recurring bills, job tickets with billable time, several people signed in at once, and hosting the books for other computers on your own network or Tailscale. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
 
-The application source comes from the internally tested `4caf4c206952dcaf1c6dedeb386c2a85570d3c03` snapshot. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
+The application source comes from the internally tested `971340230a1395c183f9995b77ee5b654c49349c` build; application behavior is unchanged; sample test names, public documentation, the dependency notices and their generator, and the tested Node version pin were adjusted for publication. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
 
 ## Available in the desktop app
 
 - Company creation with starter accounts, editable business details and document numbering.
-- Customers, vendors, items, estimates, invoices, receipts, bills and payments. Customer and vendor notes support paragraphs and blank lines.
+- Customers, vendors, items, estimates, invoices, receipts, bills and payments.
 - Checks, deposits, transfers, bank registers and reconciliation.
 - Financial reports, audit history, document PDFs and attachments.
 - Book protection, recovery keys, portable backups and restore.
@@ -21,14 +21,19 @@ The application source comes from the internally tested `4caf4c206952dcaf1c6dede
 - Optional authenticator-app MFA: scan a locally generated QR code, confirm a six-digit code and save single-use recovery codes. Manual setup is available as a fallback.
 - Authorized AI assistant connections through a local API and MCP, including reports, invoices, bank categorization and structured journal imports. The model can run locally or in the cloud. Connections use the signed-in person's permissions and validated accounting operations. See [AI assistant connections](docs/local-ai.md).
 - Keyboard selection, previewed bulk draft edits and reusable rules for transaction review. Applying bulk edits does not post transactions.
+- An Expenses page for recording and finding spending in one place.
+- Monthly and yearly recurring bills from a template, with skip and catch-up review. See [Recurring bills](docs/recurring-bills.md).
+- Job tickets for customer work, with billable time entries that become an ordinary draft invoice. See [Job tickets](docs/job-tickets.md).
+- Several people signed in to the same books at once, each with their own user name, password and role.
+- Hosting: one computer keeps the books and other computers on your own network or Tailscale use them through it, paired with a one-time code and mutually pinned certificates. Hosting is off until an Administrator turns it on. See [Host these books](docs/hosting.md) and [Remote access](docs/remote-access.md).
 
 Bank access is read-only. Downloaded activity stays in review until you accept it into the books. In SimpleFIN Bridge, use **My Account → Apps → New app connection** to create a separate connection for FreedomBooks; keep your existing bank connections and other apps.
 
-One person can use the desktop books at a time; simultaneous access from other computers and YubiKey support are deferred. Local AI access covers the documented operation catalogue, not arbitrary database or file access. The optional receipt assistant and email plugins are separate from the SimpleFIN-enabled build below. Payroll is not supported. See the [product backlog](docs/product-backlog.md).
+Hosting never listens on the internet, opens a router port or uses UPnP, and a headless host service is not built yet. Backup, restore and book password or key changes run only at the host computer. YubiKey support is deferred. Local AI access covers the documented operation catalogue, not arbitrary database or file access. The optional receipt assistant and email plugins are separate from the SimpleFIN-enabled build below. Payroll is not supported. See the [product backlog](docs/product-backlog.md).
 
 ## Build and run on Linux
 
-Prerequisites: stable Rust, a C/C++ toolchain, Perl, pkg-config, and Node.js 22.12 or newer. SQLCipher and OpenSSL are built from source. Electron also needs the usual Linux graphical libraries. A working desktop secret store is required to save bank connections.
+Prerequisites: stable Rust, a C/C++ toolchain, Perl, pkg-config, and Node.js 22.12 or newer (`.node-version` pins the tested 24.22.2). SQLCipher and OpenSSL are built from source. Electron also needs the usual Linux graphical libraries. A working desktop secret store is required to save bank connections.
 
 From the repository root:
 
@@ -39,7 +44,7 @@ npm test --prefix electron
 npm start --prefix electron
 ```
 
-`FB_SIMPLEFIN=1` builds both the native application bridge and the separate network helper. Set it again whenever rebuilding this configuration. The default build without this flag hides bank feeds. The broader experimental plugin build uses `FB_PLUGINS=1` instead.
+`FB_SIMPLEFIN=1` builds both the native application bridge and the separate network helper. Set it again whenever rebuilding this configuration. The default build without this flag hides bank feeds. The broader experimental plugin build uses `FB_PLUGINS=1` instead. Gmail invoice email and Stripe payment links are a separate opt-in build (`FB_INVOICING=1`); ordinary invoices need no flag. See [invoice email and payments](docs/invoicing-migration.md).
 
 For isolated evaluation, set `FB_DESKTOP_USER_DATA` to a new absolute directory before starting Electron. Never point development or test commands at your real books. The normal Linux profile is under `~/.config/app.freedombooks.FreedomBooks`.
 
@@ -53,7 +58,7 @@ cargo clippy --locked --workspace --all-targets -- -D warnings
 npm test --prefix electron
 ```
 
-Start with tests for the behavior you change; the full workspace includes long-running fuzz and compatibility tests. Historical Django differential and screen-comparison checks need a separate frozen reference environment. See [Contributing](CONTRIBUTING.md#running-the-tests) and [development checks](docs/development-process.md).
+Start with tests for the behavior you change; the full workspace includes long-running fuzz and compatibility tests. See [Contributing](CONTRIBUTING.md#running-the-tests) and [development checks](docs/development-process.md).
 
 The code is organized under `crates/` (accounting core, database, app, templates, bridges and plugins), `electron/` (desktop shell) and `packaging/` (packaging tooling). Packaging tooling is retained as source, but packaged releases are outside this preview.
 

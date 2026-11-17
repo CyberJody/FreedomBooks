@@ -80,3 +80,17 @@ test('OS-bootstrap API mode handles JSON lines; malformed MCP primitives cannot 
     assert.equal(JSON.parse(replies.trim().split('\n').at(-1)).id,1);
   } finally {await server.stop();}
 });
+test('a long-running client reloads rotated credentials, preflights reads and never retries mutations',async()=>{
+ let current={token:'a'.repeat(64)},saved,posts=0,reads=0;
+ const server=create({generation:()=>1,request:async(token,body)=>{
+  if(body===undefined){reads++;if(token===saved.token){current={...current,token:'b'.repeat(64)};throw Error('expired synthetic session');}assert.equal(token,current.token);return '{"operations":[]}';}
+  posts++;throw Error('Synthetic response lost after posting');
+ }});
+ const base=await server.start();saved={endpoint:base,token:current.token};current={...saved};
+ try{
+  assert.deepEqual(await api(()=>({...current}),'/v1/catalogue'),{operations:[]});assert.equal(reads,2);
+  const input=new PassThrough(),output=new PassThrough();let text='';output.on('data',c=>text+=c);
+  const client=serve(()=>({...current}),input,output,{apiMode:true});input.write('{"operation":"command_SaveInvoice","arguments":{}}\n');await client.done();
+  assert.equal(posts,1);assert.equal(JSON.parse(text).ok,false);assert.ok(!text.includes(current.token));
+ }finally{await server.stop();}
+});

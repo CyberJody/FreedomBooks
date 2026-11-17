@@ -20,8 +20,10 @@ pub fn book_path(tag: &str) -> PathBuf {
     path
 }
 
+/// A fresh, fully migrated book: a copy of the per-process template that the real `Book::create`
+/// made (fb_db::test_support::template_book). Tests of creation itself call `Book::create`.
 pub fn book(tag: &str) -> Book {
-    Book::create(&book_path(tag), &KEY).unwrap()
+    fb_db::test_support::template_book(&book_path(tag), &KEY).unwrap()
 }
 
 pub struct Fx {

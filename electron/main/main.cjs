@@ -16,11 +16,17 @@ native.setHost(app.getVersion(), require('./about.cjs').osLabel());
 // The default build has neither and remains offline.
 const PLUGINS = native.pluginsEnabled() === true;
 const BANK_FEEDS = native.bankfeedsEnabled() === true;
+const INVOICE_DELIVERY = native.invoiceDeliveryEnabled() === true;
 // WAVE4: plugin network calls run in the separate fb-net process, spawned by fb-node. The path is
 // set once here and fb-node refuses to change it; without the helper, bank feeds and ChatGPT say so.
-if (PLUGINS || BANK_FEEDS) {
+if (PLUGINS || BANK_FEEDS || INVOICE_DELIVERY) {
   const helper = development.netHelper(app, __dirname);
   if (fs.existsSync(helper)) native.configureNetwork(path.resolve(helper));
+}
+// "Host these books": the same fb-remote helper, as the TLS listener. fb-node takes the path once.
+{
+  const helper = development.remoteHelper(app, __dirname);
+  if (fs.existsSync(helper)) native.configureRemote(path.resolve(helper));
 }
 const STATIC_ROOT = path.join(__dirname, '..', 'renderer', 'static');
 const ORIGIN = 'fb://app';
@@ -39,8 +45,15 @@ require('./identity.cjs').configure(app);
 if (!require('./identity.cjs').claimInstance(app, development.userData(app) || require('./identity.cjs').settingsDir(app))) app.exit(0);
 
 const userData = keys.userDataDir(app);
-const store = keys.store(userData);
+// CRASHLOG: the problem log (diagnostics.cjs). Development runs keep it inside the isolated profile.
+const diagnostics = require('./diagnostics.cjs').create({native, dir: require('./diagnostics.cjs').logDir(app), shell, clipboard, dialog, window: () => win});
+diagnostics.install();
 native.configureBackups(userData);
+// An interrupted "Use this as my books" is finished or undone before the saved choice of books is
+// read. If that can't be decided, no book opens and the unlock screen says why (gateMode 'error').
+let bookChangeError = null;
+try { native.recoverBookChange(); } catch (e) { bookChangeError = e; }
+const store = keys.store(userData);
 const output = require('./save-file.cjs').create({dataDir:userData, bookPath:()=>JSON.parse(native.appState()).path || store.bookPath()});
 const printing = require('./printing.cjs').controller(native, output, exclusive);
 
@@ -58,6 +71,65 @@ const BACKUPS_PAGE = /^\/c\/[0-9a-f-]{36}\/backups\/$/;
 let busy = null;
 let lockWhenIdle = false;
 const localAI = require('./ai-desktop.cjs').create({app,native,dialog,clipboard,safeStorage,root:userData,window:()=>win,exclusive,busy:()=>!!busy});
+// Remote access, client mode (remote-mode.cjs): off until the person connects to a host. While
+// connected, pages and form posts go to the host; the local books stay closed.
+const remoteLink = require('./remote-client.cjs');
+const remoteStore = remoteLink.store({dir: userData, safeStorage, writePrivate: keys.writePrivate});
+let remoteGeneration = 0;
+const remote = require('./remote-mode.cjs').create({
+  client: remoteLink.child({helper: development.remoteHelper(app, __dirname), onLink: state => remote.setLink(state)}),
+  store: remoteStore, window: () => win, output, dialog,
+  onChange: () => {
+    remoteGeneration++;
+    const menu = Menu.getApplicationMenu();
+    const off = menu?.getMenuItemById('remote-disconnect');
+    if (off) off.enabled = remote.active();
+    const lockItem = menu?.getMenuItemById('lock-books');
+    if (lockItem && remote.active()) lockItem.enabled = true;
+  },
+});
+const REMOTE = require('./remote-mode.cjs');
+// "Host these books" (hosting.cjs): Settings › Host these books… on the computer with the books.
+const hosting = require('./hosting.cjs').create({
+  native, exclusive, os: require('node:os'), loopback: development.hostingLoopback(app),
+  note: (op, e) => diagnostics.note(op, e),
+  onNotice: () => { if (win && !win.isDestroyed() && new URL(win.webContents.getURL()).pathname === hosting.PATH) win.loadURL(ORIGIN + hosting.PATH); },
+  onStatus: s => {
+    const label = require('./hosting.cjs').statusLabel(s);
+    if (label === hostingTitle) return;
+    hostingTitle = label;
+    if (win && !win.isDestroyed()) win.setTitle(windowTitle(win.webContents.getTitle()));
+  },
+});
+// While hosting, the window title says so and how many computers are connected (review S5).
+let hostingTitle = '';
+function windowTitle(title) {
+  if (remote.active()) return `${title} — connected to ${remote.host()}`;
+  return hostingTitle ? `${title} — ${hostingTitle}` : title;
+}
+function remoteSender(event, paths) {
+  let pathname = '';
+  try { pathname = new URL(event.senderFrame.url).pathname; } catch { /* refused below */ }
+  if (!paths.includes(pathname)) throw new Error('Refused: unexpected sender.');
+}
+function remoteResult(r) {
+  if (r.errors) { remote.flash(r.errors); return {outcome: 'invalid', reload: '/remote/connect/'}; }
+  return {outcome: 'redirect', location: r.location};
+}
+// Connecting closes this computer's own books first: one window shows one set of books.
+function closeLocalForRemote() {
+  if (busy) throw new Error(BUSY_TEXT);
+  if (JSON.parse(native.appState()).open) { native.lock(); store.returnToMain(); }
+  pending = null;
+}
+async function remotePage(target, url) {
+  const r = await remote.render(target);
+  if (r.redirect) return Response.redirect(new URL(r.redirect, ORIGIN).href, 303);
+  if (r.binary) return new Response(r.binary, {headers: {'content-type': r.mime, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': guards.CSP}});
+  const csv = (r.route === 'history' && url.searchParams.get('format') === 'csv') || (['profit_loss', 'balance_sheet', 'general_ledger', 'register', 'reconcile:report'].includes(r.route) && url.searchParams.getAll('output').at(-1) === 'csv');
+  if (r.status === 200 && csv) return new Response(r.html, {status: 200, headers: {'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="export.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'}});
+  return page(r.html, r.status);
+}
 function exclusive(work) {
   if (busy) throw new Error(BUSY_TEXT);
   const capture = result => ({...result,generation:JSON.parse(native.appState()).session_generation});
@@ -65,7 +137,7 @@ function exclusive(work) {
     busy = null;
     if (lockWhenIdle) {
       lockWhenIdle = false;
-      lockNow();
+      lockNow('locked');
     }
   }).then(result => {
     // Native completion may itself sign in/out. Bind its resulting session BEFORE the
@@ -92,23 +164,101 @@ function page(html, status = 200) {
   });
 }
 
+// Why the unlock screen is showing: '' (nothing special), 'missing' or 'unreadable' (the saved book key
+// is not usable after a reinstall or move), 'keyring' (no working keyring this launch), 'ask' (the owner
+// chose to be asked), 'locked' or 'idle' (locked by the user or after inactivity), 'choose' (pick a book).
+let gateReason = '';
+
+// fb-node refusals carry plain words written for the owner. Anything else (file system, keyring,
+// Electron) is never shown: its text can be technical or name internals.
+const GATE_FALLBACK = 'FreedomBooks could not finish opening these books. Nothing was changed. Try again, and if this keeps happening use “Report a problem”.';
+function plainError(e) {
+  const panic = diagnostics.panic(e);
+  if (panic) return diagnostics.panicText(panic);
+  const code = e && typeof e.code === 'string' ? e.code : '';
+  return (code === 'GenericFailure' || code.startsWith('FB_')) && typeof e.message === 'string' && e.message ? e.message : GATE_FALLBACK;
+}
+const WRONG_UNLOCK = 'That didn’t unlock the books. Check Caps Lock, and remember this is the book password (or the recovery key from your Emergency Kit), not your sign-in password.';
+
+// What the gate says about this computer: why it shows, which book file it opens and when that file last
+// changed. Paths are shown to the owner (home folder as ~); nothing secret is included.
+function gateContext() {
+  const context = {reason: gateReason, book: '', books: [], home: require('node:os').homedir()};
+  try {
+    context.book = store.bookPath();
+    context.books = store.books();
+  } catch (e) { diagnostics.note('gate-context', e); /* the screen still works without the file details */ }
+  return context;
+}
+// setup only when this computer is known to have no books at all; a saved choice that can't be
+// followed, or a missing main book beside other books, asks the owner to choose instead of starting
+// new books. Anything that can't be read fails closed: an error page, never first-time setup.
+const BOOKS_UNREADABLE = 'FreedomBooks couldn’t read the list of books on this computer: the books folder, or a folder inside it, can’t be opened. Nothing was changed or deleted. Check that folder’s permissions, then start FreedomBooks again. If this keeps happening use “Report a problem”.';
+function gateProblem() {
+  if (bookChangeError) return plainError(bookChangeError);
+  if (store.exists() && gateReason !== 'choose') return '';
+  try { store.books(); return ''; } catch { return BOOKS_UNREADABLE; }
+}
+function gateMode() {
+  if (gateProblem()) return 'error';
+  if (store.exists() && gateReason !== 'choose') return 'unlock';
+  return store.books().length ? 'choose' : 'setup';
+}
 function gate(errors = [], starterChart = 'standard') {
-  const mode = store.exists() ? 'unlock' : 'setup';
-  return native.renderGate(mode, true, '', JSON.stringify(errors), starterChart);
+  const mode = gateMode();
+  const shown = mode === 'error' ? [gateProblem(), ...errors.filter(e => e !== gateProblem())] : errors;
+  return native.renderGate(mode, JSON.stringify(gateContext()), JSON.stringify(shown), starterChart);
 }
 
+// After any open: remember which book is open, and keep the saved book key in step with the owner's
+// choice. A keyring that can't seal right now changes nothing on disk; the password is asked next time.
 function syncBookKeys() {
   const state = JSON.parse(native.appState());
   if (!state.open || !state.path) return;
-  store.remember(state.path, state.viewing_restored === true);
+  gateReason = '';
+  // Only the main book is the main book. Anything else opened (a restored copy, a set-aside book, or
+  // any book while the saved choice is missing or damaged) is a labelled copy until the owner makes
+  // it the main books with fb-app's confirmed, audited "Use this as my books".
+  store.remember(state.path);
+  const copy = !store.isMain(state.path);
+  native.markCopy(copy);
+  // A committed change of main books whose audit event a restart still owes is recorded now.
+  try { native.finishBookChange(); } catch (e) { diagnostics.note('finish-book-change', e); /* tried again after the next command or open */ }
   const protection = JSON.parse(native.protectionState(state.path));
-  if (!protection.known) return; // Preserve an older OS-only key until recovery setup finishes.
-  if (!state.builtin && !protection.ask_password && store.osStoreUsable()) {
-    // The books are already open: a keyring that cannot seal means asking for the password next time.
-    try { store.sealBook(native.keyForSealing()); } catch { store.removeSealedKey(); }
-  } else store.removeSealedKey();
+  if (protection.known) { // Otherwise preserve an older OS-only key until recovery setup finishes.
+    if (state.builtin || protection.ask_password) {
+      try { store.removeSealedKey(); } catch (e) { diagnostics.note('remove-sealed-key', e); /* the owner's prompt still applies: the record says ask */ }
+    } else if (!copy && store.keyringWorks()) {
+      // Only the main books open by themselves at start, so only their key is saved here. A copy's
+      // saved key would only ever be a way to open it without its password (see app.chooseBook).
+      try { store.sealBook(native.keyForSealing()); } catch (e) { diagnostics.note('seal-book-key', e); /* nothing removed; asked next time */ }
+    }
+  }
   const item = Menu.getApplicationMenu()?.getMenuItemById('lock-books');
   if (item) item.enabled = state.can_lock || state.signed_in;
+  const use = Menu.getApplicationMenu()?.getMenuItemById('use-restored');
+  if (use) use.enabled = copy;
+}
+
+// "Use this as my books", after the owner confirmed it on the restored-book page. fb-app does the
+// whole change under a journal: it sets the previous main book aside (moved, never deleted), points
+// the saved choice at the open book, and writes the audit event only once the change is committed.
+// A refusal or failure says truthfully what is where; the shell then changes nothing.
+function useRestored() {
+  const state = JSON.parse(native.appState());
+  if (!state.open || !state.path || state.path !== store.bookPath() || store.isMain(state.path)) {
+    throw new Error('These are already your books.');
+  }
+  const main = store.mainBook();
+  const previous = main && main !== state.path && fs.existsSync(main) ? main : '';
+  const made = JSON.parse(native.useRestoredCopy(previous));
+  store.adoptMain(made.main);
+  native.markCopy(false);
+  try { syncBookKeys(); } catch (e) {
+    if (diagnostics.panic(e)) throw e;
+    diagnostics.note('sync-keys', e); // the change is made; save the key after the next unlock
+  }
+  return {outcome:'redirect', location:'/settings/restored-book/?done=1'};
 }
 
 async function saveRecovery() {
@@ -129,9 +279,15 @@ async function handle(request) {
   if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
   if (!guards.pluginAllowed(url.pathname, {plugins:PLUGINS,bankFeeds:BANK_FEEDS})) return new Response('Not found', { status: 404 });
   if (url.pathname.startsWith('/static/')) return guards.staticFile(STATIC_ROOT, url.pathname.slice('/static/'.length));
+  if (url.pathname === diagnostics.PROBLEM_PATH) return diagnostics.lastPage() ? page(diagnostics.lastPage(), 500) : Response.redirect(`${ORIGIN}/`, 303);
   const target = url.pathname + url.search;
+  if (remote.active() || remote.handles(url.pathname)) {
+    try { return await remotePage(target, url); }
+    catch (e) { diagnostics.unexpected('remote-page', e); return page(require('./remote-mode.cjs').noticePage('Something went wrong', 'The page could not be shown. Try again.'), 500); }
+  }
   // Several page loads may be waiting on the same operation. Recheck admission after
   // every await so a newly admitted render cannot overlap another request.
+  const waitedForWork = !!busy;
   while (busy) await busy.catch(() => {});
   const logo = /^\/c\/([0-9a-f-]{36})\/document-logo\/$/.exec(url.pathname);
   if (logo) {
@@ -140,7 +296,7 @@ async function handle(request) {
       const data = JSON.parse(native.query(JSON.stringify({type:'CompanyLogo',company_id:logo[1]})));
       if (!data || !['image/png','image/jpeg'].includes(data.mime)) return new Response('Not found', {status:404});
       return new Response(Buffer.from(data.base64,'base64'), {headers:{'content-type':data.mime,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':guards.CSP}});
-    } catch { return new Response('Not found', {status:404}); }
+    } catch (e) { diagnostics.note('logo', e); return new Response('Not found', {status:404}); }
   }
   if (pending && pending.generation !== undefined && pending.generation !== JSON.parse(native.appState()).session_generation) pending = null;
   if (pending && pending.path === target) {
@@ -149,7 +305,18 @@ async function handle(request) {
     return page(html, status);
   }
   if (!JSON.parse(native.appState()).open) return page(gate(), 200);
+  if (hosting.handles(url.pathname)) {
+    try { return page(hosting.render()); }
+    catch (e) { diagnostics.unexpected('hosting-page', e); return page(gate([plainError(e)]), 500); }
+  }
   try {
+    // Automation has its own write-classified native boundary, separate from page reads.
+    // The timer also catches up while the user leaves a page open across a due date.
+    if (!waitedForWork && /^\/c\/[0-9a-f-]{36}\//.test(url.pathname) && JSON.parse(native.appState()).signed_in) {
+      const generation = JSON.parse(native.appState()).session_generation;
+      await exclusive(() => native.recurringBillsAsync());
+      requireGeneration(generation);
+    }
     const r = JSON.parse(BACKUPS_PAGE.test(url.pathname)
       ? await exclusive(() => native.renderAsync(target)) : native.render(target));
     // exclusive applies a deferred lock before resolving. Never deliver the completed
@@ -159,6 +326,15 @@ async function handle(request) {
       const location = new URL(guards.target({ target: r.html }), ORIGIN);
       if (location.protocol !== 'fb:' || location.host !== 'app') throw new Error('Invalid local redirect');
       return Response.redirect(location.href, r.status);
+    }
+    // The remembered approval cannot act until native rendering has authenticated this company.
+    const aiCompany = /^\/c\/([0-9a-f-]{36})\//.exec(url.pathname)?.[1];
+    if (r.status === 200 && aiCompany) {
+      const generation = JSON.parse(native.appState()).session_generation;
+      const aiGeneration = native.aiGeneration();
+      await localAI.resume(aiCompany);
+      requireGeneration(generation);
+      if (aiGeneration !== native.aiGeneration()) throw Object.assign(new Error('The active company changed. Open the screen again.'), {code:'SESSION_CHANGED'});
     }
     if (r.route === 'history' && url.searchParams.get('format') === 'csv' && r.html.startsWith('\uFEFF')) {
       return new Response(r.html, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="audit-history.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store' } });
@@ -177,11 +353,63 @@ async function handle(request) {
       return JSON.parse(native.appState()).open ? Response.redirect(ORIGIN+'/desktop/sign-in/',303) : page(gate(),200);
     }
     if (String(e.message) === 'LOCKED') return page(gate(), 200);
-    return page(native.renderGate('unlock', false, '', JSON.stringify([String(e.message)])), 404);
+    const panic = diagnostics.panic(e);
+    if (panic) return page(afterPanic(panic, url.pathname), 500);
+    diagnostics.unexpected('page', e);
+    return page(gate([plainError(e)]), 404);
   }
 }
 
-function lockNow() {
+// CRASHLOG: fb-node caught a panic and turned it into an error (see diagnostics.cjs). When it closed
+// the books (after anything that could have changed them), open them again the way startup does if
+// this computer can, so the owner signs in or unlocks as usual; then say what happened.
+function afterPanic(info, pathname) {
+  if (info.closed) {
+    pending = null;
+    gateReason = '';
+    startupHome = '';
+    if (!busy && info.was_open) {
+      try { startupOpen(true); } catch (e) { diagnostics.note('reopen', e); }
+      try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); }
+    }
+  }
+  let state = {open: false};
+  try { state = JSON.parse(native.appState()); } catch (e) { diagnostics.note('app-state', e); }
+  let version = '';
+  try { version = JSON.parse(native.buildInfo()).version; } catch (e) { diagnostics.note('build-info', e); }
+  return diagnostics.remember(info, {open: state.open === true, version}, pathname);
+}
+
+function showPanic(error, pathname = '') {
+  const info = diagnostics.panic(error);
+  if (!info) return false;
+  afterPanic(info, pathname);
+  if (win && !win.isDestroyed()) win.loadURL(`${ORIGIN}${diagnostics.PROBLEM_PATH}`);
+  return true;
+}
+
+function lockNow(reason = 'locked') {
+  // Connected to a host: this person's session there is signed out; the host's books stay open.
+  // The page is replaced at once; if the host cannot confirm the sign-out, the connection is
+  // closed so the next one needs a sign-in (remote-mode.cjs lock).
+  if (remote.active()) {
+    void remote.lock(location => { if (win && !win.isDestroyed()) win.loadURL(`${ORIGIN}${location}`); });
+    return;
+  }
+  // Hosting: the host person's lock (Ctrl+L, idle, suspend, screen lock) signs out only them; the
+  // books stay open for the people connected. Closing the books or quitting stops hosting. It never
+  // waits for the books (a connected person's request may hold them, or a desktop task may be
+  // running): fb-node records the Lock at once and applies it before anything else runs for this
+  // window, and the sign-in screen replaces the page now (review S1).
+  let hostingNow = false;
+  try { hostingNow = native.hostingActive(); } catch (e) { diagnostics.note('hosting-lock', e); }
+  if (hostingNow) {
+    try { native.signOut(); } catch (e) { diagnostics.note('hosting-lock', e); }
+    lockWhenIdle = false;
+    pending = null;
+    if (win && !win.isDestroyed()) win.loadURL(`${ORIGIN}/desktop/sign-in/`);
+    return;
+  }
   if (busy) {
     lockWhenIdle = true;
     return;
@@ -197,6 +425,7 @@ function lockNow() {
   }
   native.lock();
   store.returnToMain();
+  gateReason = reason === 'idle' ? 'idle' : 'locked';
   pending = null;
   if (win && !win.isDestroyed()) win.loadURL(`${ORIGIN}/`);
 }
@@ -206,7 +435,8 @@ const calls = {
   'books.run': async (payload) => {
     if (busy) throw new Error(BUSY_TEXT);
     const command = guards.command(payload, { plugins: PLUGINS, bankFeeds: BANK_FEEDS });
-    const long = command.type === 'SubmitForm' && LONG_COMMAND.test(command.path);
+    if (remote.active()) return remote.run(command);
+    const long = command.type === 'SubmitForm' && (LONG_COMMAND.test(command.path) || (INVOICE_DELIVERY && command.fields.some(([k,v])=>k==='action' && (v.startsWith('gmail_') || v.startsWith('stripe_')))));
     let outcome;
     try { outcome = JSON.parse(long ? await exclusive(() => native.runAsync(JSON.stringify(command))) : native.run(JSON.stringify(command))); }
     catch(error) {
@@ -215,15 +445,20 @@ const calls = {
     }
     const generation = JSON.parse(native.appState()).session_generation;
     if (long && !JSON.parse(native.appState()).open) return {outcome:'redirect',location:'/'};
-    syncBookKeys();
+    try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the command finished; the key is saved after the next unlock */ }
     if (outcome.outcome === 'done' && outcome.data?.desktop_keys === 'copy-recovery') {
       // The path-bound form and native authorization both have to allow this export.
       // Copying is not a durable backup and must not mark the recovery key as saved.
       try { clipboard.writeText(native.recoveryKey()); outcome.data.copied = true; }
-      catch { outcome.data.copy_error = 'The recovery key could not be copied. Try again, or save it to a file.'; }
+      catch (e) { diagnostics.note('copy-recovery', e); outcome.data.copy_error = 'The recovery key could not be copied. Try again, or save it to a file.'; }
       return outcome;
     }
+    if (outcome.outcome === 'done' && typeof outcome.data?.invoice_email_pdf === 'string') {
+      if (!INVOICE_DELIVERY) throw new Error('Invoice email is unavailable.');
+      return require('./invoice-email.cjs').controller(native,STATIC_ROOT,exclusive)(outcome.data.invoice_email_pdf);
+    }
     if (outcome.outcome === 'done' && outcome.data?.desktop_keys === 'save-recovery') return saveRecovery();
+    if (outcome.outcome === 'done' && outcome.data?.desktop_keys === 'use-restored') return useRestored();
     if (outcome.outcome === 'done' && outcome.data && typeof outcome.data.desktop === 'string') return backupDialog(outcome.data);
     if (outcome.outcome === 'done' && outcome.data && outcome.data.desktop_print === true) {
       try {
@@ -242,7 +477,7 @@ const calls = {
       return { outcome: 'done', data: { saved: true } };
     }
     if (outcome.outcome === 'external') {
-      if (!PLUGINS) throw new Error('Refused: link not allowed.');
+      if (!PLUGINS && !INVOICE_DELIVERY) throw new Error('Refused: link not allowed.');
       // The ChatGPT sign-in: the system browser, never this window; then the page fb-app named.
       const url = guards.signIn(outcome.url, JSON.parse(native.externalOrigins()));
       const location = guards.target({ target: outcome.location });
@@ -256,10 +491,34 @@ const calls = {
     }
     return outcome;
   },
+  // Only this computer's own connect and disconnect screens may pair, connect, forget or
+  // disconnect: never a page whose content came from a host.
+  'remote.pair': async (payload, event) => {
+    remoteSender(event, [REMOTE.CONNECT]);
+    const input = guards.remotePair(payload);
+    closeLocalForRemote();
+    return remoteResult(await remote.pair(input));
+  },
+  'remote.connect': async (_payload, event) => {
+    remoteSender(event, [REMOTE.CONNECT]);
+    closeLocalForRemote();
+    return remoteResult(await remote.connectSaved());
+  },
+  'remote.disconnect': async (_payload, event) => { remoteSender(event, [REMOTE.CONNECT, REMOTE.DISCONNECT]); await remote.disconnect(); return {outcome: 'redirect', location: '/'}; },
+  'remote.forget': async (_payload, event) => { remoteSender(event, [REMOTE.CONNECT]); await remote.forget(); return {outcome: 'redirect', location: '/remote/connect/'}; },
+  // Hosting controls: only from this computer's own Hosting screen; fb-node checks the Administrator.
+  'hosting.on': async (payload, event) => { remoteSender(event, [hosting.PATH]); if (remote.active()) throw new Error('Disconnect from the host first.'); return hosting.on(guards.hostingOn(payload)); },
+  'hosting.off': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.off(); },
+  'hosting.pair': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.pair(); },
+  'hosting.cancel': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.cancel(); },
+  'hosting.revoke': async (payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.revoke(guards.hostingRevoke(payload)); },
+  'hosting.repair': async (payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.repair(guards.hostingRepair(payload)); },
+  'hosting.restart': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.restart(); },
   'app.createBook': async (payload) => {
     if (busy) throw new Error(BUSY_TEXT);
     const input = guards.setup(payload);
-    if (store.exists()) throw new Error('A book already exists on this computer.');
+    // Only first-time setup creates books: never beside books this computer has (or can't list).
+    if (store.exists() || gateMode() !== 'setup') throw new Error('Books already exist on this computer. Choose them on the unlock screen, or restore a backup as a copy.');
     const errors = [];
     if (!input.owner_name.trim()) errors.push("Enter the owner's name.");
     if (!input.company_name.trim()) errors.push('Enter the company name.');
@@ -268,20 +527,21 @@ const calls = {
     if (errors.length) return failGate(errors, input.starter_chart);
     try {
       const created = JSON.parse(await exclusive(() => native.createProtectedBookAsync(store.bookPath(), input.owner_name, input.company_name, input.lock_password, protect, input.starter_chart)));
-      syncBookKeys();
+      try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the new book is open; its key is saved after the next unlock */ }
       return {outcome:'redirect',location:created.home};
-    } catch (e) { return failGate([String(e.message)], input.starter_chart); }
+    } catch (e) { return failGate([plainError(e)], input.starter_chart); }
   },
   'app.restoreBook': async (payload) => {
     if (busy) throw new Error(BUSY_TEXT);
     const input = guards.restoreBook(payload);
+    if (gateMode() === 'error') return failGate([]);
     const selected = await dialog.showOpenDialog(win, {title:'Choose a backup to restore', properties:['openFile'], filters:[{name:'FreedomBooks backups',extensions:['fbbackup']}]});
     if (selected.canceled || !selected.filePaths[0]) return {outcome:'done'};
-    try {
-      const opened = JSON.parse(await exclusive(() => native.restoreBookFromGateAsync(selected.filePaths[0], input.name || 'Recovered books', input.secret)));
-      syncBookKeys();
-      return {outcome:'redirect',location:opened.home || '/'};
-    } catch (e) { return failGate([String(e.message)]); }
+    let opened;
+    try { opened = JSON.parse(await exclusive(() => native.restoreBookFromGateAsync(selected.filePaths[0], input.name || 'Recovered books', input.secret))); }
+    catch (e) { return failGate([plainError(e)]); }
+    try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the restored book is open; its key is saved after the next unlock */ }
+    return {outcome:'redirect',location:opened.home || '/'};
   },
 
   // The issue page opens in the system browser; only guards.EXTERNAL_URLS, matched exactly.
@@ -289,21 +549,50 @@ const calls = {
     await shell.openExternal(guards.external(payload));
     return { outcome: 'done' };
   },
+  // The unlock screen's list of books only points the unlock screen at another book. It never opens
+  // one through a saved key, so a lock (by the owner or after inactivity) or "ask every time" can't be
+  // stepped around by choosing a different book: the chosen book asks for its own book password.
+  // Only a built-in-key book, which has no book password, opens straight away (sign-in still applies).
+  'app.chooseBook': (payload) => {
+    if (busy) throw new Error(BUSY_TEXT);
+    const input = guards.chooseBook(payload);
+    if (JSON.parse(native.appState()).open) throw new Error('Lock the open books first.');
+    if (gateMode() === 'error') return failGate([]);
+    try { store.select(input.path); }
+    catch (e) { return failGate([plainError(e)]); }
+    const locked = ['locked', 'idle'].includes(gateReason) ? gateReason : '';
+    gateReason = '';
+    pending = null;
+    startupHome = '';
+    startupOpen(true, false);
+    if (!startupHome && locked) gateReason = locked;
+    if (startupHome) {
+      try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* opened; the key is saved after the next unlock */ }
+      void hosting.resume();
+      return {outcome:'redirect', location:startupHome};
+    }
+    return {outcome:'redirect', location:'/'};
+  },
   'app.unlock': (payload) => {
     const input = guards.unlock(payload);
+    if (gateMode() === 'error') return failGate([]);
+    let opened;
     try {
+      // An interrupted key change is recovered before every open, not only at startup.
+      native.recoverKeyChange(store.bookPath());
       const state = JSON.parse(native.protectionState(store.bookPath()));
-      let opened;
       if (state.known) opened = JSON.parse(native.openProtectedBook(store.bookPath(), input.password || ''));
       else if (store.hasPasswordWrap()) opened = JSON.parse(native.openBookWithPassword(store.bookPath(), store.readWrap(), input.password || ''));
       else {
         opened = keys.openLegacyBook(native, store, input.password || '');
       }
-      syncBookKeys();
-      return { outcome: 'redirect', location: opened.home || '/' };
     } catch (e) {
-      return failGate([String(e.message)]);
+      return failGate([e && e.code === 'FB_BOOK_WRONG_KEY' ? WRONG_UNLOCK : plainError(e)]);
     }
+    // The books are open: saving the key for next time must never turn into an unlock failure.
+    try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* asked again next time; nothing removed */ }
+    void hosting.resume();
+    return { outcome: 'redirect', location: opened.home || '/' };
   },
 };
 
@@ -316,6 +605,9 @@ async function backupDialog({ desktop, ticket, folder, filename }) {
     chosen = r.canceled ? '' : r.filePaths[0] || '';
   } else if (desktop === 'pick-backup') {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a backup to restore', defaultPath: folder, properties: ['openFile'], filters: [{ name: 'FreedomBooks backups', extensions: ['fbbackup'] }] });
+    chosen = r.canceled ? '' : r.filePaths[0] || '';
+  } else if (desktop === 'pick-bank-rules') {
+    const r = await dialog.showOpenDialog(win, { title: 'Import QuickBooks bank rules', properties: ['openFile'], filters: [{ name: 'QuickBooks rule export', extensions: ['xls'] }] });
     chosen = r.canceled ? '' : r.filePaths[0] || '';
   } else if (desktop === 'pick-attachment') {
     // J-ATTACH: the page never sends file bytes; Rust reads the picked file (size-limited) and checks its type.
@@ -333,12 +625,35 @@ function failGate(errors, starterChart) {
   return { outcome: 'invalid', reload: '/' };
 }
 
+// While connected to a host, this computer's own books stay closed: a stale gate page cannot open them.
+for (const name of ['app.createBook', 'app.restoreBook', 'app.chooseBook', 'app.unlock']) {
+  const local = calls[name];
+  calls[name] = (payload) => {
+    if (remote.active()) throw new Error('Disconnect from the host first (File › Disconnect from host).');
+    return local(payload);
+  };
+}
+
+// CRASHLOG: Report a problem's two buttons (open the log folder, copy the diagnostic summary).
+Object.assign(calls, diagnostics.calls());
+// Back, Forward, Home, Find and the Go menu (navigation.cjs). The title bar's Back and Forward buttons
+// come through this one call; the preload sends only {to:'back'|'forward'}.
+// While connected to a host, navigation follows the remote connection (the host enforces sign-in).
+const navigationState = { appState: () => remote.active() ? JSON.stringify({open: true, signed_in: true, session_generation: 1e9 + remoteGeneration}) : native.appState() };
+const navigation = require('./navigation.cjs').controller({ native: navigationState, window: () => win, menu: () => Menu.getApplicationMenu() });
+calls['app.navigate'] = (payload) => navigation.navigate(payload);
+
 for (const [name, fn] of Object.entries(calls)) {
   ipcMain.handle(`fb:${name}`, async (event, payload) => {
     guards.sender(event, win);
     try {
-      return { ok: true, value: await fn(payload) };
+      return { ok: true, value: await fn(payload, event) };
     } catch (e) {
+      if (showPanic(e, payload && typeof payload.path === 'string' ? payload.path : '')) {
+        // The window shows what happened; the form's own handler follows the same address.
+        return { ok: true, value: { outcome: 'redirect', location: diagnostics.PROBLEM_PATH } };
+      }
+      diagnostics.unexpected(name, e);
       const message = String(e && e.message ? e.message : e);
       return { ok: false, error: message === 'BUSY' ? BUSY_TEXT : message };
     }
@@ -368,46 +683,143 @@ function createWindow() {
     },
   });
   guards.window(win, ORIGIN);
+  navigation.attach(win);
   require('./edit-menu.cjs').attach(win, Menu);
   win.once('ready-to-show', () => win.show());
+  // The window title says which host's books are showing.
+  win.on('page-title-updated', (event, title) => {
+    if (!remote.active() && !hostingTitle) return;
+    event.preventDefault();
+    win.setTitle(windowTitle(title));
+  });
   const state = JSON.parse(native.appState());
   const companies = state.signed_in ? JSON.parse(native.query(JSON.stringify({type:'Companies'}))) : [];
-  win.loadURL(`${ORIGIN}${startupHome || (companies.length ? '/c/'+companies[0].id+'/home/' : '/')}`);
+  // A computer with no books of its own that is paired with a host starts connected to it.
+  let remoteStart = false;
+  try { remoteStart = !state.open && !startupHome && gateMode() === 'setup' && !!remoteStore.summary(); } catch { /* local start */ }
+  win.loadURL(`${ORIGIN}${remoteStart ? '/remote/connect/?auto=1' : startupHome || (companies.length ? '/c/'+companies[0].id+'/home/' : '/')}`);
 }
 
 app.whenReady().then(() => {
   guards.session(session.defaultSession);
   session.defaultSession.protocol.handle('fb', handle);
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'File', submenu: [...printing.menuItems, { type:'separator' }, { id:'lock-books', label:'Lock', enabled:false, accelerator:'CmdOrCtrl+L', click:lockNow }, { type: 'separator' }, { role: 'quit' }] },
-    { label:'Settings', submenu:[...localAI.menuItems,{type:'separator'},{label:'Multi-factor authentication…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/mfa/');}},{label:'Users…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/users/');}},{label:'Switch user / sign out…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/session/');}},{label:'Book protection…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/book-protection/');}}] },
+    { label: 'File', submenu: [{ id:'remote-connect', label:'Connect to a FreedomBooks host…', click:()=>{ if (win && !win.isDestroyed()) win.loadURL(ORIGIN+'/remote/connect/'); } }, { id:'remote-disconnect', label:'Disconnect from host', enabled:false, click:()=>{ void remote.disconnect(); if (win && !win.isDestroyed()) win.loadURL(ORIGIN+'/'); } }, { type:'separator' }, ...printing.menuItems, { type:'separator' }, { id:'lock-books', label:'Lock', enabled:false, accelerator:'CmdOrCtrl+L', click:()=>lockNow('locked') }, { id:'use-restored', label:'Use this copy as my books…', enabled:false, click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/restored-book/');} }, { type: 'separator' }, { role: 'quit' }] },
+    { label:'Settings', submenu:[...localAI.menuItems,{type:'separator'},{label:'Multi-factor authentication…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/mfa/');}},{label:'Users…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/users/');}},{label:'Switch user / sign out…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/session/');}},{label:'Book protection…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/book-protection/');}},{type:'separator'},{id:'host-books',label:'Host these books…',click:()=>{if(!remote.active() && JSON.parse(native.appState()).open) win.loadURL(ORIGIN+hosting.PATH);}}] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }] },
+    navigation.go,
+    require('./navigation.cjs').helpMenu({ app, dialog, native, window: () => win }),
   ]));
-  powerMonitor.on('suspend', lockNow);
-  powerMonitor.on('lock-screen', lockNow);
+  powerMonitor.on('suspend', () => lockNow('idle'));
+  powerMonitor.on('lock-screen', () => lockNow('idle'));
   setInterval(() => {
-    if (!busy && powerMonitor.getSystemIdleTime() >= IDLE_LOCK_SECONDS && JSON.parse(native.appState()).open) lockNow();
+    if (!busy && powerMonitor.getSystemIdleTime() >= IDLE_LOCK_SECONDS && (remote.active() || JSON.parse(native.appState()).open)) lockNow('idle');
   }, 30 * 1000).unref();
+  const recurringTimer = setInterval(async () => {
+    if (busy || !win || win.isDestroyed()) return;
+    try {
+      const state = JSON.parse(native.appState());
+      if (state.open && state.signed_in) await exclusive(() => native.recurringBillsAsync());
+    } catch (e) {
+      if (diagnostics.panic(e)) { clearInterval(recurringTimer); showPanic(e, new URL(win.webContents.getURL()).pathname); }
+      else if (e.code !== 'SESSION_CHANGED' && !['BUSY', BUSY_TEXT].includes(e.message)) diagnostics.note('recurring-bills', e);
+    }
+  }, 30 * 1000);
+  recurringTimer.unref();
+  if (INVOICE_DELIVERY) {
+    const timer=setInterval(async () => {
+      if (busy || !win || win.isDestroyed()) return;
+      const pathname=new URL(win.webContents.getURL()).pathname;
+      try {
+        const state=JSON.parse(native.appState()); if(!state.open || !state.signed_in) return;
+        const match=pathname.match(/^\/c\/([0-9a-f-]{36})\//);
+        if(match) await exclusive(()=>native.stripeRefreshAsync(match[1]));
+      } catch (e) {
+        if (diagnostics.panic(e)) {
+          // Do not repeat a failing background write every thirty seconds this launch.
+          clearInterval(timer);
+          showPanic(e, pathname);
+        } else if (e.code !== 'SESSION_CHANGED' && e.message !== 'BUSY') diagnostics.note('stripe-refresh',e);
+      }
+    }, 30 * 1000); timer.unref();
+  }
+  startupOpen();
+  startupConnectionKey();
+  createWindow();
+  try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the window still opens; the key is saved after the next unlock */ }
+  // Hosting left on by an Administrator starts again once the books are open (it says why if not),
+  // and stops if its address leaves this computer.
+  if (JSON.parse(native.appState()).open) void hosting.resume();
+  hosting.watch();
+});
+
+// Startup, in an order where no step can skip another:
+//  1. finish or roll back an interrupted protection change, before anything opens the book;
+//  2. open the book if this computer can (built-in key, or a saved key the keyring can read);
+//     otherwise record why the unlock screen is showing;
+//  3. set up the connection key (bank feeds, Stripe, Gmail), which never affects opening.
+// `savedKey` false (the unlock screen's list of books): a saved key is never used; the book asks.
+function startupOpen(chosen = false, savedKey = true) {
+  const errors = [];
   try {
-    native.configureKeys(store.connectionKey(), store.osStoreUsable());
-    if (store.exists()) {
-      native.recoverKeyChange(store.bookPath());
-      const state = JSON.parse(native.protectionState(store.bookPath()));
-      if (state.known && state.ask_password) store.removeSealedKey();
-      if (state.builtin) startupHome = JSON.parse(native.openProtectedBook(store.bookPath(), '')).home;
-      else if (!state.known && !store.hasPasswordWrap()) {
-        // A copied built-in-key file needs no local metadata or OS store to open.
-        const opened = keys.openLegacyBook(native, store, '', store.osStoreUsable());
+    if (bookChangeError) return; // nothing opens on a guess; the unlock screen says why
+    if (!chosen && ['missing', 'unreadable'].includes(store.activeChoice())) { gateReason = 'choose'; return; }
+    if (!store.exists()) return;
+    try { native.recoverKeyChange(store.bookPath()); }
+    catch (e) { errors.push(plainError(e)); return; }
+    const state = JSON.parse(native.protectionState(store.bookPath()));
+    if (state.known && state.ask_password) {
+      try { store.removeSealedKey(); } catch (e) { diagnostics.note('remove-sealed-key', e); /* the record still asks every time */ }
+    }
+    if (state.builtin) { startupHome = JSON.parse(native.openProtectedBook(store.bookPath(), '')).home; return; }
+    if (!state.known && !store.hasPasswordWrap()) {
+      // A copied built-in-key file needs no local metadata or OS store to open.
+      try {
+        const opened = keys.openLegacyBook(native, store, '', savedKey && store.keyringWorks());
         if (opened) startupHome = opened.home;
-      } else if (state.known && !state.ask_password && store.osStoreUsable()) {
-        startupHome = JSON.parse(native.openBook(store.bookPath(), store.readSealedKey())).home;
+      } catch (e) {
+        if (e && e.code === 'FB_BOOK_WRONG_KEY') gateReason = !savedKey ? '' : store.keyringWorks() ? 'missing' : 'keyring';
+        else errors.push(plainError(e));
+      }
+      return;
+    }
+    if (!state.known) { gateReason = 'ask'; return; }
+    if (!savedKey) { gateReason = state.ask_password ? 'ask' : ''; return; }
+    const status = store.bookKeyStatus(state.ask_password);
+    if (status === 'unreadable') {
+      // A saved key set aside earlier (the keyring may have answered differently one launch) that
+      // this keyring opens and that opens these books is put back; anything else still asks.
+      for (const candidate of store.bookKeyCandidates()) {
+        try { startupHome = JSON.parse(native.openBook(store.bookPath(), candidate.key)).home; }
+        catch (e) { if (e && e.code === 'FB_BOOK_WRONG_KEY') continue; errors.push(plainError(e)); return; }
+        try { store.restoreBookKey(candidate.file); } catch { /* opened; the key is saved again after this open */ }
+        return;
       }
     }
-  } catch (e) { pending = {path:'/',html:gate([String(e.message)]),status:400}; }
-  createWindow();
-  syncBookKeys();
-});
+    if (status !== 'present') { gateReason = status; return; }
+    try { startupHome = JSON.parse(native.openBook(store.bookPath(), store.readSealedKey())).home; }
+    catch (e) {
+      if (e && e.code === 'FB_BOOK_WRONG_KEY') gateReason = 'unreadable';
+      else if (e && e.message === keys.SEALED_UNREADABLE) gateReason = 'unreadable';
+      else errors.push(plainError(e));
+    }
+  } catch (e) {
+    errors.push(plainError(e));
+  } finally {
+    if (errors.length) pending = {path:'/', html:gate(errors), status:400};
+  }
+}
+function startupConnectionKey() {
+  let found;
+  try { found = store.connectionKey(); }
+  catch (e) { diagnostics.note('connection-key', e); found = {key:null, state:keys.CONNECTION.UNAVAILABLE}; }
+  try { native.configureKeys(found.key || '', found.state, store.keyringWorks(), JSON.stringify(found.alternates || [])); }
+  catch (e) {
+    diagnostics.note('configure-keys', e);
+    try { native.configureKeys('', keys.CONNECTION.UNAVAILABLE, false); } catch { /* starts unavailable */ }
+  }
+}
 
 app.on('second-instance', () => {
   if (win) {
@@ -416,8 +828,10 @@ app.on('second-instance', () => {
   }
 });
 app.on('window-all-closed', () => {
-  if (!busy) native.lock();
-  app.quit();
+  // Connected: sign out on the host first (waited for briefly), so it does not show this person
+  // signed in until the idle limit.
+  const done = () => { if (!busy) native.lock(); app.quit(); };
+  if (remote.active()) remote.disconnect().then(done, done); else done();
 });
 // DESKTOP-BACKUPS: app.quit() (File › Quit) skips window-all-closed; close the open book cleanly too.
 // BACKUPS-POLISH: a running backup or restore finishes first, then the book closes and the app quits.

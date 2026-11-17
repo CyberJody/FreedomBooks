@@ -9,7 +9,7 @@ use fb_db::rusqlite::Connection;
 
 fn snapshot(conn: &Connection, table: &str) -> Vec<Vec<fb_db::rusqlite::types::Value>> {
     let mut stmt = conn
-        .prepare(&format!("SELECT * FROM {table} ORDER BY 1,2"))
+        .prepare(&fb_db::test_support::select_all_ordered(conn, table).unwrap())
         .unwrap();
     let width = stmt.column_count();
     stmt.query_map([], |row| (0..width).map(|i| row.get(i)).collect())

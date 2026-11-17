@@ -70,8 +70,11 @@ pub fn save_mappings(
                 map_account_tx(w, actor, co, feed_id, &json!(wanted))?;
             }
         }
+        // Saving a Bank-type account already made it a bank account when a setup exists.
+        let listed = documents::setup_snapshot(w.tx, co)?["banks"].as_array().cloned().unwrap_or_default();
+        new_banks.retain(|b| !listed.contains(b));
         if !new_banks.is_empty() {
-            // Checks/deposits require designated banks. Keep every existing role and bank,
+            // Checks/deposits require bank accounts. Keep every existing role and bank,
             // and audit this addition in the same transaction as creation and mapping.
             let mut setup = documents::setup_snapshot(w.tx, co)?;
             let revision = setup["revision"].as_i64();

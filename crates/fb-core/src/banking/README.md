@@ -85,8 +85,5 @@ FB_HARNESS_VAR="$PWD/target/banking-var" \
 crates/fb-harness/run_harness.sh
 ```
 
-See `REQUESTS.md` for the untouched payables fixture blocker and shared service
-hook requests, plus the L2 open-check mismatch on an unused reclassified
-designated account. The lead must integrate those, rerun the unfiltered workspace
-suite, independently review this branch and merge it. This worker stops before
-merge. Preview URL and screenshots are not applicable to this core-only job.
+Known open item: the L2 open-check mismatch on an unused reclassified designated
+account.

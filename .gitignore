@@ -20,3 +20,7 @@ __pycache__/
 /packaging/node_modules
 /packaging/.work/
 /packaging/dist/
+
+# Agent tool worktrees and local agent state
+/.claude/
+/error.log

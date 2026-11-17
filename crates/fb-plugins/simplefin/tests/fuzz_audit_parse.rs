@@ -198,16 +198,25 @@ proptest! {
 /// now indexed once per response (`parse::connections_by_id`).
 #[test]
 fn connections_lookup_is_linear() {
-    let n = 6_000;
-    let accounts: Vec<Value> = (0..n).map(|i| json!({"id": format!("a{i}"), "currency": "USD", "balance": "1.00", "conn_id": format!("c{i}")})).collect();
-    let connections: Vec<Value> = (0..n).map(|i| json!({"conn_id": format!("z{i}")})).collect();
-    let body = serde_json::to_vec(&json!({"accounts": accounts, "connections": connections})).unwrap();
-    let started = std::time::Instant::now();
-    let set = parse_account_set_json(&body).unwrap();
-    let took = started.elapsed();
-    eprintln!("{n} accounts x {n} connections ({} KiB) took {took:?}", body.len() / 1024);
-    assert_eq!(set.accounts.len(), n);
-    assert!(took.as_secs_f64() < 1.0, "quadratic connections scan: {n}x{n} took {took:?} (body {} KiB)", body.len() / 1024);
+    // Fastest of three parses of an n x n response.
+    let parse = |n: usize| {
+        let accounts: Vec<Value> = (0..n).map(|i| json!({"id": format!("a{i}"), "currency": "USD", "balance": "1.00", "conn_id": format!("c{i}")})).collect();
+        let connections: Vec<Value> = (0..n).map(|i| json!({"conn_id": format!("z{i}")})).collect();
+        let body = serde_json::to_vec(&json!({"accounts": accounts, "connections": connections})).unwrap();
+        (0..3).map(|_| {
+            let started = std::time::Instant::now();
+            let set = parse_account_set_json(&body).unwrap();
+            assert_eq!(set.accounts.len(), n);
+            started.elapsed()
+        }).min().unwrap()
+    };
+    let (small, large) = (parse(1_500), parse(6_000));
+    let ratio = large.as_secs_f64() / small.as_secs_f64().max(1e-6);
+    eprintln!("1,500 x 1,500 took {small:?}; 6,000 x 6,000 took {large:?}; ratio {ratio:.1}");
+    // Four times the input costs about 4x when linear and 16x when quadratic; the absolute bound catches
+    // a regression even if both sizes slow down alike (the quadratic scan took 220 s at 6,000).
+    assert!(ratio < 10.0, "connections scan grows faster than linear: x4 input took x{ratio:.1} ({small:?} -> {large:?})");
+    assert!(large.as_secs_f64() < 30.0, "quadratic connections scan: 6000x6000 took {large:?}");
 }
 
 /// FINDING F-04 (data correctness / secret hygiene; fixed): `parse::redact` ran its credential regexes

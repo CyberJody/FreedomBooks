@@ -285,6 +285,7 @@ fn configured_mailboxes_are_per_connection_even_with_one_shared_plugin_and_store
         .credentials()
         .save(
             Tokens {
+                scope: SEND_SCOPE,
                 client_id: CLIENT.into(),
                 from_address: "second@example.test".into(),
                 access: SecretString::from("SECOND_ACCESS"),

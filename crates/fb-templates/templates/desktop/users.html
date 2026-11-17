@@ -2,13 +2,16 @@
 {% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
 {% if screen == signin_path %}
 {% if bootstrap %}
-<h1>Set up the owner's sign-in</h1>
-<p>The books are open. Set an individual user password for the existing owner, <strong>{{ bootstrap }}</strong>. Existing companies, balances and history stay with this identity.</p>
+{% if first_run %}<p class="eyebrow">Step 2 of {{ setup_steps }} · Your sign-in</p>{% endif %}
+<h1>{% if first_run %}Choose your sign-in password{% else %}Set up the owner's sign-in{% endif %}</h1>
+<p class="notice">User name: <strong>{{ bootstrap }}</strong></p>
+{% if first_run %}<p>This is the name you entered for yourself. You sign in to FreedomBooks with this user name and the password you choose now.{% if setup_steps == 3 %} It is separate from the book password you just chose.{% endif %}</p>
+{% else %}<p>The books are open. Set an individual user password for the existing owner, <strong>{{ bootstrap }}</strong>. Existing companies, balances and history stay with this identity.</p>{% endif %}
 <form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="enroll">
-<p><label for="id_password">New user password</label><input id="id_password" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required></p>
+<p><label for="id_password">New user password</label><input id="id_password" name="password" type="password" minlength="8" maxlength="1024" autocomplete="new-password" required autofocus></p>
 <p><label for="id_password_repeat">Repeat user password</label><input id="id_password_repeat" name="password_repeat" type="password" autocomplete="new-password" required></p>
-<p><label><input type="checkbox" name="confirm_owner" required> I am setting up the existing owner on this desktop.</label></p>
-<button>Set password and sign in</button></form>
+{% if not first_run %}<p><label><input type="checkbox" name="confirm_owner" required> I am setting up the existing owner on this desktop.</label></p>{% endif %}
+<button>Set password and continue</button></form>
 <p>If setup is interrupted, reopen these books and finish here. No default password is created.</p>
 {% elif mfa_pending %}
 <h1>Verify your sign-in</h1>
@@ -20,6 +23,7 @@
 <form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="cancel_mfa"><button>Back to password sign-in</button></form>
 <p>Codes can be used only once. If you just used a code, wait for the next one. This sign-in expires after five minutes.</p>
 {% else %}
+{% if unlocked %}<p class="eyebrow">Books unlocked ✓ · Step 2 of 2 · Sign in</p>{% endif %}
 <h1>Sign in to FreedomBooks</h1>
 <p>Choose or enter your user name, then enter your password. One person uses these books at a time on this desktop.</p>
 <form method="post" class="narrow">{{ csrf_token|safe }}<input type="hidden" name="action" value="signin">
@@ -27,7 +31,6 @@
 <p><label for="id_password">User password</label><input id="id_password" name="password" type="password" maxlength="1024" autocomplete="current-password" required></p>
 <button>Sign in</button></form><p>Forgot your user password? Ask another administrator to set a new one from Users. A book recovery key opens the file; it does not sign you in as a person.</p>
 {% endif %}
-<p class="notice">Your user password signs you in and identifies your work. The separate book password and recovery key protect backups and let you open these books on another computer.</p>
 {% if builtin %}<p>These books use the built-in key. Anyone with a copy of the file can open it. User sign-in does not add password protection to the file.</p>{% endif %}
 {% elif screen == session_path %}
 <h1>Your desktop session</h1><p>Signed in as <strong>{{ user.username }}</strong> ({{ role }}).</p>

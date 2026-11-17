@@ -56,7 +56,7 @@ pub static MANIFEST: PluginManifest = PluginManifest {
 
 /// One shared instance per host, serializing rotating refresh tokens and disconnects.
 /// `host_id` must be a persisted, install-wide UUID from the host, not a user id.
-/// CoreBridge only exposes per-connection state; see FRAMEWORK-REQUESTS.md.
+/// CoreBridge only exposes per-connection state.
 #[derive(Clone)]
 pub struct OpenAi {
     endpoints: Endpoints,

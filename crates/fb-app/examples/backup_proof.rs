@@ -188,7 +188,7 @@ fn report(book_path: &Path, password_file: &str, data: &Path, out: &Path) {
                 .query_map([], |r| {
                     Ok((r.get(0)?, r.get(1)?, fb_core::attachments::storage::Stored {
                         stored_name: r.get(2)?, content_type: r.get(3)?, size: r.get(4)?, sha256: r.get(5)?, original_sha256: r.get(6)?,
-                        wrapped_key: r.get(7)?, wrap_nonce: r.get(8)?, nonce: r.get(9)?,
+                        wrapped_key: r.get(7)?, wrap_nonce: r.get(8)?, nonce: r.get(9)?, rewraps: Vec::new(),
                     }, r.get(10)?))
                 })?
                 .collect::<Result<_, _>>()?;

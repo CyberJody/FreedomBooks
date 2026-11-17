@@ -72,22 +72,9 @@ after partial writes through every public writer, competing payments, simultaneo
 creation, missing guards, and the deferred-parent/REPLACE escapes. HTTP/forms and
 visual tests remain outside this Rust-core translation.
 
-Final evidence lives in the project run directory:
-`runs/2026-10-30/l3-payables-rebase/` contains failing-first regressions, final
-workspace/clippy/harness logs, normalized dumps and verification-summary.json.
-The earlier source captures remain in `runs/2026-10-30/l3-payables/`.
+## Guards
 
-## Integration requests / limits
-
-1. Independent integration review and lead verification/merge remain required.
-   This worker stops before merge. The parallel L1 permanent-key change is not
-   included in the pinned base; all six payables tables already have their own
-   unconditional BEFORE UPDATE OF id guards.
-2. Combine numeric check-number uniqueness with future checks and customer
-   deposit-refund modules. `fb_payables_live_checks` currently covers payables only.
-   Reversal clearing locks likewise belong to the future banking layer.
-3. Host/CoreBridge wiring, durable review-token transport, persisted receipt
-   evidence and the host's “Keep as entered” override/audit remain separate work.
+All six payables tables have BEFORE UPDATE OF id guards that refuse any primary-key change.
 
 Vendor credits are not in the frozen payables app, so no new credit subsystem was
 invented. P2-3 reminder orchestration/settings live outside payables; its shared
@@ -175,7 +162,7 @@ validates those result shapes and identities. Provenance is a SQL guard detail
 absent from Python and is excluded from the differential document dump; native
 SQL/service and populated-upgrade tests validate it directly.
 
-Dev Master follow-up, outside this job's edit scope: sales invoice editing retains
+Follow-up, outside this change's scope: sales invoice editing retains
 `account_snapshot` and calls `as_object_mut().unwrap()` in `sales/invoices.rs`.
 Sales JSON loading and other readers also retain unchecked stored-value accesses.
 No lowercase substring search exists in the Rust sales module at this base:

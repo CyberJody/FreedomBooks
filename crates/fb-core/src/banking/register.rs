@@ -2,6 +2,42 @@ use super::*;
 pub fn register_accounts(book: &mut Book, actor: UserId, c: CompanyId) -> FbResult<Vec<Value>> {
     book.read(|q|{services::access(q,actor,c)?;let mut st=q.prepare("SELECT id FROM banking_register_account WHERE company_id=?1 ORDER BY code COLLATE fb_text,id")?;let keys=st.query_map([c.to_db()],|r|r.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?;keys.iter().map(|k|{let a=account(q,c,k)?;Ok(json!({"id":k,"code":a.code,"name":a.name,"kind":a.kind.as_str(),"active":a.active}))}).collect()})
 }
+/// Book balance of every bank and credit card account of the company, in the order of the Bank accounts list:
+/// `[(account, balance cents)]`, each equal to that register's `closing` with no filters (every posted line,
+/// shown on the account's normal side). Two indexed reads in total, not one register build per account;
+/// the sums are integer cents added in Rust. The caller checks company access.
+pub fn register_balances(
+    q: &(impl Query + ?Sized),
+    c: CompanyId,
+) -> FbResult<Vec<(crate::model::Account, i64)>> {
+    let mut st = q.prepare(&format!(
+        "SELECT {} FROM banking_register_account WHERE company_id=?1 ORDER BY code COLLATE fb_text,id",
+        store::ACCOUNT_COLS
+    ))?;
+    let accounts = st
+        .query_map([c.to_db()], store::account_row)?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut runs: BTreeMap<String, i64> = BTreeMap::new();
+    let mut st = q.prepare(
+        "SELECT l.account_id,l.debit,l.credit FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id
+         WHERE j.company_id=?1 AND j.status='POSTED' AND l.account_id IN (SELECT id FROM banking_register_account WHERE company_id=?1)",
+    )?;
+    for row in st.query_map([c.to_db()], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?))
+    })? {
+        let (account, debit, credit) = row?;
+        let run = runs.entry(account).or_default();
+        *run = add(*run, add(debit, -credit)?)?;
+    }
+    accounts
+        .into_iter()
+        .map(|a| {
+            let sign = if a.section_balance() == crate::model::Side::Debit { 1 } else { -1 };
+            let run = runs.get(&a.id.to_db()).copied().unwrap_or(0);
+            Ok((a, signed(run, sign)?))
+        })
+        .collect()
+}
 pub fn build(
     book: &mut Book,
     actor: UserId,
@@ -67,7 +103,7 @@ fn build_normalized(
         Some(cents(&f["amount"])?)
     };
     let sources = source_metadata(q, c)?;
-    let mut st=q.prepare("SELECT l.id,l.account_id,l.journal_id,l.debit,l.credit,j.date,coalesce(s.state,'U'),coalesce(s.revision,0),l.description,l.name,l.position,j.memo,j.source_id,j.reversal_of_id,z.id,i.number,j.entry_number,j.number,o.entry_number,o.number FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id LEFT JOIN banking_banklinestatus s ON s.journal_line_id=l.id LEFT JOIN documents_documentidentity i ON i.id=j.source_id LEFT JOIN ledger_journal o ON o.id=j.reversal_of_id LEFT JOIN ledger_journal z ON z.reversal_of_id=j.id WHERE l.account_id=?1 AND j.company_id=?2 AND j.status='POSTED' ORDER BY j.date,j.id,l.position,l.id")?;
+    let mut st=q.prepare("SELECT l.id,l.account_id,l.journal_id,l.debit,l.credit,j.date,coalesce(s.state,'U'),coalesce(s.revision,0),l.description,l.name,l.position,j.memo,j.source_id,j.reversal_of_id,z.id,i.number,j.entry_number,j.number,o.entry_number,o.number FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id LEFT JOIN banking_banklinestatus s ON s.journal_line_id=l.id LEFT JOIN documents_displayidentity i ON i.id=j.source_id LEFT JOIN ledger_journal o ON o.id=j.reversal_of_id LEFT JOIN ledger_journal z ON z.reversal_of_id=j.id WHERE l.account_id=?1 AND j.company_id=?2 AND j.status='POSTED' ORDER BY j.date,j.id,l.position,l.id")?;
     let raw=st.query_map(params![aid,c.to_db()],|r|{
         let description:String=r.get(8)?;let jm:String=r.get(11)?;
         let memo=if description.is_empty(){jm}else{description.clone()};
@@ -370,7 +406,7 @@ pub fn source_metadata(q: &(impl Query + ?Sized), c: CompanyId) -> FbResult<BTre
         out.insert(identity, value);
     }
     // Deposit applications have display provenance, but no party-search provider in Python.
-    let mut st=q.prepare("SELECT a.identity_id,a.id,r.data,di.number,ii.number FROM prepayments_depositapplication a JOIN sales_receipt r ON r.id=a.deposit_id JOIN documents_documentidentity di ON di.id=r.identity_id JOIN sales_invoice i ON i.id=a.invoice_id JOIN documents_documentidentity ii ON ii.id=i.identity_id WHERE a.company_id=?1")?;
+    let mut st=q.prepare("SELECT a.identity_id,a.id,r.data,di.number,ii.number FROM prepayments_depositapplication a JOIN sales_receipt r ON r.id=a.deposit_id JOIN documents_displayidentity di ON di.id=r.identity_id JOIN sales_invoice i ON i.id=a.invoice_id JOIN documents_displayidentity ii ON ii.id=i.identity_id WHERE a.company_id=?1")?;
     for row in st.query_map([c.to_db()], |r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,String>(4)?)))? {
         let (identity,id,raw,deposit,invoice)=row?;
         let receipt=fb_db::parse_unique_json(&raw).map_err(|_| FbError::validation("Invalid deposit evidence."))?;
@@ -379,8 +415,8 @@ pub fn source_metadata(q: &(impl Query + ?Sized), c: CompanyId) -> FbResult<BTre
     }
     // Frozen module provenance, in bulk for the whole register snapshot.
     for (sql, label, parent_kind) in [
-        ("SELECT r.identity_id,r.id,r.data,i.number FROM credits_creditrefund r JOIN credits_creditmemo m ON m.id=r.credit_memo_id JOIN documents_documentidentity i ON i.id=m.identity_id WHERE r.company_id=?1", "Refund", "credit memo"),
-        ("SELECT r.identity_id,r.id,r.data,i.number FROM prepayments_depositrefund r JOIN sales_receipt m ON m.id=r.deposit_id JOIN documents_documentidentity i ON i.id=m.identity_id WHERE r.company_id=?1", "Deposit refund", "customer deposit"),
+        ("SELECT r.identity_id,r.id,r.data,i.number FROM credits_creditrefund r JOIN credits_creditmemo m ON m.id=r.credit_memo_id JOIN documents_displayidentity i ON i.id=m.identity_id WHERE r.company_id=?1", "Refund", "credit memo"),
+        ("SELECT r.identity_id,r.id,r.data,i.number FROM prepayments_depositrefund r JOIN sales_receipt m ON m.id=r.deposit_id JOIN documents_displayidentity i ON i.id=m.identity_id WHERE r.company_id=?1", "Deposit refund", "customer deposit"),
     ] {
         let mut st=q.prepare(sql)?;
         for row in st.query_map([c.to_db()], |r| Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?)))? {
@@ -400,6 +436,12 @@ pub fn source_metadata(q: &(impl Query + ?Sized), c: CompanyId) -> FbResult<BTre
         let (identity,id,number,later,name)=row?;
         let display=if number.is_empty(){if later{"To print"}else{"No number"}}else{&number};
         out.insert(identity.clone(),json!({"identity_id":identity,"document_id":id,"label":"Check","party":name,"parties":[name],"ref":display,"search_number":number}));
+    }
+    // Sales tax payments: the agency is the party; the return reference is searchable.
+    let mut st=q.prepare("SELECT identity_id,id,agency_name,reference FROM salestax_payment WHERE company_id=?1")?;
+    for row in st.query_map([c.to_db()], |r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?)))? {
+        let (identity,id,name,reference)=row?;
+        out.insert(identity.clone(),json!({"identity_id":identity,"document_id":id,"label":"Sales tax payment","party":name,"parties":[name],"search_number":reference}));
     }
     let mut st=q.prepare("SELECT identity_id,id,from_snapshot,to_snapshot FROM transfers_transfer WHERE company_id=?1")?;
     for row in st.query_map([c.to_db()], |r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?)))? {

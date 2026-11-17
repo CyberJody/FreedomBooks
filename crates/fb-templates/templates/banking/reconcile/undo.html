@@ -1,5 +1,5 @@
 {% extends 'ledger/base.html' %}{% block extra_head %}<link rel="stylesheet" href="{{ static('banking/reconcile.css') }}">{% endblock %}{% block content %}
-<div class="heading"><div><p class="eyebrow">{{ company.name }} · Reconcile · {{ company.currency }}</p><h1>Undo last reconciliation</h1><p>{{ account.label }}</p></div>
+<div class="heading"><div><h1>Undo last reconciliation</h1><p>{{ account.label }}</p></div>
 <p class="register-actions"><a href="{{ url('reconcile:history', company.pk, account.pk) }}">History</a></p></div>
 {% if errors %}<ul class="errorlist" role="alert">{% for message in errors %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
 {% if last %}

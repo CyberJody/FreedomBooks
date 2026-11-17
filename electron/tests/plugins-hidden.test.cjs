@@ -61,7 +61,8 @@ test('session guard switches off the spellchecker and its dictionary download', 
 test('the main process keys every plugin surface off the compiled flag', () => {
   const main = fs.readFileSync(path.join(__dirname, '../main/main.cjs'), 'utf8');
   assert.match(main, /const PLUGINS = native\.pluginsEnabled\(\) === true;/);
-  assert.match(main, /if \(PLUGINS \|\| BANK_FEEDS\) \{\n {2}const helper = development\.netHelper/);
+  assert.match(main, /const INVOICE_DELIVERY = native\.invoiceDeliveryEnabled\(\) === true;/);
+  assert.match(main, /if \(PLUGINS \|\| BANK_FEEDS \|\| INVOICE_DELIVERY\) \{\n {2}const helper = development\.netHelper/);
   assert.match(main, /guards\.command\(payload, \{ plugins: PLUGINS, bankFeeds: BANK_FEEDS \}\)/);
   assert.match(main, /if \(!guards\.pluginAllowed\(url\.pathname, \{plugins:PLUGINS,bankFeeds:BANK_FEEDS\}\)\) return new Response\('Not found', \{ status: 404 \}\);/);
   // Provider traffic stays in fb-net. The opt-in local agent listener is the only HTTP server;

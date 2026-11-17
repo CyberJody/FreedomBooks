@@ -1,0 +1,21 @@
+[package]
+name = "fb-diag"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "The local problem log: build identity, a rotating log file of code coordinates (no free text) and the panic hook."
+
+[dependencies]
+fb-db = { path = "../fb-db" }
+serde_json = { version = "1", features = ["preserve_order"] }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

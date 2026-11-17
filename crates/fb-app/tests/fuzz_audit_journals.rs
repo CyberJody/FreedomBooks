@@ -158,6 +158,7 @@ proptest! {
             refresh_customer: false,
             keep_archived: false,
             lines: lines.iter().map(|(qw, qf, rw, rf, taxable)| InvoiceLineValues {
+            line_kind: None,
                 origin_position: None, item_id: None, description: "line".into(),
                 quantity: format!("{qw}.{qf:04}"), rate: format!("{rw}.{rf:02}"), taxable: *taxable,
                 refresh_item: false, keep_archived: false, income_account_id: Some(b.income.clone()),

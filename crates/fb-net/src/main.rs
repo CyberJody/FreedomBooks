@@ -26,6 +26,8 @@
 //! feature (tests and the smoke only) instead reads `FB_NET_FAKE_SIMPLEFIN_PORT` and
 //! `FB_NET_FAKE_OPENAI` (`http://127.0.0.1:<port>`) and allows exactly that numeric loopback port.
 #![forbid(unsafe_code)]
+mod gmail;
+mod stripe;
 use fb_plugin_api::*;
 use fb_plugin_openai::OpenAi;
 use fb_plugin_simplefin::{client::FetchOptions, parse, SimpleFin};
@@ -34,7 +36,8 @@ use std::io::{BufRead, Read, Write};
 use std::sync::{Arc, Mutex};
 use zeroize::{Zeroize, Zeroizing};
 
-const MAX_REQUEST: u64 = 256 * 1024;
+// MIME content has an independent 8 MiB decoded bound in the Gmail adapter.
+const MAX_REQUEST: u64 = 24 * 1024 * 1024;
 
 /// One scope's credential, in memory for one request. Wiped on drop (SecretBytes).
 struct OneRecord {
@@ -163,6 +166,10 @@ struct Request {
     start_epoch: Option<i64>,
     #[serde(default)]
     zone: Option<String>,
+    #[serde(default)]
+    gmail: Option<gmail::Input>,
+    #[serde(default)]
+    stripe: Option<stripe::Input>,
 }
 impl Drop for Request {
     fn drop(&mut self) {
@@ -425,6 +432,10 @@ fn main() {
         "simplefin_fetch" => simplefin_fetch(&request).unwrap_or_else(|e| fail(None, e)),
         "chatgpt_begin" => chatgpt_begin(&request).unwrap_or_else(|(stage, e)| fail(stage, e)),
         "chatgpt_disconnect" => chatgpt_disconnect(&request).unwrap_or_else(|e| fail(None, e)),
+        "gmail_begin" => gmail::begin(&request).unwrap_or_else(|(stage,e)| fail(stage,e)),
+        "gmail_disconnect" => gmail::disconnect(&request).unwrap_or_else(|e| fail(None,e)),
+        "stripe_probe"|"stripe_create"|"stripe_recover"|"stripe_conflicts"|"stripe_refresh"|"stripe_deactivate" => stripe::run(&request).unwrap_or_else(|e|fail(None,e)),
+        "gmail_deliver" => gmail::deliver(&request).unwrap_or_else(|e| fail(None,e)),
         _ => fail(None, PluginError::InvalidConfiguration),
     }
 }

@@ -51,16 +51,11 @@ fn populated_98100e0_upgrade_preserves_every_cell_trigger_and_schema_hash() {
     }
     let dir=tempfile::tempdir().unwrap();let path=dir.path().join("prior.fbbook");
     let prior=fb_db::test_support::populated_copy(f.book.connection(),&path,&[72;32],"0137_bankfeeds_reconnect",true).unwrap();
-    // Later migrations introduce the empty vault, business-details and numbering tables.
-    // Every table at the frozen boundary still compares in full, and opening
-    // below must preserve every legacy row while adding these empty tables.
-    let mut expected_before = prior.expected.clone();
-    for table in ["plugin_credential", "company_document_details", "fb_numbering", "desktop_mfa_totp", "desktop_mfa_recovery"] {
-        assert_eq!(expected_before.remove(table), Some(Vec::new()), "the later {table} table must be empty");
-        assert!(!prior.before.contains_key(table), "{table} did not exist at the frozen boundary");
-    }
-    assert_eq!(expected_before.remove("desktop_user"), Some(fb_db::test_support::desktop_user_backfill(f.book.connection()).unwrap()));
-    assert!(!prior.before.contains_key("desktop_user"));
+    // Later migrations add the vault, business-details, numbering, MFA, invoice and bank-rule tables;
+    // they are derived from the schemas (empty, except desktop_user's 0185 backfill). Every table at
+    // the frozen boundary still compares in full, and opening below must preserve every legacy row
+    // while adding the later tables.
+    let expected_before = prior.expected_at_boundary(f.book.connection(), &["plugin_credential", "company_document_details", "fb_numbering", "desktop_mfa_totp", "desktop_mfa_recovery", "desktop_user"]);
     assert_eq!(prior.before,expected_before);
     let book=Book::open(&path,&[72;32]).unwrap();
     assert_eq!(prior.expected,fb_db::test_support::snapshot(book.connection()).unwrap());

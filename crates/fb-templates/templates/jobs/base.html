@@ -1,0 +1,6 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('sales/estimates.css') }}"><link rel="stylesheet" href="{{ static('sales/invoices.css') }}"><link rel="stylesheet" href="{{ static('sales/jobs.css') }}">{% endblock %}
+{% block content %}{% include 'ledger/tabs.html' %}<div class="jobs">
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+{% block jobs_content %}{% endblock %}
+</div>{% endblock %}

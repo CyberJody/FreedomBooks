@@ -1,38 +1,58 @@
 "use strict";
+// Write check only: payee fields, check numbers, item and vendor defaults. Lines, totals and
+// entries are in payables/purchase-lines.js.
 (() => {
   const read = (id) => { const node = document.getElementById(id); return node ? JSON.parse(node.textContent) : null; };
   const catalog = read("item-catalog"), vendors = read("vendor-catalog"), nextNumbers = read("next-numbers");
-  const form = document.getElementById("check-entry");
+  const form = document.getElementById("purchase-entry");
   if (!form) return;
+  const setValue = (node, value) => {
+    if (!node || node.value === String(value)) return;
+    node.value = String(value);
+    node.dispatchEvent(new Event("change", { bubbles: true }));
+  };
   // FX4: the server-filled suggestion follows a bank change like a JS-filled one; a typed number never does.
   (() => {
     const bank = form.querySelector('[name="bank"]'), number = form.querySelector('[name="check_number"]');
     if (bank && number && nextNumbers && number.value !== "" && number.value === nextNumbers[bank.value]) number.dataset.auto = "1";
   })();
 
-  // Item pick fills description / cost / account on that row only (editable afterwards).
+  // Show the vendor list or the payee name box, whichever "Pay to" asks for.
+  const payee = () => {
+    const chosen = form.querySelector('[name="payee_kind"]:checked');
+    const value = chosen ? chosen.value : "VENDOR";
+    for (const node of form.querySelectorAll("[data-payee]")) node.hidden = node.dataset.payee !== value;
+  };
+  payee();
+
+  const vendorDefaults = (vendorId) => {
+    const vendor = vendors && vendors[vendorId];
+    if (!vendor) return;
+    const address = form.querySelector('[name="address"]');
+    if (address && !address.value.trim()) address.value = vendor.address;
+    // First empty line only. Never overwrites an account already chosen.
+    if (vendor.expense_account) {
+      for (const row of document.querySelectorAll("#check-lines tr.purchase-line")) {
+        if (row.hidden) continue;
+        const account = row.querySelector('[name$="-account"]');
+        if (account && !account.value) { setValue(account, vendor.expense_account); break; }
+      }
+    }
+  };
+
   form.addEventListener("change", (event) => {
     const name = event.target.name || "";
+    if (name === "payee_kind") payee();
     if (name.endsWith("-item") && catalog) {
       const item = catalog[event.target.value];
       if (!item) return;
-      const row = event.target.closest("fieldset");
+      const row = event.target.closest("tr");
       row.querySelector('[name$="-description"]').value = item.description;
       row.querySelector('[name$="-rate"]').value = item.rate;
-      row.querySelector('[name$="-account"]').value = item.account;
+      setValue(row.querySelector('[name$="-account"]'), item.account);
+      row.querySelector('[name$="-rate"]').dispatchEvent(new Event("input", { bubbles: true }));
     }
-    if (name === "vendor" && vendors) {
-      const vendor = vendors[event.target.value];
-      const address = form.querySelector('[name="address"]');
-      if (vendor && address && !address.value.trim()) address.value = vendor.address;
-      // First empty Expenses-tab line only. Never overwrites an account already chosen.
-      if (vendor && vendor.expense_account) {
-        for (const row of document.querySelectorAll("#expense-lines .tab-expense")) {
-          const account = row.querySelector('[name$="-account"]');
-          if (account && !account.value) { account.value = String(vendor.expense_account); break; }
-        }
-      }
-    }
+    if (name === "vendor") vendorDefaults(event.target.value);
     if (name === "bank" && nextNumbers) {
       const number = form.querySelector('[name="check_number"]');
       const later = form.querySelector('[name="print_later"]');
@@ -47,23 +67,8 @@
     }
     if (name === "check_number") { event.target.dataset.auto = "0"; }
   });
-
-  const add = (holderId, tab, legend) => {
-    const count = document.getElementById("id_lines-TOTAL_FORMS");
-    const index = Number(count.value);
-    if (index >= 50) return;
-    const holder = document.createElement("div");
-    holder.innerHTML = document.getElementById("empty-line").innerHTML.replaceAll("__prefix__", String(index));
-    const row = holder.firstElementChild;
-    row.classList.add(tab === "ITEM" ? "tab-item" : "tab-expense");
-    row.querySelector("legend").textContent = legend;
-    row.querySelector('[name$="-tab"]').value = tab;
-    row.querySelector('[name$="-quantity"]').value = "1";
-    if (tab === "ITEM") { const rate = row.querySelector('[name$="-rate"]'); const label = row.querySelector(`label[for="${rate.id}"]`); if (label) label.textContent = "Cost per unit:"; }
-    document.getElementById(holderId).append(row);
-    count.value = String(index + 1);
-    row.querySelector(tab === "ITEM" ? '[name$="-item"]' : '[name$="-account"]').focus();
-  };
-  document.getElementById("add-expense-line").addEventListener("click", () => add("expense-lines", "EXPENSE", "Expense line"));
-  document.getElementById("add-item-line").addEventListener("click", () => add("item-lines", "ITEM", "Item line"));
+  if (form.dataset.vendorPreset === "1") {
+    const vendor = form.querySelector('[name="vendor"]');
+    if (vendor) vendorDefaults(vendor.value);
+  }
 })();

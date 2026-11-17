@@ -322,7 +322,16 @@ fn review(
     input: &Value,
     sale: bool,
 ) -> FbResult<Review> {
-    command(book, |tx| {
+    command(book, |tx| review_tx(tx, actor, c, input, sale))
+}
+pub(super) fn review_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    input: &Value,
+    sale: bool,
+) -> FbResult<Review> {
+
         services::access(tx, actor, c)?;
         let req = request(input, sale)?;
         let p = prepare(tx, actor, c, &req, sale)?;
@@ -331,8 +340,8 @@ fn review(
             digest: p["digest"].as_str().ok_or_else(invalid_stored)?.into(),
             display: json!({"mapping":p["display"],"entries":p["entries"]}),
         })
-    })
 }
+
 pub fn review_receipt(
     book: &mut Book,
     actor: UserId,
@@ -381,7 +390,7 @@ pub fn review_receipt_form(
             .ok_or_else(invalid_stored)?
             .clone();
         for row in &mut allocations {
-            let number:String=tx.query_row("SELECT d.number FROM sales_invoice i JOIN documents_documentidentity d ON d.id=i.identity_id WHERE i.id=?1",[row["invoice_id"].as_str().ok_or_else(invalid_stored)?],|r|r.get(0))?;
+            let number:String=tx.query_row("SELECT d.number FROM sales_invoice i JOIN documents_displayidentity d ON d.id=i.identity_id WHERE i.id=?1",[row["invoice_id"].as_str().ok_or_else(invalid_stored)?],|r|r.get(0))?;
             row["number"] = json!(number);
         }
         let vm = json!({"data":p["data"],"company_snapshot":p["company_snapshot"],"customer_snapshot":p["customer_snapshot"],"mapping":p["display"],"entries":p["entries"],"allocations":allocations,"lines":lines,"method_label":label});
@@ -397,6 +406,12 @@ fn record(
     sale: bool,
 ) -> FbResult<Value> {
     command(book, |tx| {
+        let stripe:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM invoice_stripe_payment WHERE id=?1)",[input["request_key"].as_str().unwrap_or("")],|r|r.get(0))?;
+        if stripe {return Err(FbError::refused("Use the Stripe payment review to record this receipt."));}
+        record_receipt_tx(tx, actor, c, input, review, sale)
+    })
+}
+pub(crate) fn record_receipt_tx(tx: &Writer<'_>, actor: UserId, c: CompanyId, input: &Value, review: Option<&Review>, sale: bool) -> FbResult<Value> {
         let user = services::access(tx, actor, c)?;
         let req = request(input, sale)?;
         let hash = if sale {
@@ -412,7 +427,7 @@ fn record(
         };
         let reviewed = token(review, domain, error)?;
         let key = req["request_key"].as_str().ok_or_else(invalid_stored)?;
-        let existing:Option<String>=tx.query_row("SELECT r.id FROM sales_receipt r JOIN documents_documentidentity d ON d.id=r.identity_id WHERE r.company_id=?1 AND d.request_key=?2",params![c.to_db(),key],|r|r.get(0)).optional()?;
+        let existing:Option<String>=tx.query_row("SELECT r.id FROM sales_receipt r JOIN documents_displayidentity d ON d.id=r.identity_id WHERE r.company_id=?1 AND d.request_key=?2",params![c.to_db(),key],|r|r.get(0)).optional()?;
         if let Some(key) = existing {
             let old = receipt(tx, c, &key)?;
             if old["kind"] != if sale { "SR" } else { "RCP" }
@@ -503,7 +518,6 @@ fn record(
             },
         )?;
         Ok(out)
-    })
 }
 pub fn record_receipt(
     book: &mut Book,

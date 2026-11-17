@@ -46,20 +46,16 @@ impl Fixture {
         id
     }
 
-    /// Review and record a customer receipt for `amount` against `invoice` through the real form.
+    /// Receive a payment of `amount` against `invoice` through the real Receive payment form.
     fn pay(&mut self, invoice: &str, amount: &str) {
         let path = format!("/c/{}/receipts/new/", self.c);
         let html = render(&mut self.app, &format!("{path}?customer={}", self.customer));
-        let mut p = pairs(&[
+        let p = pairs(&[
             ("request_key", &field(&html, "request_key")), ("customer", &self.customer), ("date", "2026-10-02"), ("amount", amount),
-            ("method", "CASH"), ("destination", "UNDEPOSITED"), ("allocations-TOTAL_FORMS", "3"), ("allocations-INITIAL_FORMS", "0"),
-            ("allocations-0-invoice", invoice), ("allocations-0-amount", amount),
+            ("method", "CASH"), ("destination", "UNDEPOSITED"), ("allocations-TOTAL_FORMS", "1"),
+            ("allocations-0-invoice", invoice), ("allocations-0-pay", "on"), ("allocations-0-amount", amount), ("action", "save"),
         ]);
-        let mut review = p.clone();
-        review.push(("action".into(), "review".into()));
-        let Outcome::Page { html, .. } = post(&mut self.app, &path, &html, review) else { panic!("receipt review failed") };
-        p.extend(pairs(&[("action", "record"), ("review_token", &field(&html, "review_token"))]));
-        assert!(matches!(post(&mut self.app, &path, &html, p), Outcome::Redirect { .. }), "receipt record failed");
+        assert!(matches!(post(&mut self.app, &path, &html, p), Outcome::Redirect { .. }), "payment not recorded");
     }
 }
 
@@ -75,13 +71,12 @@ fn pairs(p: &[(&str, &str)]) -> Vec<(String, String)> {
 fn render(app: &mut App, path: &str) -> String {
     screens::render(app, path).unwrap().html
 }
-/// The document panel's status line: `<number> · <status> · <currency>`.
-fn status_line(html: &str) -> String {
-    let panel = html.split_once("<section class=\"panel estimate-document\">").unwrap().1;
-    panel.split_once("</h2><p>").unwrap().1.split("</p>").next().unwrap().into()
+/// The status chip beside an invoice's title.
+fn status_chip(html: &str) -> String {
+    html.split_once("class=\"status-chip ").unwrap().1.split_once('>').unwrap().1.split('<').next().unwrap().into()
 }
 
-// Item 2: a fully paid invoice read "Open" in its detail header.
+// Item 2: a fully paid invoice read "Open" in its detail header. The chip now carries the payment state.
 #[test]
 fn item2_paid_invoice_header_shows_payment_state_with_posting_state() {
     let mut f = Fixture::new();
@@ -92,21 +87,22 @@ fn item2_paid_invoice_header_shows_payment_state_with_posting_state() {
     f.pay(&part, "30.00");
     let detail = |f: &mut Fixture, id: &str| render(&mut f.app, &format!("/c/{}/invoices/{id}/", f.c));
     let html = detail(&mut f, &paid);
-    assert_eq!(status_line(&html), "INV-000001 · Posted · Paid · USD");
-    assert!(html.contains("Current payment state: Paid"));
-    assert!(html.contains("<strong id=\"outstanding\">0.00</strong>"), "balance unchanged");
-    assert_eq!(status_line(&detail(&mut f, &part)), "INV-000002 · Posted · Partial · USD");
-    assert_eq!(status_line(&detail(&mut f, &open)), "INV-000003 · Posted · Open · USD");
-    // Historical revisions keep the state recorded in that revision (no live payment state there).
+    assert_eq!(status_chip(&html), "Paid");
+    assert!(html.contains("<span class=\"label\">Paid in full</span>"));
+    assert!(html.contains("<dd id=\"balance-due\" class=\"balance\">0.00</dd>"), "balance unchanged");
+    // The fixture's invoices fall due on 2026-11-01, so later runs also say they are overdue.
+    assert!(["Partly paid", "Partly paid · Overdue"].contains(&status_chip(&detail(&mut f, &part)).as_str()));
+    assert!(["Open", "Overdue"].contains(&status_chip(&detail(&mut f, &open)).as_str()));
+    // Historical versions say what happened then, not today's payment state.
     let revision = render(&mut f.app, &format!("/c/{}/invoices/{paid}/revisions/2/", f.c));
-    assert_eq!(status_line(&revision), "INV-000001 · Open · USD");
-    // A draft and a voided invoice keep their posting state word.
+    assert!(revision.contains("Posted by ") && !revision.contains("status-chip"));
+    // A draft keeps its posting state word.
     let values = serde_json::from_value(json!({"request_key":uuid::Uuid::new_v4().to_string(),"customer_id":f.customer,"date":"2026-10-01","tax_mode":"NONE","lines":[{"description":"Draft work","quantity":"1","rate":"5.00","income_account_id":f.income}]})).unwrap();
     let Outcome::Done { data } = f.app.run(Command::SaveInvoiceDraft { company_id: f.c.clone(), invoice_id: None, expected_revision: 0, values }).unwrap() else { panic!() };
     let draft = data["id"].as_str().unwrap().to_owned();
-    assert!(status_line(&detail(&mut f, &draft)).ends_with(" · Draft · USD"));
-    // The invoice list already reads the payment state (v1 and v2 alike).
-    assert!(render(&mut f.app, &format!("/c/{}/invoices/", f.c)).contains("<td>Paid</td>"));
+    assert_eq!(status_chip(&detail(&mut f, &draft)), "Draft");
+    // The invoice list reads the payment state too.
+    assert!(render(&mut f.app, &format!("/c/{}/invoices/", f.c)).contains("\">Paid</span>"));
     let _ = &f.bank;
 }
 
@@ -118,8 +114,10 @@ fn item2_invoice_print_copy_shows_payment_state() {
     let open = f.posted_invoice("20.00");
     f.pay(&paid, "10.00");
     let print = |f: &mut Fixture, id: &str| screens::render(&mut f.app, &format!("/c/{}/invoices/{id}/print/", f.c)).unwrap().html;
-    assert!(print(&mut f, &paid).contains("· Status: Posted · Paid<br>"));
-    assert!(print(&mut f, &open).contains("· Status: Posted · Open<br>"));
+    // The customer copy says Paid with its stamp; an open one shows the balance instead.
+    assert!(print(&mut f, &paid).contains("<div class=\"status-stamp\" aria-hidden=\"true\">PAID</div>"));
+    let open = print(&mut f, &open);
+    assert!(!open.contains(">PAID</div>") && open.contains("id=\"print-balance\">20.00"));
 }
 
 /// `(value, label)` of every option of `<select name="{name}">`.
@@ -136,7 +134,7 @@ fn run(app: &mut App, v: serde_json::Value) -> serde_json::Value {
 
 // Item 3: the transfer list's "Bank (from or to)" filter listed every asset account.
 #[test]
-fn item3_transfer_filter_lists_designated_banks_and_banks_used_by_transfers() {
+fn item3_transfer_filter_lists_bank_accounts_and_banks_used_by_transfers() {
     let mut f = Fixture::new();
     let c = f.c.clone();
     let account = |app: &mut App, code: &str, detail: &str| run(app, json!({"type":"SaveAccount","company_id":c,"code":code,"name":format!("Acct {code}"),"detail_type":detail}))["id"].as_str().unwrap().to_owned();
@@ -144,23 +142,25 @@ fn item3_transfer_filter_lists_designated_banks_and_banks_used_by_transfers() {
     let reserve = account(&mut f.app, "1020", "BANK");
     let prepaid = account(&mut f.app, "1300", "OTHER_CURRENT_ASSET");
     let (ar, uf) = (f.ar.clone(), f.uf.clone());
-    let setup = |app: &mut App, banks: Vec<&str>, rev: i64| {
+    // Bank-type accounts are bank accounts as soon as they are saved; saving the setup keeps them.
+    let setup = |app: &mut App, banks: Vec<&str>| {
         let o = app.open_mut().unwrap();
-        fb_core::documents::save_setup(&mut o.book, o.owner, c.parse().unwrap(), &json!({"receivables":ar,"undeposited":uf,"banks":banks}), Some(rev)).unwrap();
+        let rev = o.book.read(|tx| fb_core::documents::setup_snapshot(tx, c.parse().unwrap())).unwrap()["revision"].as_i64();
+        fb_core::documents::save_setup(&mut o.book, o.owner, c.parse().unwrap(), &json!({"receivables":ar,"undeposited":uf,"banks":banks}), rev).unwrap();
     };
-    setup(&mut f.app, vec![&f.bank, &savings], 1);
+    setup(&mut f.app, vec![&f.bank]);
     let values = json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":"2026-10-31","from_account_id":f.bank,"to_account_id":savings,"amount":"20.00","memo":"Reserve"});
     let review = run(&mut f.app, json!({"type":"ReviewTransfer","company_id":c,"values":values}));
     run(&mut f.app, json!({"type":"RecordTransfer","company_id":c,"values":values,"review_token":review["token"]}));
-    // Savings stops being a designated bank; Reserve becomes one.
-    setup(&mut f.app, vec![&f.bank, &reserve], 2);
+    // Savings is closed (made inactive), so it stops being a bank account.
+    run(&mut f.app, json!({"type":"SaveAccount","company_id":c,"account_id":savings,"code":"1010","name":"Acct 1010","detail_type":"BANK","active":false}));
     let list = render(&mut f.app, &format!("/c/{c}/transfers/"));
     let values: Vec<String> = options(&list, "account").into_iter().map(|(v, _)| v).collect();
     let mut want = vec![String::new(), f.bank.clone(), savings.clone(), reserve.clone()];
     want[1..].sort_by_key(|id| ["1000", "1010", "1020"][[&f.bank, &savings, &reserve].iter().position(|x| *x == id).unwrap()]);
-    assert_eq!(values, want, "designated banks plus a bank an existing transfer used; no A/R, undeposited funds or other assets");
+    assert_eq!(values, want, "bank accounts plus a bank an existing transfer used; no A/R, undeposited funds or other assets");
     assert!(!values.contains(&prepaid));
-    // The entry form's choices are the designated banks only (v1 and v2 alike).
+    // The entry form's choices are the active bank accounts only.
     let form = render(&mut f.app, &format!("/c/{c}/transfers/new/"));
     let entry: Vec<String> = options(&form, "from_account").into_iter().map(|(v, _)| v).filter(|v| !v.is_empty()).collect();
     assert_eq!(entry, vec![f.bank.clone(), reserve.clone()]);
@@ -209,8 +209,10 @@ fn attr<'a>(html: &'a str, start: &str, name: &str) -> &'a str {
     let from = html.split_once(start).unwrap_or_else(|| panic!("no {start}")).1;
     from.split_once(&format!("{name}=\"")).unwrap().1.split('"').next().unwrap()
 }
+/// The report itself: everything after the report controls form (the title bar now has its own Find form).
 fn report_body(html: &str) -> &str {
-    html.split_once("</form>").unwrap().1
+    let controls = html.find("id=\"report-preset\"").unwrap();
+    html[controls..].split_once("</form>").unwrap().1
 }
 
 // Item 5: "Last month" did not move the From/To boxes before Run, and the address / Print / CSV kept the
@@ -275,7 +277,7 @@ fn item6_no_v1_import_or_tax_backfill_in_the_desktop() {
     let values = serde_json::from_value(json!({"request_key":uuid::Uuid::new_v4().to_string(),"customer_id":f.customer,"date":"2026-10-01","tax_mode":"MANUAL","tax_label":"County tax","tax_rate":"7.5","lines":[{"description":"Work","quantity":"1","rate":"100.00","taxable":true,"income_account_id":f.income}]})).unwrap();
     let Outcome::Done { data } = f.app.run(Command::SaveInvoiceDraft { company_id: f.c.clone(), invoice_id: None, expected_revision: 0, values }).unwrap() else { panic!() };
     let html = render(&mut f.app, &format!("/c/{}/invoices/{}/", f.c, data["id"].as_str().unwrap()));
-    assert!(html.contains("County tax · 7.5"), "manual rate kept on the document");
+    assert!(html.contains("County tax (7.5%)"), "manual rate kept on the document");
     let o = f.app.open_mut().unwrap();
     let (items, charge): (i64, i64) = o.book.read(|tx| tx.query_row("SELECT (SELECT count(*) FROM salestax_taxitem),(SELECT coalesce(max(charge_tax),0) FROM salestax_salestaxsettings)", [], |r| Ok((r.get(0)?, r.get(1)?)))).unwrap();
     assert_eq!((items, charge), (0, 0));

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const {verify} = require('./fuses.cjs');
+const {validateNativeBuild} = require('./native-build.cjs');
 (async () => {
   const [tree, reference, platform, incomplete] = process.argv.slice(2);
   const binary = platform === 'win32' ? 'FreedomBooks.exe' : 'freedombooks';
@@ -17,14 +18,28 @@ const {verify} = require('./fuses.cjs');
   const metadata = JSON.parse(extractFile(asar, 'package.json'));
   const hasSimplefin = metadata.freedomBooksFeatures?.simplefin === true;
   const helper = platform === 'win32' ? 'fb-net.exe' : 'fb-net';
+  const remote = platform === 'win32' ? 'fb-remote.exe' : 'fb-remote';
   const unpacked = path.join(tree, 'resources/app.asar.unpacked/native');
-  const expected = incomplete === 'incomplete-shell' ? [] : ['fb-node.node', ...(hasSimplefin ? [helper] : [])];
+  if (incomplete !== 'incomplete-shell') {
+    validateNativeBuild(metadata.freedomBooksNativeBuild, {
+      native: path.join(unpacked, 'fb-node.node'), helper: hasSimplefin ? path.join(unpacked, helper) : undefined, remote: path.join(unpacked, remote),
+      platform, arch: 'x64', commit: metadata.freedomBooksNativeBuild?.commit, simplefin: hasSimplefin,
+    });
+  }
+  const expected = incomplete === 'incomplete-shell' ? [] : ['fb-node.node', remote, ...(hasSimplefin ? [helper] : [])];
   if (fs.existsSync(unpacked)) assert.deepEqual(fs.readdirSync(unpacked).filter(n => n !== 'PENDING.txt').sort(), expected.sort(), 'unpacked native allowlist');
   const helpers = entries.filter(name => /(^|\/)fb-net(\.exe)?$/.test(name));
   assert.equal(helpers.length, hasSimplefin ? 1 : 0, 'helper matches declared capabilities');
   if (hasSimplefin) {
     assert.ok(fs.readFileSync(path.join(unpacked, helper)).equals(fs.readFileSync(path.join(reference, 'resources/app.asar.unpacked/native', helper))), 'installer changed network helper');
     if (platform !== 'win32') assert.ok(fs.statSync(path.join(unpacked, helper)).mode & 0o100, 'helper must be executable');
+  }
+  if (incomplete !== 'incomplete-shell') {
+    // The remote-access helper: present, executable, the one built, and unchanged by the installer.
+    assert.equal(entries.filter(name => /(^|\/)fb-remote(\.exe)?$/.test(name)).length, 1, 'one remote-access helper');
+    assert.ok(fs.readFileSync(path.join(unpacked, remote)).equals(fs.readFileSync(path.join(reference, 'resources/app.asar.unpacked/native', remote))), 'installer changed the remote-access helper');
+    if (platform !== 'win32') assert.ok(fs.statSync(path.join(unpacked, remote)).mode & 0o100, 'remote-access helper must be executable');
+    console.log(`REMOTE HELPER VERIFIED ${remote} sha256 ${metadata.freedomBooksNativeBuild.remoteSha256}`);
   }
   assert.ok(!metadata.devDependencies && !metadata.scripts && !metadata.dependencies);
   assert.equal(metadata.desktopName, 'app.freedombooks.FreedomBooks.desktop');

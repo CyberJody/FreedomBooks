@@ -8,9 +8,11 @@ const net = require('node:net');
 const {spawn, spawnSync} = require('node:child_process');
 const {setTimeout: delay} = require('node:timers/promises');
 const {chromium} = require(process.env.FB_SMOKE_PLAYWRIGHT || '../electron/node_modules/playwright');
+const {signIn} = require('../electron/scripts/smoke-identity.cjs');
 const binary = process.argv[2];
 const shots = process.argv[3];
 const label = process.argv[4] || 'INSTALLED';
+const USER_PASSWORD = 'Synthetic installed owner42';
 const settings = path.join(process.env.XDG_CONFIG_HOME, 'app.freedombooks.FreedomBooks');
 const data = path.join(process.env.XDG_DATA_HOME, 'FreedomBooks');
 let checks = 0, child, browser, port;
@@ -84,7 +86,8 @@ async function shot(page, name) { await page.screenshot({path: path.join(shots, 
     assert.equal(await page.isDisabled('#id_lock_password'), true);
     assert.match(await page.locator('#built-in-warning').innerText(), /Anyone who gets a copy of this file can open it\./);
     try {
-      await Promise.all([page.waitForURL(/\/home\/$/), page.click('button:has-text("Create books")')]);
+      await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/), page.click('button:has-text("Create books")')]);
+      await signIn(page, USER_PASSWORD);
     } catch (error) {
       console.error('SETUP FAILURE:', page.url(), await page.locator('body').innerText());
       await shot(page, 'failure-setup');
@@ -93,6 +96,27 @@ async function shot(page, name) { await page.screenshot({path: path.join(shots, 
     assert.equal(await heading(page), 'Home');
     await shot(page, '02-home');
     pass('first run with the default built-in key creates synthetic books and renders Home');
+    if (process.env.FB_SMOKE_REQUIRE_SIMPLEFIN === '1') {
+      const companyBase = page.url().replace(/home\/$/, '');
+      await page.goto(companyBase + 'settings/');
+      await page.getByRole('link', {name: 'Bank feeds and rules', exact: true}).click();
+      await page.waitForURL(/\/bank-feeds\/$/);
+      assert.match(await heading(page), /Bank feeds/i);
+      await shot(page, '02-bank-feeds');
+      console.log('SIMPLEFIN VERIFIED: Bank feeds and rules is present and opens in the packaged app');
+      await page.goto(companyBase + 'home/');
+    }
+    // "Host these books": the packaged remote-access helper is found at its fixed path, and
+    // hosting is off by default (nothing listens; this smoke never turns it on).
+    const homeUrl = page.url();
+    await page.goto('fb://app/hosting/');
+    assert.equal(await heading(page), 'Host these books');
+    const hostingText = await page.locator('main').innerText();
+    assert.ok(!/helper is missing/.test(hostingText), hostingText);
+    assert.match(hostingText, /Hosting is off/);
+    await shot(page, '02-hosting-off');
+    console.log('HOSTING VERIFIED: the packaged fb-remote helper is found and hosting is off by default');
+    await page.goto(homeUrl);
     const book = path.join(data, 'books/default.fbbook');
     assert.notEqual(fs.readFileSync(book).subarray(0, 16).toString(), 'SQLite format 3\0');
     assert.equal(fs.statSync(book).mode & 0o077, 0);
@@ -114,14 +138,16 @@ async function shot(page, name) { await page.screenshot({path: path.join(shots, 
       assert.equal(result.status, 0, result.stderr);
     }
     await delay(2000);
+    await signIn(page, USER_PASSWORD);
     assert.equal(await heading(page), 'Home');
     await page.goto('fb://app/settings/book-protection/');
     assert.equal(await heading(page), 'Book protection');
-    assert.match(await page.locator('main').innerText(), /Anyone who gets a copy of this file can open it\.[\s\S]*File › Lock and idle lock do not apply/);
+    assert.match(await page.locator('main').innerText(), /Anyone who gets a copy of this file can open it\.[\s\S]*File › Lock, idle lock and switching users still end the individual sign-in session\./);
     await shot(page, '03-book-protection');
-    pass('File > Lock does not apply to built-in-key books, and Book protection says why');
+    pass('File > Lock signs out of the built-in-key book; Book protection explains the file key');
     await stop();
     const reopened = await start();
+    await signIn(reopened, USER_PASSWORD);
     assert.equal(await heading(reopened), 'Home');
     assert.match(reopened.url(), /\/home\/$/);
     await shot(reopened, '04-home-after-restart');

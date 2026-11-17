@@ -35,6 +35,7 @@ fn normalize(input: &Value, editing: bool, old: Option<&Value>) -> FbResult<Valu
         .filter(|a| (1..=50).contains(&a.len()))
         .ok_or_else(|| FbError::validation("Enter between 1 and 50 meaningful lines."))?;
     let allowed = [
+        "line_kind",
         "item_id",
         "description",
         "quantity",
@@ -61,15 +62,21 @@ fn normalize(input: &Value, editing: bool, old: Option<&Value>) -> FbResult<Valu
         if !origin.is_null() && origin.as_i64().is_none_or(|n| n <= 0) {
             return Err(FbError::validation("Choose a record from this company."));
         }
-        lines.push(json!({"item_id":id(&row["item_id"],true)?,"income_account_id":id(&row["income_account_id"],true)?,"origin_position":origin,"description":py::input_text(&row["description"],1000,true,py::retained_line_text(old.and_then(|o| o["lines"].as_array()), &origin, "description"))?,"quantity":calculations::quantity(&row["quantity"])?.to_string(),"rate":calculations::unit_rate(&row["rate"])?.to_string(),"taxable":boolean(&row["taxable"])?,"refresh_item":boolean(row.get("refresh_item").unwrap_or(&json!(false)))?,"keep_archived":boolean(row.get("keep_archived").unwrap_or(&json!(false)))?}));
+        let kind = calculations::invoice_kind(row)?;
+        calculations::invoice_line_amount(row)?;
+        let qty = if kind == "NOTE" { "0.0000".to_owned() } else { calculations::quantity(&row["quantity"])?.to_string() };
+        let mut line = json!({"item_id":id(&row["item_id"],true)?,"income_account_id":id(&row["income_account_id"],true)?,"origin_position":origin,"description":py::input_multiline_text(&row["description"],4096,true,py::retained_line_text(old.and_then(|o| o["lines"].as_array()), &origin, "description"))?,"quantity":qty,"rate":calculations::unit_rate(&row["rate"])?.to_string(),"taxable":boolean(&row["taxable"])?,"refresh_item":boolean(row.get("refresh_item").unwrap_or(&json!(false)))?,"keep_archived":boolean(row.get("keep_archived").unwrap_or(&json!(false)))?});
+        // Omitting the legacy kind preserves existing creation/retry digests.
+        if kind != "CHARGE" { line["line_kind"] = json!(kind); }
+        lines.push(line);
     }
     let requested = ["ITEM", "KEEP"].contains(&input["tax_mode"].as_str().unwrap_or(""));
     let preliminary = if requested {
-        calculate(&lines, &json!({"tax_mode":"NONE"}), false)?
+        calculations::invoice_totals(&lines, &json!({"tax_mode":"NONE"}), false)?
     } else {
-        calculate(&lines, input, false)?
+        calculations::invoice_totals(&lines, input, false)?
     };
-    let mut intent = json!({"customer_id":customer,"date":d,"due_date":due,"memo":py::input_text(input.get("memo").unwrap_or(&json!("")),2000,false,previous.and_then(|p| p["memo"].as_str()))?,"lines":lines,"tax_mode":preliminary["tax_mode"],"tax_rate":preliminary["tax_rate"],"tax_label":preliminary["tax_label"],"refresh_customer":boolean(input.get("refresh_customer").unwrap_or(&json!(false)))?,"keep_archived":boolean(input.get("keep_archived").unwrap_or(&json!(false)))?});
+    let mut intent = json!({"customer_id":customer,"date":d,"due_date":due,"memo":py::input_multiline_text(input.get("memo").unwrap_or(&json!("")),2000,false,previous.and_then(|p| p["memo"].as_str()))?,"lines":lines,"tax_mode":preliminary["tax_mode"],"tax_rate":preliminary["tax_rate"],"tax_label":preliminary["tax_label"],"refresh_customer":boolean(input.get("refresh_customer").unwrap_or(&json!(false)))?,"keep_archived":boolean(input.get("keep_archived").unwrap_or(&json!(false)))?});
     if requested {
         intent["tax_mode"] = input["tax_mode"].clone();
         intent["tax_rate"] = Value::Null;
@@ -85,7 +92,15 @@ pub fn save_invoice(
     c: CompanyId,
     input: &Value,
 ) -> FbResult<Value> {
-    command(book, |tx| {
+    command(book, |tx| save_invoice_tx(tx, actor, c, input))
+}
+pub(crate) fn save_invoice_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    input: &Value,
+) -> FbResult<Value> {
+
         let user = services::access(tx, actor, c)?;
         let editing_id = id(&input["invoice_id"], true)?;
         let editing = editing_id.as_deref();
@@ -158,7 +173,7 @@ pub fn save_invoice(
         )?;
         let previous = old.as_ref().map(|o| &o["current"]);
         let tax = crate::salestax::document_tax(tx, c, input, previous, true)?;
-        let calc = calculate(
+        let calc = calculations::invoice_totals(
             normalized["lines"].as_array().ok_or_else(invalid_stored)?,
             &tax,
             false,
@@ -238,9 +253,14 @@ pub fn save_invoice(
                 }
             }
             lines.push(json!({"position":i+1,"origin_position":origin,"origin_revision_id":if origin.is_some(){old.as_ref().map(|o|o["current"]["id"].clone()).unwrap_or(Value::Null)}else{Value::Null},"item_id":row["item_id"],"item_snapshot":retained.map(|p|p["item_snapshot"].clone()).unwrap_or_else(||item.as_ref().map(item_snapshot).unwrap_or(json!({}))),"description":row["description"],"quantity":row["quantity"],"rate":row["rate"],"taxable":row["taxable"],"amount":calc["lines"][i],"income_account_id":row["income_account_id"],"expense_account_id":expense,"account_snapshot":snapshots}));
+            if let Some(kind) = row.get("line_kind") { lines.last_mut().unwrap()["line_kind"] = kind.clone(); }
         }
         let mut current = json!({"customer_id":customer_id,"customer_snapshot":if let Some(o)=&old{if o["current"]["customer_id"]==customer_id&&normalized["refresh_customer"]!=true{o["current"]["customer_snapshot"].clone()}else{party(&customer)}}else{party(&customer)},"company_snapshot":old.as_ref().map(|o|o["current"]["company_snapshot"].clone()).unwrap_or(company_snapshot(tx,c)?),"date":normalized["date"],"due_date":normalized["due_date"],"memo":normalized["memo"],"state":"DRAFT","action":if old.is_some(){"revised"}else{"created"},"reason":if normalized["refresh_customer"]==true||normalized["lines"].as_array().ok_or_else(invalid_stored)?.iter().any(|l|l["refresh_item"]==true){"Explicit snapshot refresh"}else{""},"tax_item_id":tax["tax_item_id"],"journal_id":null,"reversal_id":null,"review_digest":""});
         copy_calc(&mut current, &calc);
+        if let Some(old) = &old {
+            // Time billed on this draft follows its lines, is released with a removed line, or refuses the edit.
+            crate::jobs::follow_invoice_edit(tx, &user, c, crate::jobs::InvoiceEdit { invoice_id: &key, old, revision, customer_id, lines: &lines })?;
+        }
         if old.is_none() {
             tx.execute("INSERT INTO sales_invoice(id,company_id,identity_id,creation_digest,revision) VALUES(?1,?2,?3,?4,1)",params![key,c.to_db(),source,hash])?;
         } else {
@@ -251,8 +271,8 @@ pub fn save_invoice(
         }
         append(tx, &user, c, &key, revision, &mut current, &lines)?;
         invoice(tx, c, &key)
-    })
 }
+
 pub(super) fn append(
     tx: &Writer<'_>,
     user: &crate::store::User,
@@ -303,7 +323,7 @@ fn posting(
         ));
     }
     let lines = inv["lines"].as_array().ok_or_else(invalid_stored)?;
-    let calc = calculate(lines, h, true)?;
+    let calc = calculations::invoice_totals(lines, h, true)?;
     if ["subtotal", "taxable", "tax", "total", "tax_snapshot"]
         .iter()
         .any(|k| calc[*k] != h[*k])
@@ -321,6 +341,7 @@ fn posting(
     let mut active = customer["active"] == true;
     let mut ids = Vec::new();
     for l in lines {
+        if calculations::invoice_kind(l)? == "NOTE" { continue; }
         if let Some(key) = l["item_id"].as_str() {
             active &= directory::get(tx, c, Model::Item, key)?["active"] == true
         }
@@ -338,7 +359,7 @@ fn posting(
     }
     if ids.iter().any(Option::is_none) {
         return Err(FbError::validation(
-            "Choose an explicit income account on every line before posting.",
+            "Each charge and discount needs a product or service with an income account set up in Items before posting.",
         ));
     }
     let ids = ids.into_iter().flatten().collect::<Vec<_>>();
@@ -350,6 +371,7 @@ fn posting(
     let mut mapping = documents::lock_configuration(tx, actor, c, &roles, None, &ids)?;
     let mut credits = BTreeMap::new();
     for l in lines {
+        if calculations::invoice_kind(l)? == "NOTE" { continue; }
         let key = l["income_account_id"].as_str().ok_or_else(invalid_stored)?;
         let a = account(tx, c, key)?;
         if a.kind.as_str() != "INCOME" {
@@ -358,7 +380,8 @@ fn posting(
             ));
         }
         mapping[format!("income:{}", l["position"])] = json!(key);
-        *credits.entry(key.to_string()).or_insert(0) += cents(&l["amount"])?;
+        let sign = if calculations::invoice_kind(l)? == "DISCOUNT" { -1 } else { 1 };
+        *credits.entry(key.to_string()).or_insert(0) += sign * cents(&l["amount"])?;
     }
     if roles.len() > 1 {
         *credits
@@ -370,11 +393,9 @@ fn posting(
             )
             .or_insert(0) += cents(&calc["tax"])?;
     }
-    let es = entries(
-        mapping["receivables"].as_str().ok_or_else(invalid_stored)?,
-        cents(&calc["total"])?,
-        credits,
-    );
+    let mut es = vec![json!({"account": mapping["receivables"], "debit":calc["total"], "credit":"0.00"})];
+    es.extend(credits.into_iter().filter(|(_,n)| *n != 0).map(|(a,n)|
+        json!({"account":a,"debit":cash((-n).max(0)),"credit":cash(n.max(0))})));
     let display = mapping_display(tx, c, &mapping)?;
     let hash = digest(
         &json!({"invoice":inv["id"],"company":c.to_db(),"revision":inv["revision"],"mapping":display,"entries":es,"total":calc["total"]}),
@@ -388,7 +409,16 @@ pub fn review_invoice(
     key: &str,
     expected: Option<i64>,
 ) -> FbResult<Review> {
-    command(book, |tx| {
+    command(book, |tx| review_invoice_tx(tx, actor, c, key, expected))
+}
+pub(super) fn review_invoice_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    key: &str,
+    expected: Option<i64>,
+) -> FbResult<Review> {
+
         services::access(tx, actor, c)?;
         let inv = invoice(tx, c, key)?;
         documents::check_revision(
@@ -401,8 +431,8 @@ pub fn review_invoice(
             digest: hash,
             display: json!({"mapping":mapping_display(tx,c,&m)?,"entries":es}),
         })
-    })
 }
+
 pub fn post_invoice(
     book: &mut Book,
     actor: UserId,
@@ -411,7 +441,17 @@ pub fn post_invoice(
     expected: Option<i64>,
     review: Option<&Review>,
 ) -> FbResult<Value> {
-    command(book, |tx| {
+    command(book, |tx| post_invoice_tx(tx, actor, c, key, expected, review))
+}
+pub(super) fn post_invoice_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    key: &str,
+    expected: Option<i64>,
+    review: Option<&Review>,
+) -> FbResult<Value> {
+
         let user = services::access(tx, actor, c)?;
         let inv = invoice(tx, c, key)?;
         let reviewed = token(
@@ -473,8 +513,8 @@ pub fn post_invoice(
         )?;
         finish_journal(tx, &j.id.to_db())?;
         invoice(tx, c, key)
-    })
 }
+
 pub fn void_invoice(
     book: &mut Book,
     actor: UserId,
@@ -484,7 +524,18 @@ pub fn void_invoice(
     when: &Value,
     reason: &Value,
 ) -> FbResult<Value> {
-    command(book, |tx| {
+    command(book, |tx| void_invoice_tx(tx, actor, c, key, expected, when, reason))
+}
+pub(super) fn void_invoice_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    key: &str,
+    expected: Option<i64>,
+    when: &Value,
+    reason: &Value,
+) -> FbResult<Value> {
+
         let user = services::access(tx, actor, c)?;
         let inv = invoice(tx, c, key)?;
         let d = date(when)?;
@@ -492,6 +543,7 @@ pub fn void_invoice(
         let rev = inv["revision"].as_i64().ok_or_else(invalid_stored)?;
         let h = &inv["current"];
         if h["state"] == "VOID" && expected == Some(rev - 1) && h["reason"] == reason {
+            if h["journal_id"].is_null() && h["cancelled_date"] == d { return Ok(inv); }
             let jd: String = tx.query_row(
                 "SELECT date FROM ledger_journal WHERE id=?1",
                 [h["reversal_id"].as_str().ok_or_else(invalid_stored)?],
@@ -503,15 +555,21 @@ pub fn void_invoice(
         }
         documents::check_revision(rev, expected)?;
         let next_revision = documents::next_revision(rev)?;
-        if h["state"] != "OPEN" {
-            return Err(FbError::validation(
-                "Only an open posted invoice can be voided.",
-            ));
+        if h["state"] != "OPEN" && h["state"] != "DRAFT" {
+            return Err(FbError::validation("Only a draft or open invoice can be voided."));
         }
         if d.as_str() < h["date"].as_str().ok_or_else(invalid_stored)? {
             return Err(FbError::validation(
                 "Reversal date cannot precede the invoice date.",
             ));
+        }
+        if h["state"] == "DRAFT" {
+            let mut next = h.clone();
+            next["state"] = json!("VOID"); next["action"] = json!("cancelled");
+            next["reason"] = json!(reason); next["cancelled_date"] = json!(d);
+            tx.execute("UPDATE sales_invoice SET revision=?1 WHERE id=?2", params![next_revision, key])?;
+            append(tx, &user, c, key, next_revision, &mut next, inv["lines"].as_array().ok_or_else(invalid_stored)?)?;
+            return invoice(tx, c, key);
         }
         if queries::allocated(tx, key)? > 0 {
             return Err(FbError::validation(
@@ -541,5 +599,4 @@ pub fn void_invoice(
         )?;
         finish_journal(tx, &j.id.to_db())?;
         invoice(tx, c, key)
-    })
 }

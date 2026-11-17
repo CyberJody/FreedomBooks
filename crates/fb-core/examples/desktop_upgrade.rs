@@ -1,5 +1,5 @@
-//! Isolated synthetic evidence: run create with main b0b216a, then verify with the desktop head.
-//! The wrapper tools/verify_desktop_upgrade.py exports main and runs both foreground binaries.
+//! Isolated synthetic evidence: create a book with an earlier build of this example, then verify it
+//! with the current one.
 use fb_core::{Book, accounts, services};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};

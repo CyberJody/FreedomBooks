@@ -3,6 +3,7 @@ use fb_money::Money;
 use rusqlite::{self, Connection, functions::FunctionFlags};
 use serde_json::{Value, json};
 mod calculations;
+pub(crate) mod historical;
 mod snapshots;
 fn text(v: &Value, max: usize, required: bool) -> FbResult<String> {
     v.as_str()
@@ -45,8 +46,11 @@ impl FbError {
         Invalid
     }
 }
-fn document_ok(header: &Value, ls: &[Value], total: i64) -> bool {
-    let Ok(calc) = calculate(ls, header, header["state"] != "DRAFT") else {
+fn document_ok(header: &Value, ls: &[Value], total: i64, invoice: bool) -> bool {
+    if !invoice && ls.iter().any(|l| !l["line_kind"].is_null()) { return false; }
+    let result = if invoice { calculations::invoice_totals(ls, header, header["journal_id"].is_string()) }
+        else { calculate(ls, header, header["state"] != "DRAFT") };
+    let Ok(calc) = result else {
         return false;
     };
     (1..=50).contains(&ls.len())
@@ -97,6 +101,26 @@ pub(super) fn register(conn: &Connection) -> rusqlite::Result<()> {
         );
         Ok(transition && text(&json!(reason), 500, state == "CANCELLED").is_ok())
     })?;
+    conn.create_scalar_function("fb_invoice_import_digest", 1, flags, |ctx| {
+        let raw:String=ctx.get(0)?;
+        Ok(crate::json_evidence::parse_unique_json_as::<Value>(&raw).ok().and_then(|v|historical::evidence_digest(&v)))
+    })?;
+    conn.create_scalar_function("fb_invoice_import_matches", 3, flags, |ctx| {
+        let data:String=ctx.get(0)?;let header:String=ctx.get(1)?;let lines:String=ctx.get(2)?;
+        Ok(match (crate::json_evidence::parse_unique_json_as::<Value>(&data),crate::json_evidence::parse_unique_json_as::<Value>(&header),crate::json_evidence::parse_unique_json_as::<Vec<Value>>(&lines)) {
+            (Ok(v),Ok(h),Ok(ls))=>historical::matches(&v,&h,&ls),_=>false
+        })
+    })?;
+    conn.create_scalar_function("fb_source_money", 1, flags, |ctx| {
+        let raw:String=ctx.get(0)?;
+        let value=crate::json_evidence::parse_unique_json_as::<Value>(&raw).ok();
+        let result=value.and_then(|v| {
+            let text=match v { Value::String(s)=>s, Value::Number(n)=>n.to_string(), _=>return None };
+            let (sign,abs)=if let Some(s)=text.strip_prefix('-'){(-1,s)}else{(1,text.as_str())};
+            cents(&json!(abs)).ok().map(|n|n*sign)
+        });
+        Ok(result)
+    })?;
     conn.create_scalar_function("fb_sales_money", 1, flags, |ctx| {
         let s: String = ctx.get(0)?;
         Ok(crate::json_evidence::parse_unique_json_as::<Value>(&s)
@@ -128,23 +152,27 @@ pub(super) fn register(conn: &Connection) -> rusqlite::Result<()> {
         })();
         Ok(ok.unwrap_or(false))
     })?;
-    conn.create_scalar_function("fb_sales_line_ok", 1, flags, |ctx| {
+    for (name, invoice) in [("fb_sales_line_ok", false), ("fb_invoice_line_ok", true)] {
+    conn.create_scalar_function(name, 1, flags, move |ctx| {
         let s: String = ctx.get(0)?;
         let out = (|| {
             let l: Value = crate::json_evidence::parse_unique_json_as(&s).ok()?;
-            let amount = calculations::line_amount(&l["quantity"], &l["rate"]).ok()?;
+            if !invoice && !l["line_kind"].is_null() { return None; }
+            let amount = if invoice { calculations::invoice_line_amount(&l).ok()? }
+                else { calculations::line_amount(&l["quantity"], &l["rate"]).ok()? };
             Some(
                 snapshots::line(&l)
                     && l["quantity"].is_string()
                     && l["rate"].is_string()
                     && l["amount"].is_string()
-                    && text(&l["description"], 1000, true).is_ok()
+                    && text(&l["description"], if invoice {4096} else {1000}, true).is_ok()
                     && l["taxable"].is_boolean()
                     && cents(&l["amount"]).ok() == amount.to_db(),
             )
         })();
         Ok(out.unwrap_or(false))
     })?;
+    }
     conn.create_scalar_function("fb_sales_snapshot_ok", 2, flags, |ctx| {
         let kind: String = ctx.get(0)?;
         let raw: String = ctx.get(1)?;
@@ -162,7 +190,8 @@ pub(super) fn register(conn: &Connection) -> rusqlite::Result<()> {
             .ok()
             .is_some_and(|v| snapshots::reversal(&v)))
     })?;
-    conn.create_scalar_function("fb_sales_document_ok", 3, flags, |ctx| {
+    for (name, invoice) in [("fb_sales_document_ok", false), ("fb_invoice_document_ok", true)] {
+    conn.create_scalar_function(name, 3, flags, move |ctx| {
         let h: String = ctx.get(0)?;
         let ls: String = ctx.get(1)?;
         let n: i64 = ctx.get(2)?;
@@ -171,11 +200,12 @@ pub(super) fn register(conn: &Connection) -> rusqlite::Result<()> {
                 crate::json_evidence::parse_unique_json_as::<Value>(&h),
                 crate::json_evidence::parse_unique_json_as::<Vec<Value>>(&ls),
             ) {
-                (Ok(h), Ok(ls)) => document_ok(&h, &ls, n),
+                (Ok(h), Ok(ls)) => document_ok(&h, &ls, n, invoice),
                 _ => false,
             },
         )
     })?;
+    }
     Ok(())
 }
 pub(super) fn check(conn: &Connection) -> rusqlite::Result<Vec<String>> {
@@ -214,6 +244,7 @@ pub(super) fn check(conn: &Connection) -> rusqlite::Result<Vec<String>> {
                 &crate::json_evidence::parse_unique_json_as::<Value>(&h).unwrap_or(Value::Null),
                 &crate::json_evidence::parse_unique_json_as::<Vec<Value>>(&ls).unwrap_or_default(),
                 total,
+                table == "sales_invoicerevision",
             ) {
                 problems.push(format!("inconsistent sales totals {id}"))
             }
@@ -241,4 +272,10 @@ pub(super) fn check(conn: &Connection) -> rusqlite::Result<Vec<String>> {
         }
     }
     Ok(problems)
+}
+
+/// Exact shared document arithmetic, without exposing the sales guard's internal error type.
+pub(crate) fn recurring_bill_total(lines: &[Value]) -> Option<String> {
+    let total=calculations::totals(lines,"NONE",None,&json!(""),None,false).ok()?;
+    total["total"].as_str().map(str::to_owned)
 }

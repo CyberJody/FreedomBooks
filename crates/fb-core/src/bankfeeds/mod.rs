@@ -12,8 +12,12 @@ mod accept;
 mod mapping;
 pub use mapping::{MappingTarget, NewAccountKind, save_mappings};
 mod rules;
+pub mod qbo;
+mod automatic;
+pub use automatic::{auto_post,pending_automatic};
 mod secrets;
 mod staging;
+pub use staging::store_pull_for_desktop;
 pub mod text;
 mod write;
 mod credentials;
@@ -21,12 +25,12 @@ pub use credentials::{flag_unreadable_credential, restore_connection_credentials
 #[cfg(test)]
 mod tests;
 
-pub use accept::{accept, default_check_number, ignore, return_to_review};
+pub use accept::{UNDO_REASON, UndoPlan, accept, default_check_number, ignore, link_existing, return_blocker, return_to_review, undo_accept, undo_plan, undo_status};
 pub use secrets::{MASK, MIN_CREDENTIAL_CHARS, SecretSet, TOO_SHORT, CREDENTIAL_ALPHABET, UNSAFE_CREDENTIAL};
-pub use rules::{Rule, active_rules, all_rules, move_rule, rule_accounts, rule_for, save_rule, set_rule_active};
+pub use rules::{Rule, active_rules, all_rules, move_rule, rule_accounts, rule_for, save_rule, set_rule_active, turn_off_imported_auto_post};
 pub use staging::{
-    ACCOUNT_DOMAIN, CONN_KEY_DOMAIN, StagedAccount, StagedPull, StagedTransaction, TRANSACTION_DOMAIN, begin_sync, identity_of,
-    record_sync_failure, stage_bank_transactions, store_pull,
+    ACCOUNT_DOMAIN, BankChange, CONN_KEY_DOMAIN, ClockWarning, StagedAccount, StagedPull, StagedTransaction, SyncGap, TRANSACTION_DOMAIN, bank_changes, begin_sync,
+    clock_warning, identity_of, keep_recorded, record_sync_failure, review_sync_gap, stage_bank_transactions, store_pull, sync_gaps,
 };
 
 use crate::{AccountId, Book, CompanyId, FbError, FbResult, Money, UserId, documents, py, services, store};
@@ -215,6 +219,25 @@ pub fn items(book: &mut Book, actor: UserId, co: CompanyId) -> FbResult<Vec<Item
         let mut st = q.prepare(&format!("SELECT {ITEM_COLS} FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1 ORDER BY t.posted_on IS NOT NULL,t.posted_on DESC,t.ordinal DESC"))?;
         Ok(st.query_map([co.to_db()], item_row)?.collect::<Result<Vec<_>, _>>()?)
     })
+}
+
+/// Downloaded transactions waiting in Review transactions: the sidebar badge and the count on Home.
+/// The caller checks company access.
+pub fn review_count(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<i64> {
+    Ok(q.query_row(
+        "SELECT count(*) FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1 AND t.status='NEW'",
+        [co.to_db()],
+        |r| r.get(0),
+    )?)
+}
+
+/// Labels of the company's live connections whose saved sign-in must be entered again before they can
+/// download (the durable reconnect flag). The caller checks company access.
+pub fn reconnect_labels(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<Vec<String>> {
+    let mut st = q.prepare(
+        "SELECT label FROM bankfeeds_connection WHERE company_id=?1 AND active=1 AND forgotten_at IS NULL AND needs_reconnect=1 ORDER BY label,id",
+    )?;
+    Ok(st.query_map([co.to_db()], |r| r.get(0))?.collect::<Result<Vec<_>, _>>()?)
 }
 
 fn connection_row(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str) -> FbResult<Value> {
@@ -415,6 +438,203 @@ pub fn match_candidates(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, l
     Ok(keyed.into_iter().take(limit as usize).map(|(_, _, c)| c).collect())
 }
 
+/// A staged transaction that is very likely already in the books: an earlier feed row of ANOTHER downloaded
+/// account (an earlier connection, typically one replaced after a reinstall) produced or matched a posted,
+/// unreversed line on this item's mapped ledger account, with the same amount and direction, dated within
+/// [`MATCH_WINDOW_DAYS`] of this item. The earlier row carrying the same bank transaction identity ranks
+/// first. [`match_candidates`] cannot offer such a line (it is already linked to that earlier row), so
+/// without this check accepting would post the same money twice (review 2026-11-10, code-1 finding 2).
+///
+/// Rows of the item's own downloaded account need the same date, amount and description AND evidence that
+/// the earlier row arrived before a completed, numbered sync, and this item afterwards. Identical charges
+/// delivered together are not flagged. Such a row stays recordable with explicit confirmation; it cannot be
+/// linked (a link joins two downloaded accounts), so the screen offers Record again and Ignore (`same_account`). An earlier row already
+/// linked by another row of this item's account ([`link_existing`]) is not offered again, so two re-downloads
+/// pair with two entries.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Recorded {
+    /// The earlier feed row whose entry this is.
+    pub earlier_id: String,
+    pub earlier_ordinal: i64,
+    pub journal_id: String,
+    pub line_id: String,
+    /// The earlier row's document number (`CHK-000004`, `JE 12`) and app route (`checks:detail:<id>`).
+    pub reference: String,
+    pub reference_url: String,
+    /// The earlier row's bank date.
+    pub date: String,
+    /// The earlier row carries this item's bank transaction identity (same provider id).
+    pub same_identity: bool,
+    /// The earlier row is on this item's own downloaded account (same date, amount and description).
+    pub same_account: bool,
+}
+pub fn already_recorded(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -> FbResult<Option<Recorded>> {
+    let Some(f) = feed(q, &item.feed_account_id)? else { return Ok(None) };
+    let (Some(account), Some(when)) = (f.ledger_account_id.clone(), item.date()) else { return Ok(None) };
+    if item.amount == 0 {
+        return Ok(None);
+    }
+    let (debit, credit) = direction(item)?;
+    let day = parse_date(when)?;
+    let fmt = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+    let (lo, hi) = (fmt(add_days(day, -MATCH_WINDOW_DAYS)?), fmt(add_days(day, MATCH_WINDOW_DAYS)?));
+    let sql = "SELECT b.id,b.ordinal,b.journal_id,b.journal_line_id,b.reference,b.reference_url,coalesce(b.posted_on,b.transacted_on),
+            b.remote_identity=(SELECT remote_identity FROM bankfeeds_transaction WHERE id=?2) AS same
+        FROM bankfeeds_transaction b
+        JOIN bankfeeds_account bf ON bf.id=b.feed_account_id JOIN bankfeeds_connection bc ON bc.id=bf.connection_id
+        JOIN ledger_journalline l ON l.id=b.journal_line_id JOIN ledger_journal j ON j.id=l.journal_id
+        WHERE bc.company_id=?1 AND b.id<>?2 AND b.feed_account_id<>?3 AND b.status IN('ACCEPTED','MATCHED')
+          AND l.account_id=?4 AND l.debit=?5 AND l.credit=?6
+          AND j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)
+          AND coalesce(b.posted_on,b.transacted_on) BETWEEN ?7 AND ?8
+          AND NOT EXISTS(SELECT 1 FROM bankfeeds_link k JOIN bankfeeds_transaction o ON o.ordinal=k.item_ordinal WHERE k.earlier_ordinal=b.ordinal AND o.feed_account_id=?3 AND o.id<>?2)
+        ORDER BY same DESC,abs(julianday(coalesce(b.posted_on,b.transacted_on))-julianday(?9)),b.ordinal LIMIT 1";
+    let row = |same_account: bool| {
+        move |r: &Row<'_>| {
+            Ok(Recorded {
+                earlier_id: r.get(0)?,
+                earlier_ordinal: r.get(1)?,
+                journal_id: r.get(2)?,
+                line_id: r.get(3)?,
+                reference: r.get(4)?,
+                reference_url: r.get(5)?,
+                date: r.get(6)?,
+                same_identity: r.get(7)?,
+                same_account,
+            })
+        }
+    };
+    if let Some(found) = q.query_row(sql, params![co.to_db(), item.id, item.feed_account_id, account, debit, credit, lo, hi, when], row(false)).optional()? {
+        return Ok(Some(found));
+    }
+    // Rows do not store their arrival sync number. first_seen_at and the sync audit's occurred_at both use
+    // actual write time (the pull's supplied `at` may differ). The last numbered sync completed before this
+    // row was first seen supplies a boundary: only a candidate strictly before it arrived in an earlier
+    // pull. Number order, not clock order, chooses the boundary. Ties or no numbered boundary conservatively
+    // leave the row unflagged; first_seen_at is never changed by a later pull. This also works while the
+    // current pull is still being stored, before its own sync event has been written.
+    let boundary: Option<String> = q.query_row(
+        "SELECT s.occurred_at FROM ledger_auditevent s WHERE s.company_id=?1 AND s.action='bankfeed.synced' AND s.target=?2
+          AND json_type(s.detail,'$.sync')='integer' AND s.occurred_at<(SELECT first_seen_at FROM bankfeeds_transaction WHERE id=?3)
+          ORDER BY json_extract(s.detail,'$.sync') DESC LIMIT 1",
+        params![co.to_db(), format!("bankfeedconnection:{}", f.connection_id), item.id],
+        |r| r.get(0),
+    ).optional()?;
+    let Some(boundary) = boundary else { return Ok(None) };
+    let same = "SELECT b.id,b.ordinal,b.journal_id,b.journal_line_id,b.reference,b.reference_url,coalesce(b.posted_on,b.transacted_on),0
+        FROM bankfeeds_transaction b JOIN ledger_journalline l ON l.id=b.journal_line_id JOIN ledger_journal j ON j.id=l.journal_id
+        WHERE b.feed_account_id=?3 AND b.id<>?2 AND b.status IN('ACCEPTED','MATCHED') AND b.amount=?7 AND coalesce(b.posted_on,b.transacted_on)=?8 AND b.description=?9
+          AND b.first_seen_at<?10 AND b.ordinal<?11
+          AND l.account_id=?4 AND l.debit=?5 AND l.credit=?6
+          AND j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)
+        ORDER BY b.ordinal LIMIT 1";
+    Ok(q.query_row(same, params![co.to_db(), item.id, item.feed_account_id, account, debit, credit, item.amount, when, item.description, boundary, item.ordinal], row(true)).optional()?)
+}
+
+/// An unmapped accepted row cannot recover its original ledger mapping: another downloaded account holds
+/// it. The posted line identifies the mapping this row used; the mapping audit proves it belonged to this
+/// feed, even after unmapping. A temporary unmapping without a replacement remains recoverable.
+fn replaced_account(q: &(impl Query + ?Sized), item: &Item) -> FbResult<bool> {
+    Ok(q.query_row(
+        "SELECT EXISTS(SELECT 1 FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id
+          JOIN ledger_auditevent m ON m.company_id=c.company_id AND m.action='bankfeed.mapped' AND m.target='bankfeedaccount:'||f.id
+          JOIN bankfeeds_account other ON other.ledger_account_id=json_extract(m.detail,'$.after') AND other.id<>f.id AND other.active=1
+          JOIN bankfeeds_connection oc ON oc.id=other.connection_id AND oc.company_id=c.company_id
+          WHERE f.id=?1 AND f.ledger_account_id IS NULL
+            AND other.ledger_account_id=(SELECT account_id FROM ledger_journalline WHERE id=?2))",
+        params![item.feed_account_id, item.journal_line_id],
+        |r| r.get(0),
+    )?)
+}
+
+/// The connection label of a row whose bank connection was disconnected ("forgotten") and whose downloaded
+/// account no longer maps to a ledger account, typically because a new connection to the same bank now holds
+/// that mapping after a reconnect. Such a row can never be recorded (one ledger account maps to one
+/// downloaded account), so the screen offers only Ignore, and Undo of its acceptance is refused.
+pub fn retired_connection(q: &(impl Query + ?Sized), item: &Item) -> FbResult<Option<String>> {
+    Ok(q.query_row(
+        "SELECT c.label FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE f.id=?1 AND c.active=0 AND (f.ledger_account_id IS NULL OR f.active=0)",
+        [&item.feed_account_id],
+        |r| r.get(0),
+    )
+    .optional()?)
+}
+/// The copy of a disconnected connection's row that a connected bank connection downloaded again: the same
+/// bank transaction identity, else the same date, amount and description, on a downloaded account of a
+/// connection still connected.
+pub fn downloaded_again(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -> FbResult<Option<Item>> {
+    let id: Option<String> = q
+        .query_row(
+            "SELECT t.id FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+              WHERE c.company_id=?1 AND c.active=1 AND t.feed_account_id<>?2 AND t.amount=?3
+                AND (t.remote_identity=(SELECT remote_identity FROM bankfeeds_transaction WHERE id=?4)
+                     OR (coalesce(t.posted_on,t.transacted_on) IS ?5 AND t.description=?6))
+              ORDER BY t.remote_identity=(SELECT remote_identity FROM bankfeeds_transaction WHERE id=?4) DESC,t.ordinal LIMIT 1",
+            params![co.to_db(), item.feed_account_id, item.amount, item.id, item.date(), item.description],
+            |r| r.get(0),
+        )
+        .optional()?;
+    id.map(|id| self::item(q, co, &id)).transpose()
+}
+/// A decided row that points at an entry no longer in the books, for example after its document was voided
+/// from its own page: an accepted or matched row whose entry was voided or reversed, or a linked row whose
+/// earlier transaction no longer holds a live entry. Returns what the screen says; the way forward is
+/// Return to review.
+pub fn stale_decision(q: &(impl Query + ?Sized), item: &Item) -> FbResult<Option<&'static str>> {
+    match item.status.as_str() {
+        "ACCEPTED" | "MATCHED" if !accept::journal_live(q, item.journal_id.as_deref())? => {
+            Ok(Some(if item.status == "MATCHED" { "The entry this was matched to was voided or reversed." } else { "Its entry was voided or reversed." }))
+        }
+        "IGNORED" => {
+            let earlier: Option<(String, Option<String>)> = q
+                .query_row(
+                    "SELECT e.status,e.journal_id FROM bankfeeds_link k JOIN bankfeeds_transaction e ON e.ordinal=k.earlier_ordinal WHERE k.item_ordinal=?1",
+                    [item.ordinal],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .optional()?;
+            match earlier {
+                Some((status, journal)) if !matches!(status.as_str(), "ACCEPTED" | "MATCHED") || !accept::journal_live(q, journal.as_deref())? => {
+                    Ok(Some("The entry it was linked to was voided, reversed or returned to review."))
+                }
+                _ => Ok(None),
+            }
+        }
+        _ => Ok(None),
+    }
+}
+/// The company's decided rows that point at an entry no longer in the books ([`stale_decision`]).
+pub fn stale_decisions(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<Vec<Item>> {
+    let mut st = q.prepare(&format!(
+        "SELECT {ITEM_COLS} FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+          WHERE c.company_id=?1 AND (t.status IN('ACCEPTED','MATCHED') OR EXISTS(SELECT 1 FROM bankfeeds_link k WHERE k.item_ordinal=t.ordinal)) ORDER BY t.ordinal"
+    ))?;
+    let items = st.query_map([co.to_db()], item_row)?.collect::<Result<Vec<_>, _>>()?;
+    let mut out = vec![];
+    for i in items {
+        if stale_decision(q, &i)?.is_some() {
+            out.push(i);
+        }
+    }
+    Ok(out)
+}
+
+/// How many of the company's transactions still to review look [`already_recorded`].
+pub fn already_recorded_count(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<i64> {
+    let mut st = q.prepare(&format!(
+        "SELECT {ITEM_COLS} FROM bankfeeds_transaction t JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+          WHERE c.company_id=?1 AND t.status='NEW' AND t.pending=0 AND f.ledger_account_id IS NOT NULL"
+    ))?;
+    let items = st.query_map([co.to_db()], item_row)?.collect::<Result<Vec<_>, _>>()?;
+    let mut n = 0;
+    for i in &items {
+        if already_recorded(q, co, i)?.is_some() {
+            n += 1;
+        }
+    }
+    Ok(n)
+}
+
 pub(crate) fn is_designated_bank(q: &(impl Query + ?Sized), co: CompanyId, account_id: Option<&str>) -> FbResult<bool> {
     let Some(account_id) = account_id else { return Ok(false) };
     let setup = documents::setup_snapshot(q, co)?;
@@ -493,6 +713,8 @@ pub fn suggest_for(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, rules:
         "MATCH"
     } else if !receipts.is_empty() {
         "DEPOSIT"
+    } else if let Some(p)=rule.as_ref().and_then(|r|r.policy.as_ref()) {
+        {let _=p; "JOURNAL"}
     } else if rule.is_some() {
         default_kind(q, co, item, &f)?
     } else {

@@ -1,6 +1,6 @@
 {% extends 'salestax/base.html' %}
 {% block salestax_content %}
-<div class="heading"><h1>Sales tax settings</h1></div>
+<div class="heading"><h1>Sales tax settings</h1><a href="{{ url('salestax:setup',company.pk) }}">Guided sales tax setup</a></div>
 <form method="post" class="master-form tax-settings" novalidate>{{ csrf_token|safe }}{{ form.f.expected_revision.widget|safe }}{{ form.non_field_errors|safe }}
 <fieldset class="choice-row"><legend>{{ form.f.charge_tax.label }}</legend>{{ form.f.charge_tax.widget|safe }}{{ form.f.charge_tax.errors|safe }}</fieldset>
 <div class="field">{{ form.f.default_item.label_tag|safe }}{{ form.f.default_item.errors|safe }}{{ form.f.default_item.widget|safe }}<div class="helptext">{{ form.f.default_item.help_text }} {% if not counts.rates %}<a href="{{ url('salestax:rate_new', company.pk) }}">Add a tax rate</a> first.{% endif %}</div></div>

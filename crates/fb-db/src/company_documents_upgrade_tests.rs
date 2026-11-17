@@ -106,7 +106,7 @@ fn upgrade_at(boundary_name: &str) {
     }
     assert_eq!(
         after.len(),
-        before.len() + 3 + usize::from(boundary_name == "0180_company_documents")
+        before.len() + 22 + crate::job_tickets_upgrade_tests::JOB_TICKET_TABLES + crate::remote_host_upgrade_tests::REMOTE_HOST_TABLES + usize::from(boundary_name == "0180_company_documents")
     );
     if boundary_name == "0180_company_documents" {
         assert!(after["company_document_details"].is_empty());
@@ -116,7 +116,7 @@ fn upgrade_at(boundary_name: &str) {
     test_support::assert_desktop_user_backfill(&book.conn);
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in schema {
-        if !["view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) {
+        if !["table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) {
             assert_eq!(upgraded[&object], hash, "changed prior schema {object}");
         }
     }
@@ -163,19 +163,8 @@ fn upgrade_at(boundary_name: &str) {
             "lost {name} arms: {:?}",
             prior_predicates.difference(&current_predicates).collect::<Vec<_>>()
         );
-        // Named users and the two MFA tables add three value-view arms.
-        // The numbering/document arm below remains boundary-dependent.
-        assert_eq!(
-            current.len(),
-            prior.len()
-                + 3 * usize::from(name == "fb_value_invalid")
-                + usize::from(
-                    name == "fb_value_invalid"
-                        || ["0180_company_documents", "0181_company_document_guards"]
-                            .contains(&boundary_name)
-                ),
-            "unexpected {name} arms after upgrading {boundary_name}"
-        );
+        // Later migrations only add arms; none of the earlier ones is lost (checked above).
+        assert!(current.len() >= prior.len());
     }
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(

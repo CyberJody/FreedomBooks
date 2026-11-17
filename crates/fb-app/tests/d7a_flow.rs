@@ -438,5 +438,6 @@ fn editing_a_fifty_line_check_does_not_render_two_extra_rows_beyond_the_limit() 
     .html;
     assert_eq!(field(&html, "lines-TOTAL_FORMS"), "50");
     assert_eq!(field(&html, "lines-INITIAL_FORMS"), "50");
-    assert_eq!(html.matches("check-line tab-expense").count(), 50);
+    // Fifty saved lines and no blank line beyond the limit (plus the one empty-line template).
+    assert_eq!(html.matches("<tr class=\"purchase-line\">").count(), 51);
 }

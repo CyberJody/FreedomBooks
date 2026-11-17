@@ -1,0 +1,19 @@
+.expenses-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 14px }
+.expenses-heading h1 { margin-bottom: 4px }
+.expenses-heading p { margin: 0; color: #675d6b }
+.expenses-actions, .expenses-links { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center }
+.expenses-links { margin-bottom: 18px }
+.expenses-controls { padding: 14px; border: 1px solid #d8d0c4; border-radius: 4px; background: #fff; margin-bottom: 18px }
+.expenses-controls select { max-width: min(310px, 100%) }
+.expenses-controls input[type=search] { width: min(260px, 100%) }
+.expenses-overview { display: grid; grid-template-columns: minmax(230px, 1fr) minmax(240px, 1fr); gap: 22px; padding: 18px 22px; background: #fff; border: 1px solid #d8d0c4; border-radius: 4px }
+.expenses-overview h2, .expenses-overview h3 { margin: 0 0 8px; font-size: 15px }
+.expenses-overview p { margin: 6px 0; color: #675d6b }
+.expenses-overview .expense-total-amount { font-size: 30px; font-weight: 700; color: #35253e; font-variant-numeric: tabular-nums }
+.expense-total-amount small { font-size: 14px; font-weight: 500 }
+.expenses-categories, .expenses-entries { margin-top: 22px }
+.expense-entries { min-width: 760px }
+.expense-entries td { vertical-align: top; overflow-wrap: anywhere }
+.expense-entries td:first-child { white-space: nowrap }
+.expenses-entries .report-foot { max-width: none }
+@media (max-width: 800px) { .expenses-overview { grid-template-columns: 1fr; gap: 14px } .expenses-controls label { max-width: 100% } }

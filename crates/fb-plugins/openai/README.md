@@ -81,9 +81,9 @@ deduplication, vendor/account matching and receipt-to-bill linking remain core.
 
 The current DraftBill shape cannot hold the full reading/review metadata. Host
 must persist the returned ReceiptReading and enforce authoritative indexed Save
-checks in wave 4. This crate conservatively blocks mismatched staging; it does
+checks during host integration. This crate conservatively blocks mismatched staging; it does
 not implement the UI's explicit "Keep as entered" override or pretend a corrected
-product is what the receipt printed. See FRAMEWORK-REQUESTS.md for the remaining
+product is what the receipt printed. Remaining framework work covers
 header fields and live streaming. UsageLimit and bounded request-class policies
 are adopted; host ceilings must explicitly allow 180 s / 16 MiB for SSE.
 
@@ -153,11 +153,11 @@ Optional fixture regeneration (Python; cryptography needed only for RSA):
 The fixed instruction/schema are copied from that frozen answer key's
 `assistant/receipts.py`. Python UI/database-only tests belong to later host wiring.
 
-## Jody's eventual real sign-in
+## Real sign-in
 
-Not part of this job. Wave 4 is Jody-initiated only. For the open-source locally
-run flow he needs his own ChatGPT account and consent to use his plan; no developer
+Real sign-in is started only by the account holder. For the open-source locally
+run flow they need their own ChatGPT account and consent to use their plan; no developer
 client-secret/app registration is required (dynamic registration supplies the
-client id). Alternatively he can use his own OpenAI API key. Never paste a real
+client id). Alternatively they can use their own OpenAI API key. Never paste a real
 key into reports, fixtures or chat. Paid/remotely hosted app eligibility is outside
 this local OSS flow and needs OpenAI approval, per the recorded SIWC research.

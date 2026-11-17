@@ -1,43 +1,107 @@
-/* Hybrid UI v1 company Home: workflow lanes (N10 concept A) beside a grouped list/report shelf (N10 concept B).
-   Decorative icons only; every action is a real link with a visible text label. */
-.company-home .home-heading{border-bottom:2px solid var(--fb-tan-mid,#e4d7bd)}
-.home-grid{display:grid;grid-template-columns:minmax(0,1fr) 264px;gap:14px;align-items:start}
-.home-flows{display:grid;gap:12px;min-width:0}
-.flow,.shelf{background:#fff;border:1px solid var(--fb-border,#d8d0c4);border-radius:5px;overflow:visible;margin:0}
-.flow-head,.shelf-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 14px;background:linear-gradient(#f8f2e6,var(--fb-tan,#eee4d0));border-bottom:1px solid var(--fb-tan-line,#d9ccb2);border-radius:5px 5px 0 0}
-.flow-head h2,.shelf-head h2{display:flex;align-items:center;gap:8px;margin:0;font-size:14.5px;color:var(--fb-plum-deep,#35253e)}
-.flow-head p,.shelf-head p{margin:0;font-size:12px;color:#54483c}
-.flow-mark{width:9px;height:9px;border-radius:2px;background:#557b60;flex:none}.mark-vendors{background:#bd7657}.mark-banking{background:#598299}.mark-lists,.mark-company{background:#684276}
-.flow-steps{list-style:none;margin:0;padding:12px 14px 10px;display:grid;gap:30px}
+/* Company Home: needs attention, money cards, a compact task row, recent activity, and the optional workflow
+   diagrams. Every figure is a link to the screen that resolves or explains it; words carry every state
+   (overdue, draft, void), colour only repeats them. */
+.company-home{display:grid;gap:14px;min-width:0}
+.company-home h2{margin:0;font-size:14.5px;color:var(--fb-plum-deep,#35253e)}
+.company-home .amount{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Heading: title, today's date, and the Reminders link when the attention row is absent. */
+.home-heading{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding-bottom:8px;border-bottom:2px solid var(--fb-tan-mid,#e4d7bd)}
+body.shell main .home-heading h1{margin:0}
+.home-date{margin:0;color:var(--fb-muted,#675d6b);font-size:13px}
+.home-reminders{margin-left:auto;font-size:13px;font-weight:600}
+
+/* Needs attention: one wrapping row of linked items. */
+body.shell .home-attention,body.shell .home-money,body.shell .home-tasks,body.shell .home-recent{margin:0;padding:0;border:0;border-radius:0;background:none;overflow:visible}
+.attention-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.attention-head a{margin-left:auto;font-size:13px;font-weight:600}
+.attention-list{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.attention-item a{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;padding:7px 12px;border:1px solid var(--fb-border,#d8d0c4);border-left:4px solid var(--fb-plum,#684276);border-radius:4px;background:#fff;color:var(--fb-text,#25222a);text-decoration:none;font-size:13.5px;line-height:1.35}
+.attention-item.is-alert a{border-left-color:#a33a2a;background:#fff8f5}
+.attention-item a:hover{background:var(--fb-lavender,#eee8f1)}
+.attention-label{font-weight:700}
+.attention-item.is-alert .attention-label{color:#8a2c1f}
+.attention-amount{color:var(--fb-text,#25222a)}
+.attention-link{color:var(--fb-plum,#684276);font-size:12.5px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.attention-link::after{content:" ›" / ""}
+
+/* Money: four cards, two per row when the content area is narrow. */
+.money-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@container home (max-width: 900px){.money-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container home (max-width: 460px){.money-cards{grid-template-columns:minmax(0,1fr)}}
+.company-home{container:home/inline-size}
+.money-card{display:flex;flex-direction:column;gap:3px;min-width:0;padding:10px 13px 11px;border:1px solid var(--fb-border,#d8d0c4);border-top:3px solid var(--fb-tan-line,#d9ccb2);border-radius:4px;background:#fff}
+.money-card h3{margin:0 0 3px;font-size:13.5px;line-height:1.3}
+.money-card h3 a{color:var(--fb-plum-dark,#4b2b57)}
+.money-card p{margin:0;font-size:12.5px;line-height:1.45;color:#4f4653}
+.money-card .card-figure{font-size:21px;font-weight:700;color:var(--fb-plum-deep,#35253e);line-height:1.25}
+.card-figure .currency{font-size:12px;font-weight:600;color:var(--fb-muted,#675d6b)}
+.money-card .card-line.is-alert,.money-card .card-line.is-alert a{color:#8a2c1f;font-weight:650}
+.money-card .card-note{margin-top:auto;padding-top:4px;color:var(--fb-muted,#675d6b);font-size:11.5px}
+.money-card .card-more{font-size:12px}
+.card-empty{font-size:12.5px}
+.bank-lines{margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.5}
+.bank-lines li{display:flex;align-items:baseline;gap:6px;min-width:0}
+.bank-lines li + li{border-top:1px solid #f0eadf}
+.bank-lines a{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank-lines .amount{margin-left:auto;font-weight:650}
+.card-tag{flex:none;padding:0 4px;border:1px solid #d9ccb2;border-radius:3px;font-size:10.5px;color:#5d4316;background:#f8f3e8}
+.month-figures{display:grid;gap:1px;margin:0;font-size:12.5px}
+.month-figures div{display:flex;justify-content:space-between;gap:8px}
+.month-figures dt{color:#4f4653}
+.month-figures dd{margin:0}
+.month-net{margin-top:2px;padding-top:2px;border-top:1px solid var(--fb-tan-line,#d9ccb2);font-weight:700;font-size:14px}
+.month-net dt{color:var(--fb-plum-deep,#35253e)}
+.month-net.is-negative dd{color:#8a2c1f}
+
+/* New company: the required setup steps instead of a wall of zeros. */
+body.shell .home-setup{margin:0;padding:12px 16px;border:1px solid var(--fb-border,#d8d0c4);border-radius:4px;background:#fff;overflow:visible}
+.setup-steps{display:flex;flex-wrap:wrap;gap:6px 22px;margin:8px 0 6px;padding:0;list-style:none;font-size:14px}
+.step-state{display:inline-block;min-width:3.6em;margin-right:4px;padding:0 6px;border:1px solid #c9a46a;border-radius:3px;background:#f6ead0;color:#5d4316;font-size:11px;font-weight:700;text-align:center}
+.setup-steps .is-done .step-state{border-color:#9db8a3;background:#e8f2ea;color:#2f5a3a}
+.setup-steps .is-done{color:var(--fb-muted,#675d6b)}
+.setup-steps a{font-weight:650}
+.setup-more{margin:0;font-size:12.5px;color:var(--fb-muted,#675d6b)}
+
+/* Start a task: one compact row of buttons. */
+.home-tasks h2{margin-bottom:6px}
+.task-row{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.task-row .button{padding:6px 13px}
+
+/* Recent activity. */
+.home-recent h2{margin-bottom:6px}
+.recent-scroll{overflow-x:auto;border:1px solid var(--fb-border,#d8d0c4);border-radius:4px}
+body.shell main .recent-table{border:0}
+.recent-table td,.recent-table th{white-space:nowrap}
+.recent-table td:nth-child(3){white-space:normal;min-width:10em}
+.recent-table .num{text-align:right}
+.doc-state{display:inline-block;margin-left:4px;padding:0 5px;border:1px solid #c9bccd;border-radius:3px;font-size:11px;font-weight:700;color:#4f3a58;background:#f5f0f7}
+
+/* How the pieces fit: the workflow diagrams, closed once the company has posted anything. */
+body.shell details.home-flows{margin:0;padding:0;border:1px solid var(--fb-border,#d8d0c4);border-radius:4px;background:#fff}
+.home-flows > summary{padding:8px 14px;font-size:13.5px}
+.home-flow-list{display:grid;gap:10px;padding:0 12px 12px}
+body.shell .home-flows .flow{margin:0;border:1px solid #ece4d6;border-radius:4px;background:#fdfbf7;overflow:visible}
+.flow-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:6px 12px;border-bottom:1px solid #ece4d6}
+.flow-head h3{display:flex;align-items:center;gap:8px;margin:0;font-size:13.5px;color:var(--fb-plum-deep,#35253e)}
+.flow-head p{margin:0;font-size:12px;color:#54483c}
+.flow-mark{width:9px;height:9px;border-radius:2px;background:#557b60;flex:none}.mark-vendors{background:#bd7657}.mark-banking{background:#598299}
+.flow-steps{list-style:none;margin:0;padding:10px 12px;display:grid;gap:30px}
 .flow-steps.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .flow-steps.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .step{position:relative;min-width:0}
-.step > a,.step-box{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:10px 8px;border:1px solid #ece4d6;border-radius:6px;background:#fdfbf7;color:var(--fb-text,#25222a);text-decoration:none;height:100%}
+.step > a{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:8px;border:1px solid #ece4d6;border-radius:6px;background:#fff;color:var(--fb-text,#25222a);text-decoration:none;height:100%}
 .step > a:hover{background:var(--fb-lavender,#eee8f1);border-color:#b9a7c1}
-.step > a.needs-setup{background:#fbf7ef;border-style:dashed}.step > a.needs-setup .step-label{color:#5f5346}
-.setup-flag{display:inline-block;margin:2px 0;padding:0 6px;border:1px solid #c9a46a;border-radius:3px;background:#f6ead0;color:#5d4316;font-size:11px;font-weight:700}
 .step > a:hover .step-label{text-decoration:underline}
-.step-icon{width:48px;height:48px;margin-bottom:4px}
+.step-icon{width:40px;height:40px;margin-bottom:2px}
 .step-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-.step-label{font-weight:700;font-size:13.5px;color:var(--fb-plum-dark,#4b2b57);line-height:1.3}
+.step-label{font-weight:700;font-size:13px;color:var(--fb-plum-dark,#4b2b57);line-height:1.3}
 .step-note{font-size:12px;color:#544b58;line-height:1.35;text-wrap:balance}
-/* Sequence arrows sit centred in the gap between steps, level with the icons. They are drawn (no text), so
-   screen readers hear only the ordered list. A companion step gets a dashed rule in its gap instead. */
-.step.connected::after{content:'';position:absolute;right:-27px;top:30px;width:24px;height:16px;background:url("home-arrow-1.svg") center/contain no-repeat;pointer-events:none}
+/* Sequence arrows sit in the gap between steps; they are drawn, so screen readers hear only the ordered list. */
+.step.connected::after{content:'';position:absolute;right:-27px;top:24px;width:24px;height:16px;background:url("home-arrow-1.svg") center/contain no-repeat;pointer-events:none}
 .step.companion::before{content:'';position:absolute;left:-16px;top:6px;bottom:6px;border-left:2px dashed #cdbd9f;pointer-events:none}
-.register-links{list-style:none;margin:4px 0 0;padding:0;font-size:12.5px;line-height:1.5}
-.register-links a{overflow-wrap:anywhere}
-.flow-note{margin:0;padding:0 16px 10px;font-size:12px;color:#5f5763}
-.home-shelf{display:grid;gap:12px}
-.shelf-head{display:block}.shelf-head p{margin-top:2px}
-.shelf-rows{list-style:none;margin:0;padding:5px}
-.shelf-rows li + li{border-top:1px solid #efe8dc}
-.shelf-rows a{display:flex;align-items:center;gap:11px;padding:7px 8px;border-radius:4px;text-decoration:none;color:var(--fb-text,#25222a)}
-.shelf-rows a:hover{background:var(--fb-lavender,#eee8f1)}
-.shelf-rows a:hover .row-label{text-decoration:underline}
-.row-icon{width:36px;height:36px;flex:none}
-.row-label{display:block;font-weight:700;font-size:13.5px;color:var(--fb-plum-dark,#4b2b57)}
-.row-note{display:block;font-size:12px;color:#544b58;line-height:1.35;text-wrap:pretty}
-@media(max-width:1180px){.home-grid{grid-template-columns:minmax(0,1fr)}.home-shelf{grid-template-columns:1fr 1fr}}
-@media(max-width:760px){.flow-steps.cols-4,.flow-steps.cols-3{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.step.connected::after{display:none}.step.companion::before{display:none}.home-shelf{grid-template-columns:minmax(0,1fr)}.flow-head{flex-wrap:wrap}}
-@media(max-width:420px){.flow-steps.cols-4,.flow-steps.cols-3{grid-template-columns:minmax(0,1fr)}.step > a,.step-box{flex-direction:row;text-align:left;align-items:center;gap:10px}.step-icon{width:40px;height:40px;margin:0;flex:none}}
+.flow-note{margin:0;padding:0 14px 8px;font-size:12px;color:#5f5763}
+
+@media(max-width:760px){.flow-steps.cols-4,.flow-steps.cols-3{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.step.connected::after,.step.companion::before{display:none}.flow-head{flex-wrap:wrap}}
+@media print{.home-tasks,.home-flows{display:none}}
+.company-home .tax-setup-card{margin:0}

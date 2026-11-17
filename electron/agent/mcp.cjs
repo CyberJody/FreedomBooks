@@ -8,6 +8,8 @@ function endpoint(value) {
   return u;
 }
 function api(config, route, body) {
+  const reload=typeof config==='function'?config:null;
+  if(reload)config=reload();
   const u=endpoint(config.endpoint);
   if (!/^[a-f0-9]{64}$/.test(config.token)) return Promise.reject(new Error('Invalid connection'));
   const data=body===undefined ? null : JSON.stringify(body);
@@ -22,10 +24,15 @@ function api(config, route, body) {
     req.setTimeout(15000,()=>req.destroy());
     req.on('error',()=>reject(new Error('Local API unavailable')));
     req.end(data);
+  }).catch(error=>{
+    // Only a read may be repeated, and only when the sealed endpoint/token actually rotated.
+    // Mutations are never retried: a lost response can follow a committed atomic operation.
+    if(reload && route==='/v1/catalogue' && body===undefined){const latest=reload();if(latest.endpoint!==config.endpoint || latest.token!==config.token)return api(latest,route);}
+    throw error;
   });
 }
 function serve(config,input=process.stdin,output=process.stdout,{apiMode=false}={}) {
-  endpoint(config.endpoint);
+  if(typeof config!=='function')endpoint(config.endpoint);
   let buffer=Buffer.alloc(0), chain=Promise.resolve(), pending=0, closed=false;
   const send=v=>{
     const line=JSON.stringify(v)+'\n';
@@ -37,6 +44,7 @@ function serve(config,input=process.stdin,output=process.stdout,{apiMode=false}=
     try { r=JSON.parse(line); } catch { send({jsonrpc:'2.0',id:null,error:{code:-32700,message:'Invalid JSON'}});return; }
     if (apiMode) {
       try {
+        if(typeof config==='function' && r?.catalogue!==true)await api(config,'/v1/catalogue');
         const data=await api(config,r?.catalogue===true?'/v1/catalogue':'/v1/call',r?.catalogue===true?undefined:r);
         send({ok:true,data});
       } catch(error) {send({ok:false,error:error.message});}
@@ -53,6 +61,7 @@ function serve(config,input=process.stdin,output=process.stdout,{apiMode=false}=
         case 'tools/call': {
           if (typeof r.params?.name!=='string' || !r.params.arguments || typeof r.params.arguments!=='object' || Array.isArray(r.params.arguments)) throw new Error('Invalid tool arguments');
           try {
+            if(typeof config==='function')await api(config,'/v1/catalogue');
             const data=await api(config,'/v1/call',{operation:r.params.name,arguments:r.params.arguments});
             result={content:[{type:'text',text:JSON.stringify(data)}],isError:false};
           } catch(error) {result={content:[{type:'text',text:error.message}],isError:true};}

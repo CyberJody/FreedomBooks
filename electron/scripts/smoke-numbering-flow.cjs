@@ -28,7 +28,8 @@ const pass = text => console.log(`PASS ${++checks}: ${text}`);
     assert.equal(await page.isChecked('#id_protect'), false);
     await page.fill('#id_owner_name', 'Numbering owner');
     await page.fill('#id_company_name', 'Synthetic numbered company');
-    await nav('button:has-text("Create books")', /\/home\/$/);
+    await nav('button:has-text("Create books")', /\/desktop\/sign-in\/$/);
+    await require('./smoke-identity.cjs').signIn(page, 'Synthetic flow owner42');
     const company = /\/c\/([0-9a-f-]{36})\//.exec(page.url())[1];
     const base = `fb://app/c/${company}`;
     const ids = await app.evaluate(({ app: a }, c) => {

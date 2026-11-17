@@ -217,7 +217,9 @@ fn persist_item(conn: &Writer<'_>, company: CompanyId, v: &Value) -> FbResult<()
 }
 /// `input`: name, description, rate, agency_id/new_agency_name; optional item_id/expected_revision.
 pub fn save_rate(book: &mut Book, actor: UserId, company: CompanyId, input: &Value) -> FbResult<Value> {
-    book.write(|tx|{
+    book.write(|tx| save_rate_tx(tx, actor, company, input))
+}
+fn save_rate_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, input: &Value) -> FbResult<Value> {
         let user=services::access(tx,actor,company)?;
         // locked_item below retains its original place in the validation order.
         let retained_result=input["item_id"].as_str().map(|id|item(tx,company,id)).transpose();
@@ -234,11 +236,10 @@ pub fn save_rate(book: &mut Book, actor: UserId, company: CompanyId, input: &Val
         else if let Some(id)=optional_id(input,"agency_id","Choose a tax agency (vendor) from this company.")?{
             let agency=directory::get(tx,company,directory::Model::Vendor,id).map_err(|_|FbError::validation("Choose a tax agency (vendor) from this company."))?;
             if agency["active"]!=true&&before.as_ref().is_none_or(|b|b["agency_id"]!=id){return Err(FbError::validation("Choose an active vendor as the tax agency."));}agency
-        }else{return Err(FbError::validation("Choose the tax agency (the vendor you pay this tax to), or type a new agency name."));};
+        }else{return Err(FbError::validation("Enter a tax authority name or choose an existing authority."));};
         let v=json!({"id":id,"kind":"RATE","name":name,"description":description,"rate":rate.to_string(),"agency_id":agency["id"],"active":before.as_ref().map(|v|v["active"].clone()).unwrap_or(json!(true)),"revision":documents::next_revision(before.as_ref().map(|v|v["revision"].as_i64().unwrap()).unwrap_or(0))?});
         persist_item(tx,company,&v)?;
         services::audit(tx,&user,company,if before.is_some(){"salestax.rate.updated"}else{"salestax.rate.created"},format!("taxitem:{id}"),json!({"before":before.as_ref().map(item_snapshot),"after":item_snapshot(&v)}))?;Ok(v)
-    })
 }
 pub fn save_group(book: &mut Book, actor: UserId, company: CompanyId, input: &Value) -> FbResult<Value> {
     book.write(|tx|{
@@ -279,7 +280,9 @@ fn persist_settings(conn: &Writer<'_>, company: CompanyId, v: &Value) -> FbResul
     Ok(())
 }
 pub fn save_settings(book: &mut Book, actor: UserId, company: CompanyId, input: &Value) -> FbResult<(Value, bool)> {
-    book.write(|tx| {
+    book.write(|tx| save_settings_tx(tx, actor, company, input))
+}
+fn save_settings_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, input: &Value) -> FbResult<(Value, bool)> {
         let user = services::access(tx, actor, company)?;
         if !input["charge_tax"].is_boolean() {
             return Err(FbError::validation("Choose whether this company charges sales tax."));
@@ -321,7 +324,6 @@ pub fn save_settings(book: &mut Book, actor: UserId, company: CompanyId, input: 
             json!({"before":settings_snapshot(&before),"after":settings_snapshot(&after)}),
         )?;
         Ok((after, offer))
-    })
 }
 pub fn set_item_active(
     book: &mut Book,
@@ -467,4 +469,32 @@ pub fn creation_digest(request: &Value, expand: impl FnOnce() -> FbResult<Value>
         expand()?
     };
     Ok(format!("{:x}", Sha256::digest(py::py_json_dumps_sorted(&value).as_bytes())))
+}
+
+/// First-run sales-tax setup: authority payee, rate and default are one audited write.
+/// Existing documents, catalog flags, reporting basis and filing schedule stay intact.
+pub fn configure(book: &mut Book, actor: UserId, company: CompanyId, input: &Value) -> FbResult<Value> {
+    book.write(|tx| {
+        services::access(tx, actor, company)?;
+        let before = settings_for(tx, company)?;
+        documents::check_revision(before["revision"].as_i64().unwrap(), input["expected_revision"].as_i64())?;
+        let charge = input["charge_tax"].as_bool().ok_or_else(|| FbError::validation("Choose whether this company collects sales tax."))?;
+        let default = if !charge { Value::Null } else if let Some(id) = input["default_item_id"].as_str() {
+            let rate = item(tx, company, id)?;
+            if rate["active"] != true { return Err(FbError::validation("Choose an active sales tax rate.")); }
+            json!(id)
+        } else {
+            let authority = text(&input["authority_name"],120,"a tax authority name",true)?;
+            let matches = directory::list(tx, company, directory::Model::Vendor)?.into_iter().filter(|v|
+                v["display_name"].as_str().unwrap().eq_ignore_ascii_case(&authority)
+            ).collect::<Vec<_>>();
+            if matches.len() > 1 || matches.first().is_some_and(|v| v["active"] != true) {
+                return Err(FbError::validation("The tax authority matches an inactive or ambiguous payee. Review it in Vendors before continuing."));
+            }
+            let rate = save_rate_tx(tx, actor, company, &json!({"name":input["name"],"description":"Sales tax","rate":input["rate"],"agency_id":matches.first().map(|v|v["id"].clone()),"new_agency_name":if matches.is_empty(){authority}else{String::new()}}))?;
+            rate["id"].clone()
+        };
+        let (settings, _) = save_settings_tx(tx, actor, company, &json!({"expected_revision":input["expected_revision"],"charge_tax":charge,"default_item_id":default,"owed_basis":before["owed_basis"],"filing_frequency":before["filing_frequency"]}))?;
+        Ok(settings)
+    })
 }
