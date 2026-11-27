@@ -176,7 +176,8 @@ pub fn save_setup(book: &mut Book, actor: UserId, company: CompanyId, values: &V
     book.write(|tx| save_setup_tx(tx, actor, company, values, expected_revision))
 }
 
-pub(crate) fn save_setup_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, values: &Value, expected_revision: Option<i64>) -> FbResult<Value> {
+/// Apply setup in the caller’s Writer after any application-specific choice checks.
+pub fn save_setup_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, values: &Value, expected_revision: Option<i64>) -> FbResult<Value> {
         let user=services::access(tx,actor,company)?;
         let before=setup_record(tx,company)?;check_revision(before["revision"].as_i64().unwrap(),expected_revision)?;
         let mut v=json!({});for r in ROLES{v[*r]=if *r=="customer_deposits"{values.get(r).unwrap_or(&before[*r]).clone()}else{values[*r].clone()};}
@@ -192,13 +193,15 @@ pub(crate) fn save_setup_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, 
         };
         let banks=banks.iter().map(|b|b.as_str().map(str::to_string)).collect::<Option<Vec<_>>>().ok_or_else(||FbError::validation("Select each bank account once."))?;
         if banks.iter().collect::<std::collections::BTreeSet<_>>().len()!=banks.len(){return Err(FbError::validation("Select each bank account once."));}
-        // Every active, postable Bank-type account is a bank account; the list chosen here only
-        // adds other asset accounts (petty cash, for example). Accounts used in a role stay out.
-        // Choosing a bank account for a role takes it off the bank list, as unticking it in the
-        // same save always could; the change is in the setup audit entry.
+        // Merge eligible Bank-type accounts with explicit designations. The desktop can retain
+        // eligible legacy designations here. Automatic additions exclude control accounts and roles.
         let mut banks=banks;
         for b in automatic_banks(tx,company,&v)? {if !banks.contains(&b){banks.push(b);}}
         validate_mapping(tx,company,&v,None,&banks)?;
+        banks.sort();
+        if !before["id"].is_null() && ROLES.iter().all(|r| before[*r] == v[*r]) && before["banks"] == json!(banks) {
+            return Ok(without_id(&before));
+        }
         let id=before["id"].as_str().map(str::to_string).unwrap_or_else(||fb_ids::new_v7().to_string());
         let sql = if before["id"].is_null() {
             "INSERT INTO documents_accountingsetup(id,company_id,receivables_id,payables_id,undeposited_id,collected_tax_id,customer_deposits_id,revision) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)"

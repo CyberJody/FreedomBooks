@@ -84,7 +84,7 @@ impl Backend for SessionBackend {
     fn open_session(&self, device: &DeviceRef) -> Result<SessionRef, BackendError> {
         let id = {
             let mut host = self.host.lease("remote: connect", &mut |_| {}).map_err(error)?;
-            host.open_session(ClientInfo::remote(&device.name, Some(&device.id))).map_err(error)?
+            host.open_transport_session(ClientInfo::remote(&device.name, Some(&device.id))).map_err(error)?
         };
         let n = self.next.fetch_add(1, Ordering::SeqCst);
         self.ids.lock().unwrap_or_else(PoisonError::into_inner).insert(n, id);
@@ -101,6 +101,7 @@ impl Backend for SessionBackend {
         match self.dispatch(session, Request::Status)? {
             Response::Status(s) => Ok(match (s.signed_in, s.user, s.role) {
                 (true, Some((id, name)), Some(role)) => SignInState::SignedIn(SignedIn { user_id: id.to_db(), user: name, role: role.as_str().into() }),
+                (true, _, _) => return Err(BackendError::Refused("Could not read the signed-in user.".into())),
                 _ if s.mfa_pending => SignInState::MfaPending,
                 _ => SignInState::SignedOut,
             }),

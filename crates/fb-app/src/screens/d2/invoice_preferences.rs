@@ -4,6 +4,7 @@ pub(super) fn fields(app: &mut App, c: CompanyId, vm: &mut Value, posted: Option
     crate::invoice_stripe::settings(app,c,vm)?;
     if app.invoice_delivery {
         let connection=app.open_mut()?.book.read(|q|fb_core::invoice_email::connection(q,c))?;
+        vm["keyring_deferred"]=json!(app.connection_keys == crate::ConnectionKeys::Deferred);
         vm["gmail_enabled"]=json!(true);
         vm["gmail_connection"]=serde_json::to_value(connection).expect("connection");
         vm["gmail_revision"]=json!(vm["gmail_connection"]["revision"].as_i64().unwrap_or(0));

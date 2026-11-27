@@ -76,6 +76,7 @@ fn journal_added_line_field_errors_rounding_and_optimistic_edits() {
     let income = acct(&mut app, &c, "4000", "INCOME");
     let path = format!("/c/{c}/journals/new/");
     let html = screens::render(&mut app, &path).unwrap().html;
+    assert!(html.contains("data-picker=\"account\"") && !html.contains("Without JavaScript"));
     let mut values = vec![
         ("request_key".into(), field(&html, "request_key")),
         ("expected_revision".into(), "0.00".into()),
@@ -97,12 +98,13 @@ fn journal_added_line_field_errors_rounding_and_optimistic_edits() {
     ];
     let mut invalid = values.clone();
     invalid.iter_mut().find(|(k, _)| k == "date").unwrap().1 = "bad".into();
+    invalid.iter_mut().find(|(k, _)| k == "lines-0-debit").unwrap().1 = "abc".into();
     let before = count(&mut app, "ledger_auditevent");
     let Outcome::Invalid { html } = post(&mut app, &path, &invalid) else {
         panic!("invalid date accepted")
     };
     assert!(
-        html.contains("Enter a valid date.")
+        html.contains("Enter a valid date.") && html.contains("<td colspan=\"6\">Line 1 debit")
             && html.contains("name=\"lines-8-credit\" value=\"12.35\"")
     );
     assert_eq!(count(&mut app, "ledger_journal"), 0);
@@ -121,6 +123,12 @@ fn journal_added_line_field_errors_rounding_and_optimistic_edits() {
             && detail.contains("Dana 😀")
             && detail.contains("Adjusting entry")
     );
+    let mut clash = values.clone();
+    clash.iter_mut().find(|(k, _)| k == "request_key").unwrap().1 = uuid::Uuid::new_v4().to_string();
+    let Outcome::Invalid { html } = post(&mut app, &path, &clash) else { panic!("duplicate saved") };
+    assert!(html.contains("Entry number JE-1 is already used"));
+    assert_eq!(field(&html, "entry_number"), field(&screens::render(&mut app, &path).unwrap().html, "entry_number"));
+    assert_eq!(field(&html, "memo"), "Adjustment");
     let edit = format!("{location}edit/");
     values
         .iter_mut()

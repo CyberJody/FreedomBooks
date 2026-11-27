@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const fixed=(value,scale)=>{const m=/^\+?(\d*)(?:\.(\d*))?$/.exec(value.trim());if(!m||!(m[1]||m[2]))return null;const whole=m[1]||'0',fraction=(m[2]||'').replace(/0+$/,'');if(whole.length>16||fraction.length>scale)return null;return BigInt(whole)*10n**BigInt(scale)+BigInt(fraction.padEnd(scale,'0'));};
-  const money=value=>{const sign=value<0n?'-':'',n=value<0n?-value:value;return `${sign}${n/100n}.${String(n%100n).padStart(2,'0')}`;};
+  const money=value=>{const sign=value<0n?'-':'',n=value<0n?-value:value;return `${sign}${(n/100n).toLocaleString('en-US')}.${String(n%100n).padStart(2,'0')}`;};
   const lineAmount=(quantity,rate,kind='CHARGE')=>{
     const q=fixed(quantity,4),r=fixed(rate,2);
     if(q===null||r===null||!['CHARGE','DISCOUNT','NOTE'].includes(kind))return null;

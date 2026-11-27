@@ -197,11 +197,12 @@ fn finds_documents_by_number_name_amount_and_memo_most_recent_first() {
         ("market", "Sales receipts", "SR-000001 Maple Events 2026-10-22 42.75 Recorded Farmers market stall"),
         ("brunch", "Estimates", "EST-000001 Maple Events 2026-11-02 960.00 Draft Anniversary brunch"),
         ("stale", "Credit memos", "CM-000001 Lakeside Cafe 2026-10-25 12.00 Recorded Stale rolls returned"),
-        ("holiday order", "Customer deposits", "CDP-000001 Maple Events 2026-10-28 300.00 Recorded Deposit for holiday trays"),
+        // Worker item 35: the order reference matched, and the row (which shows the memo) says so.
+        ("holiday order", "Customer deposits", "CDP-000001 Maple Events 2026-10-28 300.00 Recorded Deposit for holiday trays Matched: Reference Holiday order 12"),
         ("VF-88123", "Bills", "BILL-000001 Ref. VF-88123 Valley Flour Supply 2026-10-12 412.37 Partly paid Flour and sugar, October"),
         ("part payment", "Bill payments", "BPAY-000001 Ref. 1045 Valley Flour Supply 2026-10-30 200.00 Recorded Part payment"),
         ("electric", "Checks & expenses", "CHK-000001 Check no. 1042 City Power and Light 2026-10-28 188.90 Recorded Electric bill"),
-        ("slip 77", "Deposits", "DEP-000001 Harbor checking 2026-10-31 84.00 Recorded Counter takings"),
+        ("slip 77", "Deposits", "DEP-000001 Harbor checking 2026-10-31 84.00 Recorded Counter takings Matched: Reference Slip 77"),
         ("reserve", "Transfers", "TRF-000001 Harbor checking → Harbor savings 2026-11-03 500.00 Recorded Tax reserve"),
         ("paper goods", "Journal entries", format!("{jn} Entry no. ADJ-7 2026-11-04 96.15 Posted Packaging accrual").as_str()),
     ] {
@@ -326,4 +327,129 @@ fn the_title_bar_has_find_and_new_on_every_company_page() {
     }
     // The Companies page has no company to search.
     assert!(!page(&mut b.app, "/").contains(r#"id="fb-find""#));
+}
+
+/// Worker item 21: an amount inside a document (a line's amount or rate, the tax) finds it, not only
+/// its total ("53.13" did not find the invoice that carried 53.13 of tax; "33.33" found nothing).
+#[test]
+fn an_amount_inside_a_document_finds_it() {
+    let mut b = book();
+    let c = b.c.clone();
+    let juniper = run(&mut b.app, json!({"type":"SaveCustomer","company_id":c,"display_name":"Juniper Print"}))["id"].as_str().unwrap().to_owned();
+    let income: String = b.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM ledger_account WHERE company_id=?1 AND code='4000'", [&c], |r| r.get(0))).unwrap();
+    let line = |d: &str, quantity: &str, rate: &str| json!({"description":d,"quantity":quantity,"rate":rate,"taxable":true,"income_account_id":income});
+    // 850.00 taxed at 6.25% (53.125 rounds to 53.13) plus 3 × 33.33 = 99.99, untaxed.
+    let mut lines = vec![line("Banners", "1", "850.00"), line("Posters", "3", "33.33")];
+    lines[1]["taxable"] = json!(false);
+    let invoice = run(&mut b.app, json!({"type":"SaveInvoice","company_id":c,"values":{"request_key":key(),"customer_id":juniper,"date":"2026-11-06","due_date":"2026-11-06","memo":"Spring banners","tax_mode":"MANUAL","tax_label":"State tax","tax_rate":"6.25","lines":lines}}))["id"].as_str().unwrap().to_owned();
+    let total: i64 = b.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT r.total FROM sales_invoice i JOIN sales_invoicerevision r ON r.invoice_id=i.id AND r.number=i.revision WHERE i.id=?1", [&invoice], |r| r.get(0))).unwrap();
+    assert_eq!(total, 100312, "850.00 + 53.13 + 99.99");
+    for q in ["53.13", "33.33", "99.99", "850", "1,003.12"] {
+        let html = find(&mut b, q);
+        let r = results(&html);
+        let invoices = r.iter().find(|(h, _)| h == "Invoices").unwrap_or_else(|| panic!("{q}: {r:#?}"));
+        assert_eq!(invoices.1.len(), 1, "{q}: {r:#?}");
+        assert!(invoices.1[0].contains("Juniper Print 2026-11-06 1,003.12 Draft Spring banners"), "{q}: {r:#?}");
+        assert!(hrefs(&html).iter().any(|h| h.ends_with(&format!("/{invoice}/"))), "{q}");
+    }
+    // A bill line's rate (2 × 150.00 = 300.00) finds the bill too; an amount nowhere finds nothing.
+    let flour: String = b.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM directory_vendor WHERE company_id=?1", [&c], |r| r.get(0))).unwrap();
+    let expense: String = b.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM ledger_account WHERE company_id=?1 AND code='6000'", [&c], |r| r.get(0))).unwrap();
+    run(&mut b.app, json!({"type":"SaveBill","company_id":c,"values":{"bill_id":null,"expected_revision":0,"request_key":key(),"vendor_id":flour,"date":"2026-11-07","due_date":"2026-11-07","memo":"Sugar, two sacks","reference":"","supersedes_id":null,"reentry_reason":"","refresh_vendor":false,"keep_archived":false,
+        "lines":[{"origin_position":null,"item_id":null,"expense_account_id":expense,"description":"Sugar","quantity":"2","rate":"150.00","refresh_item":false,"keep_archived":false}]}}));
+    let r = results(&find(&mut b, "150"));
+    assert_eq!(r.iter().find(|(h, _)| h == "Bills").map(|(_, rows)| rows.len()), Some(1), "{r:#?}");
+    assert!(results(&find(&mut b, "777.77")).is_empty());
+    // The other company's look-alike amounts never appear (the query stays company-scoped).
+    let html = find(&mut b, "33.33");
+    assert!(!html.contains(&b.other));
+}
+
+/// Worker items 9 and 10 (this fixture has a document of every kind, dated in October; today is
+/// 2026-11-10): applying a credit memo and every void or reversal form defaulted to today, so a March
+/// document was reversed in November unless the person noticed. They now start on the document's date.
+#[test]
+fn void_reversal_and_credit_application_dates_start_on_the_documents_date() {
+    let mut b = book();
+    let c = b.c.clone();
+    let d = b.docs.clone();
+    for (path, date) in [
+        (format!("/c/{c}/invoices/{}/void/", d["invoice_wedding"]), "2026-10-19"),
+        (format!("/c/{c}/receipts/{}/reverse/", d["payment"]), "2026-10-20"),
+        (format!("/c/{c}/sales-receipts/{}/void/", d["sales_receipt"]), "2026-10-22"),
+        (format!("/c/{c}/credit-memos/{}/void/", d["credit_memo"]), "2026-10-25"),
+        (format!("/c/{c}/credit-memos/{}/apply/", d["credit_memo"]), "2026-10-25"),
+        (format!("/c/{c}/customer-deposits/{}/void/", d["customer_deposit"]), "2026-10-28"),
+        (format!("/c/{c}/bills/{}/void/", d["bill"]), "2026-10-12"),
+        (format!("/c/{c}/payments/{}/reverse/", d["bill_payment"]), "2026-10-30"),
+        (format!("/c/{c}/checks/{}/void/", d["check"]), "2026-10-28"),
+        (format!("/c/{c}/deposits/{}/reverse/", d["deposit"]), "2026-10-31"),
+        (format!("/c/{c}/transfers/{}/void/", d["transfer"]), "2026-11-03"),
+        // Review S1: a journal reversal starts on the first day of the next month (accrual reversal).
+        (format!("/c/{c}/journals/{}/", d["journal"]), "2026-12-01"),
+    ] {
+        let html = page(&mut b.app, &path);
+        assert!(html.contains(&format!("name=\"date\" value=\"{date}\"")), "{path}: {}", html.split_once("name=\"date\"").map(|(_, r)| &r[..80.min(r.len())]).unwrap_or("no date field"));
+        assert!(!html.contains("name=\"date\" value=\"2026-11-10\""), "{path}");
+        // Review S1: every void and reversal date box carries today's date, so the page can say when
+        // the date is in an earlier month (electron/tests/worker-fixes.test.cjs shows the notice).
+        if !path.ends_with("/apply/") {
+            assert!(html.contains(&format!("name=\"date\" value=\"{date}\" data-month-notice=\"2026-11-10\"")), "{path}");
+        }
+    }
+    // A journal reversal can still be dated on or after the entry, never before it.
+    let reverse = format!("/c/{c}/journals/{}/reverse/", d["journal"]);
+    let token = b.app.tokens.mint(&reverse);
+    let out = b.app.run(fb_app::Command::SubmitForm { path: reverse, token, fields: vec![("date".into(), "2026-11-03".into()), ("reason".into(), "Synthetic early reversal".into())] }).unwrap();
+    assert!(matches!(&out, Outcome::Invalid { html } if html.contains("on or after the original date")), "{out:?}");
+}
+
+/// Review S2 and S3: a credit memo's application starts no earlier than the newest invoice it lists (it
+/// cannot precede an invoice it pays); refund voids and unapply forms start on their own record's date.
+#[test]
+fn credit_application_unapply_and_refund_void_dates() {
+    let mut b = book();
+    let c = b.c.clone();
+    let d = b.docs.clone();
+    let id = |app: &mut App, table: &str| -> String { app.open_mut().unwrap().book.read(|q| q.query_row(&format!("SELECT id FROM {table}"), [], |r| r.get(0))).unwrap() };
+    let customer = |app: &mut App, name: &str| -> String { app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM directory_customer WHERE display_name=?1", [name], |r| r.get(0))).unwrap() };
+    let (lakeside, income, bank) = (customer(&mut b.app, "Lakeside Cafe"), b.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM ledger_account WHERE code='4000'", [], |r| r.get::<_, String>(0))).unwrap(), b.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM ledger_account WHERE code='1010'", [], |r| r.get::<_, String>(0))).unwrap());
+    let invoice = |app: &mut App, date: &str| -> String {
+        let id = run(app, json!({"type":"SaveInvoice","company_id":c,"values":{"request_key":key(),"customer_id":lakeside,"date":date,"due_date":date,"memo":"Bread delivery","tax_mode":"NONE","lines":[{"description":"Bread","quantity":"1","rate":"30.00","income_account_id":income}]}}))["id"].as_str().unwrap().to_owned();
+        run(app, json!({"type":"PostInvoice","company_id":c,"invoice_id":id,"expected_revision":1}));
+        id
+    };
+    let apply = format!("/c/{c}/credit-memos/{}/apply/", d["credit_memo"]);
+    let offered = |html: &str| html.split_once("name=\"date\" value=\"").unwrap().1.split('"').next().unwrap().to_owned();
+    // Memo 2026-10-25. An older open invoice: the memo's date, as before.
+    let older = invoice(&mut b.app, "2026-10-24");
+    assert_eq!(offered(&page(&mut b.app, &apply)), "2026-10-25");
+    // A newer open invoice listed too: its date, which the application may not precede.
+    invoice(&mut b.app, "2026-10-27");
+    assert_eq!(offered(&page(&mut b.app, &apply)), "2026-10-27");
+
+    // A credit application, a credit refund, a deposit application and a deposit refund, each on a
+    // date of its own after its source's.
+    let values = json!({"request_key":key(),"date":"2026-10-28","allocations":[{"invoice_id":older,"amount":"5.00"}]});
+    let review = run(&mut b.app, json!({"type":"ReviewCreditApplication","company_id":c,"source_id":d["credit_memo"],"values":values}));
+    run(&mut b.app, json!({"type":"RecordCreditApplication","company_id":c,"source_id":d["credit_memo"],"values":values,"review_token":review["token"]}));
+    let refund = |app: &mut App, source: &str, deposit: bool, date: &str, amount: &str| {
+        let values = json!({"request_key":key(),"date":date,"amount":amount,"bank_id":bank,"method":"CASH","check_number":"","memo":"Synthetic refund"});
+        let review = run(app, json!({"type":"ReviewCustomerRefund","company_id":c,"source_id":source,"deposit":deposit,"values":values}));
+        run(app, json!({"type":"RecordCustomerRefund","company_id":c,"source_id":source,"deposit":deposit,"values":values,"review_token":review["token"]}));
+    };
+    refund(&mut b.app, &d["credit_memo"], false, "2026-10-29", "7.00");
+    let values = json!({"request_key":key(),"date":"2026-10-30","amount":"100.00","invoice_id":d["invoice_wedding"]});
+    let review = run(&mut b.app, json!({"type":"ReviewDepositApplication","company_id":c,"source_id":d["customer_deposit"],"values":values}));
+    run(&mut b.app, json!({"type":"RecordDepositApplication","company_id":c,"source_id":d["customer_deposit"],"values":values,"review_token":review["token"]}));
+    refund(&mut b.app, &d["customer_deposit"], true, "2026-11-01", "50.00");
+    for (path, date) in [
+        (format!("/c/{c}/credit-applications/{}/unapply/", id(&mut b.app, "credits_creditapplication")), "2026-10-28"),
+        (format!("/c/{c}/refunds/{}/void/", id(&mut b.app, "credits_creditrefund")), "2026-10-29"),
+        (format!("/c/{c}/deposit-applications/{}/unapply/", id(&mut b.app, "prepayments_depositapplication")), "2026-10-30"),
+        (format!("/c/{c}/deposit-refunds/{}/void/", id(&mut b.app, "prepayments_depositrefund")), "2026-11-01"),
+    ] {
+        let html = page(&mut b.app, &path);
+        assert!(html.contains(&format!("name=\"date\" value=\"{date}\" data-month-notice=\"2026-11-10\"")), "{path}: {}", html.split_once("name=\"date\"").map(|(_, r)| &r[..80.min(r.len())]).unwrap_or("no date field"));
+    }
 }

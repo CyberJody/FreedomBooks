@@ -145,6 +145,12 @@
   "transacted_on": "text",
   "updated_at": "timestamp"
  },
+ "bankfeeds_transaction_match": {
+  "journal_id": "uuid",
+  "journal_line_id": "uuid",
+  "parent_status": "text",
+  "transaction_id": "uuid"
+ },
  "banking_banklinestatus": {
   "account_id": "uuid",
   "changed_by_id": "uuid",
@@ -338,6 +344,12 @@
  "credits_seal_due": {
   "doc_id": "text",
   "kind": "text"
+ },
+ "desktop_ai_unattended": {
+  "actor_id": "uuid",
+  "anchor_id": "uuid",
+  "company_id": "uuid",
+  "id": "uuid"
  },
  "desktop_mfa_recovery": {
   "user_id": "uuid"

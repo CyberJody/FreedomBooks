@@ -336,6 +336,7 @@ pub struct ProtocolError {
 }
 pub struct ParsedTransaction {
     pub remote_id: String,
+    pub remote_id_exact: bool,
     pub posted_epoch: Option<i64>,
     pub transacted_epoch: Option<i64>,
     pub cents: i64,
@@ -345,6 +346,7 @@ pub struct ParsedTransaction {
 pub struct ParsedAccount {
     pub connection_key: String,
     pub remote_id: String,
+    pub remote_id_exact: bool,
     pub name: String,
     pub organization_name: String,
     pub organization_remote_id: String,
@@ -642,6 +644,7 @@ pub fn parse_account_set(data: &Value) -> PluginResult<AccountSet> {
             } else {
                 name
             },
+            remote_id_exact: raw["id"].as_str() == Some(&remote_id),
             remote_id,
             currency,
             balance_cents: balance,
@@ -690,6 +693,7 @@ pub fn parse_account_set(data: &Value) -> PluginResult<AccountSet> {
                 };
                 let posted = epoch(&entry["posted"]);
                 account.transactions.push(ParsedTransaction {
+                    remote_id_exact: entry["id"].as_str() == Some(&remote_id),
                     remote_id,
                     cents,
                     posted_epoch: posted,

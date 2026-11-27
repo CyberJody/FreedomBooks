@@ -78,6 +78,7 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("banking/deposits/list.html", include_str!("../templates/banking/deposits/list.html")),
     ("banking/deposits/detail.html", include_str!("../templates/banking/deposits/detail.html")),
     ("banking/deposits/form.html", include_str!("../templates/banking/deposits/form.html")),
+    ("banking/fee_lines.html", include_str!("../templates/banking/fee_lines.html")),
     ("banking/deposits/reverse.html", include_str!("../templates/banking/deposits/reverse.html")),
     ("credits/list.html", include_str!("../templates/credits/list.html")),
     ("credits/detail.html", include_str!("../templates/credits/detail.html")),
@@ -205,6 +206,7 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("ledger/setup_start.html", include_str!("../templates/ledger/setup_start.html")),
     ("ledger/setup_fill.html", include_str!("../templates/ledger/setup_fill.html")),
     ("ledger/trial_balance.html", include_str!("../templates/ledger/trial_balance.html")),
+    ("ledger/includes/posted_entries.html", include_str!("../templates/ledger/includes/posted_entries.html")),
     ("ledger/includes/print_toolbar_note.html", include_str!("../templates/ledger/includes/print_toolbar_note.html")),
     ("documents/setup.html", include_str!("../templates/documents/setup.html")),
 

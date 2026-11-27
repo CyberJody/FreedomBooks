@@ -10,6 +10,8 @@
 //! holds an app route name instead of a Django URL.
 mod accept;
 mod mapping;
+mod review;
+pub use review::{ReviewAccount, ReviewCandidates, ReviewDecision, ReviewRow, journal_receipt_ids, review_accounts, review_decision, review_page, review_snapshot};
 pub use mapping::{MappingTarget, NewAccountKind, save_mappings};
 mod rules;
 pub mod qbo;
@@ -17,7 +19,7 @@ mod automatic;
 pub use automatic::{auto_post,pending_automatic};
 mod secrets;
 mod staging;
-pub use staging::store_pull_for_desktop;
+pub use staging::{ProviderIdEvidence, store_pull_for_desktop};
 pub mod text;
 mod write;
 mod credentials;
@@ -25,7 +27,7 @@ pub use credentials::{flag_unreadable_credential, restore_connection_credentials
 #[cfg(test)]
 mod tests;
 
-pub use accept::{UNDO_REASON, UndoPlan, accept, default_check_number, ignore, link_existing, return_blocker, return_to_review, undo_accept, undo_plan, undo_status};
+pub use accept::{MAX_MATCH_LINES, MAX_SPLIT_LINES, UNDO_REASON, UndoPlan, accept, default_check_number, entry_on_account, ignore, link_existing, return_blocker, return_to_review, undo_accept, undo_plan, undo_status};
 pub use secrets::{MASK, MIN_CREDENTIAL_CHARS, SecretSet, TOO_SHORT, CREDENTIAL_ALPHABET, UNSAFE_CREDENTIAL};
 pub use rules::{Rule, active_rules, all_rules, move_rule, rule_accounts, rule_for, save_rule, set_rule_active, turn_off_imported_auto_post};
 pub use staging::{
@@ -46,6 +48,8 @@ pub const MAX_WINDOW_DAYS: i64 = 90;
 pub const SCHEDULED_MIN_INTERVAL_SECS: i64 = 6 * 3600;
 pub const MANUAL_MIN_INTERVAL_SECS: i64 = 10 * 60;
 pub const MATCH_WINDOW_DAYS: i64 = 5;
+/// Written checks (Checks, bill-payment checks, refund checks) may clear up to 180 days after issue.
+pub const CHECK_MATCH_WINDOW_DAYS: i64 = 180;
 pub const MAX_RULES: i64 = 200;
 pub const DEFAULT_LABEL: &str = "SimpleFIN";
 pub const MAX_DROPPED_IDS_AUDITED: usize = 50;
@@ -396,46 +400,205 @@ pub(crate) fn magnitude(item: &Item) -> FbResult<i64> {
 pub struct MatchCandidate {
     pub line_id: String,
     pub journal_id: String,
+    /// The entry's memo.
     pub label: String,
     pub date: String,
+    /// Worker review M2: the number the entry is known by, its source document's (CHK-000027, DEP-000001,
+    /// TRF-000001), else the journal's own (J000012), as Find and the journal page show it.
+    pub number: String,
+    /// The chosen entry number of a manual journal. Source documents use their document number.
+    entry_number: String,
+    /// Positive magnitude of this posted line, in cents.
+    pub amount: i64,
+    /// Live written check number when this entry is a check, bill-payment check, or refund check.
+    pub check_number: Option<String>,
+}
+
+/// One matched ledger entry of a decided `MATCHED` bank transaction (single or multi-entry match).
+#[derive(Clone, Debug, PartialEq)]
+pub struct MatchedEntry {
+    pub journal_id: String,
+    pub line_id: String,
+    pub reference: String,
+    pub reference_url: String,
+}
+
+pub fn review_journal_number(entry: &str, ledger: &str) -> String {
+    if entry.is_empty() || entry == ledger { ledger.to_owned() } else { format!("{entry} · {ledger}") }
+}
+
+impl MatchCandidate {
+    pub fn display_number(&self) -> String {
+        review_journal_number(&self.entry_number, &self.number)
+    }
+
+    /// The memo as extra words after [`number`](Self::number): without the "CHK-000027: " a document's
+    /// memo starts with, at most 60 characters; empty when nothing is left.
+    pub fn memo(&self) -> String {
+        let memo = self.label.strip_prefix(self.number.as_str()).map(|rest| rest.strip_prefix(':').unwrap_or(rest)).unwrap_or(&self.label);
+        py::py_truncate(py::py_strip(memo), 60)
+    }
+    /// "CHK-000027 (2026-07-06, “Bank feed: ONLINE PAYMENT”)": the entry by number and date, the memo after.
+    pub fn named(&self) -> String {
+        let memo = self.memo();
+        let number = self.display_number();
+        if memo.is_empty() { format!("{number} ({})", self.date) } else { format!("{number} ({}, “{memo}”)", self.date) }
+    }
 }
 /// `match_candidates`: posted unreversed lines on the mapped account with this exact amount and direction,
-/// dated within MATCH_WINDOW_DAYS, not already matched. Closest date first.
+/// dated within [`MATCH_WINDOW_DAYS`] (or up to [`CHECK_MATCH_WINDOW_DAYS`] for a live written check on a
+/// withdrawal, enforcing check-number agreement when the bank description names a check number), not already
+/// matched. Exact check-number match first, then closest date.
 pub fn match_candidates(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, limit: i64) -> FbResult<Vec<MatchCandidate>> {
+    eligible_match_lines(q, co, item, true, limit)
+}
+/// Maximum number of partial candidates scanned by multi-entry Review UI, validation, and auto-post duplicate detection.
+pub const MULTI_MATCH_POOL_LIMIT: i64 = 200;
+/// Unmatched posted lines on the mapped account in the bank row's direction whose amount is strictly less
+/// than the bank row's amount (for matching one bank transaction to 2..=20 posted entries totaling its exact amount).
+pub fn multi_match_candidates(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, limit: i64) -> FbResult<Vec<MatchCandidate>> {
+    eligible_match_lines(q, co, item, false, limit)
+}
+/// True when 2..=[`MAX_MATCH_LINES`] of `candidates` sum exactly to `target` (conservatively true if the
+/// bounded search exhausts its step budget, so auto-post holds ambiguous groups for manual review).
+pub(crate) fn has_multi_match_group(candidates: &[MatchCandidate], target: i64) -> bool {
+    if target <= 0 || candidates.len() < 2 {
+        return false;
+    }
+    let mut amounts: Vec<i64> = candidates.iter().map(|c| c.amount).filter(|&a| a > 0 && a < target).collect();
+    if amounts.len() < 2 {
+        return false;
+    }
+    amounts.sort_unstable_by(|a, b| b.cmp(a));
+    let mut suffix = vec![0i128; amounts.len() + 1];
+    for i in (0..amounts.len()).rev() {
+        suffix[i] = suffix[i + 1] + i128::from(amounts[i]);
+    }
+    if suffix[0] < i128::from(target) {
+        return false;
+    }
+    fn search(amounts: &[i64], suffix: &[i128], idx: usize, count: usize, rem: i128, steps: &mut usize) -> bool {
+        if rem == 0 {
+            return count >= 2;
+        }
+        if count >= MAX_MATCH_LINES || idx >= amounts.len() || rem > suffix[idx] {
+            return false;
+        }
+        if *steps >= 50_000 {
+            return true;
+        }
+        *steps += 1;
+        let a = i128::from(amounts[idx]);
+        if a <= rem && search(amounts, suffix, idx + 1, count + 1, rem - a, steps) {
+            return true;
+        }
+        search(amounts, suffix, idx + 1, count, rem, steps)
+    }
+    let mut steps = 0usize;
+    search(&amounts, &suffix, 0, 0, i128::from(target), &mut steps)
+}
+fn eligible_match_lines(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, exact_amount: bool, limit: i64) -> FbResult<Vec<MatchCandidate>> {
     let Some(f) = feed(q, &item.feed_account_id)? else { return Ok(vec![]) };
-    let (Some(account), Some(when)) = (f.ledger_account_id.clone(), item.date()) else { return Ok(vec![]) };
+    let (Some(account), Some(when_str)) = (f.ledger_account_id.clone(), item.date()) else { return Ok(vec![]) };
+    if item.amount == 0 {
+        return Ok(vec![]);
+    }
     let (debit, credit) = direction(item)?;
     let limit = limit.max(0);
     if limit == 0 {
         return Ok(vec![]);
     }
-    let when = parse_date(when)?;
-    let base = "SELECT l.id,j.id,j.memo,j.date FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id WHERE j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id) AND l.account_id=?2 AND l.debit=?3 AND l.credit=?4 AND NOT EXISTS(SELECT 1 FROM bankfeeds_transaction b WHERE b.journal_line_id=l.id)";
-    let fetch = |sql: String, lo: String, hi: String| -> FbResult<Vec<MatchCandidate>> {
-        let mut st = q.prepare(&sql)?;
-        Ok(st
-            .query_map(params![co.to_db(), account, debit, credit, lo, hi, limit], |r| {
-                Ok(MatchCandidate { line_id: r.get(0)?, journal_id: r.get(1)?, label: r.get(2)?, date: r.get(3)? })
-            })?
-            .collect::<Result<Vec<_>, _>>()?)
-    };
+    let when = parse_date(when_str)?;
     let fmt = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
-    let mut found = fetch(
-        format!("{base} AND j.date>=?5 AND j.date<=?6 ORDER BY j.date,l.id LIMIT ?7"),
-        fmt(when),
-        fmt(add_days(when, MATCH_WINDOW_DAYS)?),
+    let lo_5 = fmt(add_days(when, -MATCH_WINDOW_DAYS)?);
+    let hi_5 = fmt(add_days(when, MATCH_WINDOW_DAYS)?);
+    let lo_chk = fmt(add_days(when, -CHECK_MATCH_WINDOW_DAYS)?);
+    let money_out = !item.money_in();
+    let bank_chk = money_out.then(|| text::match_check_number_in(&item.description)).flatten();
+    let amount_clause = if exact_amount {
+        "l.debit=?3 AND l.credit=?4"
+    } else {
+        "((?3>0 AND l.debit>0 AND l.debit<?3 AND l.credit=0) OR (?4>0 AND l.credit>0 AND l.credit<?4 AND l.debit=0))"
+    };
+    let sql = format!(
+        "SELECT l.id,j.id,j.memo,j.date,
+            COALESCE((SELECT d.number FROM documents_documentidentity d WHERE d.id=j.source_id),printf('J%06d',j.number)),
+            CASE WHEN j.source_id IS NULL THEN j.entry_number ELSE '' END,
+            CASE WHEN l.debit>0 THEN l.debit ELSE l.credit END,
+            (SELECT h.number FROM fb_check_number_live h WHERE h.company_id=j.company_id AND h.bank_id=l.account_id AND h.identity_id=j.source_id AND h.number<>'' AND h.number NOT GLOB '*[^0-9]*' ORDER BY h.priority LIMIT 1) AS chk_no
+         FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id
+         WHERE j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL
+           AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)
+           AND l.account_id=?2 AND {amount_clause}
+           AND NOT EXISTS(SELECT 1 FROM bankfeeds_transaction b WHERE b.journal_line_id=l.id)
+           AND NOT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m WHERE m.journal_line_id=l.id)
+           AND NOT (?7=1 AND ?10 IS NOT NULL
+             AND EXISTS(SELECT 1 FROM fb_check_number_live h WHERE h.company_id=j.company_id AND h.bank_id=l.account_id AND h.identity_id=j.source_id AND h.number<>'' AND h.number NOT GLOB '*[^0-9]*')
+             AND NOT EXISTS(SELECT 1 FROM fb_check_number_live h WHERE h.company_id=j.company_id AND h.bank_id=l.account_id AND h.identity_id=j.source_id AND h.number<>'' AND h.number NOT GLOB '*[^0-9]*' AND lower(h.number)=lower(?10)))
+           AND ((j.date>=?5 AND j.date<=?6)
+             OR (?7=1 AND j.date>=?8 AND j.date<=?6
+               AND EXISTS(SELECT 1 FROM fb_check_number_live h WHERE h.company_id=j.company_id AND h.bank_id=l.account_id AND h.identity_id=j.source_id AND h.number<>'' AND h.number NOT GLOB '*[^0-9]*'
+                 AND (?10 IS NULL OR lower(h.number)=lower(?10)))))
+         ORDER BY
+           CASE WHEN ?7=1 AND ?10 IS NOT NULL AND EXISTS(SELECT 1 FROM fb_check_number_live h WHERE h.company_id=j.company_id AND h.bank_id=l.account_id AND h.identity_id=j.source_id AND h.number<>'' AND h.number NOT GLOB '*[^0-9]*' AND lower(h.number)=lower(?10)) THEN 0 ELSE 1 END,
+           abs(julianday(j.date)-julianday(?9)),
+           l.id
+         LIMIT ?11"
+    );
+    let mut st = q.prepare(&sql)?;
+    let found = st
+        .query_map(
+            params![co.to_db(), account, debit, credit, lo_5, hi_5, money_out, lo_chk, when_str, bank_chk, limit],
+            |r| {
+                Ok(MatchCandidate {
+                    line_id: r.get(0)?,
+                    journal_id: r.get(1)?,
+                    label: r.get(2)?,
+                    date: r.get(3)?,
+                    number: r.get(4)?,
+                    entry_number: r.get(5)?,
+                    amount: r.get(6)?,
+                    check_number: r.get(7)?,
+                })
+            },
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(found)
+}
+/// All ledger entries matched to a `MATCHED` bank transaction (1 for a single match, 2..=20 for a multi-entry match).
+pub fn matched_entries(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -> FbResult<Vec<MatchedEntry>> {
+    if item.status != "MATCHED" {
+        return Ok(vec![]);
+    }
+    let mut st = q.prepare(
+        "SELECT m.journal_id,m.journal_line_id,
+            COALESCE((SELECT d.number FROM documents_documentidentity d WHERE d.id=j.source_id),CASE WHEN j.entry_number<>'' THEN 'JE '||j.entry_number ELSE printf('J%06d',j.number) END)
+         FROM bankfeeds_transaction_match m JOIN ledger_journal j ON j.id=m.journal_id
+         WHERE m.transaction_id=?1 AND j.company_id=?2 ORDER BY j.date,m.journal_line_id",
     )?;
-    found.extend(fetch(
-        format!("{base} AND j.date>=?5 AND j.date<?6 ORDER BY j.date DESC,l.id LIMIT ?7"),
-        fmt(add_days(when, -MATCH_WINDOW_DAYS)?),
-        fmt(when),
-    )?);
-    let mut keyed = found
-        .into_iter()
-        .map(|c| Ok(((parse_date(&c.date)? - when).num_days().abs(), c.line_id.clone(), c)))
-        .collect::<FbResult<Vec<_>>>()?;
-    keyed.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
-    Ok(keyed.into_iter().take(limit as usize).map(|(_, _, c)| c).collect())
+    let rows = st
+        .query_map(params![item.id, co.to_db()], |r| {
+            let jid: String = r.get(0)?;
+            Ok(MatchedEntry {
+                journal_id: jid.clone(),
+                line_id: r.get(1)?,
+                reference: r.get(2)?,
+                reference_url: format!("journal:{jid}"),
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    if !rows.is_empty() {
+        return Ok(rows);
+    }
+    match (&item.journal_id, &item.journal_line_id) {
+        (Some(jid), Some(lid)) => Ok(vec![MatchedEntry {
+            journal_id: jid.clone(),
+            line_id: lid.clone(),
+            reference: item.reference.clone(),
+            reference_url: item.reference_url.clone(),
+        }]),
+        _ => Ok(vec![]),
+    }
 }
 
 /// A staged transaction that is very likely already in the books: an earlier feed row of ANOTHER downloaded
@@ -484,8 +647,17 @@ pub fn already_recorded(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -
         JOIN bankfeeds_account bf ON bf.id=b.feed_account_id JOIN bankfeeds_connection bc ON bc.id=bf.connection_id
         JOIN ledger_journalline l ON l.id=b.journal_line_id JOIN ledger_journal j ON j.id=l.journal_id
         WHERE bc.company_id=?1 AND b.id<>?2 AND b.feed_account_id<>?3 AND b.status IN('ACCEPTED','MATCHED')
-          AND l.account_id=?4 AND l.debit=?5 AND l.credit=?6
+          AND l.account_id=?4
           AND j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)
+          AND (
+            (NOT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m WHERE m.transaction_id=b.id) AND l.debit=?5 AND l.credit=?6)
+            OR (b.status='MATCHED' AND b.amount=?10 AND EXISTS(SELECT 1 FROM bankfeeds_transaction_match m WHERE m.transaction_id=b.id)
+              AND NOT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m LEFT JOIN ledger_journalline ml ON ml.id=m.journal_line_id LEFT JOIN ledger_journal mj ON mj.id=m.journal_id
+                WHERE m.transaction_id=b.id AND NOT (ml.id IS NOT NULL AND mj.id IS NOT NULL AND ml.journal_id=mj.id AND ml.account_id=?4
+                  AND mj.company_id=?1 AND mj.status='POSTED' AND mj.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=mj.id)))
+              AND (SELECT coalesce(sum(ml.debit),0) FROM bankfeeds_transaction_match m JOIN ledger_journalline ml ON ml.id=m.journal_line_id WHERE m.transaction_id=b.id)=?5
+              AND (SELECT coalesce(sum(ml.credit),0) FROM bankfeeds_transaction_match m JOIN ledger_journalline ml ON ml.id=m.journal_line_id WHERE m.transaction_id=b.id)=?6)
+          )
           AND coalesce(b.posted_on,b.transacted_on) BETWEEN ?7 AND ?8
           AND NOT EXISTS(SELECT 1 FROM bankfeeds_link k JOIN bankfeeds_transaction o ON o.ordinal=k.item_ordinal WHERE k.earlier_ordinal=b.ordinal AND o.feed_account_id=?3 AND o.id<>?2)
         ORDER BY same DESC,abs(julianday(coalesce(b.posted_on,b.transacted_on))-julianday(?9)),b.ordinal LIMIT 1";
@@ -504,7 +676,7 @@ pub fn already_recorded(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -
             })
         }
     };
-    if let Some(found) = q.query_row(sql, params![co.to_db(), item.id, item.feed_account_id, account, debit, credit, lo, hi, when], row(false)).optional()? {
+    if let Some(found) = q.query_row(sql, params![co.to_db(), item.id, item.feed_account_id, account, debit, credit, lo, hi, when, item.amount], row(false)).optional()? {
         return Ok(Some(found));
     }
     // Rows do not store their arrival sync number. first_seen_at and the sync audit's occurred_at both use
@@ -525,8 +697,17 @@ pub fn already_recorded(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -
         FROM bankfeeds_transaction b JOIN ledger_journalline l ON l.id=b.journal_line_id JOIN ledger_journal j ON j.id=l.journal_id
         WHERE b.feed_account_id=?3 AND b.id<>?2 AND b.status IN('ACCEPTED','MATCHED') AND b.amount=?7 AND coalesce(b.posted_on,b.transacted_on)=?8 AND b.description=?9
           AND b.first_seen_at<?10 AND b.ordinal<?11
-          AND l.account_id=?4 AND l.debit=?5 AND l.credit=?6
+          AND l.account_id=?4
           AND j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)
+          AND (
+            (NOT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m WHERE m.transaction_id=b.id) AND l.debit=?5 AND l.credit=?6)
+            OR (b.status='MATCHED' AND EXISTS(SELECT 1 FROM bankfeeds_transaction_match m WHERE m.transaction_id=b.id)
+              AND NOT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m LEFT JOIN ledger_journalline ml ON ml.id=m.journal_line_id LEFT JOIN ledger_journal mj ON mj.id=m.journal_id
+                WHERE m.transaction_id=b.id AND NOT (ml.id IS NOT NULL AND mj.id IS NOT NULL AND ml.journal_id=mj.id AND ml.account_id=?4
+                  AND mj.company_id=?1 AND mj.status='POSTED' AND mj.reversal_of_id IS NULL AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=mj.id)))
+              AND (SELECT coalesce(sum(ml.debit),0) FROM bankfeeds_transaction_match m JOIN ledger_journalline ml ON ml.id=m.journal_line_id WHERE m.transaction_id=b.id)=?5
+              AND (SELECT coalesce(sum(ml.credit),0) FROM bankfeeds_transaction_match m JOIN ledger_journalline ml ON ml.id=m.journal_line_id WHERE m.transaction_id=b.id)=?6)
+          )
         ORDER BY b.ordinal LIMIT 1";
     Ok(q.query_row(same, params![co.to_db(), item.id, item.feed_account_id, account, debit, credit, item.amount, when, item.description, boundary, item.ordinal], row(true)).optional()?)
 }
@@ -582,20 +763,54 @@ pub fn downloaded_again(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -
 /// Return to review.
 pub fn stale_decision(q: &(impl Query + ?Sized), item: &Item) -> FbResult<Option<&'static str>> {
     match item.status.as_str() {
-        "ACCEPTED" | "MATCHED" if !accept::journal_live(q, item.journal_id.as_deref())? => {
-            Ok(Some(if item.status == "MATCHED" { "The entry this was matched to was voided or reversed." } else { "Its entry was voided or reversed." }))
+        "ACCEPTED" | "MATCHED" => {
+            if !accept::journal_live(q, item.journal_id.as_deref())? {
+                return Ok(Some(if item.status == "MATCHED" {
+                    "The entry this was matched to was voided or reversed."
+                } else {
+                    "Its entry was voided or reversed."
+                }));
+            }
+            if item.status == "MATCHED" {
+                let any_dead: bool = q.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m LEFT JOIN ledger_journal j ON j.id=m.journal_id
+                       WHERE m.transaction_id=?1 AND NOT (j.id IS NOT NULL AND j.status='POSTED' AND j.reversal_of_id IS NULL
+                         AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)))",
+                    [&item.id],
+                    |r| r.get(0),
+                )?;
+                if any_dead {
+                    return Ok(Some("One of the entries this was matched to was voided or reversed."));
+                }
+            }
+            Ok(None)
         }
         "IGNORED" => {
-            let earlier: Option<(String, Option<String>)> = q
+            let earlier: Option<(String, String, Option<String>)> = q
                 .query_row(
-                    "SELECT e.status,e.journal_id FROM bankfeeds_link k JOIN bankfeeds_transaction e ON e.ordinal=k.earlier_ordinal WHERE k.item_ordinal=?1",
+                    "SELECT e.id,e.status,e.journal_id FROM bankfeeds_link k JOIN bankfeeds_transaction e ON e.ordinal=k.earlier_ordinal WHERE k.item_ordinal=?1",
                     [item.ordinal],
-                    |r| Ok((r.get(0)?, r.get(1)?)),
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
                 )
                 .optional()?;
             match earlier {
-                Some((status, journal)) if !matches!(status.as_str(), "ACCEPTED" | "MATCHED") || !accept::journal_live(q, journal.as_deref())? => {
-                    Ok(Some("The entry it was linked to was voided, reversed or returned to review."))
+                Some((eid, status, journal)) => {
+                    let multi_dead: bool = if status == "MATCHED" {
+                        q.query_row(
+                            "SELECT EXISTS(SELECT 1 FROM bankfeeds_transaction_match m LEFT JOIN ledger_journal j ON j.id=m.journal_id
+                               WHERE m.transaction_id=?1 AND NOT (j.id IS NOT NULL AND j.status='POSTED' AND j.reversal_of_id IS NULL
+                                 AND NOT EXISTS(SELECT 1 FROM ledger_journal r WHERE r.reversal_of_id=j.id)))",
+                            [&eid],
+                            |r| r.get(0),
+                        )?
+                    } else {
+                        false
+                    };
+                    if !matches!(status.as_str(), "ACCEPTED" | "MATCHED") || !accept::journal_live(q, journal.as_deref())? || multi_dead {
+                        Ok(Some("The entry it was linked to was voided, reversed or returned to review."))
+                    } else {
+                        Ok(None)
+                    }
                 }
                 _ => Ok(None),
             }
@@ -647,9 +862,20 @@ pub struct ReceiptCandidate {
     pub receipt_id: String,
     pub label: String,
     pub date: String,
+    /// In cents.
+    pub amount: i64,
 }
 /// `receipt_candidates`: undeposited customer / sales receipts of this exact amount.
 pub fn receipt_candidates(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, limit: i64) -> FbResult<Vec<ReceiptCandidate>> {
+    undeposited_receipts(q, co, item, true, limit)
+}
+/// Worker item 48: every undeposited customer / sales receipt one bank deposit row could take, whatever its
+/// amount (a deposit of several payments, or a payout net of a fee): dated in the same window as
+/// [`receipt_candidates`] (30 days before the row up to its date), newest first.
+pub fn deposit_candidates(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, limit: i64) -> FbResult<Vec<ReceiptCandidate>> {
+    undeposited_receipts(q, co, item, false, limit)
+}
+fn undeposited_receipts(q: &(impl Query + ?Sized), co: CompanyId, item: &Item, exact: bool, limit: i64) -> FbResult<Vec<ReceiptCandidate>> {
     let Some(f) = feed(q, &item.feed_account_id)? else { return Ok(vec![]) };
     let Some(when) = item.date() else { return Ok(vec![]) };
     if !item.money_in() || !is_designated_bank(q, co, f.ledger_account_id.as_deref())? {
@@ -657,17 +883,17 @@ pub fn receipt_candidates(q: &(impl Query + ?Sized), co: CompanyId, item: &Item,
     }
     let when_d = parse_date(when)?;
     let lo = add_days(when_d, -(MATCH_WINDOW_DAYS + 25))?.format("%Y-%m-%d").to_string();
-    let mut st = q.prepare("SELECT r.id,i.number,r.date FROM sales_receipt r JOIN documents_documentidentity i ON i.id=r.identity_id WHERE r.company_id=?1 AND r.destination='UNDEPOSITED' AND r.amount=?2 AND NOT EXISTS(SELECT 1 FROM sales_receiptreversal z WHERE z.receipt_id=r.id) AND r.date>=?3 AND r.date<=?4 AND NOT EXISTS(SELECT 1 FROM banking_depositline l WHERE l.receipt_id=r.id AND NOT EXISTS(SELECT 1 FROM banking_depositreversal z WHERE z.deposit_id=l.deposit_id)) ORDER BY r.date DESC,r.id LIMIT ?5")?;
+    let mut st = q.prepare("SELECT r.id,i.number,r.date,r.amount FROM sales_receipt r JOIN documents_documentidentity i ON i.id=r.identity_id WHERE r.company_id=?1 AND r.destination='UNDEPOSITED' AND (?6=0 OR r.amount=?2) AND NOT EXISTS(SELECT 1 FROM sales_receiptreversal z WHERE z.receipt_id=r.id) AND r.date>=?3 AND r.date<=?4 AND NOT EXISTS(SELECT 1 FROM banking_depositline l WHERE l.receipt_id=r.id AND NOT EXISTS(SELECT 1 FROM banking_depositreversal z WHERE z.deposit_id=l.deposit_id)) ORDER BY r.date DESC,r.id LIMIT ?5")?;
     let rows = st
-        .query_map(params![co.to_db(), item.amount, lo, when, limit.max(0)], |r| {
-            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?))
+        .query_map(params![co.to_db(), item.amount, lo, when, limit.max(0), exact], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?))
         })?
         .collect::<Result<Vec<_>, _>>()?;
     rows.into_iter()
-        .map(|(key, number, date)| {
+        .map(|(key, number, date, amount)| {
             let receipt = crate::sales::receipt(q, co, &key)?;
             let name = receipt["customer_snapshot"]["display_name"].as_str().unwrap_or("");
-            Ok(ReceiptCandidate { receipt_id: key, label: py::py_strip(&format!("{number} {name}")).to_owned(), date })
+            Ok(ReceiptCandidate { receipt_id: key, label: py::py_strip(&format!("{number} {name}")).to_owned(), date, amount })
         })
         .collect()
 }

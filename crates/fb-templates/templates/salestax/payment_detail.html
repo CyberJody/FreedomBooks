@@ -7,19 +7,19 @@
 <dt>Agency</dt><dd>{{ payment.agency_name }}</dd>
 <dt>Payment date</dt><dd>{{ payment.date|date('Y-m-d') }}</dd>
 <dt>Paid from</dt><dd><a href="{{ url('register', company.pk, payment.bank_id) }}">{{ payment.bank_label }}</a></dd>
-<dt>Sales tax paid</dt><dd id="payment-tax">{{ payment.tax_amount }}</dd>
-{% if payment.penalty_amount_cents %}<dt>Penalty and interest</dt><dd>{{ payment.penalty_amount }}</dd>{% endif %}
-<dt>Total</dt><dd id="payment-total">{{ payment.total }} {{ company.currency }}</dd>
+<dt>Sales tax paid</dt><dd id="payment-tax">{{ payment.tax_amount|money }}</dd>
+{% if payment.penalty_amount_cents %}<dt>Penalty and interest</dt><dd>{{ payment.penalty_amount|money }}</dd>{% endif %}
+<dt>Total</dt><dd id="payment-total">{{ payment.total|money }} {{ company.currency }}</dd>
 {% if payment.period_start_date %}<dt>Period covered</dt><dd>{{ payment.period_start_date|date('Y-m-d') }} to {{ payment.period_end_date|date('Y-m-d') }}</dd>{% endif %}
 {% if payment.reference %}<dt>Reference</dt><dd>{{ payment.reference }}</dd>{% endif %}
 {% if payment.memo %}<dt>Memo</dt><dd class="long-text">{{ payment.memo|linebreaksbr }}</dd>{% endif %}
 <dt>Recorded by</dt><dd>{{ payment.actor_name }}, {{ payment.created_at|date('Y-m-d H:i') }} UTC</dd>
 </dl>
 <section aria-labelledby="posted-title"><h2 id="posted-title">What posted</h2>
-<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for l in payment.lines %}<tr><td>{{ l.account }}</td><td class="amount">{% if l.debit %}{{ l.debit }}{% endif %}</td><td class="amount">{% if l.credit %}{{ l.credit }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for l in payment.lines %}<tr><td>{{ l.account }}</td><td class="amount">{% if l.debit %}{{ l.debit|money }}{% endif %}</td><td class="amount">{% if l.credit %}{{ l.credit|money }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 <p><a href="{{ url('journal', company.pk, payment.journal_id) }}">Open the journal entry</a></p></section>
 {% if payment.void %}<section aria-labelledby="void-title"><h2 id="void-title">Voided {{ payment.void.date|date('Y-m-d') }}</h2>
 <p id="void-reason">{{ payment.void.reason }}</p><p class="helptext">Voided by {{ payment.void.actor_name }}, {{ payment.void.created_at|date('Y-m-d H:i') }} UTC. The entry below reversed the payment.</p>
-<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for l in payment.void.lines %}<tr><td>{{ l.account }}</td><td class="amount">{% if l.debit %}{{ l.debit }}{% endif %}</td><td class="amount">{% if l.credit %}{{ l.credit }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for l in payment.void.lines %}<tr><td>{{ l.account }}</td><td class="amount">{% if l.debit %}{{ l.debit|money }}{% endif %}</td><td class="amount">{% if l.credit %}{{ l.credit|money }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 <p><a href="{{ url('journal', company.pk, payment.void.journal_id) }}">Open the reversing entry</a></p></section>{% endif %}
 {% endblock %}

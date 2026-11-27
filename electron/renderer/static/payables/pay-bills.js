@@ -117,6 +117,18 @@
     if (all) { all.checked = visible.length > 0 && visible.every((row) => box(row).checked); all.indeterminate = !all.checked && visible.some((row) => box(row).checked); }
   };
 
+  const paymentDate = form.querySelector('#id_date');
+  paymentDate?.addEventListener('input', () => {
+    for (const row of rows) {
+      const days = (paymentDate.valueAsNumber - Date.parse(row.dataset.due)) / 86400000;
+      const count = Math.abs(days);
+      const span = count + (count === 1 ? ' day' : ' days');
+      const status = !Number.isFinite(days) ? 'Choose a payment date'
+        : days > 0 ? 'Overdue ' + span : days < 0 ? 'Due in ' + span : 'Due on payment date';
+      row.querySelector('.due-status').textContent = status;
+      row.classList.toggle('overdue', days > 0);
+    }
+  });
   const setTicked = (row, on) => {
     box(row).checked = on;
     row.classList.toggle('ticked', on);
@@ -132,11 +144,16 @@
   }
   if (all) all.addEventListener('change', () => { for (const row of rows) if (!row.hidden) setTicked(row, all.checked); recompute(); });
 
-  // Filters work in place, so ticks are kept.
+  // Filters work in place, so ticks are kept. The pay form carries them, so a refused run comes back
+  // with the same filters (worker item 25); a row with a problem stays in sight.
+  const keepVendor = document.getElementById('keep-filter-vendor');
+  const keepDue = document.getElementById('keep-filter-due');
   const applyFilter = () => {
     const v = filterVendor ? filterVendor.value : '';
     const due = filterDue ? filterDue.value : '';
-    for (const row of rows) row.hidden = !((v === '' || row.dataset.vendor === v) && (due === '' || row.dataset.due <= due));
+    for (const row of rows) row.hidden = !((v === '' || row.dataset.vendor === v) && (due === '' || row.dataset.due <= due)) && !row.querySelector('.row-error');
+    if (keepVendor) keepVendor.value = v;
+    if (keepDue) keepDue.value = due;
     recompute();
   };
   if (filterForm) {
@@ -150,6 +167,9 @@
   if (reference.value !== '' && bank && reference.value === next[bank.value]) reference.dataset.auto = '1';
   const refill = () => {
     referenceLabel.textContent = method.value === 'CHECK' ? 'First check no.' : 'Reference';
+    // Worker item 38: by check the box holds a suggested number, so clicking into it selects the number
+    // (the preload) and typing replaces it; a free-text reference is left to edit as usual.
+    reference.toggleAttribute('data-select-on-focus', method.value === 'CHECK');
     if (reference.value !== '' && reference.dataset.auto !== '1') return;
     reference.value = method.value === 'CHECK' && bank && next[bank.value] !== undefined ? next[bank.value] : '';
     reference.dataset.auto = '1';
@@ -159,6 +179,11 @@
   reference.addEventListener('input', () => { reference.dataset.auto = '0'; recompute(); });
 
   // Send once: a second press while the first is on its way does nothing.
+  const resetSending = () => {
+    form.dataset.sending = '0';
+    submit.removeAttribute('aria-disabled');
+    submit.textContent = 'Pay selected bills';
+  };
   form.addEventListener('submit', (e) => {
     if (form.dataset.sending === '1') { e.preventDefault(); return; }
     recompute();
@@ -166,6 +191,7 @@
     submit.setAttribute('aria-disabled', 'true');
     submit.textContent = 'Paying…';
   });
-  window.addEventListener('pageshow', () => { form.dataset.sending = '0'; submit.removeAttribute('aria-disabled'); submit.textContent = 'Pay selected bills'; });
+  form.addEventListener('fb:submit-failed', resetSending);
+  window.addEventListener('pageshow', resetSending);
   applyFilter();
 })();

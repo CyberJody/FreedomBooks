@@ -485,63 +485,30 @@ fn simple_form_numbering(
                 let label = format!("{}{}", label[..1].to_uppercase(), &label[1..]);
                 fields.push(Field::new(role,&label,Widget::Select{choices}).value(d(role,setup[*role].as_str().map(str::to_owned)).unwrap_or_default()).help(if *role=="customer_deposits"{"Other current liability account that holds customer prepayments until they are applied to invoices; optional until you receive a customer deposit.".into()}else{format!("{} account; optional until used by a document.",kind.label())}));
             }
-            let selected = posted
-                .map(|p| {
-                    p.iter()
-                        .filter(|(k, _)| k == "banks")
-                        .map(|(_, v)| v.clone())
-                        .collect()
-                })
-                .unwrap_or_else(|| {
-                    setup["banks"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .filter_map(|v| v.as_str().map(str::to_owned))
-                        .collect()
-                });
-            // Bank-type accounts are bank accounts without being chosen here; this list adds
-            // other asset accounts used the same way (petty cash, for example).
-            let automatic = accounts
-                .iter()
-                .filter(|a| a.active && a.postable && a.kind == Kind::Asset && a.detail_type == DetailType::Bank)
-                .filter(|a| setup["banks"].as_array().unwrap().contains(&json!(a.id.to_db())))
-                .map(|a| a.label())
-                .collect::<Vec<_>>();
-            let choices = accounts
-                .iter()
-                .filter(|a| a.detail_type != DetailType::Bank)
-                .filter(|a| {
-                    (a.active && a.postable && a.kind == Kind::Asset)
-                        || setup["banks"]
-                            .as_array()
-                            .unwrap()
-                            .contains(&json!(a.id.to_db()))
-                })
-                .map(|a| {
-                    (
-                        a.id.to_db(),
-                        format!(
-                            "{}{}",
-                            a.label(),
-                            if a.active && a.postable && a.kind == Kind::Asset {
-                                ""
-                            } else {
-                                " (unavailable — replace or clear)"
-                            }
-                        ),
-                    )
-                })
-                .collect();
-            let any_bank_type = accounts.iter().any(|a| a.active && a.postable && a.kind == Kind::Asset && a.detail_type == DetailType::Bank);
-            let automatic = if !automatic.is_empty() {
-                format!("Every active account of type Bank is a bank account: {}.", automatic.join(", "))
-            } else if any_bank_type {
-                "Saving this page makes every active account of type Bank a bank account.".to_owned()
-            } else {
-                "No account of type Bank yet: add one in the chart of accounts.".to_owned()
-            };
-            fields.push(Field::new("banks","Other accounts used as bank accounts",Widget::MultipleSelect{choices,selected}).attr("size","5").help(format!("{automatic} Choose other asset accounts you also pay from or deposit to, such as petty cash. Control/Command-click to select more than one or clear a selection.")));
+            let existing = setup["banks"].as_array().unwrap();
+            let selected = posted.map(|p| p.iter().filter(|(k, _)| k == "banks").map(|(_, v)| v.clone()).collect())
+                .unwrap_or_else(|| existing.iter().filter_map(|v| v.as_str().map(str::to_owned)).collect());
+            let mut legacy = vec![];
+            let mut automatic = vec![];
+            for a in &accounts {
+                if a.active && a.postable && a.detail_type == DetailType::Bank {
+                    if !fb_core::documents::ROLES.iter().any(|role| setup[*role] == a.id.to_db()) {
+                        automatic.push(a.label());
+                    }
+                } else if existing.contains(&json!(a.id.to_db())) {
+                    let label = if a.active && a.postable && a.kind == Kind::Asset {
+                        a.label()
+                    } else {
+                        format!("{} (unavailable — replace or clear)", a.label())
+                    };
+                    legacy.push((a.id.to_db(), label));
+                }
+            }
+            put(&mut vm, "automatic_banks", automatic);
+            if !legacy.is_empty() {
+                fields.push(Field::new("banks", "Previously designated bank accounts", Widget::MultipleSelect { choices: legacy, selected })
+                    .help("Keep a selection to continue using that account as a bank, or clear it to remove the designation."));
+            }
             ("Accounting setup", fields)
         }
         _ => return Err(AppError::NotFound(path.into())),
@@ -553,6 +520,10 @@ fn simple_form_numbering(
     );
     put(&mut vm, "title", title);
     put(&mut vm, "csrf_token", token(app, path));
+    // Worker item 36: the account form had no Cancel.
+    if ["account_new", "account_edit"].contains(&route_name) {
+        put(&mut vm, "cancel_url", url("accounts", &[&arg_company(route)?.to_db()]));
+    }
     draw(
         app,
         if route_name == "documents:setup" {
@@ -650,6 +621,7 @@ fn journal_line(
             },
         )
         .prefix(prefix)
+        .attr("data-picker", "account")
         .value(d("account", initial.map(|l| l.account_id.to_db())).unwrap_or_default()),
         Field::new("description", "Memo", Widget::Text)
             .prefix(prefix)
@@ -727,6 +699,11 @@ fn journal_form(
         Ok((lines,names.into_iter().collect::<Vec<_>>(),fb_core::services::next_entry_number_tx(tx,c)?))
     })?;
     let d = |n: &str, i: Option<String>| data_value(posted, n, i);
+    let suggested_number = if errors.get("entry_number").is_some_and(|messages| messages.iter().any(|m| m.ends_with(NUMBER_TAKEN))) {
+        Some(next)
+    } else {
+        d("entry_number", journal.as_ref().filter(|j| !j.entry_number.is_empty()).map(|j| j.entry_number.clone()).or(Some(next)))
+    };
     let header = vec![
         Field::new("request_key", "Request key", Widget::Hidden).value_opt(d(
             "request_key",
@@ -754,16 +731,8 @@ fn journal_form(
                 Some(journal.as_ref().map(|j| j.date.clone()).unwrap_or(today)),
             )),
         Field::new("entry_number", "Entry no.", Widget::Text)
-            .value_opt(d(
-                "entry_number",
-                Some(
-                    journal
-                        .as_ref()
-                        .filter(|j| !j.entry_number.is_empty())
-                        .map(|j| j.entry_number.clone())
-                        .unwrap_or(next),
-                ),
-            ))
+            .attr("data-select-on-focus", "")
+            .value_opt(suggested_number)
             .help("Next number filled in for you; any unique text up to 20 characters."),
         Field::new(
             "adjusting",
@@ -774,8 +743,11 @@ fn journal_form(
                     .unwrap_or(journal.as_ref().is_some_and(|j| j.adjusting)),
             },
         ),
+        // Worker item 45: the Memo is required and says so; the form is `novalidate`, so an empty Memo
+        // gets the app's own message at the box (revealed below the title bar), not the browser's bubble.
         Field::new("memo", "Memo", Widget::Text)
             .required()
+            .help("Required.")
             .value_opt(d("memo", journal.as_ref().map(|j| j.memo.clone()))),
     ];
     let total = posted
@@ -981,16 +953,33 @@ fn trial_balance(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<
 fn journal_list(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<(String, u16)> {
     let mut vm = ctx(app, route)?;
     let c = arg_company(route)?;
+    put(&mut vm, "messages", std::mem::take(&mut app.messages));
     let mut errors = Errors::new();
     // A 3xx Rendered carries its Location path in the existing body slot; main follows it locally.
-    let first = app
-        .open_mut()?
-        .book
-        .read(|tx| store::get_company(tx, c))?
-        .first_run_open;
+    let (first, setup_missing) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let first = store::get_company(tx, c)?.first_run_open;
+        if !first {
+            return Ok((false, String::new()));
+        }
+        let check = fb_core::first_run::checklist(tx, c)?;
+        let missing: Vec<&str> = [
+            ("chart", "chart of accounts"),
+            ("special", "accounting setup"),
+            ("tax", "sales tax"),
+            ("customer", "a customer"),
+            ("vendor", "a vendor"),
+            ("item", "an item"),
+        ]
+        .into_iter()
+        .filter(|(k, _)| check[k] != true)
+        .map(|(_, label)| label)
+        .collect();
+        Ok((true, missing.join(", ")))
+    })?;
     // A new company's checklist is a reminder on the journal list, not a detour: the sidebar's links
     // always open the page they name.
     vm["setup_pending"] = json!(first);
+    vm["setup_missing"] = json!(setup_missing);
     let q = clean_text(params, "q", 120, false, true, &mut errors);
     let start = clean_date(params, "start", false, &mut errors);
     let end = clean_date(params, "end", false, &mut errors);
@@ -1162,6 +1151,7 @@ pub(super) fn submit(
     let _ = ctx(app, route)?;
     match route.name.as_str() {
         "company_edit" if get(fields,"action")==Some("set_next_number") => submit_numbering(app,route,path,fields),
+        "journal_edit" if get(fields, "action") == Some("delete_draft") => submit_journal_delete(app, route, fields),
         "journal_new" | "journal_edit" => submit_journal(app, route, path, fields),
         "journal_post" | "journal_reverse" => submit_journal_action(app, route, fields),
         "setup_fill" => {
@@ -1355,19 +1345,6 @@ fn submit_simple(
                 .collect();
             bank_ids.sort();
             bank_ids.dedup();
-            for id in &bank_ids {
-                if !accounts.iter().any(|a| {
-                    a.id.to_db() == *id
-                        && ((a.active && a.postable && a.kind == Kind::Asset)
-                            || snapshot["banks"].as_array().unwrap().contains(&json!(id)))
-                }) {
-                    error(
-                        &mut errors,
-                        "banks",
-                        format!("Select a valid choice. {id} is not one of the available choices."),
-                    );
-                }
-            }
             Command::SaveSetup {
                 company_id: c.to_db(),
                 expected_revision: revision.unwrap_or(0),
@@ -1396,15 +1373,18 @@ fn submit_simple(
                         data["revision"]
                     ));
                 }
-                // Saving the company profile stays in Settings, or returns to the setup checklist while
-                // it is still open.
-                let first_run = route.name == "company_edit"
-                    && CompanyId::parse(&c).is_some_and(|id| {
-                        app.open_mut().ok().and_then(|o| o.book.read(|tx| store::get_company(tx, id)).ok()).is_some_and(|row| row.first_run_open)
-                    });
+                // Worker item 4: saving the company profile stays on the page and says it saved (the
+                // page keeps its "Finish setting up" link while the setup checklist is open).
+                if route.name == "company_edit" {
+                    app.messages.push("Company profile saved.".into());
+                }
+                // Worker item 36: saving an account said nothing.
+                if ["account_new", "account_edit"].contains(&route.name.as_str()) {
+                    let name = get(fields, "name").map(py::py_strip).unwrap_or("");
+                    app.messages.push(format!("Account {} · {name} saved.", data["code"].as_str().unwrap_or("")));
+                }
                 let name = match route.name.as_str() {
                     "company_new" => "setup_start",
-                    "company_edit" if first_run => "setup_start",
                     "company_edit" => "company_edit",
                     "documents:setup" => "documents:setup",
                     _ => "accounts",
@@ -1424,6 +1404,8 @@ fn submit_simple(
         html: simple_form(app, route, path, Some(fields), &errors)?,
     })
 }
+
+const NUMBER_TAKEN: &str = " is already used by another journal entry. Choose another number.";
 
 fn submit_journal(
     app: &mut App,
@@ -1595,8 +1577,11 @@ fn submit_journal(
                     location: url("journal", &[&c.to_db(), data["id"].as_str().unwrap()]),
                 });
             }
-            Err(AppError::Core(FbError::Validation(e))) => {
-                error(&mut errors, "__all__", e.join("; "))
+            Err(AppError::Core(FbError::Validation(messages))) => {
+                for message in messages {
+                    let field = if message.ends_with(NUMBER_TAKEN) { "entry_number" } else { "__all__" };
+                    error(&mut errors, field, message);
+                }
             }
             Err(e) => return Err(e),
             other => return Ok(other.unwrap()),
@@ -1605,6 +1590,26 @@ fn submit_journal(
     Ok(Outcome::Invalid {
         html: journal_form(app, route, path, Some(fields), &errors)?.0,
     })
+}
+
+/// Worker item 19: "Delete draft" on a hand-made draft's page posts here (the draft's edit address,
+/// so it needs the same permission as editing the draft). Back to the journal list with a notice.
+fn submit_journal_delete(app: &mut App, route: &Route, fields: Posted<'_>) -> AppResult<Outcome> {
+    let c = arg_company(route)?;
+    let j = journal_at(app, route)?.unwrap();
+    let mut errors = Errors::new();
+    let Some(revision) = clean_revision(fields, &mut errors) else {
+        return Ok(Outcome::Invalid{html:failure(app,route,vec!["Open the journal entry again and delete it from its page (the revision token is missing).".into()])?});
+    };
+    match app.run(Command::DeleteJournal { company_id: c.to_db(), journal_id: j.id.to_db(), expected_revision: revision }) {
+        Ok(Outcome::Done { .. }) => {
+            app.messages.push(format!("Draft {} deleted. It had not changed your books.", j.display()));
+            Ok(Outcome::Redirect { location: url("company", &[&c.to_db()]) })
+        }
+        Err(AppError::Core(FbError::Validation(e))) => Ok(Outcome::Invalid { html: failure(app, route, e)? }),
+        Err(e) => Err(e),
+        other => other,
+    }
 }
 
 fn submit_journal_action(app: &mut App, route: &Route, fields: Posted<'_>) -> AppResult<Outcome> {
@@ -1637,13 +1642,8 @@ fn submit_journal_action(app: &mut App, route: &Route, fields: Posted<'_>) -> Ap
         let date = clean_date(fields, "date", true, &mut errors).unwrap_or_default();
         let reason = clean_text(fields, "reason", 180, true, true, &mut errors);
         if !errors.is_empty() {
-            return Ok(Outcome::Invalid {
-                html: failure(
-                    app,
-                    route,
-                    vec!["Enter a valid reversal date and reason.".into()],
-                )?,
-            });
+            // Worker item 33: the entry's page again, with what was typed and what to fix.
+            return Ok(Outcome::Invalid { html: audit::journal_page_with(app, route, Some((fields, &errors)))? });
         }
         Command::ReverseJournal {
             company_id: c.to_db(),
@@ -1652,10 +1652,15 @@ fn submit_journal_action(app: &mut App, route: &Route, fields: Posted<'_>) -> Ap
             reason,
         }
     };
+    let reversing = route.name == "journal_reverse";
     match app.run(command) {
         Ok(Outcome::Done { data }) => Ok(Outcome::Redirect {
             location: url("journal", &[&c.to_db(), data["id"].as_str().unwrap()]),
         }),
+        Err(AppError::Core(FbError::Validation(e))) if reversing => {
+            errors.insert("__all__".into(), e);
+            Ok(Outcome::Invalid { html: audit::journal_page_with(app, route, Some((fields, &errors)))? })
+        }
         Err(AppError::Core(FbError::Validation(e))) => Ok(Outcome::Invalid {
             html: failure(app, route, e)?,
         }),

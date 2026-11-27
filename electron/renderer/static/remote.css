@@ -22,3 +22,8 @@
 .fb-hosting-devices { border-collapse: collapse; width: 100%; }
 .fb-hosting-devices th, .fb-hosting-devices td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid #e3e3e3; }
 .fb-hosting-devices td .fb-remote-warning { margin-top: 4px; font-size: 13px; }
+
+/* Host-rendered pages loaded on a connected desktop. */
+[data-host-only] { display: none !important; }
+[data-connected-only][hidden] { display: block !important; }
+@media print { .fb-remote-bar { display: none; } }

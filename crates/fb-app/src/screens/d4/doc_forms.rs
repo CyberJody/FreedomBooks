@@ -15,6 +15,19 @@ fn invoice_text(p: Posted<'_>, name: &str, max: usize, required: bool, errors: &
     if let Err(e) = py::clean_multiline_free_text(raw) { error(errors, name, e.message()); }
     value.to_owned()
 }
+/// Review 2, N5: `text` is a number above zero with at most `places` decimal places but over 14 digits
+/// before the point, above the line limit 99,999,999,999,999 (plus decimals) of quantities and rates.
+fn too_large(text: &str, places: i128) -> bool {
+    match fb_money::parse_python_decimal(text) {
+        Some(fb_money::Parsed::Finite(raw)) if !raw.negative && !raw.is_zero() => {
+            let digits = raw.digits.trim_start_matches('0');
+            let kept = digits.trim_end_matches('0');
+            let exponent = raw.exponent + (digits.len() - kept.len()) as i128;
+            -exponent <= places && kept.len() as i128 + exponent > 14
+        }
+        _ => false,
+    }
+}
 fn blank(list: &[(String, String)], label: &str) -> Vec<(String, String)> {
     let mut v = vec![(String::new(), label.into())];
     v.extend(list.iter().cloned());
@@ -701,7 +714,21 @@ pub(in crate::screens) fn clean_lines(
             match result {
                 Ok(n) => n.to_string(),
                 Err(FbError::Validation(messages)) => {
-                    error(&mut le, name, messages.join("; "));
+                    // Worker item 34: the line's error reads across the row (item 12), so it names
+                    // its box and says what the box takes, instead of the generic number message.
+                    // Review 2, N5: a number in the right form that is above the limit says the limit.
+                    let places = if name == "quantity" && line_kind != "NOTE" { 4 } else { 2 };
+                    let large = too_large(&v, places);
+                    let plain = |m: &String| match (m.starts_with("Enter a finite "), name, line_kind) {
+                        (false, ..) => m.clone(),
+                        (true, "quantity", "NOTE") if large => "Qty: enter a number no larger than 99,999,999,999,999.99.".to_owned(),
+                        (true, "quantity", "NOTE") => "Qty: enter a number of 0 or more, with at most 2 decimal places.".to_owned(),
+                        (true, "quantity", _) if large => "Qty: enter a number no larger than 99,999,999,999,999.9999.".to_owned(),
+                        (true, "quantity", _) => "Qty: enter a number more than 0, with at most 4 decimal places.".to_owned(),
+                        (true, ..) if large => "Rate: enter an amount no larger than 99,999,999,999,999.99.".to_owned(),
+                        (true, ..) => "Rate: enter an amount of 0 or more, with at most 2 decimal places.".to_owned(),
+                    };
+                    error(&mut le, name, messages.iter().map(plain).collect::<Vec<_>>().join("; "));
                     v
                 }
                 Err(_) => v,
@@ -954,4 +981,17 @@ fn save_and_post(app: &mut App, c: CompanyId, saved: &Value, fresh: i64) -> AppR
         Err(e) => return Err(e),
     }
     Ok(Outcome::Redirect { location: url("invoices:detail", &[&c.to_db(), &id]) })
+}
+#[cfg(test)]
+mod too_large_tests {
+    #[test]
+    fn only_a_well_formed_number_over_the_limit_is_too_large() {
+        for (text, places, large) in [
+            ("99999999999999.99", 2, false), ("99999999999999.9999", 4, false), ("100000000000000", 2, true), ("99999999999999999", 4, true),
+            ("100000000000000.00", 2, true), ("1e20", 4, true), ("000100000000000000", 2, true), ("12.345", 2, false), ("100000000000000.123", 2, false),
+            ("-100000000000000", 4, false), ("0", 4, false), ("abc", 4, false), ("", 2, false),
+        ] {
+            assert_eq!(super::too_large(text, places), large, "{text}");
+        }
+    }
 }

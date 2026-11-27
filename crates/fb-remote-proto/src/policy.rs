@@ -54,8 +54,8 @@ pub fn host_only(target: &str) -> bool {
         if COMPANY_PREFIXES.iter().any(|p| tail.starts_with(p)) {
             return true;
         }
-        // Forgetting a bank connection removes host-held credentials.
-        if tail.starts_with("/bank-feeds/") && tail.ends_with("/forget/") {
+        // Sync uses host-held credentials and Forget removes them.
+        if tail.starts_with("/bank-feeds/") && (tail.ends_with("/forget/") || tail.ends_with("/sync/")) {
             return true;
         }
     }
@@ -122,11 +122,14 @@ pub fn command(text: &str, signed_in: bool, classify: impl Fn(&str) -> Option<Re
     match kind {
         "SubmitForm" => {
             let path = value.get("path").and_then(Value::as_str).ok_or(INVALID)?;
-            if path.len() > 4096 || path.contains(['?', '#']) {
+            let fields = value.get("fields").and_then(Value::as_array).ok_or(INVALID)?;
+            // A print capability is minted for the exact report filters in its URL.
+            // All other form commands still require a bare route.
+            let print = fields.len() == 1 && fields[0] == serde_json::json!(["action", "desktop_print"]);
+            if path.len() > 4096 || path.contains('#') || (path.contains('?') && !print) {
                 return Err(INVALID);
             }
-            path_allowed(path, classify(path))?;
-            let fields = value.get("fields").and_then(Value::as_array).ok_or(INVALID)?;
+            path_allowed(path, classify(path_of(path)))?;
             let mut actions = vec![];
             for field in fields {
                 let pair = field.as_array().filter(|p| p.len() == 2).ok_or(INVALID)?;
@@ -226,6 +229,17 @@ mod tests {
     }
 
     #[test]
+    fn bank_sync_is_host_only_and_checking_dates_stays_in_the_book() {
+        let post = |suffix: &str, fields: Value| serde_json::json!({
+            "type": "SubmitForm", "path": format!("{C}/bank-feeds/123/{suffix}/"), "token": "t", "fields": fields
+        }).to_string();
+        assert_eq!(command(&post("sync", serde_json::json!([])), true, all).unwrap_err(), (RefusalCode::HostOnly, HOST_ONLY_TEXT));
+        let check = post("accounts", serde_json::json!([["action", "gap_reviewed"]]));
+        assert!(command(&check, true, all).is_ok());
+        assert_eq!(command(&check, false, all).unwrap_err().0, RefusalCode::SignInRequired);
+    }
+
+    #[test]
     fn paths_are_deny_by_default() {
         // A route nobody classified (a new screen) is refused, screen and form alike.
         let new_route = format!("{C}/documents/x/files/");
@@ -275,6 +289,10 @@ mod tests {
             let post = format!(r#"{{"type":"SubmitForm","path":"{C}/invoices/x/email-preview/","token":"t","fields":[["{name}","{value}"]]}}"#);
             assert!(command(&post, true, all).is_ok(), "{name}={value}");
         }
+        let report = format!(r#"{{"type":"SubmitForm","path":"{C}/reports/profit-and-loss/?output=print","token":"t","fields":[["action","desktop_print"]]}}"#);
+        assert!(command(&report, true, |path| (!path.contains('?')).then_some(Remote::Allowed)).is_ok());
+        assert!(command(&report, false, all).is_err());
+        assert!(command(&report.replace("desktop_print", "save"), true, all).is_err());
         let protect = r#"{"type":"SubmitForm","path":"/settings/book-protection/","token":"t","fields":[]}"#;
         assert_eq!(command(protect, true, |_| Some(Remote::Allowed)).unwrap_err().0, RefusalCode::HostOnly);
         let dup = r#"{"type":"SubmitForm","path":"/desktop/sign-in/","path":"/settings/book-protection/","token":"t","fields":[]}"#;

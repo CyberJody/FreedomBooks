@@ -31,23 +31,35 @@ frames only). The desktop starts `fb-remote client` the same way in client mode.
    sign-in screen.
 4. A bar at the top of every page and the window title say which host you are connected to; the
    bar turns amber while reconnecting. **File › Disconnect from host** returns to this computer's
-   own books. A computer with no books of its own that is paired starts connected.
+   own books. Built-in-key books open to sign-in. Books with their own password ask for it.
+   A computer with no books of its own that is paired starts connected.
 
-Lock, idle and suspend on the connected computer sign **that person** out on the host; the host's
-books stay open for everyone else. The page is replaced at once; if the host cannot confirm the
-sign-out within a few seconds, the connection is closed (the helper process, and the session with
-it, is stopped), so reconnecting needs a sign-in. Disconnecting and quitting sign out too.
+On a connected computer, **File › Lock** (Ctrl+L or Cmd+L), the idle lock, the screen locking or
+the computer going to sleep signs **that person** out. The host's books stay open for everyone
+else. FreedomBooks covers the page immediately. When you return, sign in on the same host with
+your user password. Further lock events leave that sign-in form alone.
+
+If the host cannot confirm sign-out, FreedomBooks discards the old session on this computer. It
+shows **Locked. Reconnecting to [host]…** and uses the saved pairing to reconnect automatically.
+You can choose **Try now** or **Disconnect** while it waits. If the pairing was revoked, the host's
+identity changed, or this computer cannot read the saved pairing, FreedomBooks explains the issue
+on the Connect screen. A connection that drops while you are working also reconnects automatically
+and asks you to sign in if the host no longer has your session. When the host stops sharing or
+closes its books, the reconnect screen gives the host’s reason. Disconnecting and quitting sign out
+too.
 
 ## What a connected computer cannot do
 
 Refused by the host before the session layer, and never offered by the client: unlocking,
 creating or restoring books; book protection; the recovery key and Emergency Kit; "Use this copy
 as my books"; backups; attachments (file upload is not built); AI connections; bank-feed, Gmail
-and Stripe connection sign-in or removal (their credentials live on the host); sending or drafting
+and Stripe connection sign-in or removal, and syncing bank feeds (their credentials live on the host); sending or drafting
 an invoice email; choosing a bank-rule file. Every screen must be classified in
 `crates/fb-host/src/routes.rs`; anything not classified there is refused. Printing prints the
-host's print view on the connected computer's printer. CSV exports save through the connected
-computer's own Save dialog.
+host's print view on the connected computer's printer. Save as PDF and CSV exports use the connected
+computer's own Save dialog. A signed-in user with write access can still map downloaded accounts,
+review transactions and rules, and choose **I have checked these dates** after comparing a gap with
+the statement. These actions use records already in the books.
 
 ## Checks
 

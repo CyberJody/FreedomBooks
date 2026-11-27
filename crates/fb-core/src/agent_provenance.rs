@@ -10,6 +10,7 @@ pub struct Context {
     pub agent_name: String,
     pub operation: String,
     pub request_id: String,
+    pub unattended: bool,
 }
 thread_local! { static CURRENT: RefCell<Option<Context>> = const { RefCell::new(None) }; }
 struct Restore(Option<Context>);
@@ -34,7 +35,7 @@ pub(crate) fn record(
             tx.execute("INSERT INTO ledger_auditevent(id,company_id,actor_id,actor_name,occurred_at,action,target,detail) VALUES(?1,?2,?3,?4,?5,'agent.provenance',?6,?7)", params![
                 fb_ids::AuditEventId::new().to_db(), company.to_db(), user.id.to_db(), user.username,
                 crate::py::now_utc(), format!("audit:{event_id}"),
-                serde_json::json!({"event_id":event_id,"connection_id":c.connection_id,"agent_name":c.agent_name,"operation":c.operation,"request_id":c.request_id}).to_string()
+                serde_json::json!({"event_id":event_id,"connection_id":c.connection_id,"agent_name":c.agent_name,"operation":c.operation,"request_id":c.request_id,"unattended":c.unattended}).to_string()
             ])?;
         }
         Ok(())
@@ -51,6 +52,7 @@ mod tests {
             agent_name: "agent".into(),
             operation: "test".into(),
             request_id: "request".into(),
+            unattended: false,
         };
         assert!(CURRENT.with(|c| c.borrow().is_none()));
         let failed = std::panic::catch_unwind(|| {

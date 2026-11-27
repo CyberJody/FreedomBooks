@@ -17,6 +17,9 @@ module.exports = async ({page, company, ids, invoiceId, shot, pass, heading}) =>
     await page.selectOption('#id_vendor',vendor);
     assert.equal(await page.inputValue('#id_lines-0-account'),ids.expense);
     await page.fill('#id_date','2026-10-15');
+    // Worker item 28: with two bank accounts and no earlier check, the check starts on "Choose…".
+    assert.equal(await page.inputValue('#id_bank'),'');
+    await page.selectOption('#id_bank',ids.bank);
     await page.check('#id_print_later');
     assert.equal(await page.inputValue('#id_check_number'),'');
     await page.fill('#id_memo','Synthetic written check\tReference #typed');

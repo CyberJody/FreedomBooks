@@ -106,7 +106,7 @@ fn upgrade_at(boundary_name: &str) {
     }
     assert_eq!(
         after.len(),
-        before.len() + 22 + crate::job_tickets_upgrade_tests::JOB_TICKET_TABLES + crate::remote_host_upgrade_tests::REMOTE_HOST_TABLES + usize::from(boundary_name == "0180_company_documents")
+        before.len() + 22 + crate::job_tickets_upgrade_tests::JOB_TICKET_TABLES + crate::remote_host_upgrade_tests::REMOTE_HOST_TABLES + crate::ai_unattended_upgrade_tests::AI_UNATTENDED_TABLES + crate::bankfeeds_matching_upgrade_tests::TABLES + usize::from(boundary_name == "0180_company_documents")
     );
     if boundary_name == "0180_company_documents" {
         assert!(after["company_document_details"].is_empty());
@@ -116,7 +116,9 @@ fn upgrade_at(boundary_name: &str) {
     test_support::assert_desktop_user_backfill(&book.conn);
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in schema {
-        if !["table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) {
+        if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str())
+            && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str())
+        {
             assert_eq!(upgraded[&object], hash, "changed prior schema {object}");
         }
     }

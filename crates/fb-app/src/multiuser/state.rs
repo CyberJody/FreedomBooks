@@ -35,7 +35,7 @@ pub(crate) struct SessionState {
     vault_key: Option<zeroize::Zeroizing<[u8; 32]>>,
     email: crate::invoice_email::State,
     stripe: crate::invoice_stripe::State,
-    ai: crate::ai::Authority,
+    ai: crate::ai::Attended,
     backups: screens::backups::Personal,
 }
 
@@ -68,7 +68,6 @@ fn exchange_common(app: &mut App, s: &mut SessionState) {
     // No `..` in either pattern: a new field must be classified here before this compiles.
     let App {
         // Per person: swapped.
-        ai,
         identity,
         recovery_authorized,
         first_run_owner,
@@ -91,7 +90,9 @@ fn exchange_common(app: &mut App, s: &mut SessionState) {
         // Per person, but on the shared `Open`: exchanged by `swap_in`/`swap_out` (owner, name, staff).
         open: _,
         // Shared by design.
+        ai,                      // unattended capability cache is shared; only attended state is swapped below
         legacy_credentials: _,   // the open book's legacy credential-migration mode
+        prepared_connection: _, // in-memory masks belong to the shared book connection
         host: _,                 // application version and OS shown in About
         protection: _,           // the book's key envelope and policy, not anyone's proof of access
         os_store_usable: _,      // this computer's keyring
@@ -151,7 +152,7 @@ fn exchange_common(app: &mut App, s: &mut SessionState) {
     swap(vault_key, s_vault_key);
     swap(email, s_email);
     swap(stripe, s_stripe);
-    swap(ai, s_ai);
+    swap(&mut ai.attended, s_ai);
     backups.exchange_personal(s_backups);
 }
 

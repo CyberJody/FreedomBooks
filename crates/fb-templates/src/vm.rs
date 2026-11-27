@@ -104,6 +104,8 @@ pub struct AccountsVm {
     pub page: Page<AccountVm>,
     pub by_code: bool,
     pub query_string: String,
+    /// Worker item 36: "Account … saved." after a save.
+    pub messages: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Default)]

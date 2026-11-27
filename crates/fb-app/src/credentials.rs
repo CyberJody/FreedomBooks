@@ -2,7 +2,7 @@
 //! there is no second connection, plaintext sidecar, or alternate mutation path.
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce, aead::{Aead, Payload}};
 use fb_core::{Book, CompanyId, UserId};
-use fb_db::plugin_credentials::CredentialEnvelope;
+use fb_db::{credential_mask::{BankfeedRestore, UnreadableBankfeed}, plugin_credentials::CredentialEnvelope};
 use fb_plugin_api::{CredentialScope, CredentialStore, PluginError, PluginResult, SecretBytes};
 use hkdf::Hkdf;
 use sha2::Sha256;
@@ -16,6 +16,12 @@ pub struct BookCredentials {
     /// Other keys a saved credential may have been written under (the old book-derived vault, or a
     /// superseded connection key). Read with, then re-saved under `wrapping_key`; never written with.
     legacy_keys: Vec<Zeroizing<[u8; 32]>>,
+}
+
+#[derive(Default)]
+struct BankfeedMasks {
+    loaded: Vec<(String, String, BankfeedRestore)>,
+    unreadable: Vec<(String, String, UnreadableBankfeed)>,
 }
 
 impl BookCredentials {
@@ -32,56 +38,62 @@ impl BookCredentials {
     /// `alternates` are superseded connection keys this computer kept aside.
     pub(crate) fn with_device_key(book: Book, actor: UserId, device: &[u8; 32], legacy: Option<&[u8; 32]>, alternates: &[&[u8; 32]]) -> PluginResult<Self> {
         let mut store = Self::new(book, actor, device)?;
-        store.legacy_keys = legacy.into_iter().chain(alternates.iter().copied()).filter(|k| *k != device).map(wrapping_key).collect::<PluginResult<_>>()?;
+        store.legacy_keys = Self::legacy_wrapping_keys(device, legacy, alternates)?;
         Ok(store)
+    }
+
+    fn legacy_wrapping_keys(device: &[u8; 32], legacy: Option<&[u8; 32]>, alternates: &[&[u8; 32]]) -> PluginResult<Vec<Zeroizing<[u8; 32]>>> {
+        legacy.into_iter().chain(alternates.iter().copied()).filter(|k| *k != device).map(wrapping_key).collect()
     }
 
     pub fn into_book(self) -> PluginResult<Book> {
         self.book.into_inner().map_err(|_| PluginError::CredentialStore)
     }
 
-    /// Complete restoration before the host publishes an Open session. First
-    /// install ALL masks: legacy quarantine audit writes must also be protected
-    /// by the masks of the company's other connections.
-    ///
-    /// A connection whose stored credential can't be read (missing or damaged envelope) never makes
-    /// the books unopenable (lead decision, WAVE4 fix 1): fb-db releases only that connection, after
-    /// proving with the book's own subkey that it is unreadable, and the core marks it "reconnect
-    /// needed" (audited). Every readable connection keeps restore-before-any-command. Returns the
-    /// labels of the connections newly or still waiting for a reconnect.
-    pub(crate) fn restore_bankfeeds(&self) -> PluginResult<Vec<String>> {
+    fn prepare_bankfeed_masks(book: &mut Book, primary: &[u8; 32], legacy: &[Zeroizing<[u8; 32]>]) -> PluginResult<BankfeedMasks> {
         let scopes = {
-            let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
             book.read(|tx| {
                 let mut st = tx.prepare("SELECT c.company_id,c.id,c.active FROM bankfeeds_connection c WHERE c.active=1 OR EXISTS(SELECT 1 FROM plugin_credential v WHERE v.company_id=c.company_id AND v.plugin_id='simplefin' AND v.connection_id=c.id) ORDER BY c.company_id,c.id")?;
                 st.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, bool>(2)?)))?
                     .collect::<Result<Vec<_>, _>>()
             }).map_err(|_| PluginError::CredentialStore)?
         };
-        let mut loaded = Vec::new();
-        let mut unreadable = Vec::new();
+        let mut masks = BankfeedMasks::default();
         for (company, connection, active) in scopes {
             // Install masks for the entire file before ANY Writer is allowed. This internal
             // restore never exposes credentials or grants company access to the signed-in user.
-            let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
-            let restored = self.legacy_keys.iter()
-                .fold(book.authenticate_bankfeed_restore(&connection, &self.wrapping_key), |found, key| {
-                    found.or_else(|_| book.authenticate_bankfeed_restore(&connection, key))
-                })
-                .and_then(|record| book.restore_bankfeed_mask(&connection, &record, Vec::<String>::new()).map(|()| record));
-            match restored {
-                Ok(record) => loaded.push((company, connection, record)),
+            let keys = std::iter::once(primary).chain(legacy.iter().map(|key| &**key));
+            match book.find_bankfeed_restore(&connection, keys).map_err(|_| PluginError::CredentialStore)? {
+                Some((record, key)) => {
+                    if book.restore_bankfeed_mask(&connection, &record, Vec::<String>::new()).is_ok() {
+                        masks.loaded.push((company, connection, record));
+                    } else if active {
+                        let proof = book.release_unreadable_bankfeed(&connection, key).map_err(|_| PluginError::CredentialStore)?;
+                        masks.unreadable.push((company, connection, proof));
+                    }
+                }
                 // A forgotten connection is not write-guarded and is never used again.
-                Err(_) if !active => {}
+                None if !active => {}
                 // Refused (Err) when the credential is in fact readable: then the open is refused too.
-                Err(_) => {
-                    let proof = book.release_unreadable_bankfeed(&connection, &self.wrapping_key)
+                None => {
+                    let proof = book.release_unreadable_bankfeed(&connection, primary)
                         .map_err(|_| PluginError::CredentialStore)?;
-                    unreadable.push((company, connection, proof));
+                    masks.unreadable.push((company, connection, proof));
                 }
             }
         }
+        Ok(masks)
+    }
+
+    pub(crate) fn prepare_bankfeeds_for_write(book: &mut Book, device: &[u8; 32], legacy: Option<&[u8; 32]>, alternates: &[&[u8; 32]]) -> PluginResult<()> {
+        let primary = wrapping_key(device)?;
+        Self::prepare_bankfeed_masks(book, &primary, &Self::legacy_wrapping_keys(device, legacy, alternates)?).map(drop)
+    }
+
+    /// Prepare every mask before any durable repair. Returns the names awaiting reconnection.
+    pub(crate) fn restore_bankfeeds(&self) -> PluginResult<Vec<String>> {
         let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
+        let BankfeedMasks { loaded, unreadable } = Self::prepare_bankfeed_masks(&mut book, &self.wrapping_key, &self.legacy_keys)?;
         for (company, connection, record) in loaded {
             // An incompatible legacy value remains masked, quarantined and unable
             // to sync.
@@ -110,14 +122,13 @@ impl BookCredentials {
     /// connection's write guard is released for this open Book only, with a key that cannot read it,
     /// so the books stay writable. Nothing durable changes: no "reconnect needed" flag, no audit,
     /// no AI status, no envelope migration. Returns how many connections are waiting.
-    pub(crate) fn release_bankfeeds_unavailable(&self) -> PluginResult<usize> {
-        let mut book = self.book.lock().map_err(|_| PluginError::CredentialStore)?;
+    pub(crate) fn release_bankfeeds_unavailable(book: &mut Book, key: &[u8; 32]) -> PluginResult<usize> {
         let active = book.read(|tx| {
             tx.prepare("SELECT id FROM bankfeeds_connection WHERE active=1 ORDER BY company_id,id")?
                 .query_map([], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()
         }).map_err(|_| PluginError::CredentialStore)?;
         for connection in &active {
-            book.release_unreadable_bankfeed(connection, &self.wrapping_key).map_err(|_| PluginError::CredentialStore)?;
+            book.release_unreadable_bankfeed(connection, key).map_err(|_| PluginError::CredentialStore)?;
         }
         Ok(active.len())
     }

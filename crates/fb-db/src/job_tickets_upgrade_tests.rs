@@ -74,7 +74,7 @@ fn a_format_91_book_is_backed_up_upgraded_and_reopens_with_only_the_job_ticket_o
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected the format-91 schema"),
     };
-    assert_eq!((old.from(), old.to()), (91, 93)); // 0205, then 0206 (remote host record)
+    assert_eq!((old.from(), old.to()), (91, 97)); // 0205 through 0210
     let backup = dir.path().join("verified-format-91.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
@@ -84,19 +84,26 @@ fn a_format_91_book_is_backed_up_upgraded_and_reopens_with_only_the_job_ticket_o
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
     assert!(after["remote_host"].is_empty());
+    assert!(after["desktop_ai_unattended"].is_empty());
     for table in ["jobs_ticket", "jobs_timeentry", "jobs_billing", "jobs_billingstep"] {
         assert!(after[table].is_empty(), "{table} starts empty");
     }
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
-        if object != "view:fb_value_invalid" {
+        if !["view:fb_value_invalid", "table:bankfeeds_account", "table:bankfeeds_transaction"].contains(&object.as_str())
+            && !crate::deposit_adjustments_upgrade_tests::CHANGED.contains(&object.as_str())
+            && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str())
+        {
             assert_eq!(&upgraded[object], hash, "changed prior object {object}");
         }
     }
     let added: BTreeSet<&str> = upgraded.keys().filter(|k| !schema.contains_key(*k)).map(String::as_str)
-        .filter(|k| !crate::remote_host_upgrade_tests::REMOTE_HOST_OBJECTS.contains(k)).collect();
+        .filter(|k| !crate::remote_host_upgrade_tests::REMOTE_HOST_OBJECTS.contains(k)
+            && !crate::ai_unattended_upgrade_tests::AI_UNATTENDED_OBJECTS.contains(k)
+            && !crate::deposit_adjustments_upgrade_tests::OBJECTS.contains(k)
+            && !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k)).collect();
     assert_eq!(added, JOB_TICKET_OBJECTS.iter().copied().collect::<BTreeSet<_>>());
-    // The shared value view keeps its prior text and only gains the four job arms.
+    // The shared value view keeps its prior text and gains the four job arms before the AI arm.
     let next: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
     let (kept, tail) = next.split_once("\nUNION ALL\nSELECT 'invalid stored value in jobs_billing'").unwrap();
     assert_eq!(kept, view.trim_end_matches(';'));

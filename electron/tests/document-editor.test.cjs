@@ -34,7 +34,9 @@ test('invoice tax rounds each component exactly and uses net taxable discounts',
 
 test('sales receipt and credit memo previews post what the lines show, by account',()=>{
   const {cents,plan}=require('../renderer/static/sales/document-forms.js');
-  assert.equal(cents('1,234.50'),null); // The editor shows plain amounts; anything else defers to Save.
+  assert.equal(cents(money(123450n)),123450n); // Read the formatted amount shown by the line editor.
+  assert.equal(money(123450n),'1,234.50');
+  assert.equal(cents('12,34.50'),null);
   assert.equal(cents('30.00'),3000n);
   const accounts={kind:'SR',income:{a:'4000 · Sales',b:'4100 · Delivery'},collected_tax:'2200 · Sales tax payable',receivables:'1100 · A/R'};
   const lines=[{account:'a',amount:3000n},{account:'b',amount:500n},{account:'a',amount:1000n}];

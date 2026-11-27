@@ -430,6 +430,7 @@ pub(super) fn review_invoice_tx(
             domain: "invoice",
             digest: hash,
             display: json!({"mapping":mapping_display(tx,c,&m)?,"entries":es}),
+            settlement: None,
         })
 }
 

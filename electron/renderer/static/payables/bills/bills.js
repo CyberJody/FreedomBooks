@@ -17,7 +17,8 @@ if (catalogNode && lines) {
     const item = catalog[event.target.value];
     if (!item) return;
     const row = event.target.closest("tr");
-    row.querySelector('[name$="-description"]').value = item.description;
+    // A bill line needs a description: an item saved without one gives its name.
+    row.querySelector('[name$="-description"]').value = item.description || item.code || "";
     row.querySelector('[name$="-rate"]').value = item.rate;
     const account = row.querySelector('[name$="-expense_account"]');
     setValue(account, item.expense_account);
@@ -38,15 +39,22 @@ function dueFrom(dateValue, days) {
 const terms = document.querySelector('[name="terms"]');
 const due = document.querySelector('[name="due_date"]');
 const billDate = document.querySelector('[name="date"]');
+function fillDueFromTerms() {
+  if (!terms || terms.value === "" || !billDate || !due) return;
+  const filled = dueFrom(billDate.value, terms.value);
+  if (filled) due.value = filled;
+}
+if (billDate) billDate.addEventListener("change", fillDueFromTerms);
 if (terms) terms.addEventListener("change", () => {
   terms.dataset.touched = "1";
   if (due) due.dataset.touched = "1";
-  if (terms.value === "" || !billDate) return;
-  const filled = dueFrom(billDate.value, terms.value);
-  if (filled && due) due.value = filled;
+  fillDueFromTerms();
 });
 
-if (due) due.addEventListener("change", () => { due.dataset.touched = "1"; });
+if (due) due.addEventListener("change", () => {
+  due.dataset.touched = "1";
+  if (terms && due.value) terms.value = "";
+});
 
 // Picker hint only. Fills the first empty expense line and, when the due date
 // and terms are still blank, the bill's terms. Never overwrites a typed value.

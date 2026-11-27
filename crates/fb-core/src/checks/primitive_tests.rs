@@ -276,7 +276,7 @@ fn every_account_detail_type_matches_service_and_raw_line_eligibility() {
             &mut f.book,
             f.actor,
             f.co,
-            AccountInput::new(&format!("type-{index}"), "Synthetic detail").detail(detail.as_str()),
+            AccountInput::new(&format!("type-{index}"), &format!("Synthetic detail {index}")).detail(detail.as_str()),
         )
         .unwrap();
         let expected = directory::purchase_line_allowed(&a);

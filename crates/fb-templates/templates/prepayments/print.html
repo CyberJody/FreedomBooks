@@ -20,14 +20,14 @@
 <table class="terms-box"><thead><tr><th>Payment method</th><th>Reference</th></tr></thead><tbody><tr><td>{{ deposit.get_method_display }}</td><td>{{ deposit.reference|default('—') }}</td></tr></tbody></table>
 </section>
 <table class="lines"><thead><tr><th class="col-desc">Description</th><th class="col-num">Amount</th></tr></thead>
-<tbody><tr><td class="col-desc">Deposit (prepayment) on account{% if deposit.prepayment.order_reference %} · order reference: {{ deposit.prepayment.order_reference }}{% endif %}{% if deposit.prepayment.estimate_id %} · estimate {{ deposit.prepayment.estimate.identity.number }}{% endif %}</td><td class="col-num" id="print-amount">{{ deposit.amount }}</td></tr></tbody></table>
+<tbody><tr><td class="col-desc">Deposit (prepayment) on account{% if deposit.prepayment.order_reference %} · order reference: {{ deposit.prepayment.order_reference }}{% endif %}{% if deposit.prepayment.estimate_id %} · estimate {{ deposit.prepayment.estimate.identity.number }}{% endif %}</td><td class="col-num" id="print-amount">{{ deposit.amount|money }}</td></tr></tbody></table>
 <section class="foot-row">
 <div class="message-box"><p class="box-label">Memo</p><p class="memo">{{ deposit.memo|linebreaksbr }}</p><p class="posting-note">{% if deposit.is_void %}Voided — the original posting is cancelled by its linked reversal.{% else %}Received in advance and held on account. It will be applied to a future invoice; it is not an invoice and no amount is due.{% endif %}</p></div>
 <table class="totals"><tbody>
-<tr class="grand"><th>Deposit received {{ deposit.company_snapshot.currency }}</th><td id="print-total">{{ deposit.amount }}</td></tr>
-<tr><th>Applied to invoices</th><td id="print-applied">{{ deposit.applied }}</td></tr>
-<tr><th>Refunded</th><td id="print-refunded">{{ deposit.refunded }}</td></tr>
-<tr class="grand due"><th>Remaining on account</th><td id="print-remaining">{{ deposit.remaining }}</td></tr>
+<tr class="grand"><th>Deposit received {{ deposit.company_snapshot.currency }}</th><td id="print-total">{{ deposit.amount|money }}</td></tr>
+<tr><th>Applied to invoices</th><td id="print-applied">{{ deposit.applied|money }}</td></tr>
+<tr><th>Refunded</th><td id="print-refunded">{{ deposit.refunded|money }}</td></tr>
+<tr class="grand due"><th>Remaining on account</th><td id="print-remaining">{{ deposit.remaining|money }}</td></tr>
 </tbody></table>
 </section>
 </article>

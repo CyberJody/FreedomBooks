@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Invoice email preview</title><link rel="stylesheet" href="{{ static('sales/email-preview.css') }}"></head><body><main><header class="preview-header">
-<h1>Invoice email preview</h1><p><a href="{{ url('invoices:detail', company.pk, root.pk) }}">Back to invoice {{ doc.number }}</a> · <a href="{{ url('company_edit', company.pk) }}">Invoice and email settings</a></p>
+<h1>Invoice email preview</h1>{% for notice in invoice_notices %}<p role="status">{{ notice }}</p>{% endfor %}<p><a href="{{ url('invoices:detail', company.pk, root.pk) }}">Back to invoice {{ doc.number }}</a> · <a href="{{ url('company_edit', company.pk) }}">Invoice and email settings</a></p>
 <p>This is a preview. No draft has been saved and no email has been sent.</p>
 <dl><dt>To</dt><dd>{% if doc.party.email %}{{ doc.party.email }}{% else %}No customer email{% endif %}</dd><dt>Subject</dt><dd>{{ doc.preferences.email_subject }}</dd><dt>Default action</dt><dd>{% if doc.preferences.email_mode == 'SEND' %}Send email{% else %}Save to Gmail Drafts{% endif %}</dd></dl>
 {% if doc.preferences.stripe_enabled and doc.can_pay and not doc.payment_url %}<p>A Stripe payment link has not been prepared for this invoice.</p>{% endif %}

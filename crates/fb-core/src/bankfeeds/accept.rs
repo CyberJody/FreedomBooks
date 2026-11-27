@@ -52,8 +52,130 @@ pub(super) fn validated(w: &Writes<'_, '_>, co: CompanyId, transaction_id: &str)
     }
     Ok((item, Some(f)))
 }
+/// Compare the caller's reviewed state under the same writer as the posting.
+fn require_reviewed_state(w: &Writes<'_, '_>, co: CompanyId, transaction_id: &str, input: &Value) -> FbResult<()> {
+    let Some(expected) = input.get("preconditions") else { return Ok(()) };
+    let changed = || err("Bank review precondition failed. Nothing was recorded. Check bank review again.");
+    let row = w.tx.query_row(
+        &format!("SELECT {ITEM_COLS},f.ledger_account_id,f.currency,c.host,f.remote_id,f.provider_id_verified,t.provider_id_verified FROM bankfeeds_transaction t
+                  JOIN bankfeeds_account f ON f.id=t.feed_account_id JOIN bankfeeds_connection c ON c.id=f.connection_id
+                  WHERE t.id=?1 AND c.company_id=?2"),
+        params![transaction_id, co.to_db()],
+        |r| Ok((item_row(r)?, r.get::<_, Option<String>>(17)?, r.get::<_, String>(18)?, r.get::<_, String>(19)?,
+            r.get::<_, String>(20)?, r.get::<_, bool>(21)?, r.get::<_, bool>(22)?)),
+    ).optional()?.ok_or_else(changed)?;
+    let (item, mapped, currency, host, account_remote, account_verified, transaction_verified) = row;
+    let actual = json!({"id":item.id,"status":item.status,"return_count":item.return_count,
+        "amount_cents":item.amount.to_string(),"date":item.date(),"feed_account_id":item.feed_account_id,"mapped_account_id":mapped});
+    if actual.as_object().expect("review fields").iter().any(|(key, value)| expected.get(key) != Some(value))
+    {
+        return Err(changed());
+    }
+    let identity = json!({"currency":currency,"provider_host":host,"provider_account_id":account_remote,
+        "provider_transaction_id":item.remote_id,"description":item.description});
+    if identity.as_object().expect("identity fields").iter().any(|(key, value)| {
+        expected.get(key).is_some_and(|seen| !seen.is_null() && seen != value)
+    }) || (expected["require_exact_account_id"] == true && !account_verified)
+        || (expected["require_exact_transaction_id"] == true && !transaction_verified)
+    {
+        return Err(changed());
+    }
+    for (field, account_id) in [
+        ("mapped_account_detail_type", mapped.as_deref()),
+        ("category_detail_type", input["account_id"].as_str()),
+    ] {
+        let Some(detail_type) = expected[field].as_str() else { continue };
+        let account_id = account_id.and_then(AccountId::parse).ok_or_else(changed)?;
+        let account = store::account(w.tx, account_id)?.filter(|a| a.company_id == co && a.active && a.postable).ok_or_else(changed)?;
+        if account.detail_type.as_str() != detail_type {
+            return Err(changed());
+        }
+    }
+    if expected["require_no_candidates"] == true && review::review_candidates(w.tx, co, &item, 1)?.any() {
+        return Err(changed());
+    }
+    Ok(())
+}
+
 fn field<'v>(input: &'v Value, key: &str) -> &'v Value {
     input.get(key).unwrap_or(&Value::Null)
+}
+/// Worker review 3b M3: an account id in its standard form (lower-case, hyphenated), so that another spelling
+/// of an account (upper case, braces) is compared, and refused, exactly like the account itself. The book
+/// keeps every id in this form.
+fn account_id(v: &Value, optional: bool) -> FbResult<Option<String>> {
+    Ok(id(v, optional)?.map(|raw| py::record_uuid(&raw).map_or(raw, |c| c.0)))
+}
+
+/// Worker item 46: one line of a split row. `amount` is in cents and in the row's own direction (an expense
+/// on a withdrawal, income on a deposit); a negative line goes the other way.
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct SplitLine {
+    pub account: String,
+    pub amount: i64,
+    pub memo: String,
+}
+/// Most lines one split may carry.
+pub const MAX_SPLIT_LINES: usize = 20;
+/// Most posted ledger entries one bank transaction may match at once.
+pub const MAX_MATCH_LINES: usize = 20;
+/// A signed money amount typed on a split or fee line: at most two decimals, never zero.
+pub(super) fn signed_cents(v: &Value, what: &str) -> FbResult<i64> {
+    let raw = v.as_str().map(py::py_strip).unwrap_or("");
+    let (negative, body) = match raw.strip_prefix('-') {
+        Some(rest) => (true, rest.trim_start()),
+        None => (false, raw),
+    };
+    let amount = crate::calculations::unit_rate(&json!(body))
+        .ok()
+        .and_then(|d| i64::try_from(d.mantissa()).ok())
+        .ok_or_else(|| err(format!("Enter an amount such as 19.99 on each {what}.")))?;
+    if amount == 0 {
+        return Err(err(format!("A {what} cannot be 0.00.")));
+    }
+    Ok(if negative { -amount } else { amount })
+}
+/// Worker item 46: the split lines of `input["lines"]` (`[{account_id, amount, memo}]`), or None for a row
+/// recorded with one category. The lines must add up exactly to the row's amount; a check's lines must each
+/// be more than zero (a check line cannot be negative).
+pub(super) fn split_lines(input: &Value, item: &Item, mapped: &str, check: bool) -> FbResult<Option<Vec<SplitLine>>> {
+    let rows = match field(input, "lines") {
+        Value::Null => return Ok(None),
+        Value::Array(a) if a.is_empty() => return Ok(None),
+        Value::Array(a) => a,
+        _ => return Err(err("Enter the split lines again.")),
+    };
+    if rows.len() > MAX_SPLIT_LINES {
+        return Err(err(format!("A split has at most {MAX_SPLIT_LINES} lines.")));
+    }
+    let mut lines = vec![];
+    let mut total = 0i64;
+    for row in rows {
+        let account = account_id(field(row, "account_id"), true)?.ok_or_else(|| err("Choose an account on each split line."))?;
+        if account == mapped {
+            return Err(err("Choose an account other than the feed account itself on each split line."));
+        }
+        let amount = signed_cents(field(row, "amount"), "split line")?;
+        if check && amount < 0 {
+            return Err(err("A check's split lines must each be more than 0.00. Record it as a journal entry to put a line the other way."));
+        }
+        total = total.checked_add(amount).filter(|n| n.unsigned_abs() <= 9_999_999_999_999_999).ok_or_else(|| err("Document amount exceeds 99999999999999.99."))?;
+        lines.push(SplitLine { account, amount, memo: opt_text(row, "memo", 160)? });
+    }
+    let want = magnitude(item)?;
+    if total != want {
+        let gap = if total < want {
+            format!("{} is left to assign", money(want - total))
+        } else {
+            format!("they are {} over", money(total - want))
+        };
+        return Err(err(format!("The split lines add up to {}, not the bank's {}: {gap}. Nothing was recorded.", money(total), money(want))));
+    }
+    Ok(Some(lines))
+}
+/// A short stable text of a split for the request key: a retry with the same lines reuses the same draft.
+fn split_intent(lines: &[SplitLine]) -> String {
+    lines.iter().map(|l| format!("{}={}={}", l.account, l.amount, l.memo)).collect::<Vec<_>>().join(";")
 }
 fn opt_text(input: &Value, key: &str, max: usize) -> FbResult<String> {
     text(input.get(key).unwrap_or(&json!("")), max, false)
@@ -89,6 +211,7 @@ struct Decision<'a> {
     line_id: &'a str,
     reference: &'a str,
     url: String,
+    matched_lines: Vec<(String, String)>,
 }
 /// `_decide`.
 fn decide(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &Item, d: Decision<'_>) -> FbResult<Item> {
@@ -99,34 +222,44 @@ fn decide(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &Item, d: Deci
         "UPDATE bankfeeds_transaction SET status=?2,accepted_as=?3,journal_id=?4,journal_line_id=?5,reference=?6,reference_url=?7,decided_at=?8,decided_by_id=?9,updated_at=?8 WHERE id=?1",
         params![item.id, d.status, d.kind, d.journal_id, d.line_id, reference, py::py_truncate(&d.url, 200), py::now_utc(), actor.to_db()],
     )?;
+    let mut detail = json!({"kind":d.kind,"status":d.status,"journal_id":d.journal_id,"reference":reference,"amount":money(item.amount),"date":item.date(),"description":text::strip_url_userinfo(&item.description)});
+    if d.matched_lines.len() > 1 {
+        detail["matched_journal_ids"] = json!(d.matched_lines.iter().map(|(j, _)| j).collect::<Vec<_>>());
+        detail["matched_lines"] = json!(d.matched_lines.iter().map(|(j, l)| json!({"journal_id": j, "journal_line_id": l})).collect::<Vec<_>>());
+    }
     w.audit(
         &user,
         co,
         "bankfeed.accepted",
         format!("bankfeedtransaction:{}", item.id),
-        json!({"kind":d.kind,"status":d.status,"journal_id":d.journal_id,"reference":reference,"amount":money(item.amount),"date":item.date(),"description":text::strip_url_userinfo(&item.description)}),
+        detail,
     )?;
     super::item(tx, co, &item.id)
 }
 /// `accept`: turn one downloaded transaction into a posted document through the existing services, or
 /// match it to an existing posted entry. Accepting an already-decided item returns it unchanged.
 /// `input` keys follow Python's keyword arguments: kind, account_id, payee_name, vendor_id, check_number,
-/// journal_line_id, receipt_ids, transfer_account_id.
+/// journal_line_id, receipt_ids, transfer_account_id. Worker item 46: `lines` (`[{account_id, amount, memo}]`)
+/// records a CHECK or JOURNAL row split over several accounts instead of one `account_id`. Worker items 47 and
+/// 48: a DEPOSIT takes several `receipt_ids` and `adjustments` (`[{account_id, amount}]`, a fee negative); the
+/// deposit must equal the row.
 ///
 /// Composition (Python's `accept` / `_finish`): a check draft commits first in its own transaction, as
-/// Python's `_check_draft` does; then validation, the posting (through the modules' `_tx` forms), the
+/// Python's `_check_draft` does. A guarded check keeps its draft and posting in the same writer.
+/// Then validation, the posting (through the modules' `_tx` forms), the
 /// decision and its audit commit together in ONE writer, so a failure anywhere leaves no posted
 /// document behind an item still to review. A retry reuses the draft through the item's request key.
 ///
 /// A transaction that is very likely already in the books ([`already_recorded`]) is refused unless `input`
 /// carries `"record_again": true`, the user's explicit confirmation; a confirmed second recording is audited
 /// (`bankfeed.recorded_again`, naming the earlier entry) in the same writer. Matching an existing entry
-/// (`MATCH`) posts nothing and is never refused here.
+/// (`MATCH`) posts nothing and is never refused here. Worker item 40: so is a new entry for a transaction
+/// whose mapped account already has a posted entry it could match ([`match_candidates`]), the same way.
 pub fn accept(book: &mut Book, actor: UserId, co: CompanyId, transaction_id: &str, input: &Value, secrets: &SecretSet) -> FbResult<Item> {
     let kind = field(input, "kind").as_str().unwrap_or("").to_owned();
     let mut draft = None;
-    if kind == "CHECK" {
-        match check_draft(book, actor, co, transaction_id, input, secrets)? {
+    if kind == "CHECK" && input.get("preconditions").is_none() {
+        match command(book, secrets, |w| check_draft(w, actor, co, transaction_id, input))? {
             Err(decided) => return Ok(decided),
             Ok(check) => draft = Some(check["id"].as_str().unwrap_or("").to_owned()),
         }
@@ -134,12 +267,20 @@ pub fn accept(book: &mut Book, actor: UserId, co: CompanyId, transaction_id: &st
     command(book, secrets, |w| {
         let tx = w.tx;
         let user = services::access(tx, actor, co)?;
+        require_reviewed_state(w, co, transaction_id, input)?;
         let (item, f) = validated(w, co, transaction_id)?;
         let Some(f) = f else { return Ok(item) };
         if !KINDS.contains(&kind.as_str()) {
             return Err(err("Choose what to record this transaction as."));
         }
+        if kind == "CHECK" && draft.is_none() {
+            match check_draft(w, actor, co, transaction_id, input)? {
+                Err(decided) => return Ok(decided),
+                Ok(check) => draft = Some(check["id"].as_str().unwrap_or("").to_owned()),
+            }
+        }
         let earlier = if kind == "MATCH" { None } else { already_recorded(tx, co, &item)? };
+        let entry = if kind == "MATCH" || earlier.is_some() { None } else { entry_on_account(tx, co, &item)? };
         let done = finish(w, actor, co, &item, &f, &kind, input, draft.as_deref())?;
         // After the input's own validation (its messages come first); refusing rolls the posting back.
         if let Some(earlier) = recorded_unless_confirmed(earlier, input)? {
@@ -149,6 +290,16 @@ pub fn accept(book: &mut Book, actor: UserId, co: CompanyId, transaction_id: &st
                 "bankfeed.recorded_again",
                 format!("bankfeedtransaction:{}", item.id),
                 json!({"journal_id":done.journal_id,"reference":done.reference,"earlier_transaction":earlier.earlier_id,"earlier_journal_id":earlier.journal_id,"earlier_reference":earlier.reference}),
+            )?;
+        }
+        if let Some(entry) = entry_unless_confirmed(entry, item.date(), input)? {
+            w.audit(
+                &user,
+                co,
+                "bankfeed.recorded_again",
+                format!("bankfeedtransaction:{}", item.id),
+                // Worker review M2: the earlier entry by its number, as the earlier-download audit above names it.
+                json!({"journal_id":done.journal_id,"reference":done.reference,"earlier_journal_id":entry.journal_id,"earlier_line_id":entry.line_id,"earlier_reference":entry.number,"earlier_date":entry.date,"earlier_memo":entry.memo()}),
             )?;
         }
         Ok(done)
@@ -182,6 +333,48 @@ fn recorded_unless_confirmed(earlier: Option<Recorded>, input: &Value) -> FbResu
         "This transaction looks already recorded as {} ({}) from an earlier bank download. Link it to that entry, or confirm that you want to record it again.",
         earlier.reference, earlier.date
     )))
+}
+
+/// Worker item 40: the entry Match would offer ([`match_candidates`]' first: posted, unreversed, on this
+/// transaction's mapped account with the same amount and direction, within [`MATCH_WINDOW_DAYS`], not
+/// matched to another downloaded row). Typically a card payment recorded from the other feed: the checking
+/// side's check to the card account is the card side's payment. Recording a new entry would post it twice.
+pub fn entry_on_account(q: &(impl Query + ?Sized), co: CompanyId, item: &Item) -> FbResult<Option<MatchCandidate>> {
+    if item.amount == 0 {
+        return Ok(None);
+    }
+    Ok(match_candidates(q, co, item, 1)?.into_iter().next())
+}
+/// Refuse to post a new entry while [`entry_on_account`] found one, unless the user confirmed recording it
+/// again (`"record_again": true`; with `"recorded_as"`, only for the entry line the page showed). Returns the
+/// entry when the confirmation is what lets it through.
+/// Worker review M2: the entry is named by its number and date, its memo after them ([`MatchCandidate::named`]).
+fn entry_unless_confirmed(entry: Option<MatchCandidate>, item_date: Option<&str>, input: &Value) -> FbResult<Option<MatchCandidate>> {
+    let Some(entry) = entry else { return Ok(None) };
+    let named = entry.named();
+    if field(input, "record_again") == &Value::Bool(true) {
+        if let Some(seen) = field(input, "recorded_as").as_str()
+            && seen != entry.line_id
+        {
+            return Err(err(format!(
+                "The books changed since this page was shown: this transaction now looks already recorded as {named}. Nothing was recorded; review it again."
+            )));
+        }
+        return Ok(Some(entry));
+    }
+    let within_default_window = item_date
+        .and_then(|d| parse_date(d).ok())
+        .zip(parse_date(&entry.date).ok())
+        .is_none_or(|(bank, entry_day)| (bank - entry_day).num_days().abs() <= MATCH_WINDOW_DAYS);
+    if within_default_window {
+        Err(err(format!(
+            "This transaction looks already recorded as {named}: an entry on this account with the same amount, {MATCH_WINDOW_DAYS} days or less apart. Match it to that entry, or confirm that you want to record it again."
+        )))
+    } else {
+        Err(err(format!(
+            "This transaction looks already recorded as {named}: a check on this account with the same amount. Match it to that entry, or confirm that you want to record it again."
+        )))
+    }
 }
 
 /// "Link to existing": mark a re-downloaded transaction handled by the entry [`already_recorded`] found,
@@ -232,13 +425,77 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
     let date = item.date().unwrap_or("").to_owned();
     match kind {
         "MATCH" => {
+            let multi_ids: Option<Vec<String>> = match field(input, "journal_line_ids") {
+                Value::Null => None,
+                Value::Array(a) => Some(
+                    a.iter()
+                        .map(|v| id(v, false).map(Option::unwrap_or_default))
+                        .collect::<FbResult<Vec<_>>>()?,
+                ),
+                _ => return Err(err("Choose the posted entries to match.")),
+            };
+            if let Some(lines) = multi_ids {
+                if lines.is_empty() {
+                    return Err(err("Choose at least one posted entry to match."));
+                }
+                if lines.len() > MAX_MATCH_LINES {
+                    return Err(err(format!("A bank transaction matches at most {MAX_MATCH_LINES} posted entries.")));
+                }
+                let mut seen = std::collections::HashSet::new();
+                for l in &lines {
+                    if !seen.insert(l.as_str()) {
+                        return Err(err("Choose each posted entry only once."));
+                    }
+                }
+                if lines.len() == 1 {
+                    let line = &lines[0];
+                    let found = match_candidates(tx, co, item, 50)?.into_iter().find(|c| c.line_id == *line).ok_or_else(|| {
+                        err(format!("Choose an unmatched posted entry on the mapped account with the same amount and a date within {MATCH_WINDOW_DAYS} days (or a matching check within {CHECK_MATCH_WINDOW_DAYS} days)."))
+                    })?;
+                    let r = reference(tx, &found.journal_id)?;
+                    let url = format!("journal:{}", found.journal_id);
+                    return decide(w, actor, co, item, Decision { status: "MATCHED", kind: "MATCH", journal_id: &found.journal_id, line_id: line, reference: &r, url, matched_lines: vec![] });
+                }
+                let eligible = multi_match_candidates(tx, co, item, MULTI_MATCH_POOL_LIMIT)?;
+                let mut chosen = Vec::with_capacity(lines.len());
+                let mut total = 0i64;
+                for line in &lines {
+                    let cand = eligible.iter().find(|c| c.line_id == *line).ok_or_else(|| {
+                        err(format!("Choose unmatched posted entries on the mapped account in the same direction, dated within {MATCH_WINDOW_DAYS} days (or matching checks within {CHECK_MATCH_WINDOW_DAYS} days)."))
+                    })?;
+                    total = total.checked_add(cand.amount).ok_or_else(|| err("Document amount exceeds 99999999999999.99."))?;
+                    chosen.push(cand.clone());
+                }
+                if total != amount {
+                    return Err(err(format!("The selected entries total {}, not the bank's {}.", money(total), money(amount))));
+                }
+                let mut refs = Vec::with_capacity(chosen.len());
+                let mut pairs = Vec::with_capacity(chosen.len());
+                for cand in &chosen {
+                    w.execute(
+                        "INSERT INTO bankfeeds_transaction_match(transaction_id,journal_id,journal_line_id) VALUES(?1,?2,?3)",
+                        params![item.id, cand.journal_id, cand.line_id],
+                    )?;
+                    refs.push(reference(tx, &cand.journal_id)?);
+                    pairs.push((cand.journal_id.clone(), cand.line_id.clone()));
+                }
+                let first = &chosen[0];
+                let joined = refs.join(" + ");
+                let r = if joined.chars().count() <= 60 {
+                    joined
+                } else {
+                    text::sanitize(&format!("{} + {} more", refs[0], refs.len() - 1), 60)
+                };
+                let url = format!("journal:{}", first.journal_id);
+                return decide(w, actor, co, item, Decision { status: "MATCHED", kind: "MATCH", journal_id: &first.journal_id, line_id: &first.line_id, reference: &r, url, matched_lines: pairs });
+            }
             let line = id(field(input, "journal_line_id"), false)?.unwrap_or_default();
             let found = match_candidates(tx, co, item, 50)?.into_iter().find(|c| c.line_id == line).ok_or_else(|| {
-                err(format!("Choose an unmatched posted entry on the mapped account with the same amount and a date within {MATCH_WINDOW_DAYS} days."))
+                err(format!("Choose an unmatched posted entry on the mapped account with the same amount and a date within {MATCH_WINDOW_DAYS} days (or a matching check within {CHECK_MATCH_WINDOW_DAYS} days)."))
             })?;
             let r = reference(tx, &found.journal_id)?;
             let url = format!("journal:{}", found.journal_id);
-            decide(w, actor, co, item, Decision { status: "MATCHED", kind: "MATCH", journal_id: &found.journal_id, line_id: &line, reference: &r, url })
+            decide(w, actor, co, item, Decision { status: "MATCHED", kind: "MATCH", journal_id: &found.journal_id, line_id: &line, reference: &r, url, matched_lines: vec![] })
         }
         "CHECK" => {
             let cid = draft.ok_or_else(|| err("Choose what to record this transaction as."))?;
@@ -257,7 +514,7 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
             let journal = b["current"]["journal_id"].as_str().unwrap_or("").to_owned();
             let number = b["number"].as_str().unwrap_or("").to_owned();
             let line = bank_line(tx, &journal, &mapped, debit, credit)?;
-            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "CHECK", journal_id: &journal, line_id: &line, reference: &number, url: format!("checks:detail:{cid}") })
+            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "CHECK", journal_id: &journal, line_id: &line, reference: &number, url: format!("checks:detail:{cid}"), matched_lines: vec![] })
         }
         "DEPOSIT" => {
             if !item.money_in() {
@@ -272,18 +529,30 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
             if ids.is_empty() {
                 return Err(err("Choose the undeposited receipt(s) this deposit covers."));
             }
-            let payload = w.value(&json!({"request_key":request_key("DEPOSIT", item, ""),"bank_id":mapped,"date":date,"memo":memo(item),"receipt_ids":ids}));
+            // Worker items 47 and 48: several received payments, and fee or adjustment lines (a processor
+            // payout net of its fee), in one deposit that equals the bank row.
+            // A deposit without them is requested exactly as before (no `adjustments`, the same request key).
+            let adjustments = match field(input, "adjustments") {
+                Value::Null => Value::Null,
+                Value::Array(a) if a.is_empty() => Value::Null,
+                Value::Array(a) => json!(a),
+                _ => return Err(err("Enter the fees and adjustments again.")),
+            };
+            let intent = if adjustments.is_null() { String::new() } else { adjustments.to_string() };
+            let payload = w.value(&json!({"request_key":request_key("DEPOSIT", item, &intent),"bank_id":mapped,"date":date,"memo":memo(item),"receipt_ids":ids,"adjustments":adjustments}));
             let review = banking::review_deposit_tx(tx, actor, co, &payload)?;
             let total = review.display["amount"].as_str().unwrap_or("").to_owned();
             if total != money(amount) {
-                return Err(err(format!("The selected receipts total {total}, not the bank's {}.", money(amount))));
+                // Without fees, the frozen message (pinned by the parity scenarios).
+                let what = if adjustments.is_null() { "The selected receipts total" } else { "The selected receipts and fees total" };
+                return Err(err(format!("{what} {total}, not the bank's {}.", money(amount))));
             }
             let dep = banking::record_deposit_tx(tx, actor, co, &payload, &review)?;
             let text_of = |k: &str| dep[k].as_str().unwrap_or("").to_owned();
             let (journal, dep_id, identity) = (text_of("journal_id"), text_of("id"), text_of("identity_id"));
             let line = bank_line(tx, &journal, &mapped, debit, credit)?;
             let number = identity_number(tx, &identity)?;
-            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "DEPOSIT", journal_id: &journal, line_id: &line, reference: &number, url: format!("deposits:detail:{dep_id}") })
+            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "DEPOSIT", journal_id: &journal, line_id: &line, reference: &number, url: format!("deposits:detail:{dep_id}"), matched_lines: vec![] })
         }
         "TRANSFER" => {
             let other = id(field(input, "transfer_account_id"), false)?.unwrap_or_default();
@@ -295,21 +564,35 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
             let line = bank_line(tx, &journal, &mapped, debit, credit)?;
             let number = identity_number(tx, trf["identity_id"].as_str().unwrap_or(""))?;
             let url = format!("transfers:detail:{}", trf["id"].as_str().unwrap_or(""));
-            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "TRANSFER", journal_id: &journal, line_id: &line, reference: &number, url })
+            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "TRANSFER", journal_id: &journal, line_id: &line, reference: &number, url, matched_lines: vec![] })
         }
         _ => {
-            let category = id(field(input, "account_id"), false)?.unwrap_or_default();
-            if category == mapped {
-                return Err(err("Choose a category other than the feed account itself."));
-            }
             let name = opt_text(input, "payee_name", 120)?;
             let description = text::sanitize(&item.description, 160);
-            let lines = vec![
-                w.value(&json!({"account":mapped,"debit":money(debit),"credit":money(credit),"description":description,"name":name})),
-                w.value(&json!({"account":category,"debit":money(credit),"credit":money(debit),"description":description,"name":name})),
-            ];
+            let mut lines = vec![w.value(&json!({"account":mapped,"debit":money(debit),"credit":money(credit),"description":description,"name":name}))];
+            // Worker item 46: a split posts one line per split line against the one bank line; a negative
+            // split line goes the other way (a credit on a withdrawal, a debit on a deposit).
+            let intent = match split_lines(input, item, &mapped, false)? {
+                Some(split) => {
+                    for l in &split {
+                        let n = money(l.amount.abs());
+                        let (dr, cr) = if (l.amount > 0) == item.money_in() { ("0.00".to_owned(), n) } else { (n, "0.00".to_owned()) };
+                        let text = if l.memo.is_empty() { description.clone() } else { l.memo.clone() };
+                        lines.push(w.value(&json!({"account":l.account,"debit":dr,"credit":cr,"description":text,"name":name})));
+                    }
+                    format!("split:{}:{name}", split_intent(&split))
+                }
+                None => {
+                    let category = account_id(field(input, "account_id"), false)?.unwrap_or_default();
+                    if category == mapped {
+                        return Err(err("Choose a category other than the feed account itself."));
+                    }
+                    lines.push(w.value(&json!({"account":category,"debit":money(credit),"credit":money(debit),"description":description,"name":name})));
+                    format!("{category}:{name}")
+                }
+            };
             let mut draft = DraftInput::new(&date, &w.text(&memo(item)), lines);
-            draft.request_key = Some(request_key("JOURNAL", item, &format!("{category}:{name}")));
+            draft.request_key = Some(request_key("JOURNAL", item, &intent));
             let mut journal = services::save_draft_tx(tx, actor, co, &draft, None)?;
             if journal.status.as_str() == "DRAFT" {
                 journal = services::post_journal_tx(tx, actor, co, journal.id, Some(journal.revision))?;
@@ -324,45 +607,59 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
             }
             let line = bank_line(tx, &jid, &mapped, debit, credit)?;
             let r = py::py_strip(&format!("JE {}", journal.entry_number)).to_owned();
-            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "JOURNAL", journal_id: &jid, line_id: &line, reference: &r, url: format!("journal:{jid}") })
+            decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "JOURNAL", journal_id: &jid, line_id: &line, reference: &r, url: format!("journal:{jid}"), matched_lines: vec![] })
         }
     }
 }
 
 /// `_check_draft`: Err(item) when the item is already decided.
-fn check_draft(book: &mut Book, actor: UserId, co: CompanyId, transaction_id: &str, input: &Value, secrets: &SecretSet) -> FbResult<Result<Value, Item>> {
-    command(book, secrets, |w| {
-        let tx = w.tx;
-        services::access(tx, actor, co)?;
-        let (item, f) = validated(w, co, transaction_id)?;
-        let Some(f) = f else { return Ok(Err(item)) };
-        if item.money_in() {
-            return Err(err("Money coming in cannot be recorded as a check."));
+fn check_draft(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, transaction_id: &str, input: &Value) -> FbResult<Result<Value, Item>> {
+    let tx = w.tx;
+    services::access(tx, actor, co)?;
+    let (item, f) = validated(w, co, transaction_id)?;
+    let Some(f) = f else { return Ok(Err(item)) };
+    if item.money_in() {
+        return Err(err("Money coming in cannot be recorded as a check."));
+    }
+    if !is_designated_bank(tx, co, f.ledger_account_id.as_deref())? {
+        return Err(err("A check needs the feed mapped to a designated bank account (Accounting setup)."));
+    }
+    let vendor = id(field(input, "vendor_id"), true)?;
+    let payee_kind = if vendor.is_some() { "VENDOR" } else { "OTHER" };
+    let mut payee = opt_text(input, "payee_name", 120)?;
+    if payee_kind == "OTHER" && payee.is_empty() {
+        payee = text::sanitize(&item.description, 120);
+        if payee.is_empty() {
+            payee = "Bank feed payee".into();
         }
-        if !is_designated_bank(tx, co, f.ledger_account_id.as_deref())? {
-            return Err(err("A check needs the feed mapped to a designated bank account (Accounting setup)."));
+    }
+    let number = opt_text(input, "check_number", 20)?;
+    let number = if number.is_empty() { default_check_number(&item) } else { number };
+    let description = text::sanitize(&item.description, 1000);
+    let mapped = f.ledger_account_id.clone().unwrap_or_default();
+    // Worker item 46: a split check carries one expense line per split line, with the row's EFT-n number.
+    let (category, lines) = match split_lines(input, &item, &mapped, true)? {
+        Some(split) => (
+            format!("split:{}", split_intent(&split)),
+            split.iter().map(|l| json!({"tab":"EXPENSE","account_id":l.account,"description":if l.memo.is_empty() { description.clone() } else { l.memo.clone() },"rate":money(l.amount)})).collect::<Vec<_>>(),
+        ),
+        None => {
+            let category = account_id(field(input, "account_id"), false)?.unwrap_or_default();
+            let line = json!({"tab":"EXPENSE","account_id":category,"description":description,"rate":money(magnitude(&item)?)});
+            (category, vec![line])
         }
-        let vendor = id(field(input, "vendor_id"), true)?;
-        let payee_kind = if vendor.is_some() { "VENDOR" } else { "OTHER" };
-        let mut payee = opt_text(input, "payee_name", 120)?;
-        if payee_kind == "OTHER" && payee.is_empty() {
-            payee = text::sanitize(&item.description, 120);
-            if payee.is_empty() {
-                payee = "Bank feed payee".into();
-            }
-        }
-        let number = opt_text(input, "check_number", 20)?;
-        let number = if number.is_empty() { default_check_number(&item) } else { number };
-        let category = id(field(input, "account_id"), false)?.unwrap_or_default();
-        let intent = format!("{category}:{}:{payee}:{number}", vendor.clone().unwrap_or_else(|| "None".into()));
-        let payload = w.value(&json!({"bank_id":f.ledger_account_id,"payee_kind":payee_kind,"vendor_id":vendor,"payee_name":payee,"date":item.date(),
-            "check_number":number,"memo":memo(&item),"request_key":request_key("CHECK", &item, &intent),
-            "lines":[{"tab":"EXPENSE","account_id":category,"description":text::sanitize(&item.description, 1000),"rate":money(magnitude(&item)?)}]}));
-        let saved = checks::save_check_tx(tx, actor, co, &payload)?;
-        // After the input's validation, before the draft commits: a refused duplicate leaves no draft behind.
-        recorded_unless_confirmed(already_recorded(tx, co, &item)?, input)?;
-        Ok(Ok(saved))
-    })
+    };
+    let intent = format!("{category}:{}:{payee}:{number}", vendor.clone().unwrap_or_else(|| "None".into()));
+    let payload = w.value(&json!({"bank_id":f.ledger_account_id,"payee_kind":payee_kind,"vendor_id":vendor,"payee_name":payee,"date":item.date(),
+        "check_number":number,"memo":memo(&item),"request_key":request_key("CHECK", &item, &intent),
+        "lines":lines}));
+    let saved = checks::save_check_tx(tx, actor, co, &payload)?;
+    // After the input's validation, before the draft commits: a refused duplicate leaves no draft behind.
+    let earlier = already_recorded(tx, co, &item)?;
+    let entry = if earlier.is_none() { entry_on_account(tx, co, &item)? } else { None };
+    recorded_unless_confirmed(earlier, input)?;
+    entry_unless_confirmed(entry, item.date(), input)?;
+    Ok(Ok(saved))
 }
 
 /// `ignore`.
@@ -443,7 +740,7 @@ pub fn return_blocker(q: &(impl Query + ?Sized), _co: CompanyId, item: &Item) ->
     if item.status == "ACCEPTED" {
         if journal_live(q, item.journal_id.as_deref())? {
             let other: Option<i64> = q.query_row(
-                "SELECT b.ordinal FROM bankfeeds_transaction b WHERE b.id<>?2 AND (b.journal_id=?1 OR b.journal_line_id IN(SELECT id FROM ledger_journalline WHERE journal_id=?1)) ORDER BY b.ordinal LIMIT 1",
+                "SELECT b.ordinal FROM bankfeeds_transaction b WHERE b.id<>?2 AND (b.journal_id=?1 OR b.journal_line_id IN(SELECT id FROM ledger_journalline WHERE journal_id=?1) OR EXISTS(SELECT 1 FROM bankfeeds_transaction_match m WHERE m.transaction_id=b.id AND m.journal_id=?1)) ORDER BY b.ordinal LIMIT 1",
                 params![item.journal_id, item.id],
                 |r| r.get(0),
             ).optional()?;
@@ -479,6 +776,7 @@ fn back_to_review(w: &Writes<'_, '_>, user: &crate::store::User, co: CompanyId, 
         "UPDATE bankfeeds_transaction SET status='NEW',accepted_as='',journal_id=NULL,journal_line_id=NULL,reference='',reference_url='',decided_at=NULL,decided_by_id=NULL,return_count=?2,updated_at=?3 WHERE id=?1",
         params![item.id, count, py::now_utc()],
     )?;
+    w.execute("DELETE FROM bankfeeds_transaction_match WHERE transaction_id=?1", params![item.id])?;
     w.audit(user, co, "bankfeed.returned", format!("bankfeedtransaction:{}", item.id), json!({"previous":previous,"amount":money(item.amount),"date":item.date().unwrap_or("None")}))?;
     super::item(tx, co, &item.id)
 }

@@ -7,13 +7,17 @@ const vm=require('node:vm');
 const target='fb://app/c/0195b4a4-55af-719e-96cb-a2f946b067bf/backups/';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const diagnostics=require('../main/diagnostics.cjs');
+const CONNECTION={READY:'ready',UNAVAILABLE:'unavailable'};
+const syntheticKey='ab'.repeat(32);
 function fixture(bankFeeds=false, canLock=true, deferResume=false, deferRecurring=false) {
-  const state={open:true,signedIn:true,generation:1,aiGeneration:1,pending:[],resumePending:[],recurringPending:[],sync:0,agentRevoked:0};
+  const state={open:true,signedIn:true,generation:1,aiGeneration:1,pending:[],resumePending:[],recurringPending:[],sync:0,agentRevoked:0,keyReads:0,keyConfigurations:[]};
   const native={setHost(){},pluginsEnabled:()=>false,bankfeedsEnabled:()=>bankFeeds,invoiceDeliveryEnabled:()=>false,configureBackups(){},
+    configureKeys:(...args)=>{state.keyConfigurations.push(args);},
+    hasCredentials:()=>false,
     aiInvalidate:()=>{state.agentRevoked++;},
     recurringBillsAsync:()=>deferRecurring?new Promise(resolve=>state.recurringPending.push(resolve)):Promise.resolve(''),
     aiGeneration:()=>String(state.aiGeneration),
-    appState:()=>JSON.stringify({open:state.open,can_lock:canLock,signed_in:state.signedIn,session_generation:state.generation}),
+    appState:()=>JSON.stringify({open:state.open,builtin:!canLock,can_lock:canLock,signed_in:state.signedIn,session_generation:state.generation}),
     hostingWanted:()=>false,hostingResumeAsync:()=>Promise.resolve('{"ok":true,"running":false}'),hostingState:()=>'{"available":false}',hostingActive:()=>false, hostingStatus:()=>'{"running":false,"bind":"","connected":0}',
     lock:()=>{state.open=false;state.signedIn=false;state.generation++;},
     signOut:()=>{state.signedIn=false;state.generation++;state.agentRevoked++;},
@@ -25,9 +29,12 @@ function fixture(bankFeeds=false, canLock=true, deferResume=false, deferRecurrin
   const electron={app:{getVersion:()=>'',commandLine:{appendSwitch(){}},enableSandbox(){},whenReady:()=>new Promise(()=>{}),on(){}},
     protocol:{registerSchemesAsPrivileged(){}},ipcMain:{handle(){}}};
   const stubs={electron,'./development.cjs':{nativeModule:()=>'/native',userData:()=>'/synthetic',netHelper:()=>'/synthetic/fb-net',remoteHelper:()=>'/none',hostingLoopback:()=>false},'./hosting.cjs':require('../main/hosting.cjs'),'/native':native,'./remote-client.cjs':require('../main/remote-client.cjs'),'./remote-mode.cjs':require('../main/remote-mode.cjs'),
-    './keys.cjs':{userDataDir:()=>'/synthetic',store:()=>({exists:()=>true,returnToMain(){}})},
+    './keys.cjs':{CONNECTION,userDataDir:()=>'/synthetic',store:()=>({
+      exists:()=>true,returnToMain(){},keyringWorks:()=>true,
+      connectionKey(){state.keyReads++;return {key:syntheticKey,state:CONNECTION.READY};},
+    })},
     './identity.cjs':{configure(){},claimInstance:()=>true},'./about.cjs':{osLabel:()=>''},
-    './ai-desktop.cjs':{create:()=>({menuItems:[],resume:()=>deferResume?new Promise(resolve=>state.resumePending.push(resolve)):Promise.resolve()})},
+    './ai-desktop.cjs':{create:()=>({menuItems:[],start:async()=>{},stop:async()=>{},resume:()=>deferResume?new Promise(resolve=>state.resumePending.push(resolve)):Promise.resolve()})},
     './save-file.cjs':{create:()=>({})},'./printing.cjs':{controller:()=>({})},
     './guards.cjs':require('../main/guards.cjs'),'./navigation.cjs':require('../main/navigation.cjs'),
     './diagnostics.cjs':{...diagnostics,logDir:()=>'/synthetic/logs',create:o=>({...diagnostics.create(o),install(){}})}};
@@ -73,12 +80,16 @@ test('SimpleFIN connect and sync use worker admission and discard results after 
   const id='0195b4a4-55af-719e-96cb-a2f946b067bf';
   for(const path of [`/c/${id}/bank-feeds/connect/`,`/c/${id}/bank-feeds/${id}/sync/`]) {
     const f=fixture(true);
+    assert.equal(f.state.keyReads,0);
     const pending=f.calls['books.run']({type:'SubmitForm',path,token:'synthetic',fields:[]});
     await tick();
+    assert.equal(f.state.keyReads,1);
+    assert.deepEqual(f.state.keyConfigurations,[[syntheticKey,CONNECTION.READY,true,'[]']]);
     assert.equal(f.state.pending.length,1);
     assert.equal(f.state.pending[0].command.path,path);
     await assert.rejects(f.calls['books.run']({}),/busy/);
     f.lockNow();
+    assert.equal(f.state.open,true,'lock waits for the worker');
     f.state.pending[0].resolve(JSON.stringify({outcome:'page',html:'private bank transactions',status:200}));
     const result=await pending;
     assert.equal(result.outcome,'redirect');assert.equal(result.location,'/');
@@ -101,9 +112,19 @@ test('identity-only deferred lock suppresses completed HTML and never stamps an 
   const g=fixture(true,false);
   const path='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/bank-feeds/connect/';
   const outcome=g.calls['books.run']({type:'SubmitForm',path,token:'synthetic',fields:[]});
-  await tick();g.lockNow();g.state.pending[0].resolve(JSON.stringify({outcome:'page',html:'private old bank form',status:200}));
-  const settled=await Promise.allSettled([outcome]);
-  assert.ok(!JSON.stringify(settled).includes('private old bank form'));
+  await tick();
+  assert.equal(g.state.keyReads,0,'built-in books cannot save a new bank connection');
+  assert.equal(g.state.pending.length,1);
+  const generation=g.state.generation;
+  g.lockNow();
+  assert.equal(g.state.generation,generation,'sign-out waits for the worker');
+  g.state.pending[0].resolve(JSON.stringify({outcome:'page',html:'private old bank form',status:200}));
+  const reply=await outcome;
+  assert.equal(reply.outcome,'redirect');
+  assert.equal(reply.location,'/desktop/sign-in/');
+  assert.ok(!JSON.stringify(reply).includes('private old bank form'));
+  assert.equal(g.state.generation,generation+1);
+  assert.equal(g.state.open,true);assert.equal(g.state.signedIn,false);
   assert.equal(g.getPending(),null,'old invalid HTML must never be relabelled under the new generation');
 });
 

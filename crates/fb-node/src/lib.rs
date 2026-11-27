@@ -75,7 +75,7 @@ use zeroize::Zeroizing;
 static APP: LazyLock<Mutex<App>> = LazyLock::new(|| {
     let mut app = App::new();
     app.device_key = None;
-    app.connection_keys = fb_app::ConnectionKeys::Unavailable;
+    app.connection_keys = fb_app::ConnectionKeys::Deferred;
     Mutex::new(app)
 });
 
@@ -391,13 +391,13 @@ enum Action {
 /// "Host these books" controls (hosting.rs), on the worker pool: they wait for the listener.
 enum HostingAction {
     On { bind: String, host_name: String },
-    Off,
+    Off { generation: String },
     End(String),
     Resume { host_name: String },
     Restart { host_name: String },
     Pair,
     CancelPair,
-    Revoke(String),
+    Revoke { device: String, generation: String },
     Repair { kind: String, host_name: String },
 }
 
@@ -474,10 +474,20 @@ impl Task for Work {
 }
 
 fn hosting_in(door: &mut App, action: &HostingAction) -> Result<String> {
+    // The dialog belongs to the local Administrator who opened the Hosting screen.
+    // Check on this worker, under the desktop door, after any queued remote work.
+    if let HostingAction::Off { generation } | HostingAction::Revoke { generation, .. } = action {
+        hosting::with_desk(door, hosting::TASK_WAIT, |app| {
+            if app.session_generation().to_string() != *generation {
+                return Err(fail("The active user changed. Open the screen again."));
+            }
+            Ok(())
+        })?;
+    }
     let done = || Ok(json(serde_json::json!({"ok": true})));
     match action {
         HostingAction::On { bind, host_name } => hosting::turn_on(door, bind, host_name).and_then(|()| done()),
-        HostingAction::Off => hosting::stop(door).and_then(|()| done()),
+        HostingAction::Off { .. } => hosting::stop(door).and_then(|()| done()),
         HostingAction::End(reason) => {
             hosting::end_from(door, reason);
             done()
@@ -486,7 +496,7 @@ fn hosting_in(door: &mut App, action: &HostingAction) -> Result<String> {
         HostingAction::Restart { host_name } => hosting::restart(door, host_name).and_then(|()| done()),
         HostingAction::Pair => hosting::pair(door).map(json),
         HostingAction::CancelPair => hosting::cancel_pair(door).and_then(|()| done()),
-        HostingAction::Revoke(id) => hosting::revoke(door, id).map(json),
+        HostingAction::Revoke { device, .. } => hosting::revoke(door, device).map(json),
         HostingAction::Repair { kind, host_name } => hosting::repair(door, kind, host_name).map(|aside| json(serde_json::json!({"ok": true, "aside": aside}))),
     }
 }
@@ -521,10 +531,11 @@ pub fn hosting_status() -> Result<String> {
 
 /// What the Hosting screen shows (JSON; no secret). Administrators get the details.
 #[napi]
-pub fn hosting_state() -> Result<String> {
+pub fn hosting_state(skip_if_busy: Option<bool>) -> Result<String> {
     boundary::init();
     let mut door = app()?;
-    within("hosting_state", Class::Read, &mut door, |door| hosting::state(door).map(json))
+    let wait = if skip_if_busy == Some(true) { std::time::Duration::ZERO } else { hosting::DOOR_WAIT };
+    within("hosting_state", Class::Read, &mut door, |door| hosting::state(door, wait).map(json))
 }
 
 fn hosting_task(action: HostingAction) -> Result<AsyncTask<Work>> {
@@ -536,7 +547,7 @@ fn hosting_task(action: HostingAction) -> Result<AsyncTask<Work>> {
 pub fn hosting_on_async(bind: String, host_name: String) -> Result<AsyncTask<Work>> { hosting_task(HostingAction::On { bind, host_name }) }
 /// Administrator: turn hosting off.
 #[napi]
-pub fn hosting_off_async() -> Result<AsyncTask<Work>> { hosting_task(HostingAction::Off) }
+pub fn hosting_off_async(generation: String) -> Result<AsyncTask<Work>> { hosting_task(HostingAction::Off { generation }) }
 /// Trusted main process: stop hosting (quit, the network changed); the setting stays on.
 #[napi]
 pub fn hosting_end_async(reason: String) -> Result<AsyncTask<Work>> { hosting_task(HostingAction::End(reason)) }
@@ -553,7 +564,7 @@ pub fn hosting_pair_async() -> Result<AsyncTask<Work>> { hosting_task(HostingAct
 pub fn hosting_cancel_pair_async() -> Result<AsyncTask<Work>> { hosting_task(HostingAction::CancelPair) }
 /// Administrator: revoke a paired computer.
 #[napi]
-pub fn hosting_revoke_async(device_id: String) -> Result<AsyncTask<Work>> { hosting_task(HostingAction::Revoke(device_id)) }
+pub fn hosting_revoke_async(device: String, generation: String) -> Result<AsyncTask<Work>> { hosting_task(HostingAction::Revoke { device, generation }) }
 /// Administrator: the repair the Hosting screen offers for a start that was refused, then start.
 #[napi]
 pub fn hosting_repair_async(kind: String, host_name: String) -> Result<AsyncTask<Work>> { hosting_task(HostingAction::Repair { kind, host_name }) }
@@ -712,6 +723,12 @@ mod tests {
 }
 
 
+/// Trusted main process only, before sign-in. Older built-in books can have saved connections.
+#[napi]
+pub fn has_credentials() -> Result<bool> {
+    guarded("has_credentials", Class::Read, |app| app.has_credentials().map_err(app_error))
+}
+
 /// OS-held connection secret, never derived from a book or included in its backups.
 /// `state` is the shell's finding (`ready`, `created`, `replaced` or `unavailable`); an unavailable
 /// key is never configured, so sign-in leaves saved connections exactly as they are.
@@ -723,7 +740,7 @@ pub fn configure_keys(device_hex: String, state: String, os_store_usable: bool, 
         Some(raw) if !raw.is_empty() => serde_json::from_str::<Vec<String>>(&raw).map_err(|_| fail("Invalid connection keys."))?.into_iter().map(Zeroizing::new).collect(),
         _ => vec![],
     };
-    guarded("configure_keys", Class::Read, |app| {
+    guarded("configure_keys", Class::Write, |app| {
         let state = fb_app::ConnectionKeys::parse(&state).ok_or_else(|| fail("Unknown connection key state."))?;
         let key = match state {
             fb_app::ConnectionKeys::Unavailable => None,
@@ -736,7 +753,7 @@ pub fn configure_keys(device_hex: String, state: String, os_store_usable: bool, 
         app.device_key = key;
         app.connection_keys = state;
         app.os_store_usable = os_store_usable && state != fb_app::ConnectionKeys::Unavailable;
-        Ok(())
+        app.connection_keys_changed().map_err(app_error)
     })
 }
 

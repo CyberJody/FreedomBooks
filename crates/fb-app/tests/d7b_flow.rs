@@ -263,6 +263,7 @@ fn stale_finish_without_tick_changes_is_refused() {
     tick_all(&html, &mut p);
     post(&mut f.app, &path, p);
     let current = screens::render(&mut f.app, &path).unwrap().html;
+    assert!(current.contains("id=\"cleared-credit\">200.00<") && current.contains("id=\"cleared-balance\">800.00<"));
     let mut stale = rec_fields(&current, "reconcile");
     tick_all(&current, &mut stale);
     stale.iter_mut().find(|(k, _)| k == "revision").unwrap().1 = "1".into();
@@ -434,4 +435,16 @@ fn csv_export_preserves_signed_money_and_escapes_user_text() {
         panic!("CSV did not use native export")
     };
     assert!(contents.contains("Cleared checks and payments (−),-200.00\r\n"));
+}
+
+#[test]
+fn register_cards_follow_both_dates_and_keep_the_opening_and_ending_balances() {
+    let mut f = fixture();
+    let path = format!("/c/{}/accounts/{}/register/?start=2026-10-15&end=2026-10-31", f.c, f.bank);
+    let html = screens::render(&mut f.app, &path).unwrap().html;
+    assert!(html.contains(r#"id="opening-balance">1,000.00"#) && html.contains("Oct 15, 2026"));
+    assert!(html.contains("Cleared movement in period") && html.contains(r#"id="uncleared-left">200.00"#));
+    assert!(html.contains(r#"id="uncleared-right">0.00"#) && html.contains(r#"id="ending-balance">800.00"#));
+    let csv = screens::render(&mut f.app, &format!("{path}&output=csv")).unwrap().html;
+    assert!(csv.contains("Uncleared deposits,1000.00"));
 }

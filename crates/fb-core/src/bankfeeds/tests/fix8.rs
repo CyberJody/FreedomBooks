@@ -338,14 +338,15 @@ fn fix8_split_secrets_every_write_path_and_audit_action() {
     let selection=qbo::Selection{row:2,preserve_auto_post:true,account_id:office.clone(),scope:f.feed("ACT-checking"),kind:"EXPENSE".into(),payee_id:String::new(),payee_table:String::new()};
     returned.push(qbo::import_rules(&mut f.book,f.u,f.c,&source,&[selection],true,&SecretSet::none()).unwrap().to_string());
     let automatic=StagedPull{accounts:vec![acct("ACT-checking","Checking",vec![tx("SECRET-AUTO","2026-10-22",-17321,&format!("Automatic secret test {password}"))])],..StagedPull::default()};
-    returned.push(store_pull_for_desktop(&mut f.book,f.u,f.c,&f.conn.clone(),&automatic,NOW,false,None,&known).unwrap().to_string());
+    returned.push(store_pull_for_desktop(&mut f.book,f.u,f.c,&f.conn.clone(),&automatic,NOW,false,None,&known, &[]).unwrap().to_string());
     let auto_item=f.item("SECRET-AUTO");
     assert!(auto_post(&mut f.book,f.u,f.c,&auto_item.id,&known).unwrap());
     assert_eq!(turn_off_imported_auto_post(&mut f.book,f.u,f.c,None,&known).unwrap(),1);
     // The inline account-creation path must mask the user-entered name and its downstream audit.
     let card = f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE remote_id='ACT-card'", [], |r| r.get::<_,String>(0)).unwrap();
-    for kind in [NewAccountKind::Checking, NewAccountKind::Savings, NewAccountKind::CreditCard] {
-        save_mappings(&mut f.book, f.u, f.c, &f.conn, &[(card.clone(), MappingTarget::New { name: password.into(), kind })], &known).unwrap();
+    // Each new account has its own name (account names are unique in a company); every one holds the secret.
+    for (kind, label) in [(NewAccountKind::Checking, "checking"), (NewAccountKind::Savings, "savings"), (NewAccountKind::CreditCard, "card")] {
+        save_mappings(&mut f.book, f.u, f.c, &f.conn, &[(card.clone(), MappingTarget::New { name: format!("{password} {label}"), kind })], &known).unwrap();
     }
     returned.push(forget(&mut f.book, f.u, f.c, second["id"].as_str().unwrap(), &known).unwrap().to_string());
     // the credential is gone with the forgotten connection: the host has no set to pass

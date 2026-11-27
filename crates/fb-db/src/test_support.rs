@@ -196,6 +196,21 @@ pub fn populated_copy(
         }
         rows.sort_by_key(|r| format!("{r:?}"));
     }
+    // A prior download does not carry evidence that its ID survived the provider parser.
+    // The upgrade must default those rows to unverified while retaining every earlier field.
+    if migrations.iter().all(|(name, _)| *name < "0207_bankfeed_id_provenance") {
+        for table in ["bankfeeds_account", "bankfeeds_transaction"] {
+            let Some(rows) = expected.get_mut(table) else { continue };
+            if let Some(index) = source.prepare(&format!("SELECT * FROM {table}"))?
+                .column_names().position(|name| name == "provider_id_verified")
+            {
+                for row in rows.iter_mut() {
+                    row[index] = Value::Integer(0);
+                }
+                rows.sort_by_key(|row| format!("{row:?}"));
+            }
+        }
+    }
     for (_, sql) in triggers {
         conn.execute_batch(&sql)?;
     }

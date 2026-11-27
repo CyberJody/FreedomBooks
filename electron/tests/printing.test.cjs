@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function fixture(route='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/invoices/0195b4a4-55af-719e-96cb-a2f946b067c0/print/', overrides={}) {
+function fixture(route='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/invoices/0195b4a4-55af-719e-96cb-a2f946b067c0/print/', overrides={},remote=null) {
   const state={open:true,generation:1,url:'fb://app'+route,calls:[],saved:[],cancel:false,afterDialog:null,afterPdf:null,afterMenu:null};
   const win={isDestroyed:()=>false,loadURL:async target=>{state.url=target;state.calls.push('navigate');},webContents:{
     getURL:()=>state.url,getTitle:()=> 'INV-000001 · Invoice',
@@ -18,9 +18,9 @@ function fixture(route='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/invoices/0195b4a
     Menu:{buildFromTemplate:items=>({popup:async opts=>{if(state.afterMenu)await state.afterMenu();items[1].click();opts.callback();}})},
   };
   const output={validate:()=>{},write:(file,pdf)=>state.saved.push({file,pdf,options:{mode:0o600}})};
-  const sandbox={URL,module:{exports:{}},require:name=>name==='electron'?electron:require(name.startsWith('.')?path.join(__dirname,'../main',name):name)};
+  const sandbox={URL,URLSearchParams,module:{exports:{}},require:name=>name==='electron'?electron:require(name.startsWith('.')?path.join(__dirname,'../main',name):name)};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../main/printing.cjs'),'utf8'),sandbox);
-  return {state,win,controller:sandbox.module.exports.controller(native,output,async work=>work())};
+  return {state,win,controller:sandbox.module.exports.controller(native,output,async work=>work(),remote)};
 }
 
 test('recovery PDF and printing await their asynchronous, session-bound acknowledgment',async()=>{
@@ -60,6 +60,23 @@ test('PDF Save selection produces bytes only in the main process with Letter and
   assert.equal(state.saved[0].file,'/synthetic/invoice.pdf');assert.equal(state.saved[0].options.mode,0o600);
   const pdf=state.calls.find(c=>c[0]==='pdf')[1];assert.equal(pdf.preferCSSPageSize,true);assert.equal(pdf.pageSize,'Letter');
   assert.equal(pdf.printBackground,true);
+});
+
+test('the PDF dialog suggests a clean basename and a fixed extension', async () => {
+  const {state, win, controller} = fixture();
+  state.cancel = true;
+  for (const [title, expected] of [
+    ['../drafts/..Invoice\u202E12.PDF', 'Invoice_12.pdf'],
+    ['C:\\exports\\...NUL.copy.pdf', 'FreedomBooks.pdf'],
+    ['LPT².pdf', 'FreedomBooks.pdf'],
+    ['... ', 'FreedomBooks.pdf'],
+    ['Résumé (07).pdf', 'Résumé (07).pdf'],
+    ['x'.repeat(140), 'x'.repeat(100) + '.pdf'],
+  ]) {
+    win.webContents.getTitle = () => title;
+    await controller.perform(win, 'pdf');
+    assert.equal(state.calls.at(-1)[1].defaultPath, expected);
+  }
 });
 
 test('cancelled save and lock/navigation races cannot write PDF output',async()=>{
@@ -111,4 +128,31 @@ test('locked, non-print and foreign pages cannot open an output dialog',async()=
     await assert.rejects(controller.perform(win,'pdf'),/Unlock|print view/);
     assert.equal(state.calls.length,0);
   }
+});
+
+test('connected menu and in-page chooser use the host print view and this computer’s printer or PDF dialog', async () => {
+  const marker='synthetic-marker';
+  const renders=[];
+  const remote={active:()=>true, printMarker:()=>marker, printPage:async (target, accepted)=>{
+    assert.equal(accepted,marker);
+    renders.push(target);
+    return {status:200,html:'<button id="print-now">'};
+  }};
+  const target='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/reports/balance-sheet/?output=print';
+  const {win,state,controller}=fixture(target+'&__fb_remote_page='+marker,{
+    render:()=>assert.fail('opened local books'), appState:()=>assert.fail('consulted local session'),
+  },remote);
+  await controller.menuItems[0].click(null,win);
+  await controller.menuItems[1].click(null,win);
+  await controller.choose(win,target);
+  assert.ok(renders.length && renders.every(t=>t===target));
+  assert.equal(state.saved.length,2);
+  assert.equal(state.calls.filter(c=>c[0]==='print').length,1);
+  win.webContents.getPrintersAsync=async()=>[];
+  await assert.rejects(controller.perform(win,'print'),/No printer.*Save as PDF/);
+  win.webContents.getPrintersAsync=async()=>{throw new Error('Failed to enumerate printers');};
+  await assert.rejects(controller.perform(win,'print'),/Could not find a printer.*Save as PDF/);
+  state.afterPdf=()=>{remote.printMarker=()=>null;};
+  await assert.rejects(controller.perform(win,'pdf'),/changed/);
+  assert.equal(state.saved.length,2);
 });

@@ -19,3 +19,5 @@ nav a[aria-current=page]{background:#ebe4ee;font-weight:650}
 
 /* Register: bounded journal memos can still be one long unbroken word; money columns must stay visible. */
 .register{table-layout:fixed}.register th:nth-child(1),.register td:nth-child(1){width:8.5em;white-space:nowrap}.register th:nth-child(2),.register td:nth-child(2){width:7em;white-space:nowrap}.register th:nth-child(3),.register td:nth-child(3){width:11em}.register td:nth-child(3) a{white-space:nowrap}.register th:nth-child(4),.register td:nth-child(4){width:10em}.register th.amount,.register td.amount{width:8em}.register td{overflow-wrap:anywhere}@media(max-width:850px){.register{table-layout:auto}.register th,.register td{width:auto}}
+/* Worker items 5 and 17: a link to one Accounting setup field (#id_receivables) marks that field. */
+form select:target,form input:target{outline:3px solid #9271a6;outline-offset:2px}

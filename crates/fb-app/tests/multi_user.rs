@@ -409,6 +409,21 @@ fn idle_timeout_signs_out_only_the_idle_session() {
 }
 
 #[test]
+fn book_defers_transport_slot_abandonment_but_not_user_idle_sign_out() {
+    let mut o = office_with(Policy::default());
+    let remote = o.host.open_transport_session(ClientInfo::remote("Synthetic laptop", None)).unwrap();
+    let now = Instant::now();
+    let local = o.host.open_session_at(ClientInfo::local("Host desktop"), now).unwrap();
+    let later = now + Duration::from_secs(2 * 60 * 60);
+    assert_eq!(o.host.expire_idle(later), vec![local]);
+    assert!(!o.status(&remote).signed_in);
+    o.host.dispatch_at(&remote, Request::SignIn { username: KEEPER.into(), password: PASSWORD.into() }, later).unwrap();
+    assert!(o.status(&remote).signed_in);
+    assert_eq!(o.host.expire_idle(later + Duration::from_secs(30 * 60)), vec![remote.clone()]);
+    assert!(!o.status(&remote).signed_in);
+}
+
+#[test]
 fn maintenance_is_exclusive_and_signs_everyone_else_out_only_when_it_changes_the_book() {
     let mut o = office();
     let a = o.signed_in(OWNER, true);

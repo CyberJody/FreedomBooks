@@ -47,7 +47,7 @@ async function main(){
     // Secret-bearing setup/recovery screens are deliberately excluded from saved screenshots.
     await page.fill('#id_code',code(secret,-1));await page.getByRole('button',{name:'Verify and enable MFA',exact:true}).click();
     const codes=(await page.locator('#recovery_codes').inputValue()).trim().split(/\s+/);assert.equal(codes.length,10);
-    await assert.rejects(()=>native('aiRequestAsync',[grant.token]),/unauthorized/);
+    await assert.rejects(()=>native('aiRequestAsync',[grant.token]),/approval_gone/);
     await page.getByRole('button',{name:'I saved my codes',exact:true}).click();await page.locator('#recovery_codes').waitFor({state:'detached'});await shot('mfa-01-enabled');
     pass('authenticator enrollment confirms a generated code, returns recovery codes and revokes old AI authority');
     await signout();await signin();

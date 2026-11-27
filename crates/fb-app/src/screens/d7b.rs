@@ -273,14 +273,31 @@ fn rec_url(name: &str, c: CompanyId, aid: &str) -> String {
     url(name, &[&c.to_db(), aid])
 }
 
+// A generated journal header can end with its separator when the optional source memo is empty.
+fn register_memo<'a>(memo: &'a str, number: &str, party: &str, check: bool) -> &'a str {
+    let trimmed = memo.trim_end();
+    if trimmed.strip_suffix(':') == Some(number) {
+        return &trimmed[..number.len()];
+    }
+    if check && let Some(prefix) = trimmed.strip_suffix(" ·")
+        && prefix.strip_prefix(number).and_then(|s| s.strip_prefix(": ")) == Some(party)
+    {
+        return prefix;
+    }
+    memo
+}
+
 /// Decorate the unchanged core rows with Django model attributes and local document URLs.
 fn decorate_rows(app: &mut App, c: CompanyId, rows: &mut [Value]) -> AppResult<()> {
     let sources = super::d8::sources(app, c)?;
+    let cid = c.to_db();
     let feed = scoped_rows(
         app,
         c,
-        "SELECT t.journal_line_id FROM bankfeeds_transaction t JOIN bankfeeds_account a ON a.id=t.feed_account_id JOIN bankfeeds_connection b ON b.id=a.connection_id WHERE b.company_id=? AND t.journal_line_id IS NOT NULL",
-        &[&c.to_db()],
+        "SELECT t.journal_line_id FROM bankfeeds_transaction t JOIN bankfeeds_account a ON a.id=t.feed_account_id JOIN bankfeeds_connection b ON b.id=a.connection_id WHERE b.company_id=?1 AND t.journal_line_id IS NOT NULL
+         UNION
+         SELECT m.journal_line_id FROM bankfeeds_transaction_match m JOIN bankfeeds_transaction t ON t.id=m.transaction_id JOIN bankfeeds_account a ON a.id=t.feed_account_id JOIN bankfeeds_connection b ON b.id=a.connection_id WHERE b.company_id=?2",
+        &[&cid, &cid],
     )?;
     let feed = feed
         .iter()
@@ -298,6 +315,9 @@ fn decorate_rows(app: &mut App, c: CompanyId, rows: &mut [Value]) -> AppResult<(
         row["journal_url"] = json!(ju);
         row["url"] = json!(ju);
         if let Some(source) = row["source_id"].as_str().and_then(|id| sources.get(id)) {
+            if row["description"] == "" && row["reversal"] != true {
+                row["display_memo"] = json!(register_memo(s(row, "memo"), s(row, "document_number"), &source.party, source.label == "Check"));
+            }
             row["url"] = json!(source.url);
             row["source"] = serde_json::to_value(source).unwrap();
         } else {
@@ -1090,14 +1110,13 @@ pub(super) fn bank_register(
     }
     let output = s(&data, "output");
     let export = !output.is_empty();
-    let mut result = banking::build_on(
+    let mut result = banking::build_page_on(
         &mut o.book,
         o.owner,
         c,
         aid,
         &f,
-        if export { 1 } else { requested },
-        if export { 2000 } else { 50 },
+        banking::RegisterPage { number: if export { 1 } else { requested }, size: if export { 2000 } else { 50 }, period_totals: output != "csv" },
         &today.to_string(),
     )?;
     decorate_rows(app, c, result["rows"].as_array_mut().unwrap())?;
@@ -1432,5 +1451,16 @@ mod validator_tests {
         for value in ["abc", "", "-1", "1000000001", "0000000000", "1.0"] {
             assert_eq!(shown(&format!("{id}:{value}")).unwrap_err(), vec![RELOAD]);
         }
+    }
+}
+
+#[cfg(test)]
+mod register_memo_tests {
+    use super::register_memo;
+    #[test]
+    fn only_empty_generated_parts_lose_their_separator() {
+        assert_eq!(register_memo("DEP-1: ", "DEP-1", "", false), "DEP-1");
+        assert_eq!(register_memo("CHK-1: Vendor · ", "CHK-1", "Vendor", true), "CHK-1: Vendor");
+        assert_eq!(register_memo("CHK-1: Vendor · work:", "CHK-1", "Vendor", true), "CHK-1: Vendor · work:");
     }
 }

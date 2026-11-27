@@ -176,7 +176,7 @@ fn invoice_post_uses_the_displayed_plan_and_refuses_changed_setup() {
     assert!(matches!(post(&mut f.app, &post_path, &html, post_fields(&html, "view")), Outcome::Redirect { .. }));
     assert_eq!(f.journal_count(), 1);
     let detail = render(&mut f.app, &detail_path);
-    assert!(detail.contains("100.00"));
+    assert!(detail.contains("100.00") && detail.contains("Invoice posted."));
     assert!(detail.contains("status-chip open\">Open<") || detail.contains("status-chip overdue\">Overdue<"));
 }
 
@@ -221,8 +221,12 @@ fn invoice_page_actions_follow_the_state_and_post_refuses_a_changed_draft() {
     // A payment shows in one Payments and credits list, and the balance follows it.
     let path = format!("/c/{}/receipts/new/", f.c);
     let form = render(&mut f.app, &format!("{path}?invoice={invoice}"));
+    let entries = html.split_once("<table class=\"posted-entries\">").unwrap().1.split_once("</table>").unwrap().0;
+    assert_eq!(entries.matches(">120.00<").count(), 2);
     let p = payment(&field(&form, "request_key"), &f.customer, "20.00", &[(&invoice, true, "20.00")]);
-    assert!(matches!(post(&mut f.app, &path, &form, p), Outcome::Redirect { .. }));
+    let Outcome::Redirect { location } = post(&mut f.app, &path, &form, p) else { panic!("payment not saved") };
+    let receipt = render(&mut f.app, &location);
+    assert!(receipt.contains("Still open on invoice") && receipt.contains(">20.00</td><td class=\"num\">100.00</td>"));
     let html = render(&mut f.app, &detail_path);
     assert!(html.contains("Payments and credits") && html.contains("<td>Payment</td>"));
     assert!(html.contains("<dt>Payments received</dt><dd id=\"payments-received\">−20.00</dd>"));

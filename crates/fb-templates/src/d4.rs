@@ -38,6 +38,9 @@ pub fn datetime_display(text: String) -> String {
     )
 }
 pub fn register(env: &mut Environment<'_>) {
+    env.add_filter("history_reason", |text: String| {
+        if text == "Explicit snapshot refresh" { "Updated the saved document details".to_owned() } else { text }
+    });
     env.add_filter("datetime_display", datetime_display);
     env.add_filter("filesize", |n: u64| format!("{n} B"));
     env.add_filter("yesno", |v: Value, labels: String| {
@@ -83,6 +86,7 @@ pub fn register(env: &mut Environment<'_>) {
             "collected_tax" => "Sales tax collected",
             "undeposited" => "Undeposited funds",
             "bank" => "Bank",
+            "adjustment" => "Fee or adjustment",
             _ => prefix,
         };
         if kind.as_deref() == Some("INV")

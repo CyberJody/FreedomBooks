@@ -216,12 +216,24 @@ pub enum Command {
         company_id: Id,
         sales_receipt: bool,
         values: CustomerReceiptValues,
+        /// With `true`, from an AI connection, the review also returns `settlement`: what counts
+        /// toward each allocated invoice, up to 500 entries in all (above that `settlement` is
+        /// null and `settlement_unavailable` says so). Such a review is kept for the connection
+        /// that made it. Absent or `false`: the review is exactly what it always was.
+        #[serde(default)]
+        include_settlement: bool,
     },
     RecordCustomerReceipt {
         company_id: Id,
         sales_receipt: bool,
         values: CustomerReceiptValues,
         review_token: String,
+        /// With `true`, the receipt is recorded only if the review named by `review_token` was made
+        /// by this connection with `include_settlement`, returned a `settlement`, and that is still
+        /// what counts toward every allocated invoice, checked in the posting transaction. Absent
+        /// or `false`: recorded as before.
+        #[serde(default)]
+        require_same_settlement: bool,
     },
     ReverseCustomerReceipt {
         company_id: Id,
@@ -413,6 +425,12 @@ pub enum Command {
         journal_id: Id,
         date: String,
         reason: String,
+    },
+    /// Delete a hand-made journal entry draft (never a posted entry).
+    DeleteJournal {
+        company_id: Id,
+        journal_id: Id,
+        expected_revision: i64,
     },
     FillAccountingSetup {
         company_id: Id,
@@ -680,7 +698,14 @@ pub struct CheckLineValues {
 pub struct DepositValues {
     pub request_key: String, pub bank_id: Id, pub date: String,
     pub reference: String, pub memo: String, pub receipt_ids: Vec<Id>,
+    /// Worker item 47: fee and adjustment lines (a fee is negative, such as "-24.95"). The bank gets the
+    /// receipts plus these; each posts to its own account. Absent or empty: a deposit of the receipts alone.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub adjustments: Vec<DepositAdjustmentValues>,
 }
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DepositAdjustmentValues { pub account_id: Id, pub amount: String }
 
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]

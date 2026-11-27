@@ -427,7 +427,7 @@ fn bulk(
         ),
         Field::new(
             "items",
-            "Make all existing non-stock (goods) items taxable",
+            "Make all existing products (no stock tracking) taxable",
             Widget::Checkbox {
                 checked: posted.map(|p| checked(p, "items")).unwrap_or(true),
             },
@@ -489,6 +489,12 @@ fn service_errors(errors: &mut Errors, messages: Vec<String>) {
     // _errors in the Python view attaches the service's message_dict to form fields.
     // The core's transport error flattens messages, so restore only these documented associations.
     for message in messages {
+        // Worker item 23: a new tax authority may not take an active vendor's name; that vendor can be
+        // chosen as the existing authority instead.
+        if message.starts_with("A vendor named ") {
+            error(errors, "new_agency_name", message.replace("Choose a different name.", "Choose it under Existing tax authority instead."));
+            continue;
+        }
         let field = if message
             == "A tax rate or group with this name already exists in this company (including inactive ones)."
         {
@@ -538,7 +544,11 @@ pub(super) fn submit(
             let o=app.open_mut()?;
             let input=json!({"expected_revision":revision,"charge_tax":charge,"default_item_id":get(p,"default_item").filter(|s|!s.is_empty()),"name":get(p,"name").unwrap_or(""),"rate":get(p,"rate").unwrap_or(""),"authority_name":get(p,"authority_name").unwrap_or("")});
             match salestax::configure(&mut o.book,o.owner,c,&input) {
-                Ok(_) => { app.messages.push("Sales tax saved. New sales forms use this default; existing documents keep their saved tax.".into()); return Ok(Outcome::Redirect { location:url("setup_start",&[&c.to_db()]) }); },
+                Ok(settings) => {
+                    app.messages.push("Sales tax saved. New sales forms use this default; existing documents keep their saved tax.".into());
+                    collected_tax_notice(app, &settings);
+                    return Ok(Outcome::Redirect { location:url("setup_start",&[&c.to_db()]) });
+                },
                 Err(FbError::Validation(messages)) => { for message in messages { error(&mut errors,"__all__",message); } },
                 Err(e) => return Err(e.into()),
             }
@@ -731,6 +741,16 @@ pub(super) fn submit(
         };
         match app.run(command) {
             Ok(Outcome::Done { data }) => {
+                if settings_page {
+                    collected_tax_notice(app, &data["settings"]);
+                    default_tax_notice(app, data["settings"]["default_tax_set"].as_str());
+                } else if !group && !route.args.contains_key("item_id") {
+                    // Worker item 27: the first rate added while sales tax is on became the default.
+                    let settings = app.open_mut()?.book.read(|tx| salestax::settings_for(tx, c))?;
+                    if settings["default_item_id"] == data["id"] {
+                        default_tax_notice(app, data["name"].as_str());
+                    }
+                }
                 let dest = if settings_page && data["offer"] == true {
                     "salestax:bulk_step"
                 } else if settings_page {
@@ -791,3 +811,20 @@ fn setup_page(app: &mut App, route: &Route, posted: Option<Posted<'_>>, errors: 
 }
 
 pub(crate) use payments::run_payment_command;
+
+/// Worker item 17: say which account turning sales tax on chose for collected tax.
+/// Worker item 27: the company's only tax rate was made the default for new sales forms.
+fn default_tax_notice(app: &mut App, name: Option<&str>) {
+    if let Some(name) = name {
+        app.messages.push(format!(
+            "New sales forms start with the sales tax “{name}”. You can change this in Sales tax settings."
+        ));
+    }
+}
+fn collected_tax_notice(app: &mut App, settings: &Value) {
+    if let Some(label) = settings["collected_tax_set"].as_str() {
+        app.messages.push(format!(
+            "Sales tax you collect goes to {label}. You can change this in Accounting setup."
+        ));
+    }
+}

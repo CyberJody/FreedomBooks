@@ -334,6 +334,14 @@
       "expect_error": false
     },
     {
+      "op": "l2_active",
+      "company": "c",
+      "model": "customer",
+      "record": "twin1",
+      "active": false,
+      "expect_error": false
+    },
+    {
       "op": "l2_save",
       "company": "c",
       "model": "customer",
@@ -1933,6 +1941,14 @@
       }
     },
     {
+      "op": "l2_active",
+      "company": "d6",
+      "model": "vendor",
+      "record": "d6-twin1",
+      "active": false,
+      "expect_error": false
+    },
+    {
       "op": "l2_save",
       "company": "d6",
       "model": "vendor",
@@ -1942,6 +1958,14 @@
         "display_name": "Twin supplier",
         "billing_address": "1 Main St\tTroy, NY 10000"
       }
+    },
+    {
+      "op": "l2_active",
+      "company": "d6",
+      "model": "vendor",
+      "record": "d6-twin2",
+      "active": false,
+      "expect_error": false
     },
     {
       "op": "l2_save",
@@ -1960,6 +1984,14 @@
       "model": "vendor",
       "record": "d6-twin3",
       "active": false,
+      "expect_error": false
+    },
+    {
+      "op": "l2_active",
+      "company": "d6",
+      "model": "vendor",
+      "record": "d6-twin1",
+      "active": true,
       "expect_error": false
     },
     {

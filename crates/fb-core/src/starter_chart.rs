@@ -48,7 +48,8 @@ pub(crate) fn create_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId) -> F
         "company.starter_chart_created",
         format!("company:{company}"),
         json!({"chart":"standard", "version":1, "accounts":ids}),
-    )
+    )?;
+    crate::first_run::fill_from_chart_tx(tx, actor, company)
 }
 
 #[cfg(test)]

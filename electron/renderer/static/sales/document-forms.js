@@ -4,8 +4,8 @@
 // editor shows. The server reviews and records the same entries in one step when Save is pressed.
 (() => {
   const cents = text => {
-    const m = /^(-?)(\d+)\.(\d{2})$/.exec((text || '').trim());
-    return m ? (m[1] ? -1n : 1n) * (BigInt(m[2]) * 100n + BigInt(m[3])) : null;
+    const m = /^(-?)(\d+|\d{1,3}(?:,\d{3})+)\.(\d{2})$/.exec((text || '').trim());
+    return m ? (m[1] ? -1n : 1n) * (BigInt(m[2].replaceAll(',', '')) * 100n + BigInt(m[3])) : null;
   };
   const money = n => `${n < 0n ? '-' : ''}${(n < 0n ? -n : n) / 100n}.${String((n < 0n ? -n : n) % 100n).padStart(2, '0')}`;
   const grouped = n => money(n).replace(/\B(?=(\d{3})+(?!\d))(?=.*\.)/g, ',');

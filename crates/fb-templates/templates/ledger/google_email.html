@@ -1,6 +1,7 @@
 {% if gmail_enabled %}<section class="narrow setup-connection" id="google-connection"><h2>Google email connection</h2>
 <p>Connect Gmail for this company. Invoices can be saved to Gmail Drafts for review or sent when you choose Send email.</p>
-{% if not gmail_keyring %}<p>Unlock or enable this computer’s keyring, then restart FreedomBooks to connect Google.</p>{% else %}
+{% if keyring_deferred %}<p>FreedomBooks will ask for the system keyring when you connect.</p>{% endif %}
+{% if not gmail_keyring and not keyring_deferred %}<p>Unlock or enable this computer’s keyring, then restart FreedomBooks to connect Google.</p>{% else %}
 <p class="setup-status">{% if gmail_connection %}Status: {{ gmail_connection.status }} · {{ gmail_connection.from_address }}{% else %}Not connected{% endif %}</p><ol><li>Enter your Google OAuth Desktop app client details and sending address.</li><li>Choose Connect Google and complete consent in your browser.</li><li>Return here to check the connection, then preview an invoice email.</li></ol>
 <form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="gmail_connect"><input type="hidden" name="gmail_revision" value="{{ gmail_revision }}">
 <p><label for="gmail-client">Google OAuth desktop client ID</label><input id="gmail-client" name="gmail_client_id" maxlength="512" required value="{{ gmail_connection.client_id|default('') }}"></p>

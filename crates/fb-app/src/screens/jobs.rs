@@ -205,7 +205,7 @@ fn ticket_form(app: &mut App, route: &Route, path: &str, posted: Option<Posted<'
     draw(app, "jobs/ticket_form.html", &vm)
 }
 
-fn detail_page(app: &mut App, route: &Route, path: &str, posted: Option<Posted<'_>>, errors: &Errors) -> AppResult<String> {
+fn detail_page(app: &mut App, route: &Route, path: &str, last_date: Option<&str>, posted: Option<Posted<'_>>, errors: &Errors) -> AppResult<String> {
     let c = arg_company(route)?;
     let id = route.args["ticket_id"].clone();
     let mut t = ticket(app, c, &id)?;
@@ -221,7 +221,7 @@ fn detail_page(app: &mut App, route: &Route, path: &str, posted: Option<Posted<'
         }
         put(&mut vm, "status_token", token(app, path));
         if s(&t, "status") == "OPEN" {
-            let fs = quick_time_fields(app, c, posted)?;
+            let fs = quick_time_fields(app, c, last_date, posted)?;
             put(&mut vm, "time_form", forms::bind(&decorate(fs, errors), &[]));
             put(&mut vm, "time_token", token(app, path));
         }
@@ -233,7 +233,7 @@ fn detail_page(app: &mut App, route: &Route, path: &str, posted: Option<Posted<'
     draw(app, "jobs/detail.html", &vm)
 }
 
-fn quick_time_fields(app: &mut App, c: CompanyId, posted: Option<Posted<'_>>) -> AppResult<Vec<Field>> {
+fn quick_time_fields(app: &mut App, c: CompanyId, last_date: Option<&str>, posted: Option<Posted<'_>>) -> AppResult<Vec<Field>> {
     let actor = app.open_mut()?.owner.to_db();
     let mut fs = vec![
         Field::new("request_key", "Request key", Widget::Hidden).required(),
@@ -245,7 +245,8 @@ fn quick_time_fields(app: &mut App, c: CompanyId, posted: Option<Posted<'_>>) ->
         Field::new("worker", "Worked by", Widget::Select { choices: worker_choices(app, c)? }).required(),
         Field::new("notes", "Notes", Widget::Text).attr("maxlength", jobs::NOTES_MAX.to_string()),
     ];
-    let initial = json!({"request_key":new_key(),"date":(app.today)().to_string(),"worker":actor});
+    let date = last_date.and_then(fb_db::dates::parse_iso_date).unwrap_or_else(|| (app.today)().to_string());
+    let initial = json!({"request_key":new_key(),"date":date,"worker":actor});
     for f in &mut fs {
         if !matches!(f.widget, Widget::Checkbox { .. }) {
             f.value = data_value(posted, &f.name, initial[&f.name].as_str().map(str::to_owned));
@@ -411,7 +412,7 @@ pub(super) fn render(app: &mut App, route: &Route, p: Posted<'_>, path: &str) ->
     match route.name.as_str() {
         "jobs:list" => list_page(app, route, p),
         "jobs:new" | "jobs:edit" => Ok((ticket_form(app, route, path, None, p, &none)?, 200)),
-        "jobs:detail" => Ok((detail_page(app, route, path, None, &none)?, 200)),
+        "jobs:detail" => Ok((detail_page(app, route, path, get(p, "date"), None, &none)?, 200)),
         "jobs:invoice" => Ok((invoice_page(app, route, path, None, &none)?, 200)),
         "time:list" => time_list(app, route, p),
         "time:new" | "time:edit" => Ok((time_form(app, route, path, None, p, &none)?, 200)),
@@ -462,7 +463,7 @@ pub(super) fn submit(app: &mut App, route: &Route, path: &str, p: Posted<'_>) ->
                     }
                 }
                 "add_time" => {
-                    let fs = quick_time_fields(app, c, Some(p))?;
+                    let fs = quick_time_fields(app, c, None, Some(p))?;
                     let key = request_key(p, &mut errors);
                     let date = clean_date(p, "date", true, &mut errors).unwrap_or_default();
                     let item = chosen(p, &fs[2], &mut errors);
@@ -473,11 +474,11 @@ pub(super) fn submit(app: &mut App, route: &Route, path: &str, p: Posted<'_>) ->
                     if errors.is_empty() {
                         let values = TimeEntryValues {
                             entry_id: None, expected_revision: None, request_key: key, customer_id: s(&t, "customer_id").to_owned(), ticket_id: Some(id.clone()),
-                            item_id: item, date, hours, rate: opt(rate), billable: super::d2::checked(p, "billable"), notes, worker_id: opt(worker),
+                            item_id: item, date: date.clone(), hours, rate: opt(rate), billable: super::d2::checked(p, "billable"), notes, worker_id: opt(worker),
                         };
                         if let Some(d) = core_errors(app.run(Command::SaveTimeEntry { company_id: cid.clone(), values }), &mut errors)? {
                             app.messages.push(format!("Added {} h of {} ({}).", s(&d, "hours"), s(&d, "item_code"), if d["billable"] == true { s(&d, "amount") } else { "not billable" }));
-                            return Ok(Outcome::Redirect { location: back });
+                            return Ok(Outcome::Redirect { location: format!("{back}?date={date}") });
                         }
                     }
                 }
@@ -495,7 +496,7 @@ pub(super) fn submit(app: &mut App, route: &Route, path: &str, p: Posted<'_>) ->
                 }
                 _ => error(&mut errors, "__all__", "Choose an action on this ticket."),
             }
-            Ok(Outcome::Invalid { html: detail_page(app, route, path, Some(p), &errors)? })
+            Ok(Outcome::Invalid { html: detail_page(app, route, path, None, Some(p), &errors)? })
         }
         "jobs:invoice" => {
             let id = route.args["ticket_id"].clone();

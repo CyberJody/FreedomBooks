@@ -5,7 +5,7 @@
 //! `cargo run -p fb-host --example dev_host -- <empty dir> <path to fb-remote>`
 //!
 //! Prints one JSON line `{"addr","code","fingerprint","company"}`. Then reads commands on stdin:
-//! `pair` (prints a new `{"code"}`), `revoke <device id>`, `devices`, and stops at end of input.
+//! `pair` (prints a new `{"code"}`), `revoke <device id>`, `devices`, `end-sessions`, and stops at end of input.
 use fb_app::App;
 use fb_app::identity::Role;
 use fb_app::keys::MasterKey;
@@ -16,6 +16,7 @@ use fb_remote_proto::link::{HostLink, Start};
 use fb_remote_proto::{Config, Dispatcher};
 use std::io::{BufRead, Write};
 use std::sync::Arc;
+use std::time::Duration;
 
 pub const OWNER: &str = "Synthetic owner";
 pub const OWNER_PASSWORD: &str = "Synthetic owner user password";
@@ -25,9 +26,19 @@ pub const PASSWORD: &str = "Synthetic individual password";
 fn main() {
     let mut args = std::env::args().skip(1);
     let (Some(dir), Some(exe)) = (args.next(), args.next()) else {
-        eprintln!("usage: dev_host <empty dir> <fb-remote>");
+        eprintln!("usage: dev_host <empty dir> <fb-remote> [--idle-seconds N] [--host-name NAME]");
         std::process::exit(2);
     };
+    let mut config = Config { host_name: "Synthetic office host".into(), ..Config::default() };
+    while let Some(option) = args.next() {
+        let value = args.next().expect("option value");
+        match option.as_str() {
+            "--idle-seconds" => config.idle = Duration::from_secs(value.parse().expect("idle seconds")),
+            "--host-name" => config.host_name = value,
+            _ => panic!("unknown option: {option}"),
+        }
+    }
+    let host_name = config.host_name.clone();
     let dir = std::path::PathBuf::from(dir);
     let mut app = App::new();
     app.backups.configure(&dir).expect("backups folder");
@@ -40,10 +51,10 @@ fn main() {
     // A development host keeps its audit key only for this run (a real host keeps it sealed).
     let audit_key = AuditKey::generate().expect("audit key");
     let audit = AuditLog::open(&dir.join("remote-audit.jsonl"), &audit_key, Expect::New).expect("audit log");
-    let dispatcher = Arc::new(Dispatcher::new(SessionBackend::new(shared), Config { host_name: "Synthetic office host".into(), ..Config::default() }, Box::new(audit)));
+    let dispatcher = Arc::new(Dispatcher::new(SessionBackend::new(shared), config, Box::new(audit)));
     let state = dir.join("remote");
     std::fs::create_dir_all(&state).expect("state dir");
-    let link = HostLink::start(dispatcher, Start::new(exe.into(), "127.0.0.1:0", None, state, "Synthetic office host").expect("start")).expect("listener");
+    let link = HostLink::start(dispatcher.clone(), Start::new(exe.into(), "127.0.0.1:0", None, state, &host_name).expect("start")).expect("listener");
     let code = link.arm_pairing(OWNER).expect("pairing code");
     let mut out = std::io::stdout().lock();
     let line = serde_json::json!({"addr": link.addr, "code": fb_remote_proto::code::display(&code), "fingerprint": link.fingerprint, "company": first.to_db()});
@@ -54,6 +65,10 @@ fn main() {
         let reply = match command.split_once(' ').unwrap_or((command.as_str(), "")) {
             ("pair", _) => answer(link.arm_pairing(OWNER).map(|c| serde_json::json!({"code": fb_remote_proto::code::display(&c)}))),
             ("revoke", id) => answer(link.revoke(id, OWNER).map(|r| serde_json::json!({"revoked": r.revoked, "already": r.already, "unsaved": r.unsaved}))),
+            ("end-sessions", _) => {
+                dispatcher.end_all("synthetic test");
+                serde_json::json!({"sessions": dispatcher.session_count()})
+            }
             ("devices", _) => answer(link.devices().map(|d| serde_json::json!({"devices": d.into_iter().map(|d| serde_json::json!({"id": d.id, "name": d.name, "revoked": d.revoked_at.is_some()})).collect::<Vec<_>>()}))),
             _ => serde_json::json!({"error": "unknown command"}),
         };

@@ -27,6 +27,8 @@ fn fixture() -> Fixture {
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     let mut app = App::new();
     app.today = today;
+    app.now = || "2026-10-16T01:00:00Z".parse().unwrap(); // still October 15 in the display zone
+
     app.backups.configure(dir.path()).unwrap();
     let company = app.create_book(&path, &MasterKey::new([43; 32]), OWNER, "Synthetic home company").unwrap().company_id;
     app.enroll_owner(PASSWORD).unwrap();
@@ -148,8 +150,8 @@ fn every_home_figure_equals_the_screen_it_links_to() {
     assert!(attention.contains("2 overdue invoices") && attention.contains("1,450.00"), "{attention}");
     assert!(attention.contains(&format!(r#"href="/c/{c}/invoices/?state=OVERDUE""#)));
     let invoices = page(&mut f.app, &format!("/c/{c}/invoices/?state=OVERDUE"));
-    assert_eq!(after(&invoices, "Overdue</span>", r#"<span class="tracker-value">"#, "</span>"), "1450.00 USD");
-    assert_eq!(after(&invoices, "Open unpaid</span>", r#"<span class="tracker-value">"#, "</span>"), "1860.10 USD");
+    assert_eq!(after(&invoices, "Overdue</span>", r#"<span class="tracker-value">"#, "</span>"), "1,450.00 USD");
+    assert_eq!(after(&invoices, "Open unpaid</span>", r#"<span class="tracker-value">"#, "</span>"), "1,860.10 USD");
     let reminders = page(&mut f.app, &format!("/c/{c}/reminders/"));
     assert!(reminders.contains(r#"2 invoices</span> <span class="reminder-total"><span class="amount">1,450.00</span>"#), "reminders agree");
     // Bills: 220 overdue; 140 due within the reminder window; 35.50 later; one draft.
@@ -173,7 +175,7 @@ fn every_home_figure_equals_the_screen_it_links_to() {
     assert!(money.contains(&format!(r#"href="/c/{c}/accounts/{}/register/">1000 · Checking</a><span class="amount">1,300.00</span>"#, s.bank)), "{money}");
     assert!(money.contains(&format!(r#"href="/c/{c}/accounts/{}/register/">1010 · Savings</a><span class="amount">15,000.00</span>"#, s.savings)), "{money}");
     let registers = page(&mut f.app, &format!("/c/{c}/registers/"));
-    assert!(registers.contains(r#"<td class="amount">1300.00</td>"#) && registers.contains(r#"<td class="amount">15000.00</td>"#), "registers list agrees");
+    assert!(registers.contains(r#"<td class="amount">1,300.00</td>"#) && registers.contains(r#"<td class="amount">15,000.00</td>"#), "registers list agrees");
     // This month (October, accrual): income 300 + 410.10; expenses the two October bills (140 + 35.50).
     let month = after(money, r#"id="card-month""#, r#"<dl class="month-figures">"#, "</dl>");
     assert!(month.contains("<dt>Income</dt><dd class=\"amount\">710.10</dd>"), "{month}");

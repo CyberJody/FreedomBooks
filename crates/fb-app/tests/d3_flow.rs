@@ -82,6 +82,7 @@ fn contact_notes_save_edit_and_render_line_breaks_without_executing_markup() {
         let html = screens::render(&mut app, &loc).unwrap().html;
         assert!(html.contains("First line<br><br>&lt;script&gt;alert(1)&lt;/script&gt;<br>Last line<br>Final line"));
         assert!(!html.contains("<script>alert(1)</script>"));
+        assert_eq!(html.contains("Customer saved."), model == Model::Customer);
         let edit = format!("{loc}edit/");
         let html = screens::render(&mut app, &edit).unwrap().html;
         assert!(html.contains("First line\n\n&lt;script&gt;alert(1)&lt;/script&gt;"));
@@ -103,6 +104,9 @@ fn contact_notes_save_edit_and_render_line_breaks_without_executing_markup() {
 #[test]
 fn legacy_customer_and_item_posts_preserve_omitted_tax_fields() {
     let (mut app, c) = fixture();
+    let list = screens::render(&mut app, &format!("/c/{c}/lists/customers/")).unwrap().html;
+    let filter = list.split_once("data-submit-status").unwrap().1.split("</form>").next().unwrap();
+    assert!(filter.contains("method=\"get\"") && filter.contains("name=\"status\""));
     let path = format!("/c/{c}/lists/customers/new/");
     let loc = saved(post(
         &mut app,
@@ -129,6 +133,10 @@ fn legacy_customer_and_item_posts_preserve_omitted_tax_fields() {
     ));
     assert_eq!(audit_count(&mut app), before);
     let path = format!("/c/{c}/lists/items/new/");
+    let html = screens::render(&mut app, &path).unwrap().html;
+    let rate = html.split("name=\"sale_rate\"").nth(1).unwrap().split('>').next().unwrap();
+    assert!(!rate.contains("0.00") && rate.contains("required"));
+    assert!(matches!(post(&mut app, &path, &[("code", "Untyped price"), ("kind", "SERVICE")]), Outcome::Invalid { .. }));
     let loc = saved(post(
         &mut app,
         &path,

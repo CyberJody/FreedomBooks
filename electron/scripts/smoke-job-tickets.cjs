@@ -83,7 +83,9 @@ const pass = text => { checks.push(text); console.log(`PASS ${checks.length}: ${
     assert.match(await main(), /Enter hours such as 3\.5/);
     await page.fill('#id_hours', '3.5h');
     await page.fill('#id_notes', 'Replaced the PoE switch');
-    await nav('button:has-text("Add time")', ticketUrl);
+    const ticketWithDate = new RegExp('^' + ticketUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\?date=\\d{4}-\\d{2}-\\d{2})?$');
+    await nav('button:has-text("Add time")', ticketWithDate);
+    await page.locator('main').getByText('Added 3.50 h of On-Site Support (437.50).').waitFor();
     assert.match(await main(), /Added 3\.50 h of On-Site Support \(437\.50\)/);
     assert.equal(await page.locator('#ticket-hours').innerText(), '3.50');
     assert.equal(await page.locator('#ticket-unbilled').innerText(), '437.50');
@@ -94,7 +96,8 @@ const pass = text => { checks.push(text); console.log(`PASS ${checks.length}: ${
     await page.selectOption('#id_item', support);
     await page.fill('#id_hours', '1');
     await page.fill('#id_notes', 'Follow-up visit');
-    await nav('button:has-text("Add time")', ticketUrl);
+    await nav('button:has-text("Add time")', ticketWithDate);
+    await page.locator('main').getByText('Added 1.00 h of On-Site Support (125.00).').waitFor();
     assert.equal(await page.locator('#ticket-unbilled').innerText(), '562.50');
     assert.equal(await page.locator('tr[data-entry]').count(), 2);
     pass('a second 1h entry brings the unbilled time to 562.50');

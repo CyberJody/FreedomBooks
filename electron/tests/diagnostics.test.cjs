@@ -125,11 +125,11 @@ function launchMain(native) {
   };
   const store = {exists: () => true, bookPath: () => '/synthetic/books/default.fbbook', mainBook: () => '/synthetic/books/default.fbbook', books: () => [],
     activeChoice: () => 'saved', remember() {}, returnToMain() {}, hasPasswordWrap: () => false, keyringWorks: () => true,
-    bookKeyStatus: () => 'present', bookKeyCandidates: () => [], readSealedKey: () => 'k', removeSealedKey() {}, sealBook() {}, connectionKey: () => ({key: null, state: 'unavailable'})};
+    bookKeyStatus: () => 'present', bookKeyCandidates: () => [], readSealedKey: () => 'k', removeSealedKey() {}, sealBook() {}, hasConnectionKeyMaterial: () => true, connectionKey: () => ({key: null, state: 'unavailable'})};
   const stubs = {electron, './development.cjs': {nativeModule: () => '/native', userData: () => '/synthetic', netHelper: () => '/none', remoteHelper: () => '/none', devTools: () => false, hostingLoopback: () => false}, './hosting.cjs': require('../main/hosting.cjs'), '/native': native, './remote-client.cjs': require('../main/remote-client.cjs'), './remote-mode.cjs': require('../main/remote-mode.cjs'),
     './keys.cjs': {userDataDir: () => '/synthetic', store: () => store, CONNECTION: {UNAVAILABLE: 'unavailable'}, SEALED_UNREADABLE: 'x'},
     './identity.cjs': {configure() {}, claimInstance: () => true}, './about.cjs': {osLabel: () => ''},
-    './ai-desktop.cjs': {create: () => ({menuItems: [], resume: () => Promise.resolve()})}, './save-file.cjs': {create: () => ({})},
+    './ai-desktop.cjs': {create: () => ({menuItems: [], start: async () => {}, stop: async () => {}, resume: () => Promise.resolve()})}, './save-file.cjs': {create: () => ({})},
     './printing.cjs': {controller: () => ({menuItems: []})}, './edit-menu.cjs': {attach() {}}, './guards.cjs': {...require('../main/guards.cjs'), sender() {}},
     './navigation.cjs': require('../main/navigation.cjs'),
     './diagnostics.cjs': {...diagnostics, logDir: () => '/synthetic/logs', create: o => ({...diagnostics.create(o), install() {}})}};

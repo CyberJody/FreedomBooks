@@ -33,11 +33,12 @@ function keyring(secret = crypto.randomBytes(32), usable = true) {
 
 function fakeNative(root, options = {}) {
   const calls = [];
-  const state = {open: false, path: null, signedIn: false, generation: 1, builtin: false};
-  const record = () => ({known: true, builtin: false, ask_password: options.ask === true});
+  const state = {open: false, path: null, signedIn: false, generation: 1, builtin: !!options.builtin};
+  const record = () => ({known: true, builtin: !!options.builtin, ask_password: options.ask === true});
   const wrong = () => Object.assign(new Error("That password or key doesn't open these books."), {code: 'FB_BOOK_WRONG_KEY'});
   const native = {
-    setHost() {}, pluginsEnabled: () => false, bankfeedsEnabled: () => false, invoiceDeliveryEnabled: () => options.invoicing === true,
+    setHost() {}, pluginsEnabled: () => !!options.plugins, bankfeedsEnabled: () => !!options.plugins,
+    aiGeneration: () => state.generation, hasCredentials: () => !!options.savedCredentials, invoiceDeliveryEnabled: () => options.invoicing === true,
     recurringBillsAsync: async () => '',
     configureBackups() {},
     appState: () => JSON.stringify({open: state.open, path: state.path, signed_in: state.signedIn, session_generation: state.generation, can_lock: true, builtin: state.builtin, viewing_restored: false}),
@@ -55,7 +56,7 @@ function fakeNative(root, options = {}) {
     },
     openProtectedBook(book, secret) {
       calls.push(['openProtectedBook', book]);
-      if (secret !== PASSWORD) throw wrong();
+      if (secret !== (options.builtin ? '' : PASSWORD)) throw wrong();
       Object.assign(state, {open: true, path: book}); return JSON.stringify({home: '/desktop/sign-in/'});
     },
     configureKeys(key, kind, usable, alternates) { calls.push(['configureKeys', kind, usable, /^[0-9a-f]{64}$/.test(key), JSON.parse(alternates || '[]')]); },
@@ -85,13 +86,14 @@ function launch(root, storage, native) {
   const handlers = {};
   const windows = [];
   const timers = [];
+  const setTimer = fn => { const timer = {fn, cleared: false, unref() {}}; timers.push(timer); return timer; };
   class BrowserWindow {
     constructor() {
       // navigation.cjs attaches to the window's web contents; these tests only need it not to throw.
       this.webContents = {on() {}, send() {}, isDestroyed: () => false, getURL: () => this.url || 'fb://app/', navigationHistory: {clear() {}, canGoBack: () => false, canGoForward: () => false}};
       windows.push(this);
     }
-    once() {} on() {} loadURL(url) { this.url = url; } isDestroyed() { return false; }
+    once() {} on() {} async loadURL(url) { this.url = url; } isDestroyed() { return false; }
   }
   const electron = {
     app: {getVersion: () => '0.1.0-test', commandLine: {appendSwitch() {}}, enableSandbox() {}, whenReady: () => Promise.resolve(), on() {}, isPackaged: false, exit() {}},
@@ -106,13 +108,14 @@ function launch(root, storage, native) {
   const guards = {...require('../main/guards.cjs'), session() {}, window() {}};
   const stubs = {electron, './development.cjs': {nativeModule: () => '/native', userData: () => root, netHelper: () => '/none', remoteHelper: () => '/none', devTools: () => false, hostingLoopback: () => false}, './hosting.cjs': require('../main/hosting.cjs'), '/native': native, './remote-client.cjs': require('../main/remote-client.cjs'), './remote-mode.cjs': require('../main/remote-mode.cjs'),
     './keys.cjs': keys, './identity.cjs': {configure() {}, claimInstance: () => true}, './about.cjs': {osLabel: () => ''},
-    './ai-desktop.cjs': {create: () => ({menuItems: [], resume: () => Promise.resolve()})},
+    './ai-desktop.cjs': {create: () => ({menuItems: [], start: async () => {}, stop: async () => {}, resume: () => Promise.resolve()})},
     './save-file.cjs': {create: () => ({})}, './printing.cjs': {controller: () => ({menuItems: []})},
     './edit-menu.cjs': {attach() {}}, './guards.cjs': guards, './diagnostics.cjs': diagnosticsStub,
-    './navigation.cjs': require('../main/navigation.cjs')};
-  const sandbox = {URL, Response, Buffer, setInterval: fn => { const timer = {fn, cleared: false, unref() {}}; timers.push(timer); return timer; }, clearInterval: timer => { timer.cleared = true; }, __dirname: path.join(__dirname, '../main'), module: {exports: {}},
+    './navigation.cjs': require('../main/navigation.cjs'),
+    './power-lock.cjs': {watch: options => require('../main/power-lock.cjs').watch({...options, setTimer})}};
+  const sandbox = {URL, Response, Buffer, setInterval: setTimer, clearInterval: timer => { timer.cleared = true; }, __dirname: path.join(__dirname, '../main'), module: {exports: {}},
     require: n => Object.hasOwn(stubs, n) ? stubs[n] : require(n)};
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../main/main.cjs'), 'utf8') + '\nmodule.exports={calls,handle,lock:lockNow,status:()=>({gateReason,pending,startupHome})};', sandbox);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../main/main.cjs'), 'utf8') + '\nmodule.exports={calls,handle,remote,lock:lockNow,status:()=>({gateReason,pending,startupHome})};', sandbox);
   return {...sandbox.module.exports, windows, handlers, timers, dialog: electron.dialog};
 }
 
@@ -131,6 +134,77 @@ function oldComputer(root, oldKeyring) {
   return book;
 }
 const names = (calls, name) => calls.filter(c => c[0] === name);
+
+test('offline built-in books stay off the keyring across settings visits and relaunches', () => fixture(async root => {
+  let probes = 0;
+  const storage = {...keyring(), isEncryptionAvailable: () => { probes++; return true; }};
+  launch(root, storage, fakeNative(root).native);
+  await tick();
+  const file = path.join(root, 'books', 'default.fbbook');
+  fs.mkdirSync(path.dirname(file), {recursive:true});
+  fs.writeFileSync(file, 'synthetic books');
+  const company = '/c/0195b4a4-55af-719e-96cb-a2f946b067bf/';
+  const opts = {builtin:true, plugins:true, invoicing:true};
+  const sealed = path.join(root, 'connection-key.sealed');
+  for (let i = 0; i < 2; i++) {
+    const f = fakeNative(root, opts);
+    f.native.render = () => JSON.stringify({html:'Settings',status:200});
+    const app = launch(root, storage, f.native);
+    await tick();
+    f.state.signedIn = true;
+    for (const target of ['edit/', 'bank-feeds/', 'bank-feeds/connect/', 'ai/', 'stripe/'].map(p => company + p).concat('/settings/book-protection/')) {
+      assert.equal((await app.handle({url:'fb://app' + target, method:'GET'})).status, 200, target);
+    }
+    assert.equal(names(f.calls, 'configureKeys').length, 0);
+    assert.equal(probes, 0);
+    assert.ok(!fs.existsSync(sealed));
+  }
+  // Submitting the first secret configures the vault before the native form runs. A busy
+  // native desk leaves the operation retryable, even though the shell sealed the key.
+  const f = fakeNative(root, opts);
+  const app = launch(root, storage, f.native);
+  await tick();
+  f.state.signedIn = true;
+  const submit = {type:'SubmitForm', path:company + 'edit/', token:'fixture',
+    fields:[['action','stripe_connect'], ['stripe_key','rk_test_synthetic_1234']]};
+  const configure = f.native.configureKeys;
+  f.native.configureKeys = () => { throw new Error('BUSY'); };
+  await assert.rejects(app.calls['books.run'](submit), /BUSY/);
+  f.native.configureKeys = configure;
+  f.native.runAsync = async () => {
+    assert.deepEqual(names(f.calls, 'configureKeys'), [['configureKeys', 'ready', true, true, []]]);
+    return JSON.stringify({outcome:'redirect',location:submit.path});
+  };
+  assert.equal((await app.calls['books.run'](submit)).outcome, 'redirect');
+  assert.ok(probes > 0 && fs.existsSync(sealed));
+
+  // An old installation key on its own stays asleep. A saved credential wakes it before sign-in.
+  probes = 0;
+  launch(root, storage, fakeNative(root, opts).native);
+  await tick();
+  assert.equal(probes, 0);
+  const saved = fakeNative(root, {...opts, savedCredentials:true});
+  launch(root, storage, saved.native);
+  await tick();
+  assert.ok(probes > 0);
+  assert.deepEqual(names(saved.calls, 'configureKeys'), [['configureKeys', 'ready', true, true, []]]);
+}));
+
+test('adding a book password requests the keyring on submit', () => fixture(async root => {
+  const file = path.join(root, 'books', 'default.fbbook');
+  fs.mkdirSync(path.dirname(file), {recursive:true});
+  fs.writeFileSync(file, 'synthetic books');
+  const f = fakeNative(root, {builtin:true});
+  const app = launch(root, keyring(), f.native);
+  await tick();
+  f.state.signedIn = true;
+  f.native.runAsync = async () => {
+    assert.deepEqual(names(f.calls, 'configureKeys'), [['configureKeys','created',true,true,[]]]);
+    return JSON.stringify({outcome:'redirect',location:'/settings/recovery-key/'});
+  };
+  assert.equal((await app.calls['books.run']({type:'SubmitForm',path:'/settings/book-protection/',token:'fixture',
+    fields:[['action','add'], ['new_password', PASSWORD], ['repeat_password', PASSWORD]]})).outcome, 'redirect');
+}));
 
 test('after a reinstall the books ask once, recovery and connection setup still run, and the next launch opens by itself', () => fixture(async root => {
   const book = oldComputer(root, keyring());
@@ -172,7 +246,8 @@ test('a keyring unavailable for one launch changes nothing on disk, then everyth
   const old = keyring(), book = oldComputer(root, old);
   const before = fs.readdirSync(root).concat(fs.readdirSync(path.dirname(book))).sort();
   const sealed = fs.readFileSync(path.join(root, 'connection-key.sealed'));
-  const gone = {...old, getSelectedStorageBackend: () => 'basic_text'};
+  // Linux reports a lost keyring as the basic_text backend; elsewhere encryption is unavailable.
+  const gone = process.platform === 'linux' ? {...old, getSelectedStorageBackend: () => 'basic_text'} : {...old, isEncryptionAvailable: () => false};
   let f = fakeNative(root), app = launch(root, gone, f.native);
   await tick();
   assert.deepEqual(names(f.calls, 'configureKeys'), [['configureKeys', 'unavailable', false, false, []]]);
@@ -326,7 +401,7 @@ test('finding 2: the unlock screen never opens another book through its saved ke
     assert.equal(f.state.open, false, `${how}: choosing the copy did not open it`);
     assert.equal(names(f.calls, 'openBook').filter(c => c[1] === copy).length, 0, `${how}: its saved key was not used`);
     // Still locked after a lock; after "ask every time" the copy (which does not ask) gets the plain prompt.
-    assert.equal(app.status().gateReason, how === 'ask' ? '' : how, 'the unlock screen says why it is showing');
+    assert.equal(app.status().gateReason, how === 'ask' ? 'password' : how, 'the unlock screen says why it is showing');
     await app.handle({url: 'fb://app/', method: 'GET'});
     const shown = names(f.calls, 'renderGate').at(-1);
     assert.equal(shown[1], 'unlock');
@@ -609,4 +684,70 @@ test('recurring timer ignores both native and JavaScript busy errors', () => fix
   assert.equal(timer.cleared,false);
   const logs=path.join(root,'logs');
   if(fs.existsSync(logs)) for(const name of fs.readdirSync(logs)) assert.ok(!fs.readFileSync(path.join(logs,name),'utf8').includes('recurring-bills'));
+}));
+
+test('Disconnect reopens built-in-key books to sign-in and asks for a protected book password', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  for (const builtin of [true, false]) {
+    const f = fakeNative(root, {builtin});
+    const app = launch(root, storage, f.native);
+    await tick();
+    f.native.lock();
+    const reply = await app.calls['remote.disconnect']({}, {senderFrame: {url: 'fb://app/remote/disconnect/'}});
+    assert.equal(reply.location, builtin ? '/desktop/sign-in/' : '/');
+    assert.equal(f.state.open, builtin);
+    if (!builtin) assert.equal(app.status().gateReason, 'password');
+  }
+}));
+
+test('a failed built-in key offers backup recovery even after choosing books from a locked screen', () => fixture(async root => {
+  const k = keyring(), book = oldComputer(root, k);
+  const copy = copyWithSavedKey(root, k);
+  const f = fakeNative(root);
+  f.native.protectionState = target => JSON.stringify({known:true, builtin:target === copy});
+  const app = launch(root, k, f.native);
+  await tick();
+  assert.equal(f.state.path, book);
+  vm_lock(app, 'locked');
+  await app.calls['app.chooseBook']({path: copy});
+  assert.equal(app.status().gateReason, 'builtin');
+  assert.equal(f.state.open, false);
+  await app.handle({url:'fb://app/', method:'GET'});
+  assert.equal(names(f.calls, 'renderGate').at(-1)[2], 'builtin');
+  const backup = path.join(root, 'synthetic.fbbackup');
+  app.dialog.showOpenDialog = async () => ({filePaths:[backup]});
+  f.native.restoreBookFromGateAsync = async (file, name, secret) => {
+    assert.deepEqual([file, name, secret], [backup, 'Recovered books', 'synthetic recovery key']);
+    return JSON.stringify({home:'/desktop/sign-in/'});
+  };
+  const reply = await app.calls['app.restoreBook']({name:'Recovered books', secret:'synthetic recovery key'});
+  assert.equal(reply.location, '/desktop/sign-in/');
+}));
+
+test('only the local Hosting screen receives a poll of the paired computers', () => fixture(async root => {
+  const k = keyring();
+  oldComputer(root, k);
+  const f = fakeNative(root);
+  const app = launch(root, k, f.native);
+  await tick();
+  let reads = 0;
+  f.native.hostingState = skipIfBusy => {
+    assert.equal(skipIfBusy, true);
+    reads++;
+    return JSON.stringify({open:true, available:true, admin:true, devices:[{name:'Synthetic laptop'}]});
+  };
+  const sender = app.windows[0].webContents;
+  const frame = sender.mainFrame = {url:'fb://app/desktop/users/'};
+  const poll = marker => app.handlers['fb:hosting.poll']({sender, senderFrame:frame}, null, marker);
+  assert.equal((await poll(null)).ok, false);
+  frame.url = 'fb://app/hosting/';
+  assert.equal((await poll('synthetic-remote-marker')).ok, false);
+  app.remote.active = () => true;
+  assert.equal((await poll(null)).value, null);
+  assert.equal(reads, 0);
+  app.remote.active = () => false;
+  const local = await poll(null);
+  assert.ok(local.ok && local.value.includes('Synthetic laptop'));
+  assert.equal(reads, 1);
 }));

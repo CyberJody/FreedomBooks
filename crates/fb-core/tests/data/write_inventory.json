@@ -5,6 +5,17 @@
   "crates/fb-app/src/ai/operations.rs": {
     "execute:prepare": 1
   },
+  "crates/fb-app/src/ai/unattended.rs": {
+    "account_approvals:prepare": 1,
+    "ai_forget_all:execute": 1,
+    "ai_forget_all:write": 1,
+    "ai_prune_missing_anchors:execute": 1,
+    "ai_prune_missing_anchors:prepare": 1,
+    "ai_prune_missing_anchors:write": 1,
+    "ai_set_unattended:execute": 2,
+    "ai_set_unattended:write": 2,
+    "revoke_account_approvals:execute": 2
+  },
   "crates/fb-app/src/books.rs": {
     "audit_made_main:prepare": 1,
     "audit_made_main:write": 1,
@@ -12,9 +23,9 @@
   },
   "crates/fb-app/src/credentials.rs": {
     "migrate_legacy_envelopes:prepare": 1,
+    "prepare_bankfeed_masks:prepare": 1,
     "release_bankfeeds_unavailable:prepare": 1,
-    "restore_ai_credentials:prepare": 1,
-    "restore_bankfeeds:prepare": 1
+    "restore_ai_credentials:prepare": 1
   },
   "crates/fb-app/src/hosting.rs": {
     "save_host_record:execute": 1,
@@ -28,6 +39,9 @@
     "save_desktop_user:execute": 6,
     "save_desktop_user:prepare": 1,
     "save_desktop_user:write": 1
+  },
+  "crates/fb-app/src/mfa.rs": {
+    "mfa_commit_change:write": 1
   },
   "crates/fb-app/src/recurring_bills.rs": {
     "desktop_tick:prepare": 1
@@ -58,6 +72,7 @@
     "detail:prepare": 1
   },
   "crates/fb-app/src/screens/d4.rs": {
+    "posted_entries:prepare": 1,
     "references:prepare": 1
   },
   "crates/fb-app/src/screens/d4/choices.rs": {
@@ -97,10 +112,12 @@
     "overview:prepare": 1
   },
   "crates/fb-app/src/screens/d9/review.rs": {
+    "filtered_ids:prepare": 1,
     "recent_categories:prepare": 1,
     "retired_copies:prepare": 1,
-    "review_page:prepare": 3,
-    "run_review_post:prepare": 1
+    "review_page:prepare": 2,
+    "run_review_post:prepare": 1,
+    "status_vm:prepare": 1
   },
   "crates/fb-app/src/screens/d9/rule_import.rs": {
     "page:prepare": 4,
@@ -112,7 +129,8 @@
   "crates/fb-app/src/session.rs": {
     "create_book_with_chart:execute": 1,
     "create_book_with_chart:write": 1,
-    "query:prepare": 1
+    "query:prepare": 1,
+    "save_accounting_setup:write": 1
   },
   "crates/fb-core/src/accounts.rs": {
     "create_owner:write": 1,
@@ -194,8 +212,9 @@
     "audit_event:write": 1
   },
   "crates/fb-core/src/bankfeeds/accept.rs": {
-    "back_to_review:execute": 3,
+    "back_to_review:execute": 4,
     "decide:execute": 1,
+    "finish:execute": 1,
     "ignore:execute": 1,
     "link_existing:execute": 2
   },
@@ -213,16 +232,22 @@
     "command:write": 1,
     "connect:execute": 1,
     "control_accounts:prepare": 1,
+    "eligible_match_lines:prepare": 1,
     "forget:execute": 1,
     "items:prepare": 1,
     "map_account_tx:execute": 2,
-    "match_candidates:prepare": 1,
-    "receipt_candidates:prepare": 1,
+    "matched_entries:prepare": 1,
     "reconnect_labels:prepare": 1,
-    "stale_decisions:prepare": 1
+    "stale_decisions:prepare": 1,
+    "undeposited_receipts:prepare": 1
   },
   "crates/fb-core/src/bankfeeds/qbo.rs": {
     "import_rules:execute": 2
+  },
+  "crates/fb-core/src/bankfeeds/review.rs": {
+    "accounts:prepare": 1,
+    "journal_receipt_ids:prepare": 1,
+    "rows:prepare": 1
   },
   "crates/fb-core/src/bankfeeds/rules.rs": {
     "move_rule:execute": 1,
@@ -246,7 +271,7 @@
     "store_pull_mode:execute": 4,
     "store_pull_mode:prepare": 1,
     "sync_gaps:prepare": 1,
-    "upsert:execute": 2
+    "upsert:execute": 3
   },
   "crates/fb-core/src/bankfeeds/write.rs": {
     "execute:execute": 1
@@ -287,6 +312,10 @@
     "corrupt:execute": 1,
     "corrupt:execute_batch": 4,
     "corrupt:prepare": 1
+  },
+  "crates/fb-core/src/check_numbers.rs": {
+    "earlier_use:prepare": 1,
+    "tax_payment_numbers:prepare": 1
   },
   "crates/fb-core/src/checks/lifecycle.rs": {
     "advance:execute": 1,
@@ -340,8 +369,7 @@
   },
   "crates/fb-core/src/desktop_mfa.rs": {
     "audit:prepare": 1,
-    "change:execute": 4,
-    "change:write": 1,
+    "change:execute": 5,
     "consume:execute": 2,
     "consume:write": 1,
     "read:prepare": 1
@@ -349,6 +377,7 @@
   "crates/fb-core/src/directory.rs": {
     "get:prepare": 1,
     "list:prepare": 1,
+    "name_taken:prepare": 1,
     "persist:execute": 1,
     "save_record:write": 1,
     "save_record_tx:atomic": 1,
@@ -372,6 +401,7 @@
   "crates/fb-core/src/first_run.rs": {
     "apply_proposal:write": 1,
     "dismiss_first_run:write": 1,
+    "fill_collected_tax_tx:atomic": 1,
     "fill_setup:write": 1,
     "slice:prepare": 1
   },
@@ -557,6 +587,7 @@
   "crates/fb-core/src/sales/queries.rs": {
     "customer_activity:prepare": 1,
     "invoice_balances_query:prepare": 1,
+    "settlement_entries:prepare": 1,
     "sum_rows:prepare": 1
   },
   "crates/fb-core/src/sales/receipts.rs": {
@@ -604,6 +635,8 @@
     "all_digit_numbers:prepare": 1,
     "audit:execute": 1,
     "create_company_with_chart:write": 1,
+    "delete_draft_journal:write": 1,
+    "delete_draft_journal_tx:execute": 1,
     "edit_company:write": 1,
     "post_journal:write": 1,
     "reverse_journal:write": 1,

@@ -147,6 +147,15 @@ fn grouping_boundaries_sort_and_void_draft_exclusions() {
 #[test]
 fn totals_cover_every_row_when_the_display_is_capped_and_twin_labels_disambiguate() {
     let mut f = F::new();
+    // Worker item 23 (2026-11-23): a new or reactivated record may not take an active one's name, so the
+    // twins are made with the first archived, then the first is set active in the book directly (as a
+    // duplicate made before the rule is).
+    let first = |f: &mut F, table: &str| -> String {
+        f.fx.book.connection().query_row(&format!("SELECT id FROM {table} WHERE company_id=?1 AND display_name LIKE 'Twin %'"), [f.co.to_db()], |r| r.get(0)).unwrap()
+    };
+    let (vendor, customer) = (first(&mut f, "directory_vendor"), first(&mut f, "directory_customer"));
+    directory::set_active(&mut f.fx.book, f.fx.user, f.co, Model::Vendor, &vendor, false).unwrap();
+    directory::set_active(&mut f.fx.book, f.fx.user, f.co, Model::Customer, &customer, false).unwrap();
     directory::save_record(
         &mut f.fx.book,
         f.fx.user,
@@ -165,6 +174,9 @@ fn totals_cover_every_row_when_the_display_is_capped_and_twin_labels_disambiguat
         None,
     )
     .unwrap();
+    for (table, id) in [("directory_vendor", &vendor), ("directory_customer", &customer)] {
+        f.fx.book.connection().execute(&format!("UPDATE {table} SET active=1 WHERE id=?1"), [id]).unwrap();
+    }
     for _ in 0..30 {
         f.bill("2026-10-14", true);
     }

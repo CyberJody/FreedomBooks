@@ -10,7 +10,7 @@
 use crate::credentials::BookCredentials;
 use crate::plugins::Refusal;
 use crate::session::{App, AppError, AppResult, Open};
-use fb_core::bankfeeds::{self, SecretSet, StagedPull};
+use fb_core::bankfeeds::{self, ProviderIdEvidence, SecretSet, StagedPull};
 use fb_core::{CompanyId, FbError};
 use fb_plugin_api::{CredentialScope, CredentialStore, PluginError, SecretBytes, Uuid};
 use serde_json::{Value, json};
@@ -350,14 +350,14 @@ pub(crate) fn bankfeed_connect(app: &mut App, co: CompanyId, setup_token: &str, 
     if let Err(message) = check_label(label) {
         return Ok(Err(message));
     }
+    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn) {
+        return Ok(Err("Add your own password in Book protection before saving a connection. User sign-in can use this computer's secure keyring.".into()));
+    }
     if app.vault_key.is_none() {
         return Err(AppError::Locked);
     }
     if !app.os_store_usable {
         return Ok(Err(BANK_KEYRING_REQUIRED.into()));
-    }
-    if app.protection.as_ref().is_some_and(|r| r.keys.mode == fb_core::backups::portable::Mode::BuiltIn) {
-        return Ok(Err("Add your own password in Book protection before saving a connection. User sign-in can use this computer's secure keyring.".into()));
     }
     // Network, outside any write: claim the access URL.
     let mut request = json!({"op": "simplefin_claim", "setup_token": setup_token});
@@ -440,7 +440,11 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
     let failure = match reply {
         Ok(v) if v["ok"] == true => match serde_json::from_value::<StagedPull>(v["pull"].clone()) {
             Ok(pull) => {
-                return match bankfeeds::store_pull_for_desktop(&mut open.book, owner, co, connection_id, &pull, &now, false, Some(start), &secrets) {
+                let evidence = serde_json::from_value::<Vec<ProviderIdEvidence>>(v["identity_evidence"].clone())
+                    .ok().filter(|accounts| accounts.len() == pull.accounts.len() && accounts.iter().zip(&pull.accounts)
+                        .all(|(proof, account)| proof.transactions_exact.len() == account.transactions.len()))
+                    .unwrap_or_default();
+                return match bankfeeds::store_pull_for_desktop(&mut open.book, owner, co, connection_id, &pull, &now, false, Some(start), &secrets, &evidence) {
                     Ok(result) => {
                         let mut posted=0; let mut failed=0;
                         let ids=match bankfeeds::pending_automatic(&mut open.book,owner,co,connection_id) {Ok(ids)=>ids,Err(e)=>return Ok(Err(refusal(e)?))};

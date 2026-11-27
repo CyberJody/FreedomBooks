@@ -207,6 +207,23 @@ fn posted_rows(p: Posted<'_>) -> Vec<(String, bool, String, usize)> {
         })
         .collect()
 }
+/// Worker item 39: row `i`'s `allocations-i-chosen` mark, posted by the page's script: "1" when the person
+/// chose that invoice, "0" when the page filled it. Absent without the script, which fills nothing itself.
+fn chosen_mark(p: Posted<'_>, i: usize) -> Option<&'static str> {
+    match get(p, &format!("allocations-{i}-chosen")) {
+        Some("1") => Some("1"),
+        Some("0") => Some("0"),
+        _ => None,
+    }
+}
+/// "A", "A and B", "A, B and C".
+fn and_list(items: &[String]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
 /// Rows past this are refused as tampering; the core separately limits one payment to 50 invoices.
 const MAX_ROWS: i64 = 1000;
 /// Core refusals for a payment, said the way a bookkeeper would. Unknown messages pass through.
@@ -262,13 +279,17 @@ fn entry(
     put(&mut vm, "problems", problems);
     put(&mut vm, "setup_hint", problems.iter().any(|m| m.contains("Accounting setup")));
     put(&mut vm, "has_errors", super::super::d2::active_form_errors(e, p.unwrap_or(&[])) > 0 || !non.is_empty() || !problems.is_empty());
+    put(&mut vm, "saved_notices", std::mem::take(&mut app.messages));
     Ok((
         draw(app, "sales/sales_receipts/form.html", &vm)?,
         if p.is_some() { 400 } else { 200 },
     ))
 }
 /// Receive payment: one customer field, that customer's open invoices with a Pay box and an amount
-/// each, and one Save. `query` is the GET query (`customer`, `invoice`); `p` a refused submission.
+/// each, and one Save. `query` is the GET query (`customer`, `invoice`); `p` a refused submission;
+/// `extra` the warning and its confirmation for money the page put on invoices nobody chose (item 39);
+/// `fee_warning` the same for a positive fee line on an expense account (worker review 3b M1).
+#[allow(clippy::too_many_arguments)]
 fn receive_page(
     app: &mut App,
     r: &Route,
@@ -277,6 +298,8 @@ fn receive_page(
     p: Option<Posted<'_>>,
     e: &Errors,
     non: &[String],
+    extra: Option<(String, String)>,
+    fee_warning: Option<(String, String)>,
 ) -> AppResult<(String, u16)> {
     let c = arg_company(r)?;
     let mut vm = context(app, r)?;
@@ -299,16 +322,21 @@ fn receive_page(
     for row in rows.iter().filter(|r| r["customer_id"].as_str() == customer.as_deref()) {
         let id = row["invoice_id"].as_str().unwrap_or_default();
         let mut row = row.clone();
-        let (pay, apply) = match posted.iter().find(|(invoice, ..)| invoice == id) {
-            Some((_, pay, amount, _)) => (*pay || !amount.is_empty(), amount.clone()),
-            None if from_invoice.is_some_and(|f| f["invoice_id"] == id) => {
-                (true, row["outstanding"].as_str().unwrap_or_default().to_owned())
+        // Worker item 39: whether the person chose this invoice ("1": ticked, typed or the invoice the page
+        // was opened from; "0": the page filled or the person unticked it), kept through a refused save.
+        let (pay, apply, chosen) = match posted.iter().find(|(invoice, ..)| invoice == id) {
+            Some((_, pay, amount, i)) => {
+                (*pay || !amount.is_empty(), amount.clone(), p.and_then(|p| chosen_mark(p, *i)).unwrap_or(""))
             }
-            None => (false, String::new()),
+            None if from_invoice.is_some_and(|f| f["invoice_id"] == id) => {
+                (true, row["outstanding"].as_str().unwrap_or_default().to_owned(), "1")
+            }
+            None => (false, String::new(), ""),
         };
         row["index"] = json!(shown.len());
         row["pay"] = json!(pay);
         row["apply"] = json!(apply);
+        row["chosen"] = json!(chosen);
         row["errors"] = json!(forms::error_list(
             e.get(&format!("invoice-{id}")).map(Vec::as_slice).unwrap_or(&[]),
             None
@@ -334,6 +362,23 @@ fn receive_page(
     put(&mut vm, "deposit_hint", non.iter().any(|m| m.contains("customer deposit")));
     put(&mut vm, "setup_hint", non.iter().any(|m| m.contains("Accounting setup")));
     put(&mut vm, "has_errors", !e.is_empty() || !non.is_empty());
+    if let Some((warning, confirm)) = extra {
+        put(&mut vm, "extra_warning", warning);
+        put(&mut vm, "extra_ok", confirm);
+    }
+    // Worker item 47: fee and adjustment lines, shown while the payment goes straight to a bank (or when a
+    // refused save carried some).
+    let (fee_accounts, fee_default) = crate::screens::fees::choices(app, c)?;
+    let fee_lines = p.map(|p| crate::screens::fees::posted(p, "fee_")).unwrap_or_default();
+    put(&mut vm, "show_fees", p.and_then(|p| get(p, "destination")) == Some("BANK") || !fee_lines.is_empty());
+    put(&mut vm, "fee_lines", crate::screens::fees::drawn(&fee_lines, fee_default.as_deref()));
+    put(&mut vm, "fee_accounts", fee_accounts);
+    put(&mut vm, "fee_default", fee_default);
+    put(&mut vm, "fee_errors", e.get("fees").cloned().unwrap_or_default());
+    if let Some((warning, confirm)) = fee_warning {
+        put(&mut vm, "fee_warning", warning);
+        put(&mut vm, "fee_ok", confirm);
+    }
     put(&mut vm, "csrf_token", token(app, path));
     Ok((
         draw(app, "sales/receipts/form.html", &vm)?,
@@ -352,7 +397,7 @@ pub(super) fn render(
     let sale = r.name.starts_with("sales_receipts:");
     match r.name.rsplit(':').next().unwrap() {
         "new" if sale => entry(app, r, path, get(p, "customer"), None, &Errors::new(), &[], &[]),
-        "new" => receive_page(app, r, path, p, None, &Errors::new(), &[]),
+        "new" => receive_page(app, r, path, p, None, &Errors::new(), &[], None, None),
         "list" => listing(app, r, p, sale),
         "detail" => detail(app, r, sale),
         "void" | "reverse" => reverse_page(app, r, path, sale, None, &Errors::new()),
@@ -430,6 +475,20 @@ fn deposit(app: &mut App, c: CompanyId, v: &Value) -> AppResult<Option<Value>> {
         v["identity"] = o
             .book
             .read(|tx| identity(tx, v["identity_id"].as_str().unwrap()))?;
+        if let Some(bank_id) = v["bank_id"].as_str() {
+            let bank_label: Option<String> = o.book.read(|tx| {
+                tx.query_row(
+                    "SELECT code||' · '||name FROM ledger_account WHERE id=?1 AND company_id=?2",
+                    params![bank_id, c.to_db()],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(FbError::from)
+            })?;
+            if let Some(label) = bank_label {
+                v["bank_label"] = json!(label);
+            }
+        }
     }
     Ok(found)
 }
@@ -457,6 +516,7 @@ fn detail(app: &mut App, r: &Route, sale: bool) -> AppResult<(String, u16)> {
     put(&mut vm, "references", refs);
     put(&mut vm, "blocked_account", blocked);
     if sale {
+        put(&mut vm, "posted_entries", posted_entries(app, c, v["journal_id"].as_str().unwrap())?);
         let (mut sale, mut lines) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
             let (saleid, raw): (String, String) = tx.query_row(
                 "SELECT id,data FROM sales_salesreceipt WHERE receipt_id=?1",
@@ -479,7 +539,7 @@ fn detail(app: &mut App, r: &Route, sale: bool) -> AppResult<(String, u16)> {
         let events=app.open_mut()?.book.read(|tx|->Result<Vec<Value>,FbError>{let mut st=tx.prepare("SELECT occurred_at,action,actor_name,detail FROM ledger_auditevent WHERE target='receipt:'||?1 ORDER BY occurred_at,id")?;Ok(st.query_map([id],|r|{let action:String=r.get(1)?;let d:Value=fb_db::parse_unique_json_as(&r.get::<_,String>(3)?).unwrap();let detail=if action=="sales_receipt.recorded"{format!("{} · total {} · {} · {} line(s)",d["number"].as_str().unwrap(),d["amount"].as_str().unwrap(),d["destination"].as_str().unwrap(),d["lines"].as_array().unwrap().len())}else{format!("void dated {} · journal #{} · reason: {}",d["date"].as_str().unwrap(),journal_ordinal(tx,c,d["journal_id"].as_str().unwrap())?,d["reason"].as_str().unwrap())};Ok(json!({"occurred_at":r.get::<_,String>(0)?,"action":action,"actor_name":r.get::<_,String>(2)?,"detail":detail}))})?.collect::<Result<Vec<_>,_>>()?)})?;
         put(&mut vm, "events", events);
     } else {
-        let (allocations,labels)=app.open_mut()?.book.read(|tx|->Result<_,FbError>{let mut st=tx.prepare("SELECT a.invoice_id,a.amount,a.receivables_id,i.identity_id,r.number FROM sales_receiptallocation a JOIN sales_invoice i ON i.id=a.invoice_id JOIN sales_invoicerevision r ON r.id=a.invoice_revision_id WHERE a.receipt_id=?1 ORDER BY a.id")?;let raw=st.query_map([id],|r|Ok((r.get::<_,String>(0)?,r.get::<_,i64>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,i64>(4)?)))?.collect::<Result<Vec<_>,_>>()?;let mut out=vec![];let mut labels=vec![];for (id,n,ar,source,rev) in raw{let a=fb_core::store::account(tx,AccountId::parse(&ar).unwrap())?.unwrap();labels.push(json!({"id":ar,"code":a.code,"name":a.name}));out.push(json!({"invoice_id":id,"invoice":{"identity":identity(tx,&source)?},"invoice_revision":{"number":rev},"receivables_id":ar,"amount":cash(i128::from(n))}));}Ok((out,labels))})?;
+        let (allocations,labels)=app.open_mut()?.book.read(|tx|->Result<_,FbError>{let mut st=tx.prepare("SELECT a.invoice_id,a.amount,a.receivables_id,i.identity_id,r.number FROM sales_receiptallocation a JOIN sales_invoice i ON i.id=a.invoice_id JOIN sales_invoicerevision r ON r.id=a.invoice_revision_id WHERE a.receipt_id=?1 ORDER BY a.id")?;let raw=st.query_map([id],|r|Ok((r.get::<_,String>(0)?,r.get::<_,i64>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?,r.get::<_,i64>(4)?)))?.collect::<Result<Vec<_>,_>>()?;let mut out=vec![];let mut labels=vec![];for (id,n,ar,source,rev) in raw{let a=fb_core::store::account(tx,AccountId::parse(&ar).unwrap())?.unwrap();labels.push(json!({"id":ar,"code":a.code,"name":a.name}));out.push(json!({"invoice_id":id,"invoice":{"identity":identity(tx,&source)?},"invoice_revision":{"number":rev},"receivables_id":ar,"amount":cash(i128::from(n)),"outstanding":fb_core::sales::invoice_balance(tx,c,&id)?["outstanding"]}));}Ok((out,labels))})?;
         put(&mut vm, "allocations", allocations);
         put(&mut vm, "account_labels", labels);
     }
@@ -501,13 +561,14 @@ fn reverse_page(
 ) -> AppResult<(String, u16)> {
     let mut vm = context(app, r)?;
     let v = load(app, r, sale)?;
+    let date = crate::screens::document_date(app, &v);
     put(&mut vm, "deposit", deposit(app, arg_company(r)?, &v)?);
     put(&mut vm, "receipt", v);
     put(
         &mut vm,
         "form",
         forms::bind(
-            &reversal_fields(p, 1, (app.today)(), sale, e),
+            &crate::screens::month_notice(app, reversal_fields(p, 1, date, sale, e)),
             &nonfield(e, ""),
         ),
     );
@@ -705,6 +766,7 @@ fn sale_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
             company_id: c.to_db(),
             sales_receipt: true,
             values: values.clone(),
+            include_settlement: false,
         });
         let recorded = match reviewed {
             Ok(Outcome::Done { data }) => app.run(Command::RecordCustomerReceipt {
@@ -712,6 +774,7 @@ fn sale_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
                 sales_receipt: true,
                 values,
                 review_token: data["token"].as_str().unwrap_or_default().to_owned(),
+                require_same_settlement: false,
             }),
             other => other,
         };
@@ -764,9 +827,19 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
     }
     let mut allocations = vec![];
     let mut applied = Some(0i128);
-    for (id, pay, amount, _) in posted_rows(p) {
+    // Worker item 39: allocations the page made to invoices the person did not choose, and those chosen.
+    let (mut extras, mut chosen) = (vec![], vec![]);
+    for (id, pay, amount, i) in posted_rows(p) {
         if !pay && amount.is_empty() {
             continue;
+        }
+        if let Some(row) = mine.iter().find(|r| r["invoice_id"] == id.as_str()) {
+            let number = row["number"].as_str().unwrap_or_default().to_owned();
+            match chosen_mark(p, i) {
+                Some("0") => extras.push((id.clone(), number, cents_of(&amount))),
+                Some(_) => chosen.push(number),
+                None => {}
+            }
         }
         let key = format!("invoice-{id}");
         let Some(row) = mine.iter().find(|r| r["invoice_id"] == id.as_str()) else {
@@ -811,6 +884,83 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
     }
     values["allocations"] = json!(allocations);
     values.as_object_mut().unwrap().remove("review_token");
+    // Worker item 47: a payment that reaches the bank net of a processor's fee. The fee lines are taken off
+    // on the way to the bank, so they need Deposit to: a bank account.
+    let fees = crate::screens::fees::posted(p, "fee_");
+    let adjustments = match crate::screens::fees::adjustments(&fees) {
+        Ok(a) => a,
+        Err(message) => {
+            error(&mut e, "fees", message);
+            vec![]
+        }
+    };
+    if !fees.is_empty() && values["destination"] != "BANK" {
+        error(&mut e, "fees", "Fees and adjustments are taken off when the money reaches the bank. Choose the bank under Deposit to, or put the fee on the deposit when you deposit this payment.");
+    }
+    // Worker item 39: typing an amount spreads it over the open invoices oldest first. Money the page put on
+    // an invoice the person did not choose is never saved without saying so: the first Save shows how much
+    // and where, at the amount box, and saves nothing; saving again with the same amounts goes ahead.
+    let extra = if e.is_empty() && non.is_empty() && !extras.is_empty() {
+        let received = values["amount"].as_str().and_then(cents_of).unwrap_or(0);
+        let confirm = format!(
+            "{}|{}",
+            cash(received),
+            extras.iter().map(|(id, _, n)| format!("{id}={}", n.map(cash).unwrap_or_default())).collect::<Vec<_>>().join(",")
+        );
+        let extra: i128 = extras.iter().filter_map(|(.., n)| *n).sum();
+        let places = if extras.len() == 1 {
+            extras[0].1.clone()
+        } else {
+            and_list(&extras.iter().map(|(_, number, n)| format!("{number} ({})", n.map(cash).unwrap_or_default())).collect::<Vec<_>>())
+        };
+        let yours = if chosen.is_empty() { String::new() } else { format!(" (you chose {})", and_list(&chosen)) };
+        let untick = if extras.len() == 1 { format!("untick {}", extras[0].1) } else { "untick those invoices".to_owned() };
+        let warning = format!(
+            "{} of the {} received would go to {places}, which you did not choose{yours}. To apply it there, choose Save payment again. Otherwise correct the amount received, or {untick}.",
+            cash(extra),
+            cash(received)
+        );
+        Some((warning, confirm))
+    } else {
+        None
+    };
+    // Worker review 3b M1: a fee typed without its minus sign on an expense account would increase the deposit
+    // and credit that expense. The first Save says so at the fee lines and saves nothing; saving again with the
+    // same lines records them as typed. Shown with item 39's warning when both apply, so one Save confirms both.
+    let fee = if e.is_empty() && non.is_empty() && !adjustments.is_empty() {
+        crate::screens::fees::positive_expense(app, c, &fees, "choose Save payment again")?
+    } else {
+        None
+    };
+    let unconfirmed = |warning: &Option<(String, String)>, field: &str| warning.as_ref().is_some_and(|(_, ok)| get(p, field) != Some(ok.as_str()));
+    if unconfirmed(&extra, "extra_ok") || unconfirmed(&fee, "fee_ok") {
+        return Ok(Outcome::Invalid { html: receive_page(app, r, path, &[], Some(p), &e, &non, extra, fee)?.0 });
+    }
+    if e.is_empty() && non.is_empty() && !adjustments.is_empty() {
+        // Held in Undeposited Funds and deposited to the bank at once, net of the fees, in one step.
+        let bank = values["bank_id"].as_str().unwrap_or_default().to_owned();
+        let mut input = values.clone();
+        input.as_object_mut().unwrap().retain(|k, _| !["tax_mode", "tax_item_id", "lines"].contains(&k.as_str()));
+        let o = app.open_mut()?;
+        match fb_core::banking::record_receipt_net(&mut o.book, o.owner, c, &input, &bank, &json!(adjustments)) {
+            Ok(done) => {
+                let (number, deposit, bank_label): (String, String, String) = app.open_mut()?.book.read(|tx| {
+                    let n = |id: &str| tx.query_row("SELECT number FROM documents_displayidentity WHERE id=?1", [id], |r| r.get::<_, String>(0));
+                    let bank_label = tx.query_row("SELECT code||' · '||name FROM ledger_account WHERE id=?1", [&bank], |r| r.get::<_, String>(0))?;
+                    Ok::<_, FbError>((n(done["receipt"]["identity_id"].as_str().unwrap_or_default())?, n(done["deposit"]["identity_id"].as_str().unwrap_or_default())?, bank_label))
+                })?;
+                let received = done["receipt"]["amount"].as_str().and_then(cents_of).unwrap_or(0);
+                let net = done["deposit"]["amount"].as_str().and_then(cents_of).unwrap_or(0);
+                app.messages.push(format!(
+                    "Saved {number}: {} applied to the invoices. Deposited to {bank_label} as {deposit}: {} ({} with fees and adjustments of {}).",
+                    cash(received), cash(net), cash(received), cash(net - received)
+                ));
+                return Ok(Outcome::Redirect { location: url("receipts:detail", &[&c.to_db(), done["receipt"]["id"].as_str().unwrap_or_default()]) });
+            }
+            Err(FbError::Validation(messages)) => non.extend(messages.iter().map(|m| plain(m))),
+            Err(err) => return Err(err.into()),
+        }
+    }
     if e.is_empty() && non.is_empty() {
         let values: crate::commands::CustomerReceiptValues =
             serde_json::from_value(values).map_err(|e| AppError::Invalid(e.to_string()))?;
@@ -818,6 +968,7 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
             company_id: c.to_db(),
             sales_receipt: false,
             values: values.clone(),
+            include_settlement: false,
         });
         let recorded = match reviewed {
             Ok(Outcome::Done { data }) => app.run(Command::RecordCustomerReceipt {
@@ -825,6 +976,7 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
                 sales_receipt: false,
                 values,
                 review_token: data["token"].as_str().unwrap_or_default().to_owned(),
+                require_same_settlement: false,
             }),
             other => other,
         };
@@ -842,7 +994,7 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
         }
     }
     Ok(Outcome::Invalid {
-        html: receive_page(app, r, path, &[], Some(p), &e, &non)?.0,
+        html: receive_page(app, r, path, &[], Some(p), &e, &non, None, None)?.0,
     })
 }
 /// The cleaned header values of a receipt form, with errors recorded against each field.

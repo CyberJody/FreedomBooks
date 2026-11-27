@@ -64,7 +64,7 @@
 .bankfeed .review-links {margin:4px 0 10px}
 .bankfeed .review-count {margin:8px 0;font-size:14px}
 .bankfeed .review-count .recorded-count {color:#7a4b12}
-.bankfeed .bulk-bar {position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;border:1px solid #74576f;background:#fbf7f1;padding:6px 10px;margin:8px 0;box-shadow:0 2px 6px rgba(60,40,60,.12)}
+.bankfeed .bulk-bar {position:fixed;bottom:0;right:1rem;left:max(1rem,18%);max-height:40vh;overflow:auto;z-index:5;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;border:1px solid #74576f;background:#fbf7f1;padding:6px 10px;margin:8px 0;box-shadow:0 2px 6px rgba(60,40,60,.12)}
 .bankfeed .bulk-bar[hidden] {display:none}
 .bankfeed .bulk-bar label {display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650}
 .bankfeed .bulk-bar select, .bankfeed .bulk-bar input[type=text] {width:200px;max-width:100%;font-size:12.5px}
@@ -106,3 +106,32 @@
 .rule-import-row{background:white;border:1px solid #ddd3e0;border-radius:9px;padding:20px;margin:18px 0}.rule-import-row h2{font-size:18px;margin:0 0 8px}.rule-import-row .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.rule-import-row select{display:block;width:100%;margin-top:6px}.rule-import-row .mapping-note{padding:8px 12px;background:#fff4df;border-radius:5px;font-size:.9rem}.rule-import-row input[type=checkbox]{margin-right:8px}.rule-row-buttons{min-width:185px}.rule-row-buttons button{margin:3px}@media(max-width:850px){.rule-import-row .form-grid{grid-template-columns:1fr}}
 .bankfeed table.review .row-actions button {white-space:normal;max-width:100%}
 .bankfeed table.review thead th:first-child {text-overflow:clip}
+
+/* Worker item 46: a row split over several accounts. The lines sit under the category, which they replace. */
+.bankfeed table.review .single-cat {display:block}
+.bankfeed table.review .single-cat[hidden], .bankfeed table.review .split-lines[hidden], .bankfeed table.review .split-error[hidden] {display:none}
+.bankfeed table.review .split {display:block;margin-top:2px}
+.bankfeed table.review .split-toggle {display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
+.bankfeed table.review .split-lines {display:block;margin-top:4px;padding-top:4px;border-top:1px dashed #b8a6b4}
+.bankfeed table.review .split-line {display:block;margin:0 0 6px}
+.bankfeed table.review .split-nums {display:flex;gap:3px;align-items:flex-start}
+.bankfeed table.review .split-nums input[type=text] {margin:0;min-width:0}
+.bankfeed table.review .split-nums input[data-split-amount] {flex:0 0 5.4em;text-align:right;font-variant-numeric:tabular-nums}
+.bankfeed table.review .split-nums input[name^=split_memo_] {flex:1 1 auto}
+.bankfeed table.review .split-remove {flex:0 0 auto;font-size:12px;padding:1px 6px;min-height:0;margin:0}
+.bankfeed table.review .split-add {font-size:12px;padding:2px 8px}
+.bankfeed table.review .split-left {display:block;font-size:12px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+.bankfeed table.review .split-left.ok {color:#2f5f3a}
+.bankfeed table.review .split-left.short, .bankfeed table.review .split-left.over {color:#8a2f27}
+.bankfeed table.review .split-error {display:block;margin-top:3px}
+/* Worker item 48: deposit received payments from one row, with fee lines (item 47). */
+.bankfeed table.review .deposit-pick {display:block}
+.bankfeed table.review .deposit-pick[hidden] {display:none}
+.bankfeed table.review .deposit-title {display:block;font-size:11.5px;font-weight:650;margin:2px 0;color:#5d4f57}
+.bankfeed table.review .deposit-receipt {display:flex;gap:4px;align-items:flex-start;font-size:12px;margin:0 0 4px;cursor:pointer;overflow-wrap:anywhere}
+.bankfeed table.review .deposit-receipt input {margin:2px 0 0;flex:0 0 auto}
+.bankfeed table.review .deposit-fees {display:block}
+.bankfeed table.review .fee-line {display:block;margin:0 0 4px}
+.bankfeed table.review .fee-line input[type=text] {text-align:right;font-variant-numeric:tabular-nums}
+
+.review-page:has(.bulk-bar:not([hidden])) {padding-bottom:42vh}

@@ -21,7 +21,11 @@ fn installed_format_90_history_is_unchanged_and_recurring_is_one_additive_migrat
     assert_eq!(MIGRATIONS[89].0, "0203_salestax_payment_evidence");
     assert_eq!(MIGRATIONS[91].0, "0205_job_tickets");
     assert_eq!(MIGRATIONS[92].0, "0206_remote_host");
-    assert_eq!(MIGRATIONS.len(), 93);
+    assert_eq!(MIGRATIONS[93].0, "0207_bankfeed_id_provenance");
+    assert_eq!(MIGRATIONS[94].0, "0208_ai_unattended");
+    assert_eq!(MIGRATIONS[95].0, "0209_deposit_adjustments");
+    assert_eq!(MIGRATIONS[96].0, "0210_bankfeeds_matching");
+    assert_eq!(MIGRATIONS.len(), 97);
     let dir = tempfile::tempdir().unwrap();
     let book = Book::create(&dir.path().join("format92.fbbook"), &[92; 32]).unwrap();
     assert!(book.check().unwrap().is_empty());

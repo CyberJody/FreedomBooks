@@ -6,7 +6,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {spawn}=require('node:child_process');
 const {createInterface}=require('node:readline');
-const {randomUUID}=require('node:crypto');
+const {randomUUID,pbkdf2}=require('node:crypto');
+const {once}=require('node:events');
 const {create}=require('../main/ai-transport.cjs');
 const {api}=require('../agent/mcp.cjs');
 const fixture=JSON.parse(fs.readFileSync(path.join(process.argv[2],'fixture.json')));
@@ -14,6 +15,8 @@ const native=require(path.resolve(process.argv[3]));
 let client,server,checks=0;
 function pass(message){console.log(`PASS ${++checks}: ${message}`);}
 (async()=>{
+  native.configureBackups(path.resolve(process.argv[2]));
+  native.configureKeys(fixture.device_hex,'ready',true);
   native.openBook(fixture.book,fixture.key_hex);
   const signIn=()=>{
     const page=JSON.parse(native.render('/desktop/sign-in/'));
@@ -23,7 +26,7 @@ function pass(message){console.log(`PASS ${++checks}: ${message}`);}
   };
   signIn();
   const g=JSON.parse(native.aiGrant(fixture.company_id,'Synthetic external MCP', 'accounting_write'));
-  server=create({generation:()=>native.aiGeneration(),request:(token,body)=>native.aiRequestAsync(token,body)});
+  server=create({request:(token,body)=>native.aiRequestAsync(token,body)});
   const endpoint=await server.start();
   const config={endpoint,token:g.token};
   client=spawn(process.execPath,['-e',`require(${JSON.stringify(path.resolve(__dirname,'../agent/mcp.cjs'))}).serve(JSON.parse(process.env.FB_SYNTHETIC_MCP));`],{env:{...process.env,FB_SYNTHETIC_MCP:JSON.stringify(config)},stdio:['pipe','pipe','pipe']});
@@ -76,11 +79,95 @@ function pass(message){console.log(`PASS ${++checks}: ${message}`);}
   assert.ok(audit.includes('Synthetic operator') && audit.includes('Synthetic external MCP') && audit.includes(g.id));
   assert.ok(!audit.includes(g.token));assert.ok(!stderr.includes(g.token));
   pass('Read-only and forged scopes fail; append-only audit links the real operator and external connection without keys');
+  // A receipt review lists the settlement only when asked, and at most 500 entries of it, so the
+  // largest review a connection can receive crosses this transport far under its response limit.
+  const wire=body=>new Promise((resolve,reject)=>{
+    const data=JSON.stringify(body),u=new URL(endpoint);
+    const req=require('node:http').request({hostname:u.hostname,port:u.port,path:'/v1/call',method:'POST',agent:false,headers:{Authorization:`Bearer ${g.token}`,'content-type':'application/json','content-length':Buffer.byteLength(data)}},res=>{
+      const chunks=[];res.on('data',c=>chunks.push(c));res.on('error',reject);
+      res.on('end',()=>{const raw=Buffer.concat(chunks);resolve({status:res.statusCode,bytes:raw.length,value:JSON.parse(raw)});});
+    });
+    req.on('error',reject);req.end(data);
+  });
+  const payer=(await call('command_SaveCustomer',{display_name:'Synthetic settlement customer'})).data.id;
+  const owed=[];
+  for(let i=0;i<50;i++){
+    const made=await call('command_SaveInvoice',{values:{request_key:randomUUID(),customer_id:payer,date:'2026-11-01',tax_mode:'NONE',lines:[{description:'Synthetic work',quantity:'1',rate:'100.00',income_account_id:fixture.income}]}});
+    await call('command_PostInvoice',{invoice_id:made.data.id,expected_revision:1});
+    owed.push(made.data.id);
+  }
+  const across=()=>({request_key:randomUUID(),customer_id:payer,date:'2026-11-05',method:'CHECK',reference:'Check 5521',memo:'',destination:'BANK',bank_id:fixture.bank,amount:'50.00',allocations:owed.map(invoice_id=>({invoice_id,amount:'1.00'}))});
+  const reviewReceipt=(values,ask)=>wire({operation:'command_ReviewCustomerReceipt',arguments:{sales_receipt:false,values,...(ask?{include_settlement:true}:{})}});
+  const recordReceipt=(values,token,key)=>wire({operation:'command_RecordCustomerReceipt',arguments:{sales_receipt:false,values,review_token:token,...(key?{require_same_settlement:true}:{})}});
+  for(let i=0;i<10;i++){
+    const each=across(),plain=await reviewReceipt(each,false);
+    assert.deepEqual(Object.keys(plain.value.data),['review','token']);
+    assert.equal((await recordReceipt(each,plain.value.data.token,false)).status,200);
+  }
+  let payment=across();
+  const largest=await reviewReceipt(payment,true);
+  assert.equal(largest.status,200);assert.deepEqual(Object.keys(largest.value.data),['review','token','settlement']);
+  assert.equal(largest.value.data.settlement.length,50);
+  assert.equal(largest.value.data.settlement.reduce((n,invoice)=>n+invoice.entries.length,0),500);
+  assert.ok(largest.bytes<4*1024*1024/16,`the largest review is ${largest.bytes} bytes`);
+  assert.equal((await recordReceipt(payment,largest.value.data.token,true)).status,200);
+  payment=across();
+  const over=await reviewReceipt(payment,true);
+  assert.equal(over.status,200);assert.deepEqual(Object.keys(over.value.data),['review','token','settlement','settlement_unavailable']);
+  assert.equal(over.value.data.settlement,null);assert.equal(over.value.data.settlement_unavailable,'more than 500 entries');
+  assert.ok(typeof over.value.data.token==='string' && over.bytes<largest.bytes);
+  const guarded=await recordReceipt(payment,over.value.data.token,true);
+  assert.equal(guarded.status,400);
+  assert.deepEqual(guarded.value,{error:'operation_refused',code:'operation_refused',message:'Receipt precondition failed. Nothing was recorded. Review the invoice again.'});
+  const balances=await call('query_Invoices');
+  assert.ok(owed.every(id=>balances.find(row=>row.invoice_id===id).outstanding==='89.00'));
+  pass(`A 500-entry settlement crosses the transport in ${largest.bytes} bytes of its 4 MiB; above 500 the review returns its token without it and the guarded recording is refused`);
   native.aiRevoke(g.id);
   assert.equal((await rpc('tools/call',{name:'query_Accounts',arguments:{}})).result.isError,true);
   native.lock();native.openBook(fixture.book,fixture.key_hex);
   signIn();
   await assert.rejects(api({endpoint,token:readonly.token},'/v1/catalogue'));
   pass('Revocation and lock/reopen invalidate old external credentials');
+  const approved=JSON.parse(native.aiGrant(fixture.company_id,'Synthetic unattended worker','accounting_write'));
+  const proof=native.aiSetUnattended(approved.id,randomUUID(),true);
+  const write=JSON.stringify({operation:'command_SaveCustomer',arguments:{display_name:'Synthetic queued locked customer'}});
+  // Run with UV_THREADPOOL_SIZE=1 so acceptance precedes the sign-out deterministically.
+  const blocked=new Promise((resolve,reject)=>pbkdf2('synthetic','fixture-salt',600000,32,'sha256',error=>error?reject(error):resolve()));
+  const queued=native.aiRequestAsync(approved.token,write,proof);
+  native.signOut();
+  const [result]=await Promise.all([queued,blocked]);
+  assert.equal(JSON.parse(result).outcome,'done');
+  assert.equal(JSON.parse(native.appState()).signed_in,false);
+  assert.throws(()=>native.query(JSON.stringify({type:'Companies'})),/Sign in/);
+  assert.equal(JSON.parse(await native.aiRequestAsync(approved.token,undefined,proof)).unattended,true);
+  pass('native unattended execution and delivery survive a sign-out after acceptance without signing in the desktop');
+  native.lock();
+  assert.throws(()=>native.aiRequestAsync(approved.token,undefined,proof),/books_closed/);
+  native.openBook(fixture.book,fixture.key_hex);
+  assert.equal(JSON.parse(await native.aiRequestAsync(approved.token,undefined,proof)).unattended,true);
+  const restartWrite=JSON.stringify({operation:'command_SaveCustomer',arguments:{display_name:'Synthetic restart customer'}});
+  assert.equal(JSON.parse(await native.aiRequestAsync(approved.token,restartWrite,proof)).outcome,'done');
+  assert.equal(JSON.parse(native.appState()).signed_in,false);
+  native.lock();
+  native.configureKeys('','unavailable',false);
+  native.openBook(fixture.book,fixture.key_hex);
+  const callLocked=async (operation,args)=>JSON.parse(await native.aiRequestAsync(
+    approved.token,JSON.stringify({operation,arguments:args}),proof));
+  await callLocked('command_SaveAccount',{code:'602',name:'Synthetic before connection key',detail_type:'EXPENSE'});
+  native.configureKeys(fixture.device_hex,'ready',true);
+  await callLocked('command_SaveAccount',{code:'603',name:'Synthetic refreshed '+fixture.bank_secret,detail_type:'EXPENSE'});
+  const accounts=await callLocked('query_Accounts',{});
+  assert.ok(JSON.stringify(accounts).includes('Synthetic refreshed ***'),'configureKeys should redo mask preparation');
+  pass('key availability changes redo preparation and mask readable bank credentials without a sign-in');
+  const anchors=path.join(path.dirname(fixture.book),'ai-connections','unattended');
+  const [anchor]=fs.readdirSync(anchors);
+  const kept=fs.readFileSync(path.join(anchors,anchor));
+  native.aiForgetAll();
+  fs.writeFileSync(path.join(anchors,anchor),kept,{mode:0o600});
+  assert.throws(()=>native.aiRequestAsync(approved.token,undefined,proof),/approval_gone/);
+  pass('signed-out reopen permits writes on a bank-feed book; replaying the anchor cannot undo Forget');
+  const closed=once(client,'exit');
   client.stdin.end();
-})().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{if(client)client.kill();if(server)await server.stop();try{native.lock();}catch{}});
+  await closed;
+  client=null;
+})().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{if(client){const closed=once(client,'exit');if(client.exitCode===null && client.signalCode===null){client.kill();await closed;}}if(server)await server.stop();try{native.lock();}catch{}});

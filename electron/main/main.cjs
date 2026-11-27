@@ -55,7 +55,6 @@ let bookChangeError = null;
 try { native.recoverBookChange(); } catch (e) { bookChangeError = e; }
 const store = keys.store(userData);
 const output = require('./save-file.cjs').create({dataDir:userData, bookPath:()=>JSON.parse(native.appState()).path || store.bookPath()});
-const printing = require('./printing.cjs').controller(native, output, exclusive);
 
 let win = null;
 // One-shot page for the next GET of a path: a re-rendered invalid form, or the gate with its errors.
@@ -68,9 +67,10 @@ let pending = null;
 const BUSY_TEXT = 'The books are busy. Wait for the current operation to finish, then try again.';
 const LONG_COMMAND = /^(?:\/desktop\/(?:sign-in|users|mfa)\/|\/c\/[0-9a-f-]{36}\/(?:backups\/create|bank-feeds\/connect|bank-feeds\/[0-9a-f-]{36}\/sync)\/|\/settings\/(?:book-protection|restore-backup)\/)$/;
 const BACKUPS_PAGE = /^\/c\/[0-9a-f-]{36}\/backups\/$/;
+let connectionKeysConfigured = false;
 let busy = null;
 let lockWhenIdle = false;
-const localAI = require('./ai-desktop.cjs').create({app,native,dialog,clipboard,safeStorage,root:userData,window:()=>win,exclusive,busy:()=>!!busy});
+const localAI = require('./ai-desktop.cjs').create({app,native,dialog,clipboard,safeStorage,root:userData,window:()=>win,exclusive,busy:()=>!!busy,client:()=>remote.active()});
 // Remote access, client mode (remote-mode.cjs): off until the person connects to a host. While
 // connected, pages and form posts go to the host; the local books stay closed.
 const remoteLink = require('./remote-client.cjs');
@@ -78,20 +78,34 @@ const remoteStore = remoteLink.store({dir: userData, safeStorage, writePrivate: 
 let remoteGeneration = 0;
 const remote = require('./remote-mode.cjs').create({
   client: remoteLink.child({helper: development.remoteHelper(app, __dirname), onLink: state => remote.setLink(state)}),
-  store: remoteStore, window: () => win, output, dialog,
+  store: remoteStore, window: () => win, output, dialog, choosePrint: target => printing.choose(win, target),
+  show: (location, expected) => {
+    if (!win || win.isDestroyed()) return;
+    if (expected && win.webContents.getURL() !== ORIGIN + expected) return;
+    return win.loadURL(ORIGIN + location).catch(() => {});
+  },
   onChange: () => {
     remoteGeneration++;
     const menu = Menu.getApplicationMenu();
     const off = menu?.getMenuItemById('remote-disconnect');
     if (off) off.enabled = remote.active();
+    for (const id of ['ai-connect','ai-manage','book-protection','host-books']) {
+      const item = menu?.getMenuItemById(id);
+      if (item) item.enabled = !remote.active();
+    }
     const lockItem = menu?.getMenuItemById('lock-books');
     if (lockItem && remote.active()) lockItem.enabled = true;
   },
 });
+const printing = require('./printing.cjs').controller(native, output, exclusive, remote);
 const REMOTE = require('./remote-mode.cjs');
 // "Host these books" (hosting.cjs): Settings › Host these books… on the computer with the books.
 const hosting = require('./hosting.cjs').create({
   native, exclusive, os: require('node:os'), loopback: development.hostingLoopback(app),
+  confirm: async (message, detail, action) => {
+    const {response} = await dialog.showMessageBox(win, {type:'question', message, detail, buttons:['Cancel', action], defaultId:0, cancelId:0});
+    return response === 1 && !remote.active() && !win.isDestroyed() && win.webContents.getURL() === ORIGIN + hosting.PATH;
+  },
   note: (op, e) => diagnostics.note(op, e),
   onNotice: () => { if (win && !win.isDestroyed() && new URL(win.webContents.getURL()).pathname === hosting.PATH) win.loadURL(ORIGIN + hosting.PATH); },
   onStatus: s => {
@@ -104,7 +118,6 @@ const hosting = require('./hosting.cjs').create({
 // While hosting, the window title says so and how many computers are connected (review S5).
 let hostingTitle = '';
 function windowTitle(title) {
-  if (remote.active()) return `${title} — connected to ${remote.host()}`;
   return hostingTitle ? `${title} — ${hostingTitle}` : title;
 }
 function remoteSender(event, paths) {
@@ -113,6 +126,7 @@ function remoteSender(event, paths) {
   if (!paths.includes(pathname)) throw new Error('Refused: unexpected sender.');
 }
 function remoteResult(r) {
+  if (r.navigated) return {outcome: 'done'};
   if (r.errors) { remote.flash(r.errors); return {outcome: 'invalid', reload: '/remote/connect/'}; }
   return {outcome: 'redirect', location: r.location};
 }
@@ -122,17 +136,33 @@ function closeLocalForRemote() {
   if (JSON.parse(native.appState()).open) { native.lock(); store.returnToMain(); }
   pending = null;
 }
-async function remotePage(target, url) {
-  const r = await remote.render(target);
+async function disconnectToBooks() {
+  await remote.disconnect();
+  if (remote.active() || JSON.parse(native.appState()).open) return '/';
+  startupHome = '';
+  gateReason = '';
+  // Disconnect can be reached from a locked desktop. Only try the built-in key.
+  startupOpen(false, false);
+  if (startupHome) {
+    try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); }
+    void hosting.resume();
+  }
+  return startupHome || '/';
+}
+async function remotePage(target, url, marker) {
+  const r = await remote.render(target, marker);
+  if (r.marker && !remote.accepts(r.marker)) {
+    if (r.binary) return new Response('Not found', {status: 404});
+    return Response.redirect(ORIGIN + remote.currentPage(), 303);
+  }
   if (r.redirect) return Response.redirect(new URL(r.redirect, ORIGIN).href, 303);
   if (r.binary) return new Response(r.binary, {headers: {'content-type': r.mime, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': guards.CSP}});
-  const csv = (r.route === 'history' && url.searchParams.get('format') === 'csv') || (['profit_loss', 'balance_sheet', 'general_ledger', 'register', 'reconcile:report'].includes(r.route) && url.searchParams.getAll('output').at(-1) === 'csv');
-  if (r.status === 200 && csv) return new Response(r.html, {status: 200, headers: {'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="export.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'}});
+  if (REMOTE.csvPage(r.route, url, r.status)) return new Response(r.html, {status: 200, headers: {'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="export.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'}});
   return page(r.html, r.status);
 }
-function exclusive(work) {
+function exclusive(work, {bindSession=true} = {}) {
   if (busy) throw new Error(BUSY_TEXT);
-  const capture = result => ({...result,generation:JSON.parse(native.appState()).session_generation});
+  const capture = result => bindSession ? {...result,generation:JSON.parse(native.appState()).session_generation} : result;
   busy = Promise.resolve().then(work).then(value => capture({value}),error => capture({error})).finally(() => {
     busy = null;
     if (lockWhenIdle) {
@@ -142,7 +172,7 @@ function exclusive(work) {
   }).then(result => {
     // Native completion may itself sign in/out. Bind its resulting session BEFORE the
     // deferred-lock finalizer, then suppress that output if the finalizer ended it.
-    requireGeneration(result.generation);
+    if(bindSession)requireGeneration(result.generation);
     if(Object.hasOwn(result,'error')) throw result.error;
     return result.value;
   });
@@ -280,15 +310,20 @@ async function handle(request) {
   if (!guards.pluginAllowed(url.pathname, {plugins:PLUGINS,bankFeeds:BANK_FEEDS})) return new Response('Not found', { status: 404 });
   if (url.pathname.startsWith('/static/')) return guards.staticFile(STATIC_ROOT, url.pathname.slice('/static/'.length));
   if (url.pathname === diagnostics.PROBLEM_PATH) return diagnostics.lastPage() ? page(diagnostics.lastPage(), 500) : Response.redirect(`${ORIGIN}/`, 303);
-  const target = url.pathname + url.search;
-  if (remote.active() || remote.handles(url.pathname)) {
-    try { return await remotePage(target, url); }
+  const marker = url.searchParams.get(REMOTE.PAGE_KEY);
+  const query = marker === null ? url.search : '?' + url.search.slice(1).split('&').filter(part => !new URLSearchParams(part).has(REMOTE.PAGE_KEY)).join('&');
+  const target = url.pathname + (query === '?' ? '' : query);
+  const forRemote = () => marker !== null || remote.active() || remote.handles(url.pathname);
+  const renderRemote = async () => {
+    try { return await remotePage(target, url, marker); }
     catch (e) { diagnostics.unexpected('remote-page', e); return page(require('./remote-mode.cjs').noticePage('Something went wrong', 'The page could not be shown. Try again.'), 500); }
-  }
+  };
+  if (forRemote()) return renderRemote();
   // Several page loads may be waiting on the same operation. Recheck admission after
   // every await so a newly admitted render cannot overlap another request.
   const waitedForWork = !!busy;
   while (busy) await busy.catch(() => {});
+  if (forRemote()) return Response.redirect(ORIGIN + remote.currentPage(), 303);
   const logo = /^\/c\/([0-9a-f-]{36})\/document-logo\/$/.exec(url.pathname);
   if (logo) {
     try {
@@ -310,6 +345,7 @@ async function handle(request) {
     catch (e) { diagnostics.unexpected('hosting-page', e); return page(gate([plainError(e)]), 500); }
   }
   try {
+    const generationBeforeRender = remoteGeneration;
     // Automation has its own write-classified native boundary, separate from page reads.
     // The timer also catches up while the user leaves a page open across a due date.
     if (!waitedForWork && /^\/c\/[0-9a-f-]{36}\//.test(url.pathname) && JSON.parse(native.appState()).signed_in) {
@@ -327,6 +363,7 @@ async function handle(request) {
       if (location.protocol !== 'fb:' || location.host !== 'app') throw new Error('Invalid local redirect');
       return Response.redirect(location.href, r.status);
     }
+    if (r.status === 200 && url.pathname === '/desktop/users/') r.html = hosting.usersPage(r.html);
     // The remembered approval cannot act until native rendering has authenticated this company.
     const aiCompany = /^\/c\/([0-9a-f-]{36})\//.exec(url.pathname)?.[1];
     if (r.status === 200 && aiCompany) {
@@ -336,6 +373,7 @@ async function handle(request) {
       requireGeneration(generation);
       if (aiGeneration !== native.aiGeneration()) throw Object.assign(new Error('The active company changed. Open the screen again.'), {code:'SESSION_CHANGED'});
     }
+    if (remoteGeneration !== generationBeforeRender) return Response.redirect(ORIGIN + remote.currentPage(), 303);
     if (r.route === 'history' && url.searchParams.get('format') === 'csv' && r.html.startsWith('\uFEFF')) {
       return new Response(r.html, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="audit-history.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store' } });
     }
@@ -349,6 +387,7 @@ async function handle(request) {
     }
     return page(r.html, r.status);
   } catch (e) {
+    if (remote.active()) return Response.redirect(ORIGIN + remote.currentPage(), 303);
     if (e.code === 'SESSION_CHANGED') {
       return JSON.parse(native.appState()).open ? Response.redirect(ORIGIN+'/desktop/sign-in/',303) : page(gate(),200);
     }
@@ -389,13 +428,8 @@ function showPanic(error, pathname = '') {
 }
 
 function lockNow(reason = 'locked') {
-  // Connected to a host: this person's session there is signed out; the host's books stay open.
-  // The page is replaced at once; if the host cannot confirm the sign-out, the connection is
-  // closed so the next one needs a sign-in (remote-mode.cjs lock).
-  if (remote.active()) {
-    void remote.lock(location => { if (win && !win.isDestroyed()) win.loadURL(`${ORIGIN}${location}`); });
-    return;
-  }
+  // Client mode owns the lock page and any reconnection it needs.
+  if (remote.active()) return remote.lock().catch(() => {});
   // Hosting: the host person's lock (Ctrl+L, idle, suspend, screen lock) signs out only them; the
   // books stay open for the people connected. Closing the books or quitting stops hosting. It never
   // waits for the books (a connected person's request may hold them, or a desktop task may be
@@ -432,11 +466,18 @@ function lockNow(reason = 'locked') {
 
 // The fixed call list (preload exposes exactly these). Each handler checks the sender, then the payload.
 const calls = {
-  'books.run': async (payload) => {
+  'books.run': async (payload, _event, marker = null) => {
+    const refused = remote.admit(marker);
+    if (refused) return refused;
     if (busy) throw new Error(BUSY_TEXT);
     const command = guards.command(payload, { plugins: PLUGINS, bankFeeds: BANK_FEEDS });
-    if (remote.active()) return remote.run(command);
+    if (marker !== null) return remote.run(command, marker);
     const long = command.type === 'SubmitForm' && (LONG_COMMAND.test(command.path) || (INVOICE_DELIVERY && command.fields.some(([k,v])=>k==='action' && (v.startsWith('gmail_') || v.startsWith('stripe_')))));
+    if (!connectionKeysConfigured && command.type === 'SubmitForm') {
+      const state = JSON.parse(native.appState());
+      if (state.signed_in && needsConnectionKey(command, state.builtin)) configureConnectionKeys();
+      else if (command.path === '/desktop/sign-in/') configureForBook();
+    }
     let outcome;
     try { outcome = JSON.parse(long ? await exclusive(() => native.runAsync(JSON.stringify(command))) : native.run(JSON.stringify(command))); }
     catch(error) {
@@ -504,10 +545,14 @@ const calls = {
     closeLocalForRemote();
     return remoteResult(await remote.connectSaved());
   },
-  'remote.disconnect': async (_payload, event) => { remoteSender(event, [REMOTE.CONNECT, REMOTE.DISCONNECT]); await remote.disconnect(); return {outcome: 'redirect', location: '/'}; },
+  'remote.disconnect': async (_payload, event) => { remoteSender(event, [REMOTE.CONNECT, REMOTE.CONNECTING, REMOTE.DISCONNECT]); return {outcome: 'redirect', location: await disconnectToBooks()}; },
   'remote.forget': async (_payload, event) => { remoteSender(event, [REMOTE.CONNECT]); await remote.forget(); return {outcome: 'redirect', location: '/remote/connect/'}; },
   // Hosting controls: only from this computer's own Hosting screen; fb-node checks the Administrator.
   'hosting.on': async (payload, event) => { remoteSender(event, [hosting.PATH]); if (remote.active()) throw new Error('Disconnect from the host first.'); return hosting.on(guards.hostingOn(payload)); },
+  'hosting.poll': (_payload, event) => {
+    remoteSender(event, [hosting.PATH]);
+    return busy || remote.active() ? null : hosting.poll();
+  },
   'hosting.off': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.off(); },
   'hosting.pair': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.pair(); },
   'hosting.cancel': async (_payload, event) => { remoteSender(event, [hosting.PATH]); return hosting.cancel(); },
@@ -526,6 +571,7 @@ const calls = {
     if (protect && input.lock_password !== input.lock_password2) errors.push('The two passwords differ.');
     if (errors.length) return failGate(errors, input.starter_chart);
     try {
+      if (protect) configureConnectionKeys();
       const created = JSON.parse(await exclusive(() => native.createProtectedBookAsync(store.bookPath(), input.owner_name, input.company_name, input.lock_password, protect, input.starter_chart)));
       try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the new book is open; its key is saved after the next unlock */ }
       return {outcome:'redirect',location:created.home};
@@ -540,6 +586,7 @@ const calls = {
     let opened;
     try { opened = JSON.parse(await exclusive(() => native.restoreBookFromGateAsync(selected.filePaths[0], input.name || 'Recovered books', input.secret))); }
     catch (e) { return failGate([plainError(e)]); }
+    configureForBook();
     try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the restored book is open; its key is saved after the next unlock */ }
     return {outcome:'redirect',location:opened.home || '/'};
   },
@@ -565,7 +612,7 @@ const calls = {
     pending = null;
     startupHome = '';
     startupOpen(true, false);
-    if (!startupHome && locked) gateReason = locked;
+    if (!startupHome && locked && gateReason === 'password') gateReason = locked;
     if (startupHome) {
       try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* opened; the key is saved after the next unlock */ }
       void hosting.resume();
@@ -587,7 +634,8 @@ const calls = {
         opened = keys.openLegacyBook(native, store, input.password || '');
       }
     } catch (e) {
-      return failGate([e && e.code === 'FB_BOOK_WRONG_KEY' ? WRONG_UNLOCK : plainError(e)]);
+      const wrongKey = gateReason === 'builtin' ? 'The built-in key could not open these books.' : WRONG_UNLOCK;
+      return failGate([e && e.code === 'FB_BOOK_WRONG_KEY' ? wrongKey : plainError(e)]);
     }
     // The books are open: saving the key for next time must never turn into an unlock failure.
     try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* asked again next time; nothing removed */ }
@@ -644,10 +692,11 @@ const navigation = require('./navigation.cjs').controller({ native: navigationSt
 calls['app.navigate'] = (payload) => navigation.navigate(payload);
 
 for (const [name, fn] of Object.entries(calls)) {
-  ipcMain.handle(`fb:${name}`, async (event, payload) => {
+  ipcMain.handle(`fb:${name}`, async (event, payload, marker) => {
     guards.sender(event, win);
     try {
-      return { ok: true, value: await fn(payload, event) };
+      if (marker && !['books.run', 'app.navigate', 'app.openExternal'].includes(name)) throw new Error('This can only be done on the host computer.');
+      return { ok: true, value: await fn(payload, event, marker) };
     } catch (e) {
       if (showPanic(e, payload && typeof payload.path === 'string' ? payload.path : '')) {
         // The window shows what happened; the form's own handler follows the same address.
@@ -688,7 +737,7 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
   // The window title says which host's books are showing.
   win.on('page-title-updated', (event, title) => {
-    if (!remote.active() && !hostingTitle) return;
+    if (!hostingTitle) return;
     event.preventDefault();
     win.setTitle(windowTitle(title));
   });
@@ -703,19 +752,17 @@ function createWindow() {
 app.whenReady().then(() => {
   guards.session(session.defaultSession);
   session.defaultSession.protocol.handle('fb', handle);
+  // macOS shows the first menu under the app's name: give it the standard app menu (Hide, Quit).
+  const mac = require('node:os').platform() === 'darwin';
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { label: 'File', submenu: [{ id:'remote-connect', label:'Connect to a FreedomBooks host…', click:()=>{ if (win && !win.isDestroyed()) win.loadURL(ORIGIN+'/remote/connect/'); } }, { id:'remote-disconnect', label:'Disconnect from host', enabled:false, click:()=>{ void remote.disconnect(); if (win && !win.isDestroyed()) win.loadURL(ORIGIN+'/'); } }, { type:'separator' }, ...printing.menuItems, { type:'separator' }, { id:'lock-books', label:'Lock', enabled:false, accelerator:'CmdOrCtrl+L', click:()=>lockNow('locked') }, { id:'use-restored', label:'Use this copy as my books…', enabled:false, click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/restored-book/');} }, { type: 'separator' }, { role: 'quit' }] },
-    { label:'Settings', submenu:[...localAI.menuItems,{type:'separator'},{label:'Multi-factor authentication…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/mfa/');}},{label:'Users…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/users/');}},{label:'Switch user / sign out…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/session/');}},{label:'Book protection…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/book-protection/');}},{type:'separator'},{id:'host-books',label:'Host these books…',click:()=>{if(!remote.active() && JSON.parse(native.appState()).open) win.loadURL(ORIGIN+hosting.PATH);}}] },
+    ...(mac ? [{ role: 'appMenu' }] : []),
+    { label: 'File', submenu: [{ id:'remote-connect', label:'Connect to a FreedomBooks host…', click:()=>{ if (win && !win.isDestroyed()) win.loadURL(ORIGIN+'/remote/connect/'); } }, { id:'remote-disconnect', label:'Disconnect from host', enabled:false, click:async()=>{ const location = await disconnectToBooks(); if (win && !win.isDestroyed()) win.loadURL(ORIGIN+location); } }, { type:'separator' }, ...printing.menuItems, { type:'separator' }, { id:'lock-books', label:'Lock', enabled:false, accelerator:'CmdOrCtrl+L', click:()=>lockNow('locked') }, { id:'use-restored', label:'Use this copy as my books…', enabled:false, click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/restored-book/');} }, ...(mac ? [] : [{ type: 'separator' }, { role: 'quit' }])] },
+    { label:'Settings', submenu:[...localAI.menuItems,{type:'separator'},{label:'Multi-factor authentication…',click:()=>{if(remote.active() || JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/mfa/');}},{label:'Users…',click:()=>{if(remote.active() || JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/users/');}},{label:'Switch user / sign out…',click:()=>{if(remote.active() || JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/desktop/session/');}},{id:'book-protection',label:'Book protection…',click:()=>{if(JSON.parse(native.appState()).open) win.loadURL(ORIGIN+'/settings/book-protection/');}},{type:'separator'},{id:'host-books',label:'Host these books…',click:()=>{if(!remote.active() && JSON.parse(native.appState()).open) win.loadURL(ORIGIN+hosting.PATH);}}] },
     { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }] },
     navigation.go,
     require('./navigation.cjs').helpMenu({ app, dialog, native, window: () => win }),
   ]));
-  powerMonitor.on('suspend', () => lockNow('idle'));
-  powerMonitor.on('lock-screen', () => lockNow('idle'));
-  setInterval(() => {
-    if (!busy && powerMonitor.getSystemIdleTime() >= IDLE_LOCK_SECONDS && (remote.active() || JSON.parse(native.appState()).open)) lockNow('idle');
-  }, 30 * 1000).unref();
   const recurringTimer = setInterval(async () => {
     if (busy || !win || win.isDestroyed()) return;
     try {
@@ -745,8 +792,9 @@ app.whenReady().then(() => {
     }, 30 * 1000); timer.unref();
   }
   startupOpen();
-  startupConnectionKey();
+  void localAI.start().catch(error=>diagnostics.note('ai-start',error));
   createWindow();
+  require('./power-lock.cjs').watch({powerMonitor, window: win, remote, native, busy: () => !!busy, lockNow, idleSeconds: IDLE_LOCK_SECONDS});
   try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the window still opens; the key is saved after the next unlock */ }
   // Hosting left on by an Administrator starts again once the books are open (it says why if not),
   // and stops if its address leaves this computer.
@@ -758,7 +806,7 @@ app.whenReady().then(() => {
 //  1. finish or roll back an interrupted protection change, before anything opens the book;
 //  2. open the book if this computer can (built-in key, or a saved key the keyring can read);
 //     otherwise record why the unlock screen is showing;
-//  3. set up the connection key (bank feeds, Stripe, Gmail), which never affects opening.
+//  3. prepare saved connections for sign-in. Offline built-in books defer the keyring.
 // `savedKey` false (the unlock screen's list of books): a saved key is never used; the book asks.
 function startupOpen(chosen = false, savedKey = true) {
   const errors = [];
@@ -772,11 +820,16 @@ function startupOpen(chosen = false, savedKey = true) {
     if (state.known && state.ask_password) {
       try { store.removeSealedKey(); } catch (e) { diagnostics.note('remove-sealed-key', e); /* the record still asks every time */ }
     }
-    if (state.builtin) { startupHome = JSON.parse(native.openProtectedBook(store.bookPath(), '')).home; return; }
+    if (state.builtin) {
+      gateReason = 'builtin';
+      try { startupHome = JSON.parse(native.openProtectedBook(store.bookPath(), '')).home; }
+      catch (e) { if (e.code !== 'FB_BOOK_WRONG_KEY') errors.push(plainError(e)); }
+      return;
+    }
     if (!state.known && !store.hasPasswordWrap()) {
       // A copied built-in-key file needs no local metadata or OS store to open.
       try {
-        const opened = keys.openLegacyBook(native, store, '', savedKey && store.keyringWorks());
+        const opened = keys.openLegacyBook(native, store, '', savedKey);
         if (opened) startupHome = opened.home;
       } catch (e) {
         if (e && e.code === 'FB_BOOK_WRONG_KEY') gateReason = !savedKey ? '' : store.keyringWorks() ? 'missing' : 'keyring';
@@ -785,7 +838,7 @@ function startupOpen(chosen = false, savedKey = true) {
       return;
     }
     if (!state.known) { gateReason = 'ask'; return; }
-    if (!savedKey) { gateReason = state.ask_password ? 'ask' : ''; return; }
+    if (!savedKey) { gateReason = state.ask_password ? 'ask' : 'password'; return; }
     const status = store.bookKeyStatus(state.ask_password);
     if (status === 'unreadable') {
       // A saved key set aside earlier (the keyring may have answered differently one launch) that
@@ -807,18 +860,40 @@ function startupOpen(chosen = false, savedKey = true) {
   } catch (e) {
     errors.push(plainError(e));
   } finally {
+    configureForBook();
     if (errors.length) pending = {path:'/', html:gate(errors), status:400};
   }
 }
-function startupConnectionKey() {
+// A leftover installation key alone says nothing about the open book. Older keys stay on
+// disk for the next book or connection that actually uses them.
+function configureForBook() {
+  if (connectionKeysConfigured) return;
+  try {
+    const state = JSON.parse(native.appState());
+    if (state.open ? !state.builtin || native.hasCredentials()
+        : gateReason !== 'builtin' && (store.exists() || store.hasConnectionKeyMaterial())) configureConnectionKeys();
+  } catch (e) { diagnostics.note('connection-setup', e); }
+}
+
+function needsConnectionKey(command, builtin) {
+  const action = command.fields.findLast(([name]) => name === 'action')?.[1];
+  if (command.path === '/settings/book-protection/') return ['add', 'adopt', 'ask'].includes(action);
+  if (PLUGINS && command.path === '/auth/openai/start') return !builtin;
+  const section = /^\/c\/[0-9a-f-]{36}\/(.*)$/.exec(command.path)?.[1];
+  if (!section) return false;
+  if (BANK_FEEDS && section === 'bank-feeds/connect/') return !builtin;
+  if (BANK_FEEDS && /^bank-feeds\/[0-9a-f-]{36}\/sync\/$/.test(section)) return true;
+  return INVOICE_DELIVERY && section === 'edit/' &&
+    ['gmail_connect', 'gmail_poll', 'stripe_connect'].includes(action);
+}
+
+function configureConnectionKeys() {
+  if (connectionKeysConfigured) return;
   let found;
   try { found = store.connectionKey(); }
   catch (e) { diagnostics.note('connection-key', e); found = {key:null, state:keys.CONNECTION.UNAVAILABLE}; }
-  try { native.configureKeys(found.key || '', found.state, store.keyringWorks(), JSON.stringify(found.alternates || [])); }
-  catch (e) {
-    diagnostics.note('configure-keys', e);
-    try { native.configureKeys('', keys.CONNECTION.UNAVAILABLE, false); } catch { /* starts unavailable */ }
-  }
+  native.configureKeys(found.key || '', found.state, store.keyringWorks(), JSON.stringify(found.alternates || []));
+  connectionKeysConfigured = found.state !== keys.CONNECTION.UNAVAILABLE;
 }
 
 app.on('second-instance', () => {
@@ -841,5 +916,6 @@ app.on('will-quit', (event) => {
     busy.catch(() => {}).then(() => app.quit());
     return;
   }
+  void localAI.stop();
   native.lock();
 });

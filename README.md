@@ -2,30 +2,30 @@
 
 FreedomBooks is a desktop accounting application for small businesses, built with Rust, SQLCipher and Electron. Your books stay on your computer. Bank downloads use your own SimpleFIN Bridge account.
 
-## Source preview — November 17, 2026
+## Source preview — November 26, 2026
 
-This is a **code-only preview** of the version being used and tested internally on Linux. New since the November 8 preview: an Expenses page, recurring bills, job tickets with billable time, several people signed in at once, and hosting the books for other computers on your own network or Tailscale. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
+This is a **code-only preview** of the version being used and tested internally on Linux and Apple Silicon macOS. New since the November 17 preview: split bank-feed rows, deposit and receipt fee or adjustment lines, 180-day late-clearing check matching and multi-entry bank matching, grouped exact money formatting, client-side document printing and PDF export, live Hosting presence and safety controls, optional locked AI assistant access, and bill due-date and payment workflow fixes. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
 
-The application source comes from the internally tested `971340230a1395c183f9995b77ee5b654c49349c` build; application behavior is unchanged; sample test names, public documentation, the dependency notices and their generator, and the tested Node version pin were adjusted for publication. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
+The application source comes from the internally tested `0d5ca0b47949021234b846a10e5c0e0a2eed0fe9` build; application behavior is unchanged, and public documentation and internal test-file notes were adjusted for publication. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
 
 ## Available in the desktop app
 
 - Company creation with starter accounts, editable business details and document numbering.
 - Customers, vendors, items, estimates, invoices, receipts, bills and payments.
-- Checks, deposits, transfers, bank registers and reconciliation.
-- Financial reports, audit history, document PDFs and attachments.
+- Checks, deposits with fee/adjustment lines, transfers, bank registers and reconciliation.
+- Financial reports, audit history, document PDFs, client-side printing and attachments.
 - Book protection, recovery keys, portable backups and restore.
-- SimpleFIN bank downloads, account mapping with inline account creation, transaction review and rules. **Review transactions** is the first item under Banking.
+- SimpleFIN bank downloads, account mapping with inline account creation, transaction review with split rows, late-clearing check matching, multi-entry matching and reusable rules. **Review transactions** is the first item under Banking.
 - Copying recovery keys and native right-click Cut, Copy and Paste menus.
 - Named users on one desktop, username/password sign-in, roles, company permissions and audit attribution. See [Desktop users](docs/desktop-users.md).
 - Optional authenticator-app MFA: scan a locally generated QR code, confirm a six-digit code and save single-use recovery codes. Manual setup is available as a fallback.
-- Authorized AI assistant connections through a local API and MCP, including reports, invoices, bank categorization and structured journal imports. The model can run locally or in the cloud. Connections use the signed-in person's permissions and validated accounting operations. See [AI assistant connections](docs/local-ai.md).
+- Authorized AI assistant connections through a local API and MCP, including optional locked access for administrators, reports, invoices, bank categorization and structured journal imports. The model can run locally or in the cloud. Connections use the signed-in person's permissions and validated accounting operations. See [AI assistant connections](docs/local-ai.md).
 - Keyboard selection, previewed bulk draft edits and reusable rules for transaction review. Applying bulk edits does not post transactions.
 - An Expenses page for recording and finding spending in one place.
 - Monthly and yearly recurring bills from a template, with skip and catch-up review. See [Recurring bills](docs/recurring-bills.md).
 - Job tickets for customer work, with billable time entries that become an ordinary draft invoice. See [Job tickets](docs/job-tickets.md).
 - Several people signed in to the same books at once, each with their own user name, password and role.
-- Hosting: one computer keeps the books and other computers on your own network or Tailscale use them through it, paired with a one-time code and mutually pinned certificates. Hosting is off until an Administrator turns it on. See [Host these books](docs/hosting.md) and [Remote access](docs/remote-access.md).
+- Hosting: one computer keeps the books and other computers on your own network or Tailscale use them through it, paired with a one-time code and mutually pinned certificates, with live presence and safety controls. Hosting is off until an Administrator turns it on. See [Host these books](docs/hosting.md) and [Remote access](docs/remote-access.md).
 
 Bank access is read-only. Downloaded activity stays in review until you accept it into the books. In SimpleFIN Bridge, use **My Account → Apps → New app connection** to create a separate connection for FreedomBooks; keep your existing bank connections and other apps.
 

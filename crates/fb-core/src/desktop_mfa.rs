@@ -85,24 +85,23 @@ pub fn consume(book: &mut Book, user: UserId, proof: Proof) -> FbResult<()> {
 }
 /// An optional new recovery set replaces the old set in the same commit as enrollment.
 pub fn change(
-    book: &mut Book,
+    tx: &fb_db::Writer<'_>,
     user: UserId,
     change: Change,
     recovery: Option<&[Vec<u8>]>,
 ) -> FbResult<()> {
-    book.write(|tx| {
-        services::authenticated(tx,user)?;
-        let method=match change {
-            Change::Totp{secret,step} => { let secret=Zeroizing::new(secret); tx.execute("INSERT INTO desktop_mfa_totp(user_id,secret,last_step) VALUES(?1,?2,?3) ON CONFLICT(user_id) DO UPDATE SET secret=excluded.secret,last_step=excluded.last_step",params![user.to_db(),secret.as_slice(),step])?; "authenticator_enabled" },
-            Change::Recovery => "recovery_codes_replaced",
-            Change::Disable => { tx.execute("DELETE FROM desktop_mfa_totp WHERE user_id=?1",[user.to_db()])?; "disabled" },
-        };
-        let enabled:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM desktop_mfa_totp WHERE user_id=?1)",[user.to_db()],|r|r.get(0))?;
-        if recovery.is_some() || !enabled { tx.execute("DELETE FROM desktop_mfa_recovery WHERE user_id=?1",[user.to_db()])?; }
-        if enabled && let Some(hashes)=recovery {
-            if hashes.len()!=10 || hashes.iter().any(|h|h.len()!=32) { return Err(FbError::validation("Invalid recovery set.")); }
-            for hash in hashes {tx.execute("INSERT INTO desktop_mfa_recovery(user_id,hash) VALUES(?1,?2)",params![user.to_db(),hash])?;}
-        }
-        audit(tx,user,"user.mfa_changed",json!({"change":method,"enabled":enabled,"recovery_codes_replaced":recovery.is_some()}))
-    })
+    services::authenticated(tx,user)?;
+    let method=match change {
+        Change::Totp{secret,step} => { let secret=Zeroizing::new(secret); tx.execute("INSERT INTO desktop_mfa_totp(user_id,secret,last_step) VALUES(?1,?2,?3) ON CONFLICT(user_id) DO UPDATE SET secret=excluded.secret,last_step=excluded.last_step",params![user.to_db(),secret.as_slice(),step])?; "authenticator_enabled" },
+        Change::Recovery => "recovery_codes_replaced",
+        Change::Disable => { tx.execute("DELETE FROM desktop_mfa_totp WHERE user_id=?1",[user.to_db()])?; "disabled" },
+    };
+    let enabled:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM desktop_mfa_totp WHERE user_id=?1)",[user.to_db()],|r|r.get(0))?;
+    if recovery.is_some() || !enabled { tx.execute("DELETE FROM desktop_mfa_recovery WHERE user_id=?1",[user.to_db()])?; }
+    if enabled && let Some(hashes)=recovery {
+        if hashes.len()!=10 || hashes.iter().any(|h|h.len()!=32) { return Err(FbError::validation("Invalid recovery set.")); }
+        for hash in hashes {tx.execute("INSERT INTO desktop_mfa_recovery(user_id,hash) VALUES(?1,?2)",params![user.to_db(),hash])?;}
+    }
+    tx.execute("DELETE FROM desktop_ai_unattended WHERE actor_id=?1",[user.to_db()])?;
+    audit(tx,user,"user.mfa_changed",json!({"change":method,"enabled":enabled,"recovery_codes_replaced":recovery.is_some()}))
 }

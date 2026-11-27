@@ -173,6 +173,7 @@ impl App {
     pub fn save_host_record(&mut self, record: &HostRecord) -> AppResult<()> {
         let record = record.clone().checked()?;
         let bytes = serde_json::to_vec(&record).map_err(|e| AppError::Invalid(e.to_string()))?;
+        self.prepare_connections_for_write()?;
         let open = self.open.as_mut().ok_or(AppError::Locked)?;
         open.book.write(|tx| tx.execute("INSERT INTO remote_host(id,record) VALUES(1,?1) ON CONFLICT(id) DO UPDATE SET record=excluded.record", [bytes]).map(drop))?;
         Ok(())

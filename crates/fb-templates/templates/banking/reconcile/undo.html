@@ -5,13 +5,13 @@
 {% if last %}
 <dl class="rec-totals compact" aria-label="Reconciliation to undo">
 <div><dt>Statement date</dt><dd>{{ last.statement_date|date('Y-m-d') }}</dd></div>
-<div><dt>Beginning balance</dt><dd class="amount">{{ last.beginning_balance }}</dd></div>
-<div><dt>Ending balance</dt><dd class="amount">{{ last.ending_balance }}</dd></div>
+<div><dt>Beginning balance</dt><dd class="amount">{{ last.beginning_balance|money }}</dd></div>
+<div><dt>Ending balance</dt><dd class="amount">{{ last.ending_balance|money }}</dd></div>
 <div><dt>Reconciled lines</dt><dd>{{ last.cleared_count }}</dd></div>
 </dl>
 <ul class="undo-effects">
 <li>The {{ last.cleared_count }} reconciled line{{ last.cleared_count|pluralize }} go back to cleared (✓), so you can change them, then reconcile this statement again.</li>
-<li>The beginning balance of the next reconciliation goes back to {{ last.beginning_balance }}.</li>
+<li>The beginning balance of the next reconciliation goes back to {{ last.beginning_balance|money }}.</li>
 {% if last.service_journal_id or last.interest_journal_id %}<li><strong>Charges are not reversed.</strong> {% if last.service_journal_id %}The {{ words.service|lower }} of {{ last.service_charge }} (<a href="{{ url('journal', company.pk, last.service_journal_id) }}">journal entry</a>){% endif %}{% if last.service_journal_id and last.interest_journal_id %} and the {% endif %}{% if last.interest_journal_id %}interest earned of {{ last.interest }} (<a href="{{ url('journal', company.pk, last.interest_journal_id) }}">journal entry</a>){% endif %} stay posted. To remove one, mark it not cleared in the register and reverse it.</li>{% endif %}
 <li>Posted entries are not changed. The undo is recorded in the audit history with your reason.</li>
 </ul>

@@ -158,6 +158,15 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+// With a pairing code active, a revoked certificate can reach only the pairing
+// endpoint. Its reply to Hello is a pairing refusal (without a session refusal code).
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum HelloReply {
+    Host(HostResponse),
+    Pair(PairReply),
+}
+
 enum Attempt {
     Answer(HostResponse),
     /// The connection failed before an answer arrived; the request may or may not have arrived.
@@ -192,8 +201,8 @@ impl Client {
         // reports a refusal properly.
         let had = self.session();
         frame::send(&mut stream, &ClientRequest::Hello { resume: had.clone() }, MAX_REQUEST).map_err(|e| dropped(&e))?;
-        match frame::recv::<_, HostResponse>(&mut stream, MAX_RESPONSE) {
-            Ok(Some(HostResponse::Session { session, signed_in, host_name, resumed })) => {
+        match frame::recv::<_, HelloReply>(&mut stream, MAX_RESPONSE) {
+            Ok(Some(HelloReply::Host(HostResponse::Session { session, signed_in, host_name, resumed }))) => {
                 *lock(&self.session) = Some(session.clone());
                 // The host no longer has our session (idle expiry, host restart): whoever was
                 // signed in is not any more. Say so instead of acting in the new session.
@@ -202,8 +211,10 @@ impl Client {
                 }
                 Ok((stream, Some(HostResponse::Session { session, signed_in, host_name, resumed })))
             }
-            Ok(Some(HostResponse::Refused { code, message })) => Ok((stream, Some(HostResponse::Refused { code, message }))),
-            Ok(_) => Err(ClientError::Unreachable),
+            Ok(Some(HelloReply::Host(HostResponse::Refused { code, message }))) => Ok((stream, Some(HostResponse::Refused { code, message }))),
+            Ok(Some(HelloReply::Pair(PairReply::Refused { .. }))) => Err(ClientError::NotPaired),
+            Ok(Some(_)) => Err(ClientError::Protocol("unexpected hello reply".into())),
+            Ok(None) => Err(ClientError::Unreachable),
             Err(e) => Err(dropped(&e)),
         }
     }
@@ -244,7 +255,8 @@ impl Client {
     /// Send one request and wait for its answer, reconnecting while the retry window lasts.
     pub fn call(&self, request: &ClientRequest) -> Result<HostResponse, ClientError> {
         let deadline = Instant::now() + self.retry;
-        let mut backoff = Duration::from_millis(100);
+        // Resume promptly on a brief drop, then leave headroom under the host’s one-token-per-three-seconds limit.
+        let mut backoff = Duration::from_millis(500);
         let mut dropped = false;
         loop {
             match self.attempt(request) {
@@ -269,7 +281,7 @@ impl Client {
                         return Err(ClientError::Lost);
                     }
                     std::thread::sleep(backoff);
-                    backoff = (backoff * 2).min(Duration::from_secs(2));
+                    backoff = (backoff * 2).min(Duration::from_secs(5));
                 }
             }
         }

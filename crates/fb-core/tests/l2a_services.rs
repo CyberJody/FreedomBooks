@@ -17,6 +17,11 @@ fn contact_roles_duplicates_whitespace_lengths_and_mass_assignment() {
             None,
         )
         .unwrap();
+        // Worker item 23 (2026-11-23): a second active "Same" is refused, ignoring case and outer spaces;
+        // with the first archived it is allowed.
+        let refused = d::save_record(&mut f.book, f.user, c, model, &json!({"display_name":"same"}), None).unwrap_err();
+        assert_eq!(refused.message(), format!("A {} named “Same” already exists. Choose a different name.", model.name()));
+        d::set_active(&mut f.book, f.user, c, model, a["id"].as_str().unwrap(), false).unwrap();
         let b = d::save_record(&mut f.book, f.user, c, model, &json!({"display_name":"Same"}), None).unwrap();
         assert_ne!(a["id"], b["id"]);
         assert_eq!(a["notes"], "notes");

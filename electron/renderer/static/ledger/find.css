@@ -8,6 +8,7 @@
 .find-alt{display:block;font-size:12px;color:var(--fb-muted);white-space:nowrap}
 .find-date{white-space:nowrap;font-variant-numeric:tabular-nums}
 .find-detail{max-width:42ch;color:var(--fb-muted);overflow-wrap:anywhere}
+.find-matched{display:block;font-size:12px;color:var(--fb-plum-deep)}
 .find-exact td{background:#faf6fc}
 .find-more{margin:0;padding:8px 16px;font-size:12.5px;color:var(--fb-muted)}
 .find-status-void,.find-status-cancelled,.find-status-declined,.find-status-reversed,.find-status-inactive{background:#f1eff0;color:#5f5664;border-color:#ddd7d9}

@@ -33,7 +33,7 @@ function fixture(fn) {
 }
 const plain=o=>JSON.parse(JSON.stringify(o));
 const files=root=>fs.readdirSync(root).filter(n=>n.startsWith('connection-key')).sort();
-test('connection keys are independent per install and 0600 without a keyring',()=>fixture(root=>{
+test('connection keys are independent per install and 0600 without a keyring',{skip: process.platform !== 'linux' && 'simulates Linux keyring backends'},()=>fixture(root=>{
   const api=load(fakeStorage(false));
   const first=api.store(path.join(root,'first')), second=api.store(path.join(root,'second'));
   const a=first.connectionKey(), b=second.connectionKey();
@@ -47,7 +47,7 @@ test('connection keys are independent per install and 0600 without a keyring',()
   assert.deepEqual(plain(first.connectionKey()),{key:null,state:'unavailable',reason:'fallback'});
   assert.deepEqual(files(path.join(root,'first')),['connection-key.private']);
 }));
-test('OS-sealed connection keys migrate the fallback without a plaintext residue',()=>fixture(root=>{
+test('OS-sealed connection keys migrate the fallback without a plaintext residue',{skip: process.platform !== 'linux' && 'simulates Linux keyring backends'},()=>fixture(root=>{
   const fallback=load(fakeStorage(false)).store(root);
   const expected=fallback.connectionKey().key;
   const storage=fakeStorage(true), api=load(storage), sealed=api.store(root);
@@ -75,7 +75,7 @@ test('a connection key sealed by another keyring is set aside and replaced once,
   // Proof: the old keyring could still read what was set aside.
   assert.equal(before.decryptString(fs.readFileSync(path.join(root,replaced.setAside))),original);
 }));
-test('a keyring unavailable for one launch writes nothing, then the original key works again',()=>fixture(root=>{
+test('a keyring unavailable for one launch writes nothing, then the original key works again',{skip: process.platform !== 'linux' && 'simulates Linux keyring backends'},()=>fixture(root=>{
   const storage=fakeStorage(true);
   const original=load(storage).store(root).connectionKey().key;
   const sealedBytes=fs.readFileSync(path.join(root,'connection-key.sealed'));
@@ -170,7 +170,7 @@ test('a damaged or unreadable sealed book key is set aside and replaced, never t
   assert.equal(api.store(root).readSealedKey(),'synthetic-book-key');
   assert.ok(aside().length>=1);
 }));
-test('without a working keyring the saved book key is neither replaced nor removed',()=>fixture(root=>{
+test('without a working keyring the saved book key is neither replaced nor removed',{skip: process.platform !== 'linux' && 'simulates Linux keyring backends'},()=>fixture(root=>{
   const storage=fakeStorage(true), book=path.join(root,'books/default.fbbook');
   fs.mkdirSync(path.dirname(book),{recursive:true}); fs.writeFileSync(book,'synthetic');
   load(storage).store(root).sealBook('synthetic-book-key');
@@ -269,7 +269,7 @@ for (const [name, storage] of [
   ['unavailable', {...fakeStorage(true), isEncryptionAvailable:()=>false}],
   ['basic_text', fakeStorage(false)],
 ]) {
-  test(`bank credential admission rejects ${name} storage`,()=>fixture(root=>{
+  test(`bank credential admission rejects ${name} storage`,{skip: name === 'basic_text' && process.platform !== 'linux' && 'basic_text is a Linux keyring backend'},()=>fixture(root=>{
     assert.equal(load(storage).store(root).osStoreUsable(),false);
     assert.equal(load(fakeStorage(true)).store(root).osStoreUsable(),true);
   }));

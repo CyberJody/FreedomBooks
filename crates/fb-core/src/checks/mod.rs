@@ -12,8 +12,9 @@ pub(crate) mod support;
 use support::*;
 pub(crate) mod numbering;
 pub use numbering::{
-    next_number, number_text, record_bill_payment, refuse_conflict, review_bill_payment,
+    earlier_use, next_number, number_text, record_bill_payment, refuse_conflict, review_bill_payment,
 };
+pub use crate::check_numbers::EarlierUse;
 mod lifecycle;
 pub use lifecycle::{assign_number, record_check, record_check_tx, review_check, review_check_tx, void_check, void_check_tx};
 #[cfg(test)]
@@ -149,15 +150,12 @@ fn save_inner(tx: &Writer<'_>, actor: UserId, co: CompanyId, p: &Value) -> FbRes
     )?;
     let address = py::input_text(p.get("address").unwrap_or(&json!("")), 1000, false, previous.and_then(|p| p["address"].as_str()))?;
     let dt = date(&p["date"])?;
-    let number = number_text(p.get("check_number").unwrap_or(&json!("")))?;
+    let mut number = number_text(p.get("check_number").unwrap_or(&json!("")))?;
     let print = flag(p, "print_later")?;
     if print && !number.is_empty() {
         return Err(err(
             "A check marked print later has no number yet; clear the number or the flag.",
         ));
-    }
-    if !print && number.is_empty() {
-        return Err(err("Enter a check number, or mark the check print later."));
     }
     let memo = crate::card_numbers::card_free(py::input_text(p.get("memo").unwrap_or(&json!("")), 2000, false, previous.and_then(|p| p["memo"].as_str()))?, "Memo")?;
     let refresh = flag(p, "refresh_payee")?;
@@ -277,6 +275,13 @@ fn save_inner(tx: &Writer<'_>, actor: UserId, co: CompanyId, p: &Value) -> FbRes
             None,
         )
     };
+    if !print && number.is_empty() {
+        // Allocate after retry detection and under the same Writer as the check.
+        let used = rows(tx, "SELECT number FROM fb_check_number_used WHERE company_id=? AND bank_id=? AND number GLOB 'EFT-M*'", &[&co.to_db(), &bank_id])?;
+        let used: BTreeSet<_> = used.iter().map(|r| s(r, "number")).collect();
+        number = (1..=used.len() + 1).map(|n| format!("EFT-M{n}"))
+            .find(|n| !used.contains(n.as_str())).expect("one more candidate than used numbers");
+    }
     numbering::validate_number(tx, co, cid.as_deref(), &bank_id, &number)?;
     let vendor = vendor_id
         .as_ref()

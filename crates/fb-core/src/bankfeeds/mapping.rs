@@ -27,6 +27,12 @@ pub fn save_mappings(
     command(book, secrets, |w| {
         services::access(w.tx, actor, co)?;
         connection_row(w.tx, co, connection_id)?;
+        let mut targets = HashSet::new();
+        for (_, target) in mappings {
+            if let MappingTarget::Existing(Some(id)) = target && !targets.insert(*id) {
+                return Err(err("The same ledger account was selected for two downloaded accounts. Choose a different account for each. No mappings were saved."));
+            }
+        }
         let mut seen = HashSet::new();
         let mut new_banks = Vec::new();
         for (feed_id, target) in mappings {

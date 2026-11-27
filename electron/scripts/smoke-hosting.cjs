@@ -14,11 +14,24 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
+const {spawn} = require('node:child_process');
+const {createHmac, randomUUID} = require('node:crypto');
+const {once} = require('node:events');
+const {createInterface} = require('node:readline');
+const {setTimeout: delay} = require('node:timers/promises');
+const {seedConnectionKey} = require('./ai-fixture-key.cjs');
 const root = path.resolve(__dirname, '..');
-const OWNER = 'Synthetic host owner';
-const OWNER_PASSWORD = 'Synthetic host owner password';
 const KEEPER = 'Synthetic hosted bookkeeper';
 const KEEPER_PASSWORD = 'Synthetic hosted keeper password';
+
+function mfaCode(secret) {
+  const bits=[...secret].map(letter=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(letter).toString(2).padStart(5,'0')).join('');
+  const key=Buffer.from(bits.match(/.{8}/g).map(byte=>parseInt(byte,2)));
+  const counter=Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));
+  const mac=createHmac('sha1',key).update(counter).digest();
+  return String((mac.readUInt32BE(mac[19]&15)&0x7fffffff)%1000000).padStart(6,'0');
+}
 
 function keyringEntry(dir, seed) {
   const entry = path.join(dir, 'test-keyring.cjs');
@@ -56,18 +69,74 @@ async function open(base, name, seed, helper, extra = {}) {
     }
     throw new Error(`${name}: timed out waiting for ${re}; at ${page.url()}`);
   };
-  return {app, page, menu, at, data};
+  return {app, page, menu, at, data, entry, env};
+}
+
+async function aiLauncher(host, file) {
+  const data=path.join(path.dirname(host.data),'agent-profile');
+  // The service environment can differ from the host desktop's XDG data directory.
+  const env={...host.env,FB_DESKTOP_USER_DATA:data,XDG_DATA_HOME:path.join(data,'share')};
+  const child=spawn(require('electron'),[host.entry,'--ai-api',file,'--password-store=basic'],{cwd:root,env,stdio:['pipe','pipe','ignore']});
+  const exited=once(child,'exit');
+  const lines=createInterface({input:child.stdout});
+  return {
+    call:async request=>{
+      const signal=AbortSignal.timeout(20000);
+      const reply=once(lines,'line',{signal});
+      child.stdin.write(JSON.stringify(request)+'\n');
+      return JSON.parse((await reply)[0]);
+    },
+    close:async()=>{
+      child.stdin.end();
+      // The agent waits for its last response before it exits on EOF.
+      const done=await Promise.race([exited.then(()=>true),delay(5000,false,{ref:false})]);
+      if(!done){child.kill();await exited;}
+    },
+  };
+}
+
+async function dialogReplies(host, replies) {
+  await host.app.evaluate(({dialog}, replies)=>{
+    dialog.showMessageBox=async(_window,options)=>{
+      const key=options.title ?? options.message;
+      const reply=replies[key];
+      if(reply===undefined)throw Error('Unexpected dialog '+key);
+      if(options.title==='Connect an AI assistant') {
+        if(options.checkboxChecked!==true || options.defaultId!==0 || !options.checkboxLabel.includes('while FreedomBooks is locked'))throw Error('Locked access must be offered ticked with Cancel default to an Administrator');
+      }
+      return {response:reply,checkboxChecked:false};
+    };
+  }, replies);
+}
+
+async function until(check) {
+  const deadline=Date.now()+10000;
+  while(!check()){
+    if(Date.now()>=deadline)throw Error('AI settings did not publish the expected change');
+    await delay(50);
+  }
 }
 
 async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, label = 'HOSTING'} = {}) {
   assert.ok(process.env.DISPLAY && ![':0', ':20', ':0.0', ':20.0'].includes(process.env.DISPLAY), 'isolated Xvfb display required');
   assert.ok(helper && fs.existsSync(helper), 'FB_REMOTE_HELPER must name a built fb-remote');
   const base = fs.mkdtempSync(path.join(process.env.TMPDIR, 'fb-hosting-smoke-'));
+  const fixture = process.env.FB_HOSTING_FIXTURE && JSON.parse(fs.readFileSync(path.join(process.env.FB_HOSTING_FIXTURE, 'fixture.json')));
+  const OWNER = fixture?.username || 'Synthetic host owner';
+  const OWNER_PASSWORD = fixture?.user_password || 'Synthetic host owner password';
+  if (fixture) {
+    assert.equal(fixture.builtin, true);
+    const book = path.join(base, 'host', 'data', 'books', 'default.fbbook');
+    fs.mkdirSync(path.dirname(book), {recursive: true});
+    fs.copyFileSync(fixture.book, book);
+    fs.copyFileSync(fixture.book + '.keys.json', book + '.keys.json');
+    seedConnectionKey(path.join(base, 'host', 'data'), 31, fixture);
+  }
   const shots = shotsDir || process.env.FB_SMOKE_SHOTS || path.join(base, 'screenshots');
   fs.mkdirSync(shots, {recursive: true});
   let checks = 0;
   const pass = s => console.log(`PASS ${label} ${++checks}: ${s}`);
-  let host, client;
+  let host, client, agent;
   try {
     // --- The host computer: first run, the owner, and a bookkeeper. ---
     host = await open(base, 'host', 31, helper, {FB_HOSTING_LOOPBACK: '1'});
@@ -84,40 +153,120 @@ async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, labe
       s.on('error', () => resolve(false));
     });
     const hshot = n => h.screenshot({path: path.join(shots, `hosting-${n}.png`)});
-    await h.fill('#id_owner_name', OWNER);
-    await h.fill('#id_company_name', 'Synthetic hosted company');
-    await h.selectOption('#id_starter_chart', 'empty');
-    await h.getByRole('button', {name: 'Create books', exact: true}).click();
-    await h.waitForURL(/\/desktop\/sign-in\/$/);
-    await h.fill('#id_password', OWNER_PASSWORD);
-    await h.fill('#id_password_repeat', OWNER_PASSWORD);
-    if (await h.locator('input[name="confirm_owner"]').count()) await h.check('input[name="confirm_owner"]');
-    await h.getByRole('button', {name: 'Set password and continue', exact: true}).click();
-    await host.at(/\/(home|settings\/recovery-key)\/$/);
-    if (h.url().endsWith('/settings/recovery-key/')) {
-      const later = h.getByRole('button', {name: 'Remind me later', exact: true});
-      if (await later.count()) await later.click();
-    }
-    await host.at(/\/home\/$/);
-    const company = /\/c\/([0-9a-f-]{36})\//.exec(h.url())[1];
-    const hostSignIn = async (name, password) => {
+    const openCompany = async () => {
+      if (fixture) {
+        await h.waitForURL(url => url.pathname !== '/desktop/sign-in/');
+        await h.goto(`fb://app/c/${fixture.company_id}/home/`);
+      }
+      await host.at(/\/home\/$/);
+    };
+    const hostSignIn = async (name, password, recovery) => {
       await host.at(/\/desktop\/sign-in\/$/);
       if (await h.locator('#id_username').count()) await h.fill('#id_username', name);
       await h.fill('#id_password', password);
       await h.getByRole('button', {name: 'Sign in', exact: true}).click();
-      await host.at(/\/home\/$/);
+      if(recovery){
+        await h.fill('#id_code',recovery);
+        await h.getByRole('button',{name:'Verify and sign in',exact:true}).click();
+      }
+      await openCompany();
     };
+    if (fixture) {
+      await hostSignIn(OWNER, OWNER_PASSWORD);
+    } else {
+      await h.fill('#id_owner_name', OWNER);
+      await h.fill('#id_company_name', 'Synthetic hosted company');
+      await h.selectOption('#id_starter_chart', 'empty');
+      await h.getByRole('button', {name: 'Create books', exact: true}).click();
+      await h.waitForURL(/\/desktop\/sign-in\/$/);
+      await h.fill('#id_password', OWNER_PASSWORD);
+      await h.fill('#id_password_repeat', OWNER_PASSWORD);
+      if (await h.locator('input[name="confirm_owner"]').count()) await h.check('input[name="confirm_owner"]');
+      await h.getByRole('button', {name: 'Set password and continue', exact: true}).click();
+      await host.at(/\/(home|settings\/recovery-key)\/$/);
+      if (h.url().endsWith('/settings/recovery-key/')) {
+        const later = h.getByRole('button', {name: 'Remind me later', exact: true});
+        if (await later.count()) await later.click();
+      }
+      await host.at(/\/home\/$/);
+    }
+    const company = /\/c\/([0-9a-f-]{36})\//.exec(h.url())[1];
     await h.click('nav.appnav a:has-text("Settings")');
     await h.locator('main').getByRole('link', {name: 'Users', exact: true}).click();
     await h.waitForSelector('#id_role');
     await h.fill('#id_username', KEEPER);
     await h.selectOption('#id_role', 'bookkeeper');
-    await h.check('input[name="company"]');
+    await h.check(`input[name="company"][value="${company}"]`);
     await h.fill('#id_password', KEEPER_PASSWORD);
     await h.fill('#id_password_repeat', KEEPER_PASSWORD);
     await h.getByRole('button', {name: 'Save user and sign out', exact: true}).click();
     await hostSignIn(OWNER, OWNER_PASSWORD);
     pass('the host computer has synthetic books, its owner and a bookkeeper');
+
+    const catalogue={catalogue:true};
+    await dialogReplies(host,{'Connect an AI assistant':2,'AI assistant connected':0});
+    await host.menu('ai-connect');
+    const approvals=path.join(host.data,'ai-connections');
+    const savedFiles=()=>fs.existsSync(approvals)?fs.readdirSync(approvals).filter(name=>/^[0-9a-f-]{36}\.sealed$/.test(name)):[];
+    await until(()=>savedFiles().length===1);
+    const file=path.join(approvals,savedFiles()[0]);
+    agent=await aiLauncher(host,file);
+    assert.equal((await agent.call(catalogue)).data.unattended,false);
+    await host.menu('lock-books');
+    await host.at(/^\/desktop\/sign-in\/$/);
+    assert.equal((await agent.call(catalogue)).code,'paused_signed_out');
+    await hostSignIn(OWNER,OWNER_PASSWORD);
+    assert.equal((await agent.call(catalogue)).data.unattended,false);
+    const old=fs.readFileSync(file);
+    await host.app.close();
+    assert.equal((await agent.call(catalogue)).code,'app_not_running');
+    host=await open(base,'host',31,helper,{FB_HOSTING_LOOPBACK:'1'});
+    h=host.page;
+    await host.at(/^\/desktop\/sign-in\/$/);
+    assert.equal((await agent.call(catalogue)).code,'paused_signed_out');
+    await hostSignIn(OWNER,OWNER_PASSWORD);
+    assert.equal((await agent.call(catalogue)).data.unattended,false);
+    assert.deepEqual(savedFiles(),[path.basename(file)]);
+    assert.ok(!fs.readFileSync(file).equals(old));
+    pass('the same attended launcher resumes after standalone lock, sign-out and restart');
+
+    const attended=fs.readFileSync(file);
+    await dialogReplies(host,{'AI assistant connections':2,'Change AI locked access':1});
+    await host.menu('ai-manage');
+    await until(()=>!fs.readFileSync(file).equals(attended));
+    assert.deepEqual(savedFiles(),[path.basename(file)]);
+    const epoch = path.join(approvals, '.approval-epoch.sealed');
+    const anchors = path.join(approvals, 'unattended');
+    const anchorNames = fs.readdirSync(anchors);
+    assert.equal(anchorNames.length, 1);
+    const anchor = path.join(anchors, anchorNames[0]);
+    const replay = [file, epoch, anchor].map(name => [name, fs.readFileSync(name)]);
+    await host.menu('lock-books');
+    await host.at(/^\/desktop\/sign-in\/$/);
+    assert.equal((await agent.call(catalogue)).data.unattended,true);
+    const saveThroughAI=display_name=>agent.call({operation:'command_SaveCustomer',arguments:{display_name}});
+    assert.equal((await saveThroughAI('Synthetic standalone locked AI customer')).ok,true);
+    if(fixture){
+      const write=await agent.call({operation:'command_SaveAccount',arguments:{code:'601',name:'Synthetic hosted '+fixture.bank_secret,detail_type:'EXPENSE'}});
+      assert.equal(write.ok,true);
+      const accounts=await agent.call({operation:'query_Accounts',arguments:{}});
+      assert.ok(JSON.stringify(accounts.data).includes('Synthetic hosted ***'));
+    }
+    assert.equal(new URL(h.url()).pathname,'/desktop/sign-in/');
+    await hostSignIn(OWNER,OWNER_PASSWORD);
+    pass('Manage enables locked reads and writes off-hosting with the original approval file');
+    if(fixture){
+      const existing=new Set(fs.readdirSync(anchors));
+      await host.app.evaluate((_electron,{company,epoch,nativePath})=>{
+        const native=process.mainModule.require(nativePath);
+        const grant=JSON.parse(native.aiGrant(company,'Synthetic stale approval','read_only'));
+        native.aiSetUnattended(grant.id,epoch,true);
+        native.aiRevoke(grant.id);
+      },{company,epoch:randomUUID(),nativePath:process.env.FB_NATIVE_MODULE || path.join(root,'native','fb-node.node')});
+      const missing=fs.readdirSync(anchors).filter(name=>!existing.has(name));
+      assert.equal(missing.length,1);
+      fs.unlinkSync(path.join(anchors,missing[0]));
+    }
 
     // --- Settings › Host these books…: off by default, then on for one address. ---
     await host.menu('host-books');
@@ -165,6 +314,7 @@ async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, labe
     assert.match(await c.locator('.operator').innerText(), new RegExp(KEEPER));
     await cshot('01-signed-in');
     pass('the second computer pairs with the code and its bookkeeper signs in on the host');
+    if(fixture)pass('client sign-in succeeds with a missing AI anchor and a readable bank sign-in on the host');
 
     const addCustomer = async (page, at, name) => {
       await page.goto(`fb://app/c/${company}/lists/customers/new/`);
@@ -205,12 +355,21 @@ async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, labe
     await host.at(/^\/desktop\/sign-in\/$/);
     await c.goto(`fb://app/c/${company}/lists/customers/`);
     assert.match(await c.locator('main').innerText(), /Laptop customer/, 'the laptop keeps working');
+    assert.equal((await agent.call(catalogue)).data.unattended,true);
+    assert.equal((await saveThroughAI('Synthetic hosted locked AI customer')).ok,true);
+    await c.reload();
+    assert.match(await c.locator('main').innerText(),/Synthetic hosted locked AI customer/);
+    assert.equal(new URL(h.url()).pathname,'/desktop/sign-in/');
+    const clientAi=await client.app.evaluate(({Menu})=>['ai-connect','ai-manage'].map(id=>Menu.getApplicationMenu().getMenuItemById(id).enabled));
+    assert.deepEqual(clientAi,[false,false]);
+    pass('unattended reads and writes work while the host is signed out and the client is signed in');
     await hostSignIn(OWNER, OWNER_PASSWORD);
     pass('locking the host signs out only the host’s person; the connected computer keeps working');
 
     // --- Revoke: the computer is cut off at once. ---
     await host.menu('host-books');
     await host.at(/^\/hosting\/$/);
+    await dialogReplies(host, {'Revoke Synthetic laptop?': 1});
     await h.locator('tr', {hasText: 'Synthetic laptop'}).getByRole('button', {name: 'Revoke', exact: true}).click();
     await host.at(/^\/hosting\/$/);
     await h.waitForSelector('tr:has-text("Synthetic laptop"):has-text("Revoked")');
@@ -231,6 +390,10 @@ async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, labe
     await titled(/Hosting on — 0 computers connected$/, 1000);
     assert.ok(await listening(port), 'still listening after 12 s with nobody signed in');
     await hshot('05b-restarted');
+    assert.equal((await agent.call(catalogue)).data.unattended,true);
+    assert.equal((await saveThroughAI('Synthetic restarted locked AI customer')).ok,true);
+    assert.equal(new URL(h.url()).pathname,'/desktop/sign-in/');
+    pass('the same unattended launcher reads and writes after hosting restarts without sign-in');
     await hostSignIn(OWNER, OWNER_PASSWORD);
     await host.menu('host-books');
     await host.at(/^\/hosting\/$/);
@@ -245,6 +408,34 @@ async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, labe
     await titled(/^(?!.*Hosting on)/);
     await h.goto(`fb://app/c/${company}/lists/customers/`);
     assert.match(await h.locator('main').innerText(), /Laptop customer/);
+    await h.goto('fb://app/desktop/mfa/');
+    await h.fill('#id_password',OWNER_PASSWORD);
+    await h.getByRole('button',{name:'Continue',exact:true}).click();
+    await h.getByRole('button',{name:'Set up authenticator',exact:true}).click();
+    await h.locator('.mfa-manual summary').click();
+    await h.fill('#id_code',mfaCode(await h.locator('#setup_key').inputValue()));
+    await h.getByRole('button',{name:'Verify and enable MFA',exact:true}).click();
+    const recovery=(await h.locator('#recovery_codes').inputValue()).trim().split(/\s+/);
+    await h.getByRole('button',{name:'I saved my codes',exact:true}).click();
+    await host.menu('lock-books');
+    await host.at(/^\/desktop\/sign-in\/$/);
+    assert.equal((await agent.call(catalogue)).code,'paused_signed_out');
+    await hostSignIn(OWNER,OWNER_PASSWORD,recovery[0]);
+    await h.goto(`fb://app/c/${company}/home/`);
+    const afterMfa=await agent.call(catalogue);
+    assert.equal(afterMfa.ok,true);
+    assert.equal(afterMfa.data.unattended,false);
+    await dialogReplies(host,{'AI assistant connections':2,'Change AI locked access':1});
+    const beforeReenable=fs.readFileSync(file);
+    await host.menu('ai-manage');
+    await until(()=>!fs.readFileSync(file).equals(beforeReenable));
+    assert.deepEqual(savedFiles(),[path.basename(file)]);
+    assert.equal((await agent.call(catalogue)).data.unattended,true);
+    pass('an MFA change pauses the same launcher until sign-in, and Manage restores locked access in place');
+    await dialogReplies(host,{'AI assistant connections':1});
+    await host.menu('ai-manage');
+    await until(()=>!fs.existsSync(file));
+    assert.equal((await agent.call(catalogue)).code,'approval_gone');
     const hosted = fs.readdirSync(path.join(host.data, 'hosting'));
     assert.equal(hosted.length, 1, 'one hosting folder for these books');
     const folder = path.join(host.data, 'hosting', hosted[0]);
@@ -255,9 +446,20 @@ async function run({helper = process.env.FB_REMOTE_HELPER, shots: shotsDir, labe
     assert.equal(fs.statSync(path.join(folder, 'gateway')).mode & 0o077, 0);
     await hshot('06-stopped');
     pass('stopping hosting keeps the host signed in on its own books; the remote-access audit is private and has no password');
+    await host.app.close();
+    for (const [name, bytes] of replay) fs.writeFileSync(name, bytes, {mode: 0o600});
+    host = await open(base, 'host', 31, helper, {FB_HOSTING_LOOPBACK: '1'});
+    h = host.page;
+    await host.at(/^\/desktop\/sign-in\/$/);
+    await until(() => fs.existsSync(path.join(approvals, '.endpoint.sealed')));
+    assert.equal((await agent.call(catalogue)).code, 'approval_gone');
+    await hostSignIn(OWNER, OWNER_PASSWORD, recovery[1]);
+    assert.equal((await saveThroughAI('Synthetic forgotten approval must not write')).code, 'approval_gone');
+    pass('Forget survives replay of the sealed approval, epoch and anchor across restart and sign-in');
     console.log(`hosting smoke: ${checks} checks passed; screenshots in ${shots}`);
     return checks;
   } finally {
+    if (agent) await agent.close();
     for (const one of [client, host]) if (one) await one.app.close().catch(() => {});
     if (!process.env.FB_SMOKE_KEEP) fs.rmSync(base, {recursive: true, force: true});
   }

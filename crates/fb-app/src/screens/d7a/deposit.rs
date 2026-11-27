@@ -131,6 +131,7 @@ fn form(
     p: Option<Posted<'_>>,
     e: &Errors,
     review: Option<Value>,
+    fee_warning: Option<(String, String)>,
 ) -> AppResult<String> {
     let c = arg_company(r)?;
     let mut vm = ctx(app, r)?;
@@ -138,7 +139,10 @@ fn form(
     let fs = fields(app, c, prior.as_ref())?;
     let receipts = eligible(app, c, prior.as_ref())?;
     let offered = banks(app, c, &[])?;
-    let bank = super::super::d6::default_bank(app, c, &offered, "SELECT bank_id FROM banking_deposit WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
+    // Worker item 8: with several bank accounts, a deposit starts in the account the last deposit
+    // went to; before any deposit none is chosen, rather than the first account in the chart.
+    let last = "SELECT bank_id FROM banking_deposit WHERE company_id=? ORDER BY id DESC LIMIT 1";
+    let bank = super::super::d6::default_bank(app, c, &offered, last)?;
     put(&mut vm, "no_banks", offered.is_empty());
     put(
         &mut vm,
@@ -163,6 +167,18 @@ fn form(
         })
         .unwrap_or_default(),
     );
+    // Worker item 47: fee and adjustment lines (a processor payout net of its fee).
+    let (fee_accounts, fee_default) = crate::screens::fees::choices(app, c)?;
+    let fee_lines = p.map(|p| crate::screens::fees::posted(p, "fee_")).unwrap_or_default();
+    put(&mut vm, "fee_lines", crate::screens::fees::drawn(&fee_lines, fee_default.as_deref()));
+    put(&mut vm, "fee_accounts", fee_accounts);
+    put(&mut vm, "fee_default", fee_default);
+    put(&mut vm, "fee_errors", e.get("fees").cloned().unwrap_or_default());
+    // Shown with a review only: without one there is nothing to record yet.
+    if let Some((warning, confirm)) = fee_warning.filter(|_| review.is_some()) {
+        put(&mut vm, "fee_warning", warning);
+        put(&mut vm, "fee_ok", confirm);
+    }
     put(&mut vm, "review", review);
     put(&mut vm, "csrf_token", token(app, path));
     draw(app, "banking/deposits/form.html", &vm)
@@ -253,6 +269,7 @@ fn detail(app: &mut App, r: &Route) -> AppResult<String> {
         &[&s(&v, "id")],
     )?;
     let mut lines = vec![];
+    let mut received = 0i128;
     for mut l in raw {
         let mut receipt: Value =
             serde_json::from_str(s(&l, "receipt_data")).expect("receipt evidence");
@@ -263,6 +280,7 @@ fn detail(app: &mut App, r: &Route) -> AppResult<String> {
             "Customer receipt"
         });
         l["receipt"] = receipt;
+        received += i128::from(l["amount"].as_i64().unwrap());
         l["amount"] = json!(cash(i128::from(l["amount"].as_i64().unwrap())));
         lines.push(l);
     }
@@ -272,6 +290,10 @@ fn detail(app: &mut App, r: &Route) -> AppResult<String> {
         "SELECT id,code,name FROM ledger_account WHERE company_id=? ORDER BY code,id",
         &[&c.to_db()],
     )?;
+    // Worker item 47: the deposit's fee and adjustment lines, and what the payments came to before them.
+    let adjustments = v["adjustments"].as_array().cloned().unwrap_or_default();
+    put(&mut vm, "adjustments", adjustments);
+    put(&mut vm, "receipts_total", cash(received));
     put(&mut vm, "account_labels", accounts);
     put(&mut vm, "lines", lines);
     put(
@@ -294,14 +316,15 @@ fn reverse_form(
     let c = arg_company(r)?;
     let v = load(app, c, &r.args["deposit_id"])?;
     let mut vm = ctx(app, r)?;
+    let date = crate::screens::document_date(app, &v);
     put(&mut vm, "deposit", v);
     put(
         &mut vm,
         "form",
         bind_fields(
-            reversal_fields(),
+            crate::screens::month_notice(app, reversal_fields()),
             p,
-            &json!({"expected_revision":1,"date":(app.today)().to_string()}),
+            &json!({"expected_revision":1,"date":date}),
             e,
             true,
         ),
@@ -317,7 +340,7 @@ pub(super) fn render(
 ) -> AppResult<(String, u16)> {
     match r.name.as_str() {
         "deposits:list" => listing(app, r, p),
-        "deposits:new" => Ok((form(app, r, path, None, &Errors::new(), None)?, 200)),
+        "deposits:new" => Ok((form(app, r, path, None, &Errors::new(), None, None)?, 200)),
         "deposits:detail" => Ok((detail(app, r)?, 200)),
         "deposits:reverse" => Ok((reverse_form(app, r, path, None, &Errors::new())?, 200)),
         _ => Err(AppError::NotFound(r.name.clone())),
@@ -388,8 +411,19 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             "Select 1–50 whole undeposited receipts.",
         );
     }
+    let fee_lines = crate::screens::fees::posted(p, "fee_");
+    let adjustments = crate::screens::fees::adjustments(&fee_lines).unwrap_or_else(|message| {
+        error(&mut e, "fees", &message);
+        vec![]
+    });
     let mut review = None;
+    let mut fee_warning = None;
     if e.is_empty() {
+        // Worker review 3b M1: a fee typed without its minus sign on an expense account would increase the
+        // deposit and credit that expense. The review says so at the fee lines; Record deposit from that review
+        // (which sends its `fee_ok`) records the lines as typed. Record without it only shows the review.
+        fee_warning = crate::screens::fees::positive_expense(app, c, &fee_lines, "choose Record deposit")?;
+        let confirmed = fee_warning.as_ref().is_none_or(|(_, ok)| get(p, "fee_ok") == Some(ok.as_str()));
         let values = DepositValues {
             request_key: key,
             bank_id: bank,
@@ -397,9 +431,10 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             reference,
             memo,
             receipt_ids: ids,
+            adjustments,
         };
         match get(p, "action").unwrap_or("review") {
-            "record" => {
+            "record" if confirmed => {
                 if let Some(d) = result_error(
                     app.run(Command::RecordDeposit {
                         company_id: c.to_db(),
@@ -413,7 +448,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
                     });
                 }
             }
-            "review" => {
+            "review" | "record" => {
                 review = result_error(
                     app.run(Command::ReviewDeposit {
                         company_id: c.to_db(),
@@ -432,7 +467,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     }
     let status = if review.is_some() { 200 } else { 400 };
     Ok(Outcome::Page {
-        html: form(app, r, path, Some(&p), &e, review)?,
+        html: form(app, r, path, Some(&p), &e, review, fee_warning)?,
         status,
     })
 }

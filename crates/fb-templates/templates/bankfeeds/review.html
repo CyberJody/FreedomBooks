@@ -7,7 +7,7 @@
 {% if review_editable %}
 <section id="review-bulk" class="bulk-bar" aria-label="Selected transactions" hidden>
 <output id="review-count" aria-live="polite">0 selected</output>
-<label>Rule<select id="bulk-rule"><option value="">No rule</option>{% for rule in bulk_rules %}<option value="{{ rule.pk }}" data-account="{{ rule.account }}" data-payee="{{ rule.payee }}">{{ rule.name }}</option>{% endfor %}</select></label>
+<label>Rule<select id="bulk-rule"><option value="">Keep each row’s rule</option>{% for rule in bulk_rules %}<option value="{{ rule.pk }}" data-account="{{ rule.account }}" data-payee="{{ rule.payee }}">{{ rule.name }}</option>{% endfor %}</select></label>
 <label>Record as<select id="bulk-kind"><option value="AUTO">Check/debit or journal</option><option value="KEEP">Keep each row's choice</option><option value="JOURNAL">Journal entry</option><option value="CHECK">Check or debit</option></select></label>
 <label>Category<select id="bulk-category" data-combobox><option value="">Keep each row's category</option>{% for a in bulk_categories %}<option value="{{ a.pk }}">{{ a.label }}</option>{% endfor %}</select></label>
 <label class="bulk-payee"><span><input type="checkbox" id="bulk-set-payee"> Payee</span><input type="text" id="bulk-payee" maxlength="120" list="vendor-names" aria-label="Payee for the selected rows"></label>

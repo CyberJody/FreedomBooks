@@ -315,6 +315,26 @@ fn prepare(
         json!({"data":data,"mapping":mapping,"display":display,"entries":es,"prepared":prepared,"allocations":allocations,"customer_snapshot":party,"company_snapshot":co,"digest":hash,"destination_account_id":dest,"collected_tax_id":tax_id}),
     )
 }
+/// One stable refusal for `require_same_settlement`, whatever changed on the invoice.
+const SETTLEMENT_CHANGED: &str =
+    "Receipt precondition failed. Nothing was recorded. Review the invoice again.";
+/// The settlement of each invoice the request allocates to, in the request's (invoice id) order,
+/// or `None` when those invoices hold more than `SETTLEMENT_ENTRY_LIMIT` entries between them.
+/// A sales receipt allocates to none.
+fn settlement(conn: &(impl Query + ?Sized), c: CompanyId, req: &Value, sale: bool) -> FbResult<Option<Value>> {
+    let mut invoices = Vec::new();
+    if !sale {
+        let mut room = queries::SETTLEMENT_ENTRY_LIMIT;
+        for row in req["allocations"].as_array().ok_or_else(invalid_stored)? {
+            let key = row["invoice_id"].as_str().ok_or_else(invalid_stored)?;
+            let Some(invoice) = queries::settlement(conn, c, key, &mut room)? else {
+                return Ok(None);
+            };
+            invoices.push(invoice);
+        }
+    }
+    Ok(Some(Value::Array(invoices)))
+}
 fn review(
     book: &mut Book,
     actor: UserId,
@@ -324,7 +344,7 @@ fn review(
 ) -> FbResult<Review> {
     command(book, |tx| review_tx(tx, actor, c, input, sale))
 }
-pub(super) fn review_tx(
+pub(crate) fn review_tx(
     tx: &Writer<'_>,
     actor: UserId,
     c: CompanyId,
@@ -339,6 +359,7 @@ pub(super) fn review_tx(
             domain: if sale { "sales_receipt" } else { "receipt" },
             digest: p["digest"].as_str().ok_or_else(invalid_stored)?.into(),
             display: json!({"mapping":p["display"],"entries":p["entries"]}),
+            settlement: None,
         })
 }
 
@@ -368,14 +389,41 @@ pub fn review_receipt_form(
     input: &Value,
     sale: bool,
 ) -> FbResult<(Review, Value)> {
-    command(book, |tx| {
+    command(book, |tx| review_form_tx(tx, actor, c, input, sale, false))
+        .map(|(cap, vm, _)| (cap, vm))
+}
+/// `review_receipt_form` for a caller that asked for the settlement (`include_settlement`). The
+/// third value is what counts toward each allocated invoice, read in the review's own transaction:
+/// the list the caller is shown, or `None` when it has more than `SETTLEMENT_ENTRY_LIMIT` entries.
+/// The review keeps only that list's fingerprint, and only this review can then be recorded with
+/// `record_receipt_same_settlement`.
+pub fn review_receipt_form_with_settlement(
+    book: &mut Book,
+    actor: UserId,
+    c: CompanyId,
+    input: &Value,
+    sale: bool,
+) -> FbResult<(Review, Value, Option<Value>)> {
+    command(book, |tx| review_form_tx(tx, actor, c, input, sale, true))
+}
+fn review_form_tx(
+    tx: &Writer<'_>,
+    actor: UserId,
+    c: CompanyId,
+    input: &Value,
+    sale: bool,
+    with_settlement: bool,
+) -> FbResult<(Review, Value, Option<Value>)> {
         services::access(tx, actor, c)?;
         let req = request(input, sale)?;
         let p = prepare(tx, actor, c, &req, sale)?;
+        // Read only when asked. Every other review does exactly the reads it always did.
+        let listed = if with_settlement { settlement(tx, c, &req, sale)? } else { None };
         let cap = Review {
             domain: if sale { "sales_receipt" } else { "receipt" },
             digest: p["digest"].as_str().ok_or_else(invalid_stored)?.into(),
             display: json!({"mapping":p["display"],"entries":p["entries"]}),
+            settlement: listed.as_ref().map(digest),
         };
         let lines=p["prepared"].as_array().ok_or_else(invalid_stored)?.iter().map(|l|json!({"position":l["position"],"item":l["item_snapshot"].get("code").cloned().unwrap_or(json!("")),"description":l["description"],"quantity":l["quantity"],"rate":l["rate"],"taxable":l["taxable"],"amount":l["amount"],"income_account_id":l["income_account_id"]})).collect::<Vec<_>>();
         let label = match p["data"]["method"].as_str().ok_or_else(invalid_stored)? {
@@ -394,8 +442,7 @@ pub fn review_receipt_form(
             row["number"] = json!(number);
         }
         let vm = json!({"data":p["data"],"company_snapshot":p["company_snapshot"],"customer_snapshot":p["customer_snapshot"],"mapping":p["display"],"entries":p["entries"],"allocations":allocations,"lines":lines,"method_label":label});
-        Ok((cap, vm))
-    })
+        Ok((cap, vm, listed))
 }
 fn record(
     book: &mut Book,
@@ -404,14 +451,17 @@ fn record(
     input: &Value,
     review: Option<&Review>,
     sale: bool,
+    same_settlement: bool,
 ) -> FbResult<Value> {
     command(book, |tx| {
         let stripe:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM invoice_stripe_payment WHERE id=?1)",[input["request_key"].as_str().unwrap_or("")],|r|r.get(0))?;
         if stripe {return Err(FbError::refused("Use the Stripe payment review to record this receipt."));}
-        record_receipt_tx(tx, actor, c, input, review, sale)
+        record_receipt_tx(tx, actor, c, input, review, sale, same_settlement)
     })
 }
-pub(crate) fn record_receipt_tx(tx: &Writer<'_>, actor: UserId, c: CompanyId, input: &Value, review: Option<&Review>, sale: bool) -> FbResult<Value> {
+/// `same_settlement` is the caller's `require_same_settlement`: record only if what counts toward
+/// every allocated invoice is still what the review listed. Every other caller passes `false`.
+pub(crate) fn record_receipt_tx(tx: &Writer<'_>, actor: UserId, c: CompanyId, input: &Value, review: Option<&Review>, sale: bool, same_settlement: bool) -> FbResult<Value> {
         let user = services::access(tx, actor, c)?;
         let req = request(input, sale)?;
         let hash = if sale {
@@ -439,6 +489,20 @@ pub(crate) fn record_receipt_tx(tx: &Writer<'_>, actor: UserId, c: CompanyId, in
                 ));
             }
             return Ok(old);
+        }
+        // Before the first write of this transaction, so a receipt, credit, deposit or reversal
+        // that landed after the review stops the posting. A repeat of an already recorded request
+        // returned above: it writes nothing, and the refusal below always means nothing exists.
+        // The guard is honoured only for a review that was asked for the settlement and returned
+        // one; for any other review it refuses, and is never skipped.
+        if same_settlement {
+            let unchanged = match review.and_then(|r| r.settlement.as_deref()) {
+                Some(reviewed) => settlement(tx, c, &req, sale)?.is_some_and(|now| digest(&now) == reviewed),
+                None => false,
+            };
+            if !unchanged {
+                return Err(FbError::validation(SETTLEMENT_CHANGED));
+            }
         }
         let source =
             documents::create_identity(tx, actor, c, if sale { "SR" } else { "RCP" }, key)?;
@@ -526,7 +590,23 @@ pub fn record_receipt(
     input: &Value,
     review: Option<&Review>,
 ) -> FbResult<Value> {
-    record(book, actor, c, input, review, false)
+    record(book, actor, c, input, review, false, false)
+}
+/// `record_receipt` or `record_sales_receipt` for a caller that sent `require_same_settlement`.
+/// In the posting's own transaction, before anything is written, the settlement of each allocated
+/// invoice is read again and must equal what the review listed: the same entries, reversed or not,
+/// and the same outstanding amount. Otherwise nothing is recorded. Only a review from
+/// `review_receipt_form_with_settlement` that listed a settlement can satisfy it; a review made
+/// any other way, or one over `SETTLEMENT_ENTRY_LIMIT`, is refused the same way.
+pub fn record_receipt_same_settlement(
+    book: &mut Book,
+    actor: UserId,
+    c: CompanyId,
+    input: &Value,
+    review: Option<&Review>,
+    sale: bool,
+) -> FbResult<Value> {
+    record(book, actor, c, input, review, sale, true)
 }
 pub fn record_sales_receipt(
     book: &mut Book,
@@ -535,7 +615,7 @@ pub fn record_sales_receipt(
     input: &Value,
     review: Option<&Review>,
 ) -> FbResult<Value> {
-    record(book, actor, c, input, review, true)
+    record(book, actor, c, input, review, true, false)
 }
 fn reverse(
     book: &mut Book,

@@ -54,6 +54,7 @@ function child({helper, start = spawn, onLink = () => {}}) {
     proc = start(helper, ['client'], {stdio: ['pipe', 'pipe', 'ignore'], env: {}, windowsHide: true});
     const mine = proc;
     mine.stdout.on('data', decoder(message => {
+      if (proc !== mine) return;
       if (message.kind === 'link') return onLink(message.state);
       const p = pending.get(message.id);
       if (!p) return;
@@ -62,8 +63,17 @@ function child({helper, start = spawn, onLink = () => {}}) {
       if (message.kind === 'error') p.reject(Object.assign(new Error(message.message), {code: message.code}));
       else p.resolve(message);
     }, () => { try { mine.kill(); } catch { /* already gone */ } }));
-    mine.on('exit', () => { if (proc === mine) proc = null; fail('The connection helper stopped.'); onLink('lost'); });
-    mine.on('error', () => { if (proc === mine) proc = null; fail('The connection helper could not start.'); });
+    mine.on('exit', () => {
+      if (proc !== mine) return;
+      proc = null;
+      fail('The connection helper stopped.');
+      onLink('lost');
+    });
+    mine.on('error', () => {
+      if (proc !== mine) return;
+      proc = null;
+      fail('The connection helper could not start.');
+    });
     mine.stdin.on('error', () => {});
     return mine;
   }
@@ -111,13 +121,13 @@ function store({dir, safeStorage, writePrivate}) {
       if (safeStorage.decryptString(fs.readFileSync(file)) !== text) throw new Error('The keyring did not keep the pairing.');
     },
     load() {
-      if (!usable()) return null;
       let raw;
       try {
         const st = fs.lstatSync(file);
         if (!st.isFile() || st.size > 65536) return null;
         raw = fs.readFileSync(file);
       } catch { return null; }
+      if (!usable()) return null;
       try { const r = JSON.parse(safeStorage.decryptString(raw)); return valid(r) ? r : null; } catch { return null; }
     },
     // The public part, for screens: never the identity.

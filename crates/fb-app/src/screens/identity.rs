@@ -3,6 +3,8 @@ use super::*;
 use crate::identity::{Permission, Role, SESSION, SIGN_IN, USERS};
 use crate::mfa::SETTINGS as MFA;
 
+const USER_SAVED: &str = "User saved. Sign in again to continue.";
+
 pub(super) fn handles(path: &str) -> bool {
     [SIGN_IN, SESSION, USERS, MFA].contains(&path)
 }
@@ -67,6 +69,9 @@ pub(super) fn render(
     vm["mfa_path"] = json!(MFA);
     vm["builtin"] = json!(app.builtin());
     if path == SIGN_IN {
+        if let Some(index) = app.messages.iter().position(|m| m == USER_SAVED) {
+            vm["user_saved"] = json!(app.messages.remove(index));
+        }
         vm["bootstrap"] = json!(app.bootstrap_owner()?.map(|(_, name)| name));
         // First run: the owner who just named these books needs no "existing owner" confirmation.
         vm["first_run"] = json!(app.first_run_owner);
@@ -221,6 +226,7 @@ pub(super) fn submit(app: &mut App, path: &str, fields: Posted<'_>) -> AppResult
                 password,
                 &companies,
             )?;
+            app.messages.push(USER_SAVED.into());
             Ok(Outcome::Redirect {
                 location: SIGN_IN.into(),
             })

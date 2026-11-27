@@ -2,6 +2,9 @@ use fb_app::{App, Command, Outcome, keys};
 use fb_core::{CompanyId, UserId, bankfeeds as feeds, services};
 use serde_json::{Value, json};
 pub const PASSWORD: &str = "Synthetic individual AI password";
+pub const DEVICE_KEY: [u8; 32] = [61; 32];
+pub const BANK_SECRET: &str = "SyntheticVioletFinch842";
+pub const BANK_ACCESS: &str = "https://SyntheticFeedOperator:SyntheticVioletFinch842@fixture.invalid/simplefin";
 pub struct Fixture {
     pub app: App,
     pub path: std::path::PathBuf,
@@ -77,13 +80,13 @@ impl Fixture {
         .unwrap()
         .id
         .to_db();
-        let secret = feeds::SecretSet::none();
+        let secret = feeds::SecretSet::from_access_url(BANK_ACCESS, Vec::<String>::new()).unwrap();
         let conn = feeds::connect(
             &mut o.book,
             o.owner,
             company,
             &json!("Synthetic feed"),
-            "bridge.simplefin.org",
+            "fixture.invalid",
             &secret,
         )
         .unwrap()["id"]
@@ -107,6 +110,21 @@ impl Fixture {
             .feed_account_id
             .clone();
         feeds::map_account(&mut o.book, o.owner, company, &feed, &json!(bank), &secret).unwrap();
+        let open = app.open.take().unwrap();
+        let device = keys::MasterKey::new(DEVICE_KEY);
+        let store = fb_app::credentials::BookCredentials::new(open.book, open.owner, &device).unwrap();
+        use fb_plugin_api::{CredentialScope, CredentialStore, SecretBytes};
+        let scope = CredentialScope {
+            plugin_id: "simplefin".into(),
+            company_id: company.to_db().parse().unwrap(),
+            connection_id: conn.parse().unwrap(),
+        };
+        store.save(&scope, SecretBytes::new(json!({"access_url": BANK_ACCESS}).to_string().into_bytes())).unwrap();
+        app.open = Some(fb_app::session::Open { book: store.into_book().unwrap(), ..open });
+        app.device_key = Some(device);
+        app.connection_keys = fb_app::ConnectionKeys::Ready;
+        app.sign_out();
+        app.sign_in("Synthetic operator", PASSWORD).unwrap();
         app.ai_select_company(company).unwrap();
         Self {
             app,

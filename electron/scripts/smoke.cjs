@@ -283,11 +283,13 @@ async function heading(page) {
     await page.fill('#id_date', '2026-10-31');
     await page.fill('#id_memo', 'Supplies adjustment');
     await page.check('#id_adjusting');
-    await page.selectOption('#id_lines-0-account', ids.expense);
+    await page.fill('#id_lines-0-account-search', '5000');
+    await page.press('#id_lines-0-account-search', 'Enter');
     await page.fill('#id_lines-0-debit', '12.345');
     await page.fill('#id_lines-0-description', 'Supplies adjustment');
     await page.fill('#id_lines-0-name', 'Dana');
-    await page.selectOption('#id_lines-8-account', ids.income);
+    await page.fill('#id_lines-8-account-search', '4000');
+    await page.press('#id_lines-8-account-search', 'Enter');
     await page.fill('#id_lines-8-credit', '12.35');
     await page.fill('#id_lines-8-description', 'Supplies adjustment');
     await page.waitForFunction(() => document.querySelector('#total-difference').textContent.includes('Balanced'));

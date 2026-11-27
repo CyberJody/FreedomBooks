@@ -12,6 +12,8 @@ fs.mkdirSync(shots, { recursive: true });
 let checks = 0;
 const pass = text => console.log(`PASS ${++checks}: ${text}`);
 const password = 'starter-chart-test-only';
+const userPassword = 'starter-chart-user-only';
+const owner = 'Morgan Owner';
 const companyId = page => /\/c\/([0-9a-f-]{36})\//.exec(page.url())[1];
 
 async function accounts(app, company) {
@@ -26,7 +28,8 @@ async function shot(page, name) {
 }
 async function run(choice) {
   const data = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'fb-starter-chart-'));
-  const app = await electron.launch({ chromiumSandbox: true, args: [root], cwd: root, timeout: 180000,
+  // No system keyring: the saved book key is not used, so nothing reaches a Secret Service.
+  const app = await electron.launch({ chromiumSandbox: true, args: [root, '--password-store=basic'], cwd: root, timeout: 180000,
     env: { ...process.env, HOME: path.join(data, 'home'), XDG_CONFIG_HOME: path.join(data, 'config'), XDG_DATA_HOME: path.join(data, 'data'), XDG_CACHE_HOME: path.join(data, 'cache'), FB_DESKTOP_USER_DATA: data, ELECTRON_ENABLE_LOGGING: '0' } });
   try {
     const page = await app.firstWindow();
@@ -54,15 +57,22 @@ async function run(choice) {
       assert.equal(await page.inputValue('#id_starter_chart'), 'empty');
       pass('first-run error retains the explicit empty-chart choice');
     }
-    await page.fill('#id_owner_name', 'Morgan Owner');
+    await page.fill('#id_owner_name', owner);
     await page.fill('#id_company_name', `${choice} synthetic books`);
     await page.check('#id_protect');
     await page.fill('#id_lock_password', password);
     await page.fill('#id_lock_password2', password);
-    await Promise.all([page.waitForURL(/\/settings\/recovery-key\/$/), page.click('button:has-text("Create books")')]);
+    // First run has had a sign-in step (the owner's user password) before the recovery key since
+    // 2026-11-08.
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/), page.click('button:has-text("Create books")')]);
+    assert.match(await page.locator('main').innerText(), new RegExp(`User name: ${owner}`));
+    await page.fill('#id_password', userPassword);
+    await page.fill('#id_password_repeat', userPassword);
+    await Promise.all([page.waitForURL(/\/settings\/recovery-key\/$/), page.getByRole('button', { name: 'Set password and continue', exact: true }).click()]);
     await page.getByRole('button', { name: 'Remind me later', exact: true }).click();
     await page.waitForURL(/\/settings\/book-protection\/$/);
-    await Promise.all([page.waitForURL(/\/home\/$/), page.locator('a[href$="/home/"]').first().click()]);
+    // The sidebar's Home link (the title bar's company menu holds hidden ones).
+    await Promise.all([page.waitForURL(/\/home\/$/), page.locator('nav.appnav a[href$="/home/"]').click()]);
     const first = companyId(page);
     const original = await accounts(app, first);
     assert.equal(original.length, choice === 'standard' ? 34 : 0);
@@ -99,7 +109,12 @@ async function run(choice) {
     })]);
     await page.waitForSelector('#id_password');
     await page.fill('#id_password', password);
-    await Promise.all([page.waitForURL(/\/home\/$/), page.click('button:has-text("Unlock")')]);
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/), page.click('button:has-text("Unlock")')]);
+    await page.fill('#id_username', owner);
+    await page.fill('#id_password', userPassword);
+    await Promise.all([page.waitForURL(/\/(home|settings\/recovery-key)\/$/), page.getByRole('button', { name: 'Sign in', exact: true }).click()]);
+    // The recovery key was left for later, so signing in shows the recovery-key page first.
+    if (page.url().endsWith('/settings/recovery-key/')) await page.goto(`fb://app/c/${first}/home/`);
     assert.deepEqual(await accounts(app, first), original);
     pass(`reopening ${choice} books leaves the chart unchanged`);
   } finally {

@@ -347,8 +347,9 @@ impl App {
             _ => Err(error("That book password or recovery key does not unlock these books.")),
         }
     }
+    /// Presence only, for desktop key setup before sign-in. No credential data leaves the book.
     pub fn has_credentials(&mut self) -> AppResult<bool> {
-        Ok(self.open_mut()?.book.read(|q| {
+        Ok(self.open.as_mut().ok_or(AppError::Locked)?.book.read(|q| {
             q.query_row("SELECT EXISTS(SELECT 1 FROM plugin_credential)", [], |r| {
                 r.get(0)
             })

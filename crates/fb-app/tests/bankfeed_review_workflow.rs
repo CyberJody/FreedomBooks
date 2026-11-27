@@ -259,7 +259,7 @@ fn partial_failures_keep_all_drafts_selection_and_filters_without_posting_other_
     ]);
     let (html, status) = f.post(fields, "accept");
     assert_eq!(status, 400);
-    assert!(html.contains("recorded as JE"));
+    assert!(html.contains("recorded as 1 · J000001"));
     assert!(row(&html, bad).contains("Map "));
     assert!(row(&html, bad).contains(" checked"));
     assert!(row(&html, bad).contains("Edited OFFICE unmapped"));
@@ -404,7 +404,7 @@ fn duplicate_match_stays_available_and_accepting_it_does_not_post_another_journa
     let mut f = Fixture::new();
     let i = f.items["OFFICE debit"].clone();
     let o = f.app.open_mut().unwrap();
-    let draft = services::DraftInput::new(
+    let mut draft = services::DraftInput::new(
         "2026-11-06",
         "Previously entered payment",
         vec![
@@ -412,6 +412,7 @@ fn duplicate_match_stays_available_and_accepting_it_does_not_post_another_journa
             json!({"account":f.expense, "debit":"12.00", "credit":"0.00"}),
         ],
     );
+    draft.entry_number = Some("ADJ-7".into());
     let journal = services::save_draft(&mut o.book, o.owner, f.company, draft).unwrap();
     services::post_journal(
         &mut o.book,
@@ -427,6 +428,7 @@ fn duplicate_match_stays_available_and_accepting_it_does_not_post_another_journa
     let html = f.render("");
     assert!(row(&html, i.ordinal).contains("value=\"MATCH\" selected"));
     assert!(row(&html, i.ordinal).contains(&format!("value=\"{line}\" selected")));
+    assert!(row(&html, i.ordinal).contains("ADJ-7 · J000001"));
     artifact("matching.html", &html);
     let (html, status) = f.post(
         vec![
@@ -437,7 +439,9 @@ fn duplicate_match_stays_available_and_accepting_it_does_not_post_another_journa
         "accept",
     );
     assert_eq!(status, 200);
-    assert!(html.contains("recorded as JE"));
+    assert!(html.contains("matched to ADJ-7 · J000001"));
+    let returned = f.render("");
+    assert!(returned.contains("Recently recorded or matched entries") && returned.contains("ADJ-7 · J000001</a>"));
     assert_eq!(
         f.count("SELECT count(*) FROM ledger_journal WHERE status='POSTED'"),
         1
@@ -767,4 +771,15 @@ fn bulk_drafts_preserve_match_receipt_and_transfer_through_acceptance() {
         f.count("SELECT count(*) FROM ledger_journal WHERE status='POSTED'"),
         5
     );
+}
+
+#[test]
+fn review_count_and_missing_category_follow_the_visible_rows_and_fields() {
+    let mut f = Fixture::new();
+    let pk = f.items["OFFICE debit"].ordinal;
+    assert!(f.render("?q=OTHER").contains("1 to review"));
+    let (html, status) = f.post(vec![("sel".into(), pk.to_string()), (format!("kind_{pk}"), "JOURNAL".into())], "accept");
+    assert_eq!(status, 400);
+    let category = row(&html, pk).split_once("class=\"cell-cat\"").unwrap().1.split("</td>").next().unwrap();
+    assert!(category.contains("Choose a category for this transaction."));
 }

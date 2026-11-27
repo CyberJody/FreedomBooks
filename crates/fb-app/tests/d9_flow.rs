@@ -104,7 +104,7 @@ fn a_connection_whose_sign_in_is_unreadable_offers_forget_and_connect_again_neve
     assert_eq!(page.status, 200);
     assert!(page.html.contains("Reconnect needed"), "{}", page.html);
     assert!(page.html.contains(&format!(
-        r#"<a href="/c/{}/bank-feeds/connect/">Connect again</a>"#,
+        r#"<a data-host-only href="/c/{}/bank-feeds/connect/">Connect again</a>"#,
         co.to_db()
     )));
     assert!(page.html.contains(">Forget</a>"));
@@ -112,14 +112,14 @@ fn a_connection_whose_sign_in_is_unreadable_offers_forget_and_connect_again_neve
     // The desktop message shows once, as a plain notice above the page content.
     assert!(
         page.html.contains(
-            r#"<p class="notice">The saved sign-in for Checking feed couldn&#x27;t be read."#
+            r#"<p class="notice" role="status" data-reveal>The saved sign-in for Checking feed couldn&#x27;t be read."#
         ),
         "{}",
         page.html
     );
     assert!(app.messages.is_empty());
     let again = screens::render(&mut app, &list).unwrap();
-    assert!(!again.html.contains(r#"<p class="notice">"#));
+    assert!(!again.html.contains("The saved sign-in for Checking feed"));
     // Nor does its accounts page offer Sync.
     let id: String = app
         .open_mut()
@@ -158,7 +158,7 @@ fn the_sync_form_carries_a_token_for_its_own_action_and_shows_the_plugin_refusal
         .unwrap()
         .html;
     let marker = format!(
-        r#"<form method="post" action="{sync}"><input type="hidden" name="fb_command_token" value=""#
+        r#"<form data-host-only method="post" action="{sync}"><input type="hidden" name="fb_command_token" value=""#
     );
     let start = page.find(&marker).unwrap_or_else(|| panic!("{page}")) + marker.len();
     let token = page[start..].split('"').next().unwrap().to_owned();
@@ -370,16 +370,37 @@ fn accepting_a_downloaded_transaction_from_the_review_page_posts_it_and_shows_th
             .unwrap()
     };
     let review = format!("/c/{c}/bank-feeds/review/");
+    let accounts = format!("/c/{c}/bank-feeds/{conn}/accounts/");
+    let field = format!("map_{feed}");
+    let equipment = account(&mut app, co, "1500", "Equipment", "FIXED_ASSET");
+    let card = account(&mut app, co, "2100", "Credit card", "CREDIT_CARD");
+    let page = screens::render(&mut app, &accounts).unwrap().html;
+    for id in [&bank, &card] {
+        assert!(page.contains(&format!(r#"<option value="{id}""#)));
+    }
+    assert!(!page.contains(&format!(r#"<option value="{equipment}""#)));
+    let before = audit(&mut app);
+    let (refusal, status) = html(submit(&mut app, &accounts, &[(&field, &equipment)]));
+    assert_eq!(status, 400);
+    assert!(refusal.contains("Select a valid choice."));
+    assert_eq!(audit(&mut app), before);
+
+    // An older book may already map this feed to another asset. Saving that selection preserves it.
+    let open = app.open_mut().unwrap();
+    bankfeeds::map_account(&mut open.book, open.owner, co, &feed, &json!(equipment), &bankfeeds::SecretSet::none()).unwrap();
+    let page = screens::render(&mut app, &accounts).unwrap().html;
+    assert!(page.contains("1500 · Equipment (existing mapping)"));
+    let before = audit(&mut app);
+    assert!(matches!(submit(&mut app, &accounts, &[(&field, &equipment)]), Outcome::Redirect { .. }));
+    assert_eq!(audit(&mut app), before);
+
     // Mapping through the accounts form redirects to the list, like Django.
-    let outcome = submit(
-        &mut app,
-        &format!("/c/{c}/bank-feeds/{conn}/accounts/"),
-        &[(&format!("map_{feed}"), &bank)],
-    );
+    let outcome = submit(&mut app, &accounts, &[(&field, &bank)]);
     assert!(
         matches!(&outcome, Outcome::Redirect { location } if *location == format!("/c/{c}/bank-feeds/")),
         "{outcome:?}"
     );
+    assert!(screens::render(&mut app, &format!("/c/{c}/bank-feeds/")).unwrap().html.contains("Bank account mappings saved."));
     let (page, status) = html(submit(
         &mut app,
         &review,
@@ -392,7 +413,7 @@ fn accepting_a_downloaded_transaction_from_the_review_page_posts_it_and_shows_th
     ));
     assert_eq!(status, 200, "{page}");
     assert!(
-        page.contains("2026-10-08 Service charge -3.10: recorded as JE 1"),
+        page.contains("2026-10-08 Service charge -3.10: recorded as 1 · J000001"),
         "{page}"
     );
     let posted: i64 = app
@@ -503,7 +524,7 @@ fn a_rule_saves_through_submit_form_and_lists_in_order() {
     );
     let page = screens::render(&mut app, &format!("/c/{c}/bank-feeds/rules/")).unwrap();
     assert!(
-        page.html.contains(">Office</a>")
+        page.html.contains("Rule saved.") && page.html.contains(">Office</a>")
             && page.html.contains("– 50.00")
             && page.html.contains("6000 · Expense"),
         "{}",

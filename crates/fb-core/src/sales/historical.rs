@@ -335,7 +335,7 @@ fn apply_one(tx: &Writer<'_>, actor: UserId, c: CompanyId, v: &Value) -> FbResul
         let data = payment_input(source, p, &inv)?;
         let review = receipts::review_tx(tx, actor, c, &data, false)?;
         plans.push(review.display.clone());
-        let receipt = receipts::record_receipt_tx(tx, actor, c, &data, Some(&review), false)?;
+        let receipt = receipts::record_receipt_tx(tx, actor, c, &data, Some(&review), false, false)?;
         payments.push(
             json!({"source_id":uuid(&p["id"])?,"external_id":external,"receipt_id":receipt["id"]}),
         );

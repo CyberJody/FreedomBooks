@@ -334,6 +334,14 @@
       "expect_error": false
     },
     {
+      "op": "l2_active",
+      "company": "c",
+      "model": "customer",
+      "record": "twin1",
+      "active": false,
+      "expect_error": false
+    },
+    {
       "op": "l2_save",
       "company": "c",
       "model": "customer",

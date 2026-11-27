@@ -81,6 +81,18 @@ fn a_transaction_downloaded_again_by_a_new_connection_is_not_posted_twice_withou
 }
 
 #[test]
+fn no_candidate_guard_stops_earlier_recordings_after_reconnect() {
+    let mut f = Fx::new();
+    f.connected_books();
+    let input = json!({"kind":"JOURNAL","account_id":f.acc("500"),"record_again":true});
+    f.accept("TX-1001", input.clone()).unwrap();
+    reconnect(&mut f, &demo());
+    let connection = f.conn.clone();
+    let id = item_in(&mut f, &connection, "TX-1001").id;
+    assert_candidate_blocks_accept(&mut f, &id, json!({"match":0,"receipt":0,"recorded":true}), input);
+}
+
+#[test]
 fn reissued_ids_on_a_new_connection_are_caught_by_the_entry_an_earlier_feed_row_produced() {
     let mut f = Fx::new();
     f.connected_books();

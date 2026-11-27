@@ -42,16 +42,27 @@ fn the_unlock_screen_names_itself_the_version_the_reason_and_the_book() {
         assert!(html.contains(words), "{reason}: {html}");
         assert!(!html.contains("save the key on this computer again") || reason == "unreadable", "{reason}");
     }
+    let password = gate("password");
+    assert!(password.contains("book password</strong>. Enter it to open them."));
+    assert!(password.contains("I don’t have the book password or recovery key"));
+    let builtin = gate("builtin");
+    assert!(builtin.contains("couldn’t open these books with the built-in key"));
+    assert!(builtin.contains("<details class=\"gate-more\" open><summary>Restore a backup instead</summary>"));
+    assert!(builtin.contains("Book password or recovery key, if protected"));
     // Unknown reasons are never echoed.
     let html = gate("<script>");
-    assert!(!html.contains("<script>") && html.contains("Enter it to open them."));
+    assert!(!html.contains("<script>") && html.contains("leave the box empty"));
 }
 
 #[test]
 fn first_run_says_the_name_is_the_user_name_and_shows_the_steps() {
     let html = screens::render_gate_in(&App::new(), "setup", &GateContext::default(), &[], "standard").unwrap();
     assert!(!html.contains("<nav"));
-    assert!(html.contains("Step 1 of 3"));
+    // Worker round 1: without a book password (the default) there is no recovery-key step, so the page
+    // starts at two steps; ticking the book password box adds step 3 (preload `protectionFields`).
+    assert!(html.contains("Step 1 of <span id=\"setup-step-count\">2</span>"), "{html}");
+    assert!(html.contains("<li id=\"recovery-step\" hidden>"), "{html}");
+    assert!(!html.contains("Step 1 of 3"));
     assert!(html.contains("<label for=\"id_owner_name\">Your name</label>"));
     assert!(html.contains("This is also your <strong>user name</strong> for signing in"));
     assert!(html.contains(fb_core::backups::portable::BUILTIN_WARNING));
@@ -121,4 +132,20 @@ fn the_chooser_calls_the_main_books_file_previous_once_another_book_is_the_main_
     assert!(!html.contains(">Main books<"), "{html}");
     let html = render(false);
     assert!(html.contains("Main books") && !html.contains("Previous main books file"), "{html}");
+}
+
+/// Worker item 14 (2026-11-23): the first-run sign-in page showed "Please fill out this field" before anything was submitted.
+#[test]
+fn the_first_run_password_page_uses_its_own_messages() {
+    let d = tempfile::tempdir().unwrap();
+    let mut app = App::new();
+    app.create_book(&d.path().join("book.fbbook"), &fb_app::keys::new_master_key().unwrap(), "Pat Tester", "Synthetic").unwrap();
+    let path = fb_app::identity::SIGN_IN;
+    let html = screens::render(&mut app, path).unwrap().html;
+    assert!(html.contains("Step 2 of 2 · Your sign-in"), "{html}");
+    assert!(html.contains("<form method=\"post\" class=\"narrow\" novalidate>"), "{html}");
+    let token = app.tokens.mint(path);
+    let out = app.run_renderer(Command::SubmitForm { path: path.into(), token, fields: vec![("action".into(), "enroll".into()), ("password".into(), String::new()), ("password_repeat".into(), String::new())] }).unwrap();
+    let Outcome::Invalid { html } = out else { panic!("{out:?}") };
+    assert!(html.contains("Use a user password of at least 8 characters"), "{html}");
 }

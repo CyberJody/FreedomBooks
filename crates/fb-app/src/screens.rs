@@ -25,6 +25,7 @@ mod identity;
 pub(crate) mod find;
 mod d9;
 mod home;
+pub(crate) mod fees;
 pub(crate) use d8::export_report;
 pub(crate) use d6::{is_d6_command, run_d6_command};
 use crate::commands::{InvoiceLineValues, InvoiceValues, Outcome};
@@ -166,6 +167,9 @@ pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
         app.ai_select_company(company)?;
     }
     let name = route.name.clone();
+    if matches!(name.as_str(), "invoices:new" | "invoices:edit" | "invoices:void" | "receipts:new" | "directory:edit") {
+        app.authorize_path(target, crate::identity::Permission::Write)?;
+    }
     #[cfg(feature = "panic-test")]
     crate::test_panic::on_render(&name);
     let (html, status) = match name.as_str() {
@@ -345,16 +349,22 @@ fn accounts(app: &mut App, route: &Route, params: &[(String, String)]) -> AppRes
     if by_code {
         rows.sort_by(|a, b| a.code.cmp(&b.code).then(a.id.to_db().cmp(&b.id.to_db())));
     } else {
+        // Worker item 16: the chart lists income accounts together (4900 Other Income after 4100 Sales,
+        // not after the expenses): by kind, then type. Reports keep their own order, where other
+        // income follows operating expenses.
+        let kind = |a: &Account| Kind::ALL.iter().position(|k| *k == a.kind).unwrap_or(usize::MAX);
         rows.sort_by(|a, b| {
-            a.type_order()
-                .cmp(&b.type_order())
+            kind(a)
+                .cmp(&kind(b))
+                .then(a.type_order().cmp(&b.type_order()))
                 .then(a.code.cmp(&b.code))
                 .then(a.id.to_db().cmp(&b.id.to_db()))
         });
     }
     let vms: Vec<AccountVm> = rows.iter().map(account_vm).collect();
     let page = Page::of(&vms, 100, get(params, "page"));
-    let vm = AccountsVm { shell, accounts: page.object_list.clone(), page, by_code, query_string: if by_code { "sort=code".into() } else { String::new() } };
+    let messages = std::mem::take(&mut app.messages);
+    let vm = AccountsVm { shell, accounts: page.object_list.clone(), page, by_code, query_string: if by_code { "sort=code".into() } else { String::new() }, messages };
     Ok(app.screens.render("ledger/accounts.html", &vm)?)
 }
 
@@ -555,6 +565,22 @@ const INVOICE_STATES: &[(&str, &str)] = &[
     ("PAID", "Paid"),
     ("VOID", "Voided"),
 ];
+
+/// Worker item 10: the date a void or reversal form offers is the date of the document it undoes (the
+/// person can choose a later one), so a March document is not reversed in November by default.
+pub(crate) fn document_date(app: &App, v: &Value) -> String {
+    v["date"].as_str().filter(|d| valid_date(d)).map(str::to_owned).unwrap_or_else(|| (app.today)().to_string())
+}
+
+/// Review S1 (worker item 10): marks a void or reversal form's date box with today's date, so the page
+/// says "This posts in <Month Year> and changes that month's reports…" while the date in it is in an
+/// earlier month than today (`electron/preload/preload.cjs`, month notice). It never stops the save.
+pub(crate) fn month_notice(app: &App, mut fields: Vec<Field>) -> Vec<Field> {
+    for f in fields.iter_mut().filter(|f| f.name == "date") {
+        f.attrs.push(("data-month-notice".into(), (app.today)().to_string()));
+    }
+    fields
+}
 
 fn valid_date(text: &str) -> bool {
     fb_core::py::form_date(text).is_ok()
@@ -772,7 +798,7 @@ fn invoice_choices(book: &mut Book, c: CompanyId) -> AppResult<InvoiceChoices> {
             item_choices.push((id.clone(), format!("{} · #{}", it["code"].as_str().unwrap_or_default(), item_ordinals[&id])));
             catalog.insert(
                 id,
-                json!({"description": it["description"], "rate": it["sale_rate"].as_str().map(str::to_owned).unwrap_or_else(|| "None".into()),
+                json!({"description": it["description"], "code": it["code"], "rate": it["sale_rate"].as_str().map(str::to_owned).unwrap_or_else(|| "None".into()),
                        "taxable": it["taxable"], "income_account": it["income_account_id"].as_str().or(it["income_account"].as_str()).unwrap_or("")}),
             );
         }
@@ -949,7 +975,7 @@ pub fn render_gate_in(app: &App, mode: &str, context: &crate::books::GateContext
     if !["setup", "unlock", "choose", "error"].contains(&mode) {
         return Err(AppError::Invalid("Unknown gate screen.".into()));
     }
-    const REASONS: [&str; 8] = ["", "missing", "unreadable", "keyring", "ask", "locked", "idle", "choose"];
+    const REASONS: [&str; 10] = ["", "builtin", "password", "missing", "unreadable", "keyring", "ask", "locked", "idle", "choose"];
     let reason = if REASONS.contains(&context.reason.as_str()) { context.reason.as_str() } else { "" };
     let mut vm = context.view();
     vm["reason"] = json!(reason);

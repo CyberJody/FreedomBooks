@@ -29,6 +29,35 @@ pub enum FeedCategory {
         journal_line_id: String,
     },
 }
+/// The bank row and mapping the caller reviewed before attempting to record it.
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(inline)]
+pub struct FeedPreconditions {
+    id: String,
+    status: String,
+    return_count: i64,
+    amount_cents: String,
+    date: Option<String>,
+    feed_account_id: String,
+    mapped_account_id: Option<String>,
+    #[serde(default)]
+    currency: Option<String>,
+    #[serde(default)]
+    category_detail_type: Option<String>,
+    mapped_account_detail_type: Option<String>,
+    provider_host: Option<String>,
+    provider_account_id: Option<String>,
+    provider_transaction_id: Option<String>,
+    description: Option<String>,
+    #[serde(default)]
+    require_exact_account_id: bool,
+    #[serde(default)]
+    require_exact_transaction_id: bool,
+    #[serde(default)]
+    require_no_candidates: bool,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HistoricalInvoice {
@@ -89,7 +118,15 @@ pub enum Operation {
         as_of: String,
         basis: String,
     },
+    FeedAccounts,
+    FeedReview,
     PendingFeed {
+        #[serde(default)]
+        after: usize,
+        #[serde(default = "page_size")]
+        limit: usize,
+    },
+    DecidedFeed {
         #[serde(default)]
         after: usize,
         #[serde(default = "page_size")]
@@ -101,6 +138,8 @@ pub enum Operation {
     AcceptFeed {
         transaction_id: String,
         category: FeedCategory,
+        #[serde(default)]
+        preconditions: Option<Box<FeedPreconditions>>,
     },
     IgnoreFeed {
         transaction_id: String,
@@ -126,7 +165,28 @@ fn page_size() -> usize {
     50
 }
 pub fn item(i: &bankfeeds::Item) -> Value {
-    json!({"id":i.id,"ordinal":i.ordinal,"feed_account_id":i.feed_account_id,"date":i.date(),"amount_cents":i.amount.to_string(),"description":i.description,"pending":i.pending,"status":i.status,"accepted_as":i.accepted_as,"journal_id":i.journal_id,"return_count":i.return_count})
+    json!({"id":i.id,"ordinal":i.ordinal,"feed_account_id":i.feed_account_id,"provider_transaction_id":i.remote_id,"date":i.date(),"amount_cents":i.amount.to_string(),"description":i.description,"pending":i.pending,"status":i.status,"accepted_as":i.accepted_as,"journal_id":i.journal_id,"journal_line_id":i.journal_line_id,"return_count":i.return_count})
+}
+fn review_account(account: &bankfeeds::ReviewAccount) -> Value {
+    let f = &account.feed;
+    json!({"id":f.id,"provider_account_id":f.remote_id,"name":f.label(),
+        "currency":account.identity.currency,"provider_host":account.identity.provider_host,
+        "provider_id_exact":account.identity.provider_id_exact,"mapped_account_id":f.ledger_account_id,
+        "connection_active":account.connection_active})
+}
+fn review_row(row: &bankfeeds::ReviewRow) -> Value {
+    let mut v = item(&row.item);
+    v["mapped_account_id"] = json!(row.mapped_account_id);
+    v["provider_host"] = json!(row.identity.provider_host);
+    v["provider_id_exact"] = json!(row.identity.provider_id_exact);
+    v["currency"] = json!(row.identity.currency);
+    if let Some(decision) = &row.decision {
+        v["decision"] = json!(decision);
+    }
+    if let Some(candidates) = &row.candidates {
+        v["candidates"] = json!(candidates);
+    }
+    v
 }
 pub fn is_write(name: &str) -> bool {
     matches!(
@@ -257,32 +317,53 @@ pub fn execute(app: &mut App, co: fb_core::CompanyId, operation: Operation) -> A
             let r = reports::financial::balance_sheet(book, actor, co, basis(&b)?, date(&as_of)?)?;
             json!({"assets":r.assets.total.to_string(),"liabilities":r.liabilities.total.to_string(),"equity":r.total_equity.to_string(),"retained_earnings":r.retained_earnings.to_string(),"net_income":r.net_income.to_string(),"balanced":r.balanced,"unconverted":r.unconverted})
         }
-        Operation::PendingFeed { after, limit } => {
+        Operation::FeedAccounts => {
+            let accounts = bankfeeds::review_accounts(book, actor, co)?;
+            Value::Array(accounts.iter().map(review_account).collect())
+        }
+        Operation::FeedReview => {
+            let (accounts, rows) = bankfeeds::review_snapshot(book, actor, co)?;
+            json!({"accounts":accounts.iter().map(review_account).collect::<Vec<_>>(),
+                "items":rows.iter().map(review_row).collect::<Vec<_>>()})
+        }
+        kind @ (Operation::PendingFeed { after, limit } | Operation::DecidedFeed { after, limit }) => {
             if !(1..=100).contains(&limit) {
                 return Err(AppError::Invalid("limit must be 1–100.".into()));
             }
-            let items = bankfeeds::items(book, actor, co)?;
-            let pending = items
-                .iter()
-                .filter(|i| i.status == "NEW")
-                .collect::<Vec<_>>();
-            json!({"items":pending.iter().skip(after).take(limit).map(|i|item(i)).collect::<Vec<_>>(),"next":(after.saturating_add(limit)<pending.len()).then_some(after.saturating_add(limit)),"total":pending.len()})
+            let decided = matches!(kind, Operation::DecidedFeed { .. });
+            let (rows, total) = bankfeeds::review_page(book, actor, co, decided, after, limit)?;
+            let items: Vec<_> = rows.iter().map(review_row).collect();
+            let next = after.saturating_add(limit);
+            json!({"items":items,"next":(next < total).then_some(next),"total":total})
         }
         Operation::SuggestFeed { transaction_id } => {
             let s = bankfeeds::suggest(book, actor, co, &transaction_id)?;
-            json!({"kind":s.kind,"account_id":s.account_id,"payee_name":s.payee_name,"matches":s.matches.iter().map(|m|json!({"line_id":m.line_id,"journal_id":m.journal_id,"label":m.label,"date":m.date})).collect::<Vec<_>>(),"receipts":s.receipts.iter().map(|r|json!({"receipt_id":r.receipt_id,"label":r.label,"date":r.date})).collect::<Vec<_>>()})
+            let matches = book.read(|q| {
+                s.matches.iter().map(|m| {
+                    let receipt_ids = bankfeeds::journal_receipt_ids(q, co, &m.journal_id)?;
+                    Ok(json!({"line_id":m.line_id,"journal_id":m.journal_id,"label":m.label,"date":m.date,"receipt_ids":receipt_ids}))
+                }).collect::<fb_core::FbResult<Vec<_>>>()
+            })?;
+            json!({"kind":s.kind,"account_id":s.account_id,"payee_name":s.payee_name,"matches":matches,"receipts":s.receipts.iter().map(|r|json!({"receipt_id":r.receipt_id,"label":r.label,"date":r.date})).collect::<Vec<_>>()})
         }
         Operation::AcceptFeed {
             transaction_id,
             category,
-        } => item(&bankfeeds::accept(
-            book,
-            actor,
-            co,
-            &transaction_id,
-            &serde_json::to_value(category).expect("typed category"),
-            &bankfeeds::SecretSet::none(),
-        )?),
+            preconditions,
+        } => {
+            let mut input = serde_json::to_value(category).expect("typed category");
+            if let Some(preconditions) = preconditions {
+                input["preconditions"] = json!(preconditions);
+            }
+            let accepted = bankfeeds::accept(
+                book, actor, co, &transaction_id,
+                &input,
+                &bankfeeds::SecretSet::none(),
+            )?;
+            let mut v = item(&accepted);
+            v["decision"] = json!(bankfeeds::review_decision(book, actor, co, &accepted)?);
+            v
+        }
         Operation::IgnoreFeed { transaction_id } => item(&bankfeeds::ignore(
             book,
             actor,

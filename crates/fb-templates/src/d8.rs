@@ -15,7 +15,10 @@ fn money(v: Value) -> String {
     }
     let text = v.to_string();
     let (whole, fraction) = text.split_once('.').unwrap_or((&text, "00"));
-    let digits = whole.trim_start_matches('-');
+    let digits = whole.strip_prefix('-').unwrap_or(whole);
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) || !fraction.bytes().all(|b| b.is_ascii_digit()) {
+        return text; // A display placeholder or a value already grouped by its view model.
+    }
     let negative =
         whole.starts_with('-') && digits.chars().chain(fraction.chars()).any(|c| c != '0');
     let mut out = if negative { "-".into() } else { String::new() };
@@ -77,6 +80,8 @@ mod tests {
             ("12345678901234567890.01", "12,345,678,901,234,567,890.01"),
             ("-1234.50", "-1,234.50"),
             ("-0.00", "0.00"),
+            ("1,234.50", "1,234.50"),
+            ("—", "—"),
         ] {
             assert_eq!(money(Value::from(raw)), expected);
         }

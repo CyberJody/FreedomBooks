@@ -87,15 +87,15 @@ module.exports=async()=>{
     pass('mapped the downloaded account to the bank account');
 
     // 2. The review screen shows the pulled lines; accept one as a journal entry.
-    await page.click('a:has-text("Review downloaded transactions")');
+    await page.click('a:has-text("Review transactions")');
     assert.match(await page.locator('main').innerText(),/DEPOSIT MOBILE/);
     await shot('review');
     pass('the pull reached the review screen');
     const row=page.locator('tr',{hasText:'DEPOSIT MOBILE'}).first();
     await row.locator('select[name^="kind_"]').selectOption('JOURNAL');
     await row.locator('select[name^="account_"]').selectOption(ids.income);
-    await Promise.all([page.waitForLoadState('load'),row.locator('button[name=accept_one]').click()]);
-    await page.waitForFunction(()=>/recorded as JE/.test(document.body.innerText));
+    await row.locator('button[name=accept_one]').click();
+    await page.waitForFunction(()=>/recorded as \d+ · J\d{6}/.test(document.body.innerText));
     await shot('accepted');
     pass('accepted a line: recorded as a journal entry');
 

@@ -688,12 +688,18 @@ fn review_revision_max_must_return_error_without_panic() {
     use serde_json::json;
     let mut f = Fx::new("review-revision");
     let c = f.company("Review");
+    let ar = f.account(c, "110", "Receivables", "ASSET");
     documents::save_setup(&mut f.book, f.user, c, &json!({}), Some(0)).unwrap();
     f.book.connection().execute("UPDATE documents_accountingsetup SET revision=?1", [i64::MAX]).unwrap();
     assert!(f.book.check().unwrap().is_empty());
-    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| documents::save_setup(&mut f.book, f.user, c, &json!({}), Some(i64::MAX))));
-    assert!(outcome.is_ok(), "schema-valid max revision panics during increment");
-    assert!(outcome.unwrap().is_err());
+    let before = documents::setup_snapshot(f.book.connection(), c).unwrap();
+    let audit_count = f.count("SELECT count(*) FROM ledger_auditevent");
+    let unchanged = documents::save_setup(&mut f.book, f.user, c, &json!({}), Some(i64::MAX)).unwrap();
+    assert_eq!(unchanged, before);
+    let err = documents::save_setup(&mut f.book, f.user, c, &json!({"receivables": ar.to_db()}), Some(i64::MAX)).unwrap_err();
+    assert_eq!(err.message(), "This record's revision is exhausted.");
+    assert_eq!(documents::setup_snapshot(f.book.connection(), c).unwrap(), before);
+    assert_eq!(f.count("SELECT count(*) FROM ledger_auditevent"), audit_count);
 }
 
 #[test]
@@ -803,7 +809,8 @@ fn tax_edit_id_shapes_never_turn_an_edit_into_creation() {
             assert_eq!(dump(f.book.connection()),before);
         }
         for explicit_null in [false,true] {
-            let mut input = json!({"name":format!("New {group} {explicit_null}"),"description":"New","rate":"1","new_agency_name":"Agency","member_ids":[R1,R2]});
+            // Each a new agency of its own: a new vendor may not take an active vendor's name (worker item 23).
+            let mut input = json!({"name":format!("New {group} {explicit_null}"),"description":"New","rate":"1","new_agency_name":format!("Agency {group} {explicit_null}"),"member_ids":[R1,R2]});
             if explicit_null {input["item_id"]=json!(null);}
             assert!(if group {t::save_group(&mut f.book,f.user,c,&input)} else {t::save_rate(&mut f.book,f.user,c,&input)}.is_ok());
         }

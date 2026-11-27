@@ -35,15 +35,15 @@ fn payment(app: &mut App, c: CompanyId, id: &str) -> AppResult<Value> {
     })
 }
 
-/// The last whole filing period before `today`.
-pub(super) fn last_period(today: NaiveDate, frequency: &str) -> (NaiveDate, NaiveDate) {
+/// The filing period containing `today`.
+pub(super) fn current_period(today: NaiveDate, frequency: &str) -> (NaiveDate, NaiveDate) {
     let first = |y: i32, m: u32| NaiveDate::from_ymd_opt(y, m, 1).unwrap();
     let months = match frequency {
         "MONTHLY" => 1,
         "ANNUALLY" => 12,
         _ => 3,
     };
-    let index = (today.year() * 12 + today.month0() as i32) / months * months - months;
+    let index = (today.year() * 12 + today.month0() as i32) / months * months;
     let start = first(index.div_euclid(12), index.rem_euclid(12) as u32 + 1);
     let next = index + months;
     let end = first(next.div_euclid(12), next.rem_euclid(12) as u32 + 1).pred_opt().unwrap();
@@ -54,7 +54,7 @@ fn owed_page(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<(String, 
     let c = arg_company(route)?;
     let mut vm = page_vm(app, route)?;
     let settings = read(app, c, |q| salestax::settings_for(q, c))?;
-    let (default_start, default_end) = last_period((app.today)(), s(&settings, "filing_frequency"));
+    let (default_start, default_end) = current_period((app.today)(), s(&settings, "filing_frequency"));
     let mut errors = Errors::new();
     let start = if get(p, "start").is_some() { clean_date(p, "start", true, &mut errors) } else { Some(default_start.to_string()) };
     let end = if get(p, "end").is_some() { clean_date(p, "end", true, &mut errors) } else { Some(default_end.to_string()) };
@@ -69,6 +69,7 @@ fn owed_page(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<(String, 
     ];
     put(&mut vm, "period_form", forms::bind(&decorate(fields, &errors), &nonfield(&errors, "__all__")));
     let status = if errors.is_empty() { 200 } else { 400 };
+    let dated = if errors.is_empty() { start.clone().zip(end.clone()) } else { None };
     if errors.is_empty() {
         let (start, end) = (start.unwrap(), end.unwrap());
         let mut report = read(app, c, |q| stp::owed(q, c, Some(&start), &end))?;
@@ -84,6 +85,12 @@ fn owed_page(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<(String, 
         put(&mut vm, "end", &end);
     }
     let mut payments = read(app, c, |q| stp::payments(q, c))?;
+    // Worker item 29: the list under the dates shows the payments made in those dates (dates of the
+    // form as shown; the latest 200 when they cannot be read).
+    if let Some((start, end)) = &dated {
+        payments.retain(|v| (start.as_str()..=end.as_str()).contains(&s(v, "date")));
+        put(&mut vm, "payments_dated", true);
+    }
     payments.truncate(200);
     put(&mut vm, "payments", payments);
     put(&mut vm, "frequency", match s(&settings, "filing_frequency") { "MONTHLY" => "monthly", "ANNUALLY" => "yearly", _ => "quarterly" });
@@ -147,6 +154,13 @@ fn payment_form(app: &mut App, route: &Route, path: &str, posted: Option<Posted<
             initial[field] = json!(v);
         }
     }
+    // Worker item 28: the bank account starts as the one the last sales tax payment was paid from (the
+    // deposit's rule; with one bank account, that one, as below).
+    if let Some(Widget::Select { choices }) = fs.iter().find(|f| f.name == "bank").map(|f| f.widget.clone())
+        && let Some(bank) = super::super::d6::default_bank_choice(app, c, &choices, "SELECT bank_id FROM salestax_payment WHERE company_id=? ORDER BY id DESC LIMIT 1")?
+    {
+        initial["bank"] = json!(bank);
+    }
     for f in &mut fs {
         if let Widget::Select { choices } = &f.widget {
             // Preselect when there is only one choice, or keep a valid query choice.
@@ -178,7 +192,8 @@ fn void_form(app: &mut App, route: &Route, path: &str, posted: Option<Posted<'_>
     let v = payment(app, c, &route.args["payment_id"])?;
     let mut fs = vec![
         Field::new("expected_revision", "Expected revision", Widget::Hidden).required().value("1"),
-        Field::new("date", "Void date", Widget::Date).required().value((app.today)().to_string()).help("On or after the payment date. The payment's entry is reversed on this date."),
+        // Worker item 10: starts on the payment's own date, like every void.
+        Field::new("date", "Void date", Widget::Date).required().value(crate::screens::document_date(app, &v)).help("On or after the payment date. The payment's entry is reversed on this date."),
         Field::new("reason", "Reason", Widget::Textarea { cols: 40, rows: 2 }).required().attr("maxlength", "500"),
     ];
     for f in &mut fs {
@@ -186,7 +201,7 @@ fn void_form(app: &mut App, route: &Route, path: &str, posted: Option<Posted<'_>
     }
     let mut vm = page_vm(app, route)?;
     put(&mut vm, "payment", v);
-    put(&mut vm, "form", forms::bind(&decorate(fs, errors), &nonfield(errors, "__all__")));
+    put(&mut vm, "form", forms::bind(&decorate(crate::screens::month_notice(app, fs), errors), &nonfield(errors, "__all__")));
     put(&mut vm, "csrf_token", token(app, path));
     draw(app, "salestax/payment_void.html", &vm)
 }
@@ -344,17 +359,17 @@ pub(crate) fn run_payment_command(app: &mut App, cmd: Command) -> AppResult<Outc
 
 #[cfg(test)]
 mod tests {
-    use super::last_period;
+    use super::current_period;
     use chrono::NaiveDate;
     fn d(s: &str) -> NaiveDate {
         NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
     }
     #[test]
-    fn the_default_period_is_the_last_whole_filing_period() {
-        assert_eq!(last_period(d("2026-11-11"), "QUARTERLY"), (d("2026-07-01"), d("2026-09-30")));
-        assert_eq!(last_period(d("2026-01-15"), "QUARTERLY"), (d("2025-10-01"), d("2025-12-31")));
-        assert_eq!(last_period(d("2026-03-01"), "MONTHLY"), (d("2026-02-01"), d("2026-02-28")));
-        assert_eq!(last_period(d("2026-01-01"), "MONTHLY"), (d("2025-12-01"), d("2025-12-31")));
-        assert_eq!(last_period(d("2026-11-11"), "ANNUALLY"), (d("2025-01-01"), d("2025-12-31")));
+    fn the_default_period_is_the_current_filing_period() {
+        assert_eq!(current_period(d("2026-11-11"), "QUARTERLY"), (d("2026-10-01"), d("2026-12-31")));
+        assert_eq!(current_period(d("2026-01-15"), "QUARTERLY"), (d("2026-01-01"), d("2026-03-31")));
+        assert_eq!(current_period(d("2028-02-01"), "MONTHLY"), (d("2028-02-01"), d("2028-02-29")));
+        assert_eq!(current_period(d("2026-01-01"), "MONTHLY"), (d("2026-01-01"), d("2026-01-31")));
+        assert_eq!(current_period(d("2026-11-11"), "ANNUALLY"), (d("2026-01-01"), d("2026-12-31")));
     }
 }

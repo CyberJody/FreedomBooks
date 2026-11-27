@@ -3,8 +3,9 @@
 <div class="heading"><h1>{% if record %}Edit{% else %}New{% endif %} {{ singular }}</h1><a href="{{ url('directory:list', company.pk, kind) }}">Back to {{ title|lower }}</a></div>
 {% if record %}<p>{% if record.active %}Active{% else %}Inactive — saving does not reactivate this record.{% endif %}</p>{% endif %}
 {% if stale %}<div class="errorlist">{% for warning in stale %}<p>{{ warning }}</p>{% endfor %}</div>{% endif %}
-<form method="post" class="master-form" novalidate>{{ csrf_token|safe }}
+{% if then == 'sales_receipt' %}<p class="notice">After you save, you go back to the new sales receipt with this customer chosen.</p>{% elif then == 'bill' %}<p class="notice">After you save, you go back to the new bill with this vendor chosen.</p>{% endif %}
+<form method="post" class="master-form" novalidate>{{ csrf_token|safe }}{% if then %}<input type="hidden" name="then" value="{{ then }}">{% endif %}
 {{ form.non_field_errors|safe }}
 {% for field in form.hidden_fields %}{{ field.widget|safe }}{% endfor %}<div class="fields">{% for field in form.visible_fields %}<div class="field{% if field.name == 'notes' or field.name == 'description' or field.name == 'billing_address' %} wide{% endif %}">{{ field.label_tag|safe }}{{ field.errors|safe }}{{ field.widget|safe }}{% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}</div>{% endfor %}</div>
 <div class="actions"><button type="submit">Save</button>{% if record %}<a href="{{ url('directory:detail', company.pk, kind, record.pk) }}">Cancel</a>{% else %}<a href="{{ url('directory:list', company.pk, kind) }}">Cancel</a>{% endif %}</div>
-</form>{% if is_item and not record %}<script src="{{ static('directory/item_tax.js') }}" defer></script>{% endif %}{% endblock %}
+</form>{% if is_item and not record and charge_tax %}<script src="{{ static('directory/item_tax.js') }}" defer></script>{% endif %}{% endblock %}

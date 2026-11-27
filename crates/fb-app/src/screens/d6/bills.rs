@@ -197,7 +197,8 @@ fn header_fields(app: &mut App, c: CompanyId, current: Option<&Value>) -> AppRes
             ],
             false,
         ),
-        Field::new("due_date", "Due date", Widget::Date).required(),
+        // Worker item 15 and review N1: the due date may be left blank; it is then set from the terms.
+        Field::new("due_date", "Due date", Widget::Date).help("Leave blank to set it from the terms, or to the bill date with no terms."),
         Field::new("reference", "Ref no.", Widget::Text),
         Field::new("memo", "Memo", Widget::Textarea { cols: 40, rows: 1 }),
         select("supersedes", "Replaces voided bill", "None", supersedes, false),
@@ -220,6 +221,19 @@ fn header_fields(app: &mut App, c: CompanyId, current: Option<&Value>) -> AppRes
 }
 fn named<'a>(fs: &'a [Field], name: &str) -> &'a Field {
     fs.iter().find(|f| f.name == name).expect("declared field")
+}
+/// Review N1: the due date of a bill saved with a blank one, and the notice that says so. With terms
+/// (a number of days) it is the bill date plus those days; without, the bill date.
+fn due_from_terms(date: &str, terms_field: &Field, terms: &str) -> (String, Option<String>) {
+    let Ok(day) = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d") else { return (date.to_owned(), None) };
+    let label = match &terms_field.widget {
+        Widget::Select { choices } => choices.iter().find(|(v, _)| !v.is_empty() && v == terms).map(|(_, l)| l.clone()),
+        _ => None,
+    };
+    match (label, terms.parse::<u64>().ok().and_then(|n| day.checked_add_days(chrono::Days::new(n)))) {
+        (Some(label), Some(due)) => (due.to_string(), Some(format!("Due date set to {due} ({label})."))),
+        _ => (date.to_owned(), Some(format!("Due date set to {date}, the bill date, because no terms were chosen."))),
+    }
 }
 /// Parse a stored snapshot column that may still be JSON text.
 fn object(v: &Value) -> Value {
@@ -261,7 +275,7 @@ struct Choices {
 fn choices(app: &mut App, c: CompanyId, current: Option<&Value>) -> AppResult<Choices> {
     Ok(app.open_mut()?.book.read(|tx|->Result<_,FbError>{let ord=super::super::d2::ordinals(tx,c,"directory_item")?;let mut items=vec![];let mut catalog=json!({});
         for item in directory::list(tx,c,Model::Item)? {let retained=current.and_then(|r|r["lines"].as_array()).is_some_and(|ls|ls.iter().any(|l|l["item_id"]==item["id"]));let id=s(&item,"id");if item["active"]==true||retained {items.push((id.into(),format!("{} · #{}{}",s(&item,"code"),ord[id],if item["active"]==true{""}else{" (archived — confirm retention or replace)"})));}
-        if item["active"]==true{catalog[id]=json!({"description":item["description"],"rate":item["purchase_cost"].as_str().unwrap_or(""),"expense_account":item["expense_account"].as_str().unwrap_or("")});}}
+        if item["active"]==true{catalog[id]=json!({"description":item["description"],"code":item["code"],"rate":item["purchase_cost"].as_str().unwrap_or(""),"expense_account":item["expense_account"].as_str().unwrap_or("")});}}
         let accounts=fb_core::store::accounts(tx,c)?;let eligible=documents::eligible_line_accounts(tx,c)?.iter().map(|a|a.id.to_db()).collect();let vendors=directory::prefill_catalog(tx,c)?;Ok(Choices{items,accounts,eligible,catalog,vendors})})?)
 }
 fn line_fields(ch: &Choices, prefix: &str, keep: Option<&str>, required: bool) -> Vec<Field> {
@@ -579,6 +593,7 @@ fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<String> {
     let b = vm["bill"].clone();
     let refs = references(app, c, s(&b, "identity_id"))?;
     put(&mut vm, "references", refs);
+    put(&mut vm, "messages", std::mem::take(&mut app.messages));
     let mut allocations = scoped_rows(
         app,
         c,
@@ -693,11 +708,11 @@ fn void_form(
 ) -> AppResult<String> {
     let mut vm = context(app, r)?;
     let initial =
-        json!({"expected_revision":vm["bill"]["revision"],"date":(app.today)().to_string()});
+        json!({"expected_revision":vm["bill"]["revision"],"date":crate::screens::document_date(app, &vm["current"])});
     put(
         &mut vm,
         "form",
-        bind_fields(reversal_fields(), p, &initial, e, true),
+        bind_fields(crate::screens::month_notice(app, reversal_fields()), p, &initial, e, true),
     );
     put(&mut vm, "csrf_token", token(app, path));
     draw(app, "payables/bills/void.html", &vm)
@@ -800,13 +815,19 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     let reference = clean_text(p, "reference", 120, false, false, &mut e);
     let supersedes = choice(p, named(&fs, "supersedes"), &mut e, true);
     let reentry = clean_text(p, "reentry_reason", 500, false, true, &mut e);
-    choice(p, named(&fs, "terms"), &mut e, false);
+    let terms = choice(p, named(&fs, "terms"), &mut e, false);
     let key = key(p, b.is_none(), &mut e);
     let rev = integer(p, "expected_revision", 0, None, true, &mut e).unwrap_or(0);
     integer(p, "reading", 1, None, false, &mut e);
     let vendor = choice(p, named(&fs, "vendor"), &mut e, true);
     let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
-    let due = clean_date(p, "due_date", true, &mut e).unwrap_or_default();
+    // Worker item 15 and review N1: a blank due date is the bill date plus the chosen terms, or the
+    // bill date itself with no terms; the bill's page then says which date was set.
+    let typed_due = clean_date(p, "due_date", false, &mut e).filter(|d| !d.is_empty());
+    let (due, due_note) = match typed_due {
+        Some(d) => (d, None),
+        None => due_from_terms(&date, named(&fs, "terms"), &terms),
+    };
     let memo = clean_text(p, "memo", 2000, false, true, &mut e);
     let ch = choices(app, c, current.as_ref())?;
     let mut lines = vec![];
@@ -908,12 +929,17 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             }),
             &mut e,
         )? {
-            if get(p, "editor_action") == Some("post") {
-                return post_saved(app, c, &d, get(p, "shown_entries").unwrap_or(""), rev + 1);
+            let out = if get(p, "editor_action") == Some("post") {
+                post_saved(app, c, &d, get(p, "shown_entries").unwrap_or(""), rev + 1)?
+            } else {
+                Outcome::Redirect { location: url("bills:detail", &[&c.to_db(), s(&d, "id")]) }
+            };
+            // The bill's page shows the due date that was set for a blank one (an editor shown
+            // instead has it in its due date box).
+            if let (Some(note), Outcome::Redirect { .. }) = (due_note, &out) {
+                app.messages.push(note);
             }
-            return Ok(Outcome::Redirect {
-                location: url("bills:detail", &[&c.to_db(), s(&d, "id")]),
-            });
+            return Ok(out);
         }
     }
     Ok(Outcome::Invalid {

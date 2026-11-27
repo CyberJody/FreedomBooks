@@ -42,6 +42,7 @@ pub(crate) const DOOR_WAIT: Duration = Duration::from_secs(2);
 /// A desktop task (backup, restore, sign-in) waits up to this for its turn.
 pub(crate) const TASK_WAIT: Duration = Duration::from_secs(60);
 /// While hosting stops, connected computers are told why for up to this long.
+// The connected client probes every second; a vanished client cannot extend this wait.
 const STOP_GRACE: Duration = Duration::from_millis(1500);
 pub(crate) const STOPPED: &str = "The host stopped sharing these books.";
 const AUDIT_FILE: &str = "remote-audit.jsonl";
@@ -861,26 +862,26 @@ pub(crate) fn repair(door: &mut App, kind: &str, host_name: &str) -> Result<Stri
 }
 
 /// What the Hosting screen shows. Never waits more than the door does; no secret is included.
-pub(crate) fn state(door: &mut App) -> Result<serde_json::Value> {
+pub(crate) fn state(door: &mut App, wait: Duration) -> Result<serde_json::Value> {
     let mut slot = lock(&HOSTED);
     let helper = HELPER.get().is_some();
     let last = {
         let l = lock(&LAST);
         (l.stopped.clone(), l.problem.clone())
     };
-    let (admin, record, open, copy) = match slot.as_mut() {
+    let (admin, generation, company, record, open, copy) = match slot.as_mut() {
         None => {
             settle(door);
             let admin = door.hosting_administrator().ok();
             let record = if door.is_open() { door.host_record().ok().flatten() } else { None };
-            (admin, record, door.is_open(), door.backups.viewing_restored().is_some())
+            (admin, door.session_generation(), fb_app::screens::frame_company(door), record, door.is_open(), door.backups.viewing_restored().is_some())
         }
         Some(h) => {
-            let mut lease = lease(&h.shared, DOOR_WAIT)?;
+            let mut lease = lease(&h.shared, wait)?;
             ensure_local(&mut lease, &mut h.local)?;
-            let admin = lease.with_session(&h.local, |app| app.hosting_administrator().ok()).ok().flatten();
+            let (admin, generation, company) = lease.with_session(&h.local, |app| (app.hosting_administrator().ok(), app.session_generation(), fb_app::screens::frame_company(app))).unwrap_or_default();
             let record = lease.host_app().host_record().ok().flatten();
-            (admin, record, true, false)
+            (admin, generation, company, record, true, false)
         }
     };
     let Some(admin) = admin else {
@@ -893,7 +894,7 @@ pub(crate) fn state(door: &mut App) -> Result<serde_json::Value> {
         _ => None,
     };
     let mut out = serde_json::json!({
-        "available": helper, "open": open, "admin": true, "admin_name": admin, "copy": copy,
+        "available": helper, "open": open, "admin": true, "admin_name": admin, "generation": generation.to_string(), "company": company.map(|c| c.to_db()), "copy": copy,
         "running": slot.is_some(), "enabled": record.enabled, "bind": record.bind, "enabled_by": record.enabled_by,
         "hosted_before": record.hosted_before, "stopped": last.0, "problem": last.1,
         "audit": {"lines": record.audit_head.as_ref().map_or(0, |h| h.seq), "error": null},
@@ -903,7 +904,10 @@ pub(crate) fn state(door: &mut App) -> Result<serde_json::Value> {
     if let Some(h) = slot.as_ref() {
         let link = h.link.as_ref();
         let d = link.map(|l| l.dispatcher().clone());
-        connected = d.as_ref().map(|d| d.connections().into_iter().map(|(dev, _, _)| dev.id).collect()).unwrap_or_default();
+        let connections = d.as_ref().map(|d| d.connections()).unwrap_or_default();
+        let people: std::collections::BTreeSet<_> = connections.iter().filter_map(|(dev, _, user)| user.as_ref().map(|user| (user, &dev.name))).collect();
+        out["signed_in"] = serde_json::json!(people);
+        connected = connections.into_iter().map(|(dev, _, _)| dev.id).collect();
         dispatcher = d.clone();
         out["addr"] = link.map(|l| l.addr.clone()).into();
         out["fingerprint"] = link.map(|l| l.fingerprint.clone()).into();

@@ -278,6 +278,11 @@ function store(root, storage = safeStorage) {
     //              costs nothing once it answers as before.
     //  unavailable the keyring can't be used right now. Nothing is written; connections wait.
     // `key` is null when unavailable. No key material is logged or put in an error.
+    hasConnectionKeyMaterial() {
+      try {
+        return fs.readdirSync(root).some(name => /^connection-key\.(sealed|private)(?:$|\.(?:unreadable|superseded)-)/.test(name));
+      } catch (e) { return e.code !== 'ENOENT'; }
+    },
     connectionKey() {
       const sealed = path.join(root, 'connection-key.sealed');
       const fallback = path.join(root, 'connection-key.private');

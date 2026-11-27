@@ -32,6 +32,8 @@ fn sim_fix_labels() -> impl Iterator<Item = (&'static str, &'static str)> {
     SIM_FIX_ACTION_LABELS.into_iter()
 }
 const DOCUMENT_DETAILS_ACTION: (&str, &str) = ("company.document_details_updated", "Company document details changed");
+/// Worker item 19: a hand-made journal entry draft deleted.
+const JOURNAL_DELETED_ACTION: (&str, &str) = ("journal.deleted", "Journal draft deleted");
 const USER_ACTIONS: [(&str, &str); 5] = [
     ("user.enrolled", "User password set up"),
     ("user.mfa_changed", "Multi-factor authentication changed"),
@@ -59,6 +61,7 @@ const JOB_ACTIONS: [(&str, &str); 11] = [
 fn action(code: &str) -> String {
     if let Some((_, label)) = JOB_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if code == DOCUMENT_DETAILS_ACTION.0 { return DOCUMENT_DETAILS_ACTION.1.into(); }
+    if code == JOURNAL_DELETED_ACTION.0 { return JOURNAL_DELETED_ACTION.1.into(); }
     if let Some((_, label)) = SALES_TAX_PAYMENT_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if let Some((_, label)) = USER_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if code=="numbering.changed" {return "Next document number changed".into();}
@@ -295,7 +298,13 @@ fn events(app: &mut App, c: CompanyId) -> AppResult<Vec<Value>> {
             let operator=UserId::parse(&actor_id).map(|id|store::user(tx,id)).transpose()?.flatten().map(|u|u.username).filter(|s|!s.trim().is_empty()).unwrap_or_else(||if actor_name.trim().is_empty(){"Unknown user".into()}else{actor_name.trim().into()});
             let stamp=chrono::DateTime::parse_from_rfc3339(&occurred_at).map_err(|e|FbError::validation(e.to_string()))?;
             let zone:chrono_tz::Tz=std::env::var("FB_TIME_ZONE").unwrap_or_else(|_|"America/New_York".into()).parse().map_err(|_|FbError::validation("Unknown display time zone."))?;
-            Ok(json!({"id":id,"actor_id":actor_id,"operator":operator,"occurred_at":stamp.format("%Y-%m-%d %H:%M:%S").to_string(),"when":stamp.with_timezone(&zone).format("%Y-%m-%d %H:%M:%S").to_string(),"action":code,"action_label":action(&code),"target":key,"target_label":number,"target_url":url,"number":number,"url":url,"reason":detail["reason"].as_str().unwrap_or("").trim(),"detail":jsonb_repr(&detail)}))
+            let reason = if code == "agent.provenance" {
+                let mode = if detail["unattended"].as_bool()==Some(true) { "Unattended" } else { "Attended" };
+                format!("{mode} AI connection: {} ({})", detail["agent_name"].as_str().unwrap_or("Unknown"), detail["connection_id"].as_str().unwrap_or("unknown ID"))
+            } else {
+                detail["reason"].as_str().unwrap_or("").trim().to_owned()
+            };
+            Ok(json!({"id":id,"actor_id":actor_id,"operator":operator,"occurred_at":stamp.format("%Y-%m-%d %H:%M:%S").to_string(),"when":stamp.with_timezone(&zone).format("%Y-%m-%d %H:%M:%S").to_string(),"action":code,"action_label":action(&code),"target":key,"target_label":number,"target_url":url,"number":number,"url":url,"reason":reason,"detail":jsonb_repr(&detail)}))
         }).collect()
     })?)
 }
@@ -354,7 +363,22 @@ fn jsonb_repr(v: &Value) -> String {
     }
 }
 
+/// The first day of the month after `date` (`YYYY-MM-DD`); `date` itself if it cannot be read.
+fn next_month_start(date: &str) -> String {
+    use chrono::Datelike;
+    chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| chrono::NaiveDate::from_ymd_opt(d.year(), d.month(), 1)?.checked_add_months(chrono::Months::new(1)))
+        .map_or_else(|| date.to_owned(), |d| d.to_string())
+}
+
 pub(super) fn journal_page(app: &mut App, route: &Route) -> AppResult<String> {
+    journal_page_with(app, route, None)
+}
+/// Worker item 33: a refused reversal shows the entry's page again, with the date and reason as typed
+/// and the reason for the refusal in the open "Reverse this journal" section (it went to a separate
+/// "Action not completed" page, and what was typed was lost).
+pub(super) fn journal_page_with(app: &mut App, route: &Route, reversal: Option<(Posted<'_>, &Errors)>) -> AppResult<String> {
     let mut vm = ctx(app, route)?;
     let c = arg_company(route)?;
     let j = journal_at(app, route)?.unwrap();
@@ -386,19 +410,28 @@ pub(super) fn journal_page(app: &mut App, route: &Route) -> AppResult<String> {
             &[],
         ),
     );
-    put(
-        &mut vm,
-        "reversal_form",
-        forms::bind(
-            &[
-                Field::new("date", "Date", Widget::Date)
-                    .required()
-                    .value((app.today)().to_string()),
-                Field::new("reason", "Reason", Widget::Text).required(),
-            ],
-            &[],
-        ),
-    );
+    let no_errors = Errors::new();
+    let (posted, errors) = reversal.map_or((None, &no_errors), |(p, e)| (Some(p), e));
+    let fields = crate::screens::month_notice(app, vec![
+        // Review S1: a reversal (usually undoing an accrual) starts on the first day of the
+        // month after the entry's date; the person can choose another date on or after the
+        // entry's own.
+        Field::new("date", "Date", Widget::Date)
+            .required()
+            .value(next_month_start(&j.date)),
+        Field::new("reason", "Reason", Widget::Text).required(),
+    ])
+    .into_iter()
+    .map(|f| match posted {
+        Some(p) => {
+            let typed = get(p, &f.name).unwrap_or("").to_owned();
+            f.value(typed)
+        }
+        None => f,
+    })
+    .collect();
+    put(&mut vm, "reversal_form", forms::bind(&decorate(fields, errors), &nonfield(errors, "__all__")));
+    put(&mut vm, "reversal_open", reversal.is_some());
     put(
         &mut vm,
         "post_token",
@@ -409,6 +442,10 @@ pub(super) fn journal_page(app: &mut App, route: &Route) -> AppResult<String> {
         "reverse_token",
         token(app, &url("journal_reverse", &[&c.to_db(), &j.id.to_db()])),
     );
+    // Worker item 19: a hand-made draft can be deleted (its form posts to the draft's edit address).
+    if j.status == Status::Draft && j.manual() && j.reversal_of_id.is_none() {
+        put(&mut vm, "delete_token", token(app, &url("journal_edit", &[&c.to_db(), &j.id.to_db()])));
+    }
     let key = format!("journal:{}", j.id.to_db());
     put(
         &mut vm,
@@ -456,6 +493,7 @@ pub(super) fn history(
         .chain(USER_ACTIONS.into_iter().map(|(k, v)| (k.to_owned(), v.to_owned())))
         .chain(JOB_ACTIONS.into_iter().map(|(k, v)| (k.to_owned(), v.to_owned())))
         .chain(std::iter::once((DOCUMENT_DETAILS_ACTION.0.to_owned(), DOCUMENT_DETAILS_ACTION.1.to_owned())))
+        .chain(std::iter::once((JOURNAL_DELETED_ACTION.0.to_owned(), JOURNAL_DELETED_ACTION.1.to_owned())))
         .collect();
     labels.sort_by(|a, b| a.1.cmp(&b.1));
     actions.extend(labels);

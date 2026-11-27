@@ -14,9 +14,9 @@
 {% include 'banking/reconcile/_summary.html' %}
 {% if view != 'summary' %}{% for side in sides %}<h2 class="print-h2">Cleared {{ side.label|lower }} · {{ side.count }} item{{ side.count|pluralize }}</h2>
 <table class="print-register"><thead><tr><th>Type</th><th>Date</th><th>Number</th><th>Payee / name</th><th>Memo</th><th class="amount">Amount</th></tr></thead><tbody>
-{% for group in side.groups %}{% for row in group.rows %}<tr><td>{{ row.type }}</td><td>{{ row.line.journal.date|date('Y-m-d') }}</td><td>{{ row.number }}</td><td>{% if row.party %}{{ row.party }}{% else %}—{% endif %}</td><td>{{ row.memo }}</td><td class="amount">{% if side.key == 'left' %}{{ row.left }}{% else %}{{ row.right }}{% endif %}</td></tr>{% endfor %}
-<tr class="subtotal"><th colspan="5">Total {{ group.type }}</th><td class="amount">{{ group.total }}</td></tr>{% else %}<tr><td colspan="6">None.</td></tr>{% endfor %}
-</tbody><tfoot><tr><th colspan="5">Total cleared {{ side.label|lower }}</th><th class="amount">{{ side.total }}</th></tr></tfoot></table>{% endfor %}{% endif %}
+{% for group in side.groups %}{% for row in group.rows %}<tr><td>{{ row.type }}</td><td>{{ row.line.journal.date|date('Y-m-d') }}</td><td>{{ row.number }}</td><td>{% if row.party %}{{ row.party }}{% else %}—{% endif %}</td><td>{{ row.memo }}</td><td class="amount">{% if side.key == 'left' %}{{ row.left|money }}{% else %}{{ row.right|money }}{% endif %}</td></tr>{% endfor %}
+<tr class="subtotal"><th colspan="5">Total {{ group.type }}</th><td class="amount">{{ group.total|money }}</td></tr>{% else %}<tr><td colspan="6">None.</td></tr>{% endfor %}
+</tbody><tfoot><tr><th colspan="5">Total cleared {{ side.label|lower }}</th><th class="amount">{{ side.total|money }}</th></tr></tfoot></table>{% endfor %}{% endif %}
 <p class="report-printed">Printed {{ generated|date('Y-m-d H:i') }} UTC{% if stamp %} · {{ stamp }}{% endif %} · {{ rec.cleared_count }} line{{ rec.cleared_count|pluralize }}</p>
 </article>
 <script src="{{ static('sales/print.js') }}" defer></script>

@@ -72,17 +72,17 @@ pub(super) fn build_selected(
     selected: Option<&BTreeSet<String>>,
 ) -> FbResult<Value> {
     let normalized = normalize_filters(f, chrono::Local::now().date_naive())?;
-    build_normalized(q, c, aid, &normalized, page, per_page, selected)
+    build_normalized(q, c, aid, &normalized, RegisterPage { number: page, size: per_page, period_totals: false }, selected)
 }
 fn build_normalized(
     q: &(impl Query + ?Sized),
     c: CompanyId,
     aid: &str,
     f: &Value,
-    page: i64,
-    per_page: usize,
+    pagination: RegisterPage,
     selected: Option<&BTreeSet<String>>,
 ) -> FbResult<Value> {
+    let RegisterPage { number: page, size: per_page, period_totals } = pagination;
     let a = account(q, c, aid)?;
     if !is_register_account(q, c, aid)? {
         return Err(FbError::validation(
@@ -130,19 +130,18 @@ fn build_normalized(
         let credit = cents(&row["credit"])?;
         let net = add(debit, -credit)?;
         run = add(run, net)?;
+        let before_start = start.as_ref().is_some_and(|d| row["date"].as_str().is_some_and(|rd| rd < d.as_str()));
+        if before_start {
+            opening = run;
+            if period_totals { continue; }
+        }
         if row["state"] == "U" {
             od = add(od, debit)?;
             oc = add(oc, credit)?;
         } else {
             cleared = add(cleared, net)?;
         }
-        if start
-            .as_ref()
-            .is_some_and(|d| row["date"].as_str().is_some_and(|rd| rd < d.as_str()))
-        {
-            opening = run;
-            continue;
-        }
+        if before_start { continue; }
         let key = s(&row, "id")?;
         if selected.is_some_and(|ids| !ids.contains(key)) {
             continue;
@@ -466,11 +465,31 @@ pub fn build_on(
     per_page: usize,
     today: &str,
 ) -> FbResult<Value> {
+    build_page_on(book, actor, c, aid, filters, RegisterPage { number: page, size: per_page, period_totals: false }, today)
+}
+
+pub struct RegisterPage {
+    pub number: i64,
+    pub size: usize,
+    pub period_totals: bool,
+}
+
+/// Screen and print summary cards can show activity within both date bounds.
+/// Existing register queries and CSV exports keep their cumulative totals.
+pub fn build_page_on(
+    book: &mut Book,
+    actor: UserId,
+    c: CompanyId,
+    aid: &str,
+    filters: &Value,
+    pagination: RegisterPage,
+    today: &str,
+) -> FbResult<Value> {
     let today = py::model_date(today).map_err(FbError::validation)?;
     let filters = normalize_filters(filters, today)?;
     book.read(|q| {
         services::access(q, actor, c)?;
-        build_normalized(q, c, aid, &filters, page, per_page, None)
+        build_normalized(q, c, aid, &filters, pagination, None)
     })
 }
 fn normalize_filters(f: &Value, today: chrono::NaiveDate) -> FbResult<Value> {

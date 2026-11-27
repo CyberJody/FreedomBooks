@@ -2,9 +2,43 @@
 // Sandboxed, isolated preload (ARCHITECTURE 8). No page API is exposed. Its own
 // event handlers turn POST forms into path-bound commands and handle CSV exports.
 const { ipcRenderer } = require('electron');
+const PAGE_KEY = '__fb_remote_page';
+const pageMarker = () => document.querySelector('meta[name="fb-remote-page"]')?.content ?? null;
+const pageURL = value => new URL(value, window.location.href);
+const hostFields = url => Array.from(url.searchParams).filter(([key]) => key !== PAGE_KEY);
+
+// Client mode: a host GET with a query must carry this page's marker (remote-mode.cjs), or main
+// sends the window to the current host's page instead. The marker travels as an ordinary hidden
+// field or link parameter and the browser does the navigating, so the page's own scripts keep
+// control: a submit they cancel stays cancelled, and an address they rewrite is stamped afterwards.
+const sameOrigin = value => { try { return pageURL(value).origin === window.location.origin; } catch { return false; } };
+function stampForm(form, marker, action = form.getAttribute('action')) {
+  if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
+  let field = Array.from(form.querySelectorAll('input[type=hidden]')).find(input => input.name === PAGE_KEY && input.form === form);
+  if (!sameOrigin(action || window.location.href)) { field?.remove(); return; }
+  if (!field) {
+    field = document.createElement('input');
+    field.type = 'hidden';
+    field.name = PAGE_KEY;
+    form.append(field);
+  }
+  field.value = marker;
+}
+function stampLink(anchor, marker) {
+  if (!sameOrigin(anchor.href)) return;
+  const target = pageURL(anchor.href);
+  if (!target.search || target.searchParams.get(PAGE_KEY) === marker) return;
+  target.searchParams.set(PAGE_KEY, marker);
+  anchor.href = target.href;
+}
+function stampWithin(root, marker) {
+  if (!marker || !root.querySelectorAll) return;
+  for (const anchor of [root, ...root.querySelectorAll('a[href]')]) if (anchor.matches?.('a[href]')) stampLink(anchor, marker);
+  for (const form of [root, ...root.querySelectorAll('form')]) if (form instanceof HTMLFormElement) stampForm(form, marker);
+}
 
 async function call(name, payload) {
-  const r = await ipcRenderer.invoke(`fb:${name}`, payload);
+  const r = await ipcRenderer.invoke(`fb:${name}`, payload, pageMarker());
   if (!r || !r.ok) throw new Error((r && r.error) || 'Call failed');
   return r.value;
 }
@@ -56,7 +90,7 @@ document.addEventListener('click', async (event) => {
   if (url.origin !== window.location.origin || !match || url.searchParams.get('format') !== 'csv') return;
   event.preventDefault();
   try {
-    await call('books.run', { type: 'ExportHistory', company_id: match[1], filters: Array.from(url.searchParams.entries()) });
+    follow(await call('books.run', { type: 'ExportHistory', company_id: match[1], filters: hostFields(url) }));
   } catch (e) { window.alert(String(e.message || e)); }
 }, true);
 
@@ -70,7 +104,7 @@ document.addEventListener('click', async event => {
   event.preventDefault();
   try {
     const names = {'profit-and-loss':'profit_loss','balance-sheet':'balance_sheet','general-ledger':'general_ledger'};
-    await call('books.run', {type:'ExportReport', company_id:match[1], report:names[match[2]], filters:Array.from(target.searchParams.entries())});
+    follow(await call('books.run', {type:'ExportReport', company_id:match[1], report:names[match[2]], filters:hostFields(target)}));
   } catch (e) { window.alert(String(e.message || e)); }
 }, true);
 
@@ -216,9 +250,153 @@ document.addEventListener('click', (event) => {
 document.addEventListener('submit', (event) => {
   const form = event.target;
   // A payment has a control named "method", which shadows HTMLFormElement.method.
-  if (!(form instanceof HTMLFormElement) || (form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+  if (!(form instanceof HTMLFormElement)) return;
+  const method = (form.getAttribute('method') || 'get').toLowerCase();
+  const marker = pageMarker();
+  if (method === 'get' && marker) {
+    // Only the field is set here. The browser submits afterwards, unless the page's own handler
+    // (which runs after this one) cancels it.
+    stampForm(form, marker, event.submitter?.getAttribute('formaction') || form.getAttribute('action'));
+    return;
+  }
+  if (method !== 'post') return;
   event.preventDefault();
+  if (!dateConfirmed(form)) {
+    event.stopImmediatePropagation();
+    return;
+  }
   sendForm(form, event.submitter);
+}, true);
+
+// Worker item 11: a document dated more than a year before or after today is easy to mistype (2027 for
+// 2026) and would post without a word. The first save with such a date only warns, beside the date;
+// saving again with the same date goes ahead. Nothing is refused. A review page reloaded for the same
+// form and date does not warn twice; another document (its own request key) is warned again.
+const FAR_DATE = 'fb:far-date';
+function farDate(form) {
+  const field = Array.from(form.querySelectorAll('input[type=date][name=date]')).find(input => input.form === form && !input.disabled);
+  const m = field && /^(\d{4})-(\d{2})-(\d{2})$/.exec(field.value);
+  if (!m) return null;
+  const now = new Date();
+  const day = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const after = Date.UTC(now.getFullYear() + 1, now.getMonth(), now.getDate());
+  const before = Date.UTC(now.getFullYear() - 1, now.getMonth(), now.getDate());
+  return day > after || day < before ? { field, day } : null;
+}
+function dateConfirmed(form) {
+  const far = farDate(form);
+  if (!far) return true;
+  const { field, day } = far;
+  const requestKey = Array.from(form.querySelectorAll('input[name=request_key]')).find(input => input.form === form)?.value || '';
+  const key = `${window.location.pathname} ${requestKey} ${field.value}`;
+  let seen = false;
+  try { seen = window.sessionStorage.getItem(FAR_DATE) === key; } catch {}
+  if (seen || field.dataset.farDateWarned === field.value) return true;
+  field.dataset.farDateWarned = field.value;
+  try { window.sessionStorage.setItem(FAR_DATE, key); } catch {}
+  let box = field.parentElement.querySelector('.far-date-warning');
+  if (!box) {
+    box = document.createElement('p');
+    box.className = 'notice far-date-warning';
+    box.setAttribute('role', 'alert');
+    field.insertAdjacentElement('afterend', box);
+  }
+  const shown = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }).format(day);
+  box.textContent = `${shown} is more than a year from today. Check the date. If it is right, save again.`;
+  field.focus();
+  return false;
+}
+document.addEventListener('change', event => {
+  if (!event.target.matches || !event.target.matches('input[type=date][name=date]')) return;
+  event.target.parentElement?.querySelector('.far-date-warning')?.remove();
+});
+
+// Review S1 (worker item 10): a void or reversal starts on the date of what it undoes, so it can post in
+// an earlier month and change that month's reports. While the date in such a box (marked by the server
+// with today's date in `data-month-notice`) is in an earlier month than today, a notice under it says
+// so. It follows the date as it changes and never stops the save.
+const MONTH_FIELD = 'input[type=date][data-month-notice]';
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function monthNotice(field) {
+  const date = /^(\d{4})-(\d{2})-\d{2}$/.exec(field.value);
+  const today = /^(\d{4})-(\d{2})-\d{2}$/.exec(field.dataset.monthNotice) || [null, new Date().getFullYear(), new Date().getMonth() + 1];
+  const earlier = date && Number(date[1]) * 12 + Number(date[2]) < Number(today[1]) * 12 + Number(today[2]);
+  const id = `${field.id}_month_notice`;
+  let box = document.getElementById(id);
+  if (!earlier) {
+    if (box) box.hidden = true;
+    return;
+  }
+  if (!box) {
+    box = document.createElement('p');
+    box.className = 'notice month-notice';
+    box.id = id;
+    box.setAttribute('role', 'status');
+    (field.closest('p') || field).insertAdjacentElement('afterend', box);
+    field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), id].filter(Boolean).join(' '));
+  }
+  box.hidden = false;
+  box.textContent = `This posts in ${MONTHS[Number(date[2]) - 1]} ${date[1]} and changes that month's reports. Change the date to record it in a different month.`;
+}
+document.addEventListener('DOMContentLoaded', () => { for (const field of document.querySelectorAll(MONTH_FIELD)) monthNotice(field); });
+for (const type of ['input', 'change']) {
+  document.addEventListener(type, event => { if (event.target.matches?.(MONTH_FIELD)) monthNotice(event.target); });
+}
+
+// Worker item 30: a page saved in place (Company profile, Accounting setup) reloads where it was scrolled,
+// at its Save button, so the "saved" message at its top was out of view. A message the server marks
+// `data-reveal` is brought into view instead; nothing else about the page's scroll changes.
+// Worker item 37: "in view" means below the title bar, which stays at the top of the window over whatever
+// scrolls under it (and the remote bar on a hosted page). The message is placed a little below the lowest
+// such bar; one only partly visible counts as out of view. A field with an error inside the revealed box
+// (worker item 45: the journal entry's Memo) also gets the focus, without scrolling again.
+const REVEAL_GAP = 12;
+function topBars() {
+  let bottom = 0;
+  for (const el of document.body ? document.body.children : []) {
+    const position = window.getComputedStyle(el).position;
+    if (position !== 'sticky' && position !== 'fixed') continue;
+    const r = el.getBoundingClientRect();
+    if (r.height > 0 && r.width >= window.innerWidth / 2 && r.top <= 1 + bottom && r.bottom > bottom) bottom = r.bottom;
+  }
+  return bottom;
+}
+function revealMessage() {
+  const message = document.querySelector('[data-reveal]');
+  if (!message) return;
+  try { window.history.scrollRestoration = 'manual'; } catch {}
+  const top = topBars();
+  const box = message.getBoundingClientRect();
+  if (box.top < top || box.bottom > window.innerHeight) window.scrollBy(0, box.top - top - REVEAL_GAP);
+  const field = message.querySelector('[aria-invalid=true]');
+  if (field && document.activeElement !== field) field.focus({ preventScroll: true });
+}
+document.addEventListener('DOMContentLoaded', revealMessage);
+window.addEventListener('load', () => { revealMessage(); requestAnimationFrame(revealMessage); });
+
+// Worker item 18: clicking into a prefilled amount, quantity or rate put the caret after the old value, so
+// typing appended to it ("33.33150.00"): a wrong-amount risk. Focusing such a field selects its value,
+// so what is typed replaces it; a click inside a field that already has focus places the caret as usual.
+// Worker item 38: a box the server or page script fills with a suggestion (a check number, the next entry
+// number, a default connection name) is marked `data-select-on-focus` and behaves the same way.
+const NUMBER_NAME = /(^|[-_])(quantity|rate|amount|debit|credit|cost)$/;
+const numberField = el => el instanceof HTMLInputElement && !el.readOnly && !el.disabled
+  && (el.type === 'text' || el.type === 'number')
+  && (el.inputMode === 'decimal' || NUMBER_NAME.test(el.name || '') || el.hasAttribute('data-select-on-focus'));
+let pressed = null, selectedOnFocus = null;
+document.addEventListener('mousedown', event => { pressed = event.target; }, true);
+document.addEventListener('focusin', event => {
+  const field = event.target;
+  const byPointer = pressed === field;
+  pressed = null;
+  if (!numberField(field) || field.value === '') return;
+  field.select();
+  selectedOnFocus = byPointer ? field : null;
+});
+// The click that gave the focus would otherwise put the caret back where the pointer was.
+document.addEventListener('mouseup', event => {
+  if (selectedOnFocus && event.target === selectedOnFocus) event.preventDefault();
+  pressed = selectedOnFocus = null;
 }, true);
 
 async function sendForm(form, submitter) {
@@ -319,7 +497,10 @@ function applyFragments(form, data) {
     const template = document.createElement('template');
     template.innerHTML = fragment.html.trim();
     const node = template.content.firstElementChild;
-    if (node && node.id === fragment.id && node.hasAttribute('data-fragment') && node.tagName === target.tagName) target.replaceWith(node);
+    if (node && node.id === fragment.id && node.hasAttribute('data-fragment') && node.tagName === target.tagName) {
+      target.replaceWith(node);
+      stampWithin(node, pageMarker());
+    }
   }
   form.dispatchEvent(new Event('fb:fragments', { bubbles: true }));
 }
@@ -381,8 +562,9 @@ document.addEventListener('click', async event => {
   event.preventDefault();
   try {
     const token = anchor.querySelector('input[name=fb_command_token]').value;
-    await call('books.run', {type:'SubmitForm', path:target.pathname, token, fields:Array.from(target.searchParams.entries())});
-    window.location.reload();
+    const result = await call('books.run', {type:'SubmitForm', path:target.pathname, token, fields:hostFields(target)});
+    if (result.outcome === 'done') window.location.reload();
+    else follow(result);
   } catch (error) { window.alert(String(error.message || error)); }
 }, true);
 
@@ -411,9 +593,13 @@ document.addEventListener('click', async event => {
   if (!input || button.disabled) return;
   button.disabled = true;
   try {
-    const result = await call('books.run',{type:'SubmitForm',path:window.location.pathname+window.location.search,token:input.value,fields:[['action','desktop_print']]});
-    if (result.outcome === 'done' && result.data.print_token) input.value = result.data.print_token;
+    const target = pageURL(window.location.href);
+    // Keep the exact query the host used to mint the capability, including its encoding.
+    const query = target.search.slice(1).split('&').filter(part => !new URLSearchParams(part).has(PAGE_KEY)).join('&');
+    const result = await call('books.run',{type:'SubmitForm',path:target.pathname+(query ? '?' + query : ''),token:input.value,fields:[['action','desktop_print']]});
+    if (result.outcome === 'done' && result.data?.print_token) input.value = result.data.print_token;
     if (result.data && result.data.print_error) window.alert(result.data.print_error);
+    follow(result);
   } catch (error) { window.alert(String(error.message || error)); }
   finally { button.disabled = false; }
 }, true);
@@ -431,6 +617,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+document.addEventListener('DOMContentLoaded', () => stampWithin(document.body, pageMarker()));
+// A link added or rewritten after the page loaded (a row re-rendered in place, an address a page
+// script changes on click) is stamped when it is followed. Bubble phase on window: after the
+// page's own handlers.
+window.addEventListener('click', event => {
+  const anchor = event.target.closest && event.target.closest('a[href]');
+  const marker = pageMarker();
+  if (anchor && marker && !event.defaultPrevented) stampLink(anchor, marker);
+});
+
 // Django opens customer prints in a new tab. The hardened app uses the same local window.
 document.addEventListener('click', event => {
   const anchor=event.target.closest && event.target.closest('a[href]');
@@ -446,7 +642,14 @@ function protectionFields() {
   const fields = document.querySelector('#own-password-fields');
   if (!checkbox || !fields) return;
   fields.hidden = !checkbox.checked;
+  const warning = document.getElementById('built-in-warning');
+  if (warning) warning.hidden = checkbox.checked;
   for (const input of fields.querySelectorAll('input')) input.disabled = !checkbox.checked;
+  // First run has a third step (the recovery key) only with a book password of one's own.
+  const recovery = document.querySelector('#recovery-step');
+  const count = document.querySelector('#setup-step-count');
+  if (recovery) recovery.hidden = !checkbox.checked;
+  if (count) count.textContent = checkbox.checked ? '3' : '2';
 }
 document.addEventListener('DOMContentLoaded', protectionFields);
 document.addEventListener('change', event => { if (event.target.id === 'id_protect') protectionFields(); });
@@ -504,6 +707,17 @@ document.addEventListener('DOMContentLoaded', () => {
     form.setAttribute('autocomplete', 'off');
     if (fromHistory) form.reset();
   }
+});
+
+// Refresh only the local Hosting page. Delegated form handlers keep working on the new rows.
+document.addEventListener('DOMContentLoaded', () => {
+  if (!document.querySelector('body.fb-hosting-page') || window.location.pathname !== '/hosting/' || pageMarker()) return;
+  setInterval(async () => {
+    try {
+      const html = await call('hosting.poll');
+      if (html) document.querySelector('main').replaceWith(new DOMParser().parseFromString(html, 'text/html').querySelector('main'));
+    } catch { /* retry on the next tick */ }
+  }, 5000);
 });
 
 // Remote access: the connected-host bar (added by the main process to host pages) follows the link.

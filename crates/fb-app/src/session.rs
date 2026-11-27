@@ -13,6 +13,7 @@ use std::path::Path;
 #[derive(Debug)]
 pub enum AppError {
     Locked,
+    Ai(crate::ai::Refusal),
     Invalid(String),
     Core(FbError),
     Render(String),
@@ -25,6 +26,7 @@ impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AppError::Locked => f.write_str("The books are locked."),
+            AppError::Ai(reason) => f.write_str(reason.code()),
             AppError::Invalid(m) => f.write_str(m),
             AppError::Core(e) => write!(f, "{e}"),
             AppError::Render(m) => write!(f, "Screen failed to render: {m}"),
@@ -176,6 +178,7 @@ pub struct App {
     pub ai: crate::ai::Authority,
     pub(crate) identity: crate::identity::Identity,
     pub(crate) legacy_credentials: bool,
+    pub(crate) prepared_connection: Option<u64>,
     pub host: Host,
     pub protection: Option<crate::protection::Record>,
     pub recovery_authorized: bool,
@@ -267,6 +270,8 @@ pub struct Created {
 /// `Replaced` adds the explanation that the keyring is new.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConnectionKeys {
+    /// The desktop has not consulted the keyring yet. Connection forms can request it on submit.
+    Deferred,
     /// The saved key opened, or a new installation saved its first key.
     Ready,
     /// A working keyring proved the saved key unreadable (sealed by another keyring, after a
@@ -303,6 +308,7 @@ impl App {
             ai: Default::default(),
             identity: Default::default(),
             legacy_credentials: false,
+            prepared_connection: None,
             frame_company: None,
             signout_token: None,
             host: Host::default(),
@@ -348,7 +354,7 @@ impl App {
 
     /// The session's credential subkey, or None while the connection key is unavailable.
     pub(crate) fn connection_vault_key(&self) -> Option<zeroize::Zeroizing<[u8; 32]>> {
-        if self.connection_keys == ConnectionKeys::Unavailable { return None; }
+        if matches!(self.connection_keys, ConnectionKeys::Deferred | ConnectionKeys::Unavailable) { return None; }
         self.device_key.as_ref().and_then(|k| crate::credentials::wrapping_key(k).ok())
     }
 
@@ -418,6 +424,7 @@ impl App {
     /// Lock: close the book (its key leaves memory with the connection) and forget every form token.
     pub fn lock(&mut self) {
         self.invalidate_identity();
+        self.ai.clear_unattended();
         self.legacy_credentials = false;
         self.open = None;
         self.protection = None;
@@ -438,7 +445,7 @@ impl App {
     }
 
     pub fn open_mut(&mut self) -> AppResult<&mut Open> {
-        self.authenticated_session()?;
+        self.authorize(None, crate::identity::Permission::Read)?;
         self.open.as_mut().ok_or(AppError::Locked)
     }
 
@@ -597,6 +604,10 @@ impl App {
                 let j=fb_core::services::post_journal(book,actor,company(&company_id)?,journal(&journal_id)?,Some(expected_revision))?;
                 json!({"id":j.id.to_db()})
             }
+            Command::DeleteJournal { company_id, journal_id, expected_revision } => {
+                fb_core::services::delete_draft_journal(book,actor,company(&company_id)?,journal(&journal_id)?,Some(expected_revision))?;
+                json!({"id":journal_id})
+            }
             Command::ReverseJournal { company_id, journal_id, date, reason } => {
                 let j=fb_core::services::reverse_journal(book,actor,company(&company_id)?,journal(&journal_id)?,&date,&reason)?;
                 json!({"id":j.id.to_db()})
@@ -647,7 +658,7 @@ impl App {
             Command::SaveSetup { company_id, expected_revision, receivables_id, payables_id, undeposited_id, collected_tax_id, customer_deposits_id, bank_ids } => {
                 let c = company(&company_id)?;
                 let values = json!({"receivables": receivables_id, "payables": payables_id, "undeposited": undeposited_id, "collected_tax": collected_tax_id, "customer_deposits":customer_deposits_id, "banks": bank_ids});
-                fb_core::documents::save_setup(book, actor, c, &values, Some(expected_revision))?
+                save_accounting_setup(book, actor, c, &values, &bank_ids, expected_revision)?
             }
             Command::SaveInvoice { company_id, values } => {
                 let c = company(&company_id)?;
@@ -767,6 +778,31 @@ pub fn reconnect_notice(label: &str) -> String {
 }
 
 fn journal(id: &str) -> AppResult<fb_core::JournalId> { fb_core::JournalId::parse(id).ok_or_else(||AppError::Invalid("Invalid journal id.".into())) }
+
+// The desktop can retain existing bank designations but only add Bank-type assets. Validate
+// and save under the same Writer so a concurrent account change cannot invalidate the choice.
+fn save_accounting_setup(
+    book: &mut Book, actor: UserId, company: CompanyId, values: &Value, bank_ids: &[String], revision: i64,
+) -> fb_core::FbResult<Value> {
+    book.write(|tx| {
+        if !bank_ids.is_empty() {
+            let setup = fb_core::documents::setup_snapshot(tx, company)?;
+            let existing = setup["banks"].as_array().expect("bank list in setup snapshot");
+            for id in bank_ids {
+                let account = AccountId::parse(id).map(|id| fb_core::store::account(tx, id)).transpose()?.flatten()
+                    .filter(|a| a.company_id == company)
+                    .ok_or_else(|| FbError::validation("Select a bank account from this company."))?;
+                if !account.active || !account.postable || account.kind != fb_core::model::Kind::Asset {
+                    return Err(FbError::validation(format!("{} is unavailable as a bank account. Replace or clear it.", account.label())));
+                }
+                if account.detail_type != fb_core::model::DetailType::Bank && !existing.contains(&json!(id)) {
+                    return Err(FbError::validation(format!("{} is not a Bank-type account.", account.label())));
+                }
+            }
+        }
+        fb_core::documents::save_setup_tx(tx, actor, company, values, Some(revision))
+    })
+}
 
 pub fn company(id: &str) -> AppResult<CompanyId> {
     CompanyId::parse(id).ok_or_else(|| AppError::Invalid("Invalid company id.".into()))

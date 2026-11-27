@@ -238,7 +238,7 @@ pub(crate) fn note_error(e: &fb_app::AppError) {
             };
             format!("error:Open:{name}")
         }
-        AppError::Locked | AppError::Invalid(_) | AppError::NotFound(_) => return,
+        AppError::Locked | AppError::Ai(_) | AppError::Invalid(_) | AppError::NotFound(_) => return,
     };
     let (op, route) = current();
     fb_diag::record(fb_diag::Entry { op: op.into(), route, kind, ..Default::default() });

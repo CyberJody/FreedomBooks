@@ -51,6 +51,10 @@ pub(crate) fn register(conn: &Connection) -> rusqlite::Result<()> {
     // Validators are registered once by the shared module, including the reviewed alias policies.
     crate::validators::register(conn)?;
     conn.create_scalar_function("fb_bankfeeds_identity_form", 1, flags, |ctx| Ok(as_text(ctx.get_raw(0)).is_some_and(identity_form)))?;
+    // 0210's check-match guard: the check number named in a bank description ("CHECK 1003"), or NULL.
+    conn.create_scalar_function("fb_bankfeeds_check_number", 1, flags, |ctx| {
+        Ok(as_text(ctx.get_raw(0)).and_then(crate::credential_mask::text::match_check_number_in))
+    })?;
     // 0136's backfill: the identity of an already stored (already redacted) id. NULL unless the secret
     // is a 32-byte blob and the domain and value are text.
     conn.create_scalar_function("fb_bankfeeds_identity", 3, flags, |ctx| {

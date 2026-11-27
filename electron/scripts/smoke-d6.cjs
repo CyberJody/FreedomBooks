@@ -96,6 +96,10 @@ async function runD6({ app, page, company, ids, shot, pass, heading }) {
   assert.equal(await page.inputValue(`#amount-${billId}`), '50.00');
   await page.fill('#id_date', '2026-10-31');
   await page.fill(`#amount-${billId}`, '20.00');
+  // Worker item 28: with two bank accounts and no earlier bill payment, Pay bills starts on "Choose…";
+  // choosing the account fills its next check number.
+  assert.equal(await page.inputValue('#id_bank'), '');
+  await page.selectOption('#id_bank', ids.bank);
   assert.equal(await page.inputValue('#id_reference'), '1');
   await page.waitForFunction(() => /1 bill · 1 payment · Total 20\.00/.test(document.querySelector('#pay-total').textContent));
   await capture('08-pay-bills');
@@ -134,6 +138,11 @@ async function runD6({ app, page, company, ids, shot, pass, heading }) {
   await capture('14-vendor-activity');
   pass('D6 bills: vendor defaults, add-line, invalid values retained, save/revise/history, review/post, calendar, partial payment, shared check number, reverse and void via real forms');
   await go('/transfers/new/');
+  // Worker items 28 and 32: before the first transfer neither account is chosen.
+  assert.equal(await page.inputValue('#id_from_account'), '');
+  assert.equal(await page.inputValue('#id_to_account'), '');
+  await page.selectOption('#id_from_account', ids.bank);
+  await page.selectOption('#id_to_account', savings);
   await page.fill('#id_date', '2026-10-31');
   await page.fill('#id_amount', '30.25');
   await page.fill('#id_memo', 'Synthetic reserve transfer');

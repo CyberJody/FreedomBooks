@@ -38,6 +38,13 @@ impl<'a> Visit<'a> for Calls {
                 ("crates/fb-app/src/identity.rs", "enroll_owner" | "save_desktop_user", "write" | "execute")
                 | ("crates/fb-app/src/session.rs", "create_book_with_chart", "write" | "execute")
                 | ("crates/fb-app/src/ai/import.rs", "run", "write")
+                // Native consent writes bind UUIDs and a binary verifier; the sealed secret stays out of SQL.
+                | ("crates/fb-app/src/ai/unattended.rs", "ai_set_unattended" | "ai_prune_missing_anchors" | "ai_forget_all", "write" | "execute")
+                | ("crates/fb-app/src/ai/unattended.rs", "revoke_account_approvals", "execute")
+                // Validate the desktop's bank designations in the same Writer as the core setup save.
+                | ("crates/fb-app/src/session.rs", "save_accounting_setup", "write")
+                // One Writer commits factor changes and retires unattended authorization for the same user.
+                | ("crates/fb-app/src/mfa.rs", "mfa_commit_change", "write")
                 // Makes a restored copy the working books: one Book::write that records the audit event.
                 | ("crates/fb-app/src/books.rs", "audit_made_main", "write")
                 // "Host these books": one Book::write of the single remote_host record (no accounting rows).

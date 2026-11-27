@@ -157,6 +157,15 @@ impl crate::Book {
         self.authenticate_stored(connection_id, wrapping_key)?.map_err(|()| mask_unavailable())
     }
 
+    pub fn find_bankfeed_restore<'key>(&mut self, connection_id: &str, keys: impl IntoIterator<Item = &'key [u8; 32]>) -> crate::rusqlite::Result<Option<(BankfeedRestore, &'key [u8; 32])>> {
+        for key in keys {
+            if let Ok(record) = self.authenticate_stored(connection_id, key)? {
+                return Ok(Some((record, key)));
+            }
+        }
+        Ok(None)
+    }
+
     /// The single reader of a stored envelope. `Ok(Err(()))` means the credential itself can't be
     /// read: no envelope, wrong lengths, failed authentication or an undecodable record. A database
     /// failure (anything else) stays an `Err`, so it can never be mistaken for an unreadable credential.

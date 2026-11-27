@@ -172,7 +172,11 @@ fn item3_transfer_filter_lists_bank_accounts_and_banks_used_by_transfers() {
 }
 
 const OLD_TWIN_HINT: &str = "use town or email to tell them apart in lists.";
-const TWIN_HINT: &str = "Required. Two customers or vendors may share a name; lists tell them apart by email, or else by a number.";
+// Worker item 23 (2026-11-23): a new or renamed customer or vendor may no longer take an active one's
+// name. Twins can still exist (made before that rule, or an archived one reactivated), and lists still
+// tell them apart as below.
+const TWIN_HINT: &str = "Required. No other active customer can have the same name.";
+const VENDOR_HINT: &str = "Required. No other active vendor can have the same name.";
 
 // Item 4: the twin-name hint said "use town or email", but there is no Town field. v1 takes the town
 // from line 2 of the billing address; the desktop refuses line breaks in new text (SEC-FIX1), so a
@@ -181,9 +185,9 @@ const TWIN_HINT: &str = "Required. Two customers or vendors may share a name; li
 fn item4_twin_name_hint_matches_what_the_lists_use() {
     let mut f = Fixture::new();
     let c = f.c.clone();
-    for path in ["lists/customers/new/", "lists/vendors/new/"] {
+    for (path, hint) in [("lists/customers/new/", TWIN_HINT), ("lists/vendors/new/", VENDOR_HINT)] {
         let html = render(&mut f.app, &format!("/c/{c}/{path}"));
-        assert!(html.contains(TWIN_HINT), "{path}");
+        assert!(html.contains(hint), "{path}");
         assert!(!html.contains(OLD_TWIN_HINT), "{path}");
         assert!(!html.contains("name=\"town\""), "still no Town field");
     }
@@ -192,11 +196,20 @@ fn item4_twin_name_hint_matches_what_the_lists_use() {
     let html = render(&mut f.app, &path);
     let Outcome::Invalid { html } = post(&mut f.app, &path, &html, pairs(&[("display_name", "Twin"), ("billing_address", "1 Main St\r\nPond, NY 10000"), ("tax_status", "TAXABLE")])) else { panic!("line break accepted") };
     assert!(html.contains("Control and formatting characters are not allowed."));
-    // Twins entered on the desktop: the list tells them apart by email, then by a number.
+    // Twins entered on the desktop: the list tells them apart by email, then by a number. (A new or
+    // reactivated active twin is refused now, so each is archived before the next is made, and then all
+    // are set active in the book directly, as a book from before that rule can have them.)
+    let mut twins = vec![];
     for (email, address) in [("a@example.invalid", "1 Main St, Pond, NY 10000"), ("", "9 Elm Rd, Lakeside"), ("", "")] {
         let html = render(&mut f.app, &path);
         let out = post(&mut f.app, &path, &html, pairs(&[("display_name", "Twin"), ("email", email), ("billing_address", address), ("tax_status", "TAXABLE")]));
-        assert!(matches!(out, Outcome::Redirect { .. }), "{out:?}");
+        let Outcome::Redirect { location } = out else { panic!("{out:?}") };
+        let id = location.trim_end_matches('/').rsplit('/').next().unwrap().to_owned();
+        run(&mut f.app, json!({"type":"SetDirectoryActive","company_id":c,"kind":"customer","record_id":id,"active":false}));
+        twins.push(id);
+    }
+    for id in &twins {
+        f.app.open_mut().unwrap().book.connection().execute("UPDATE directory_customer SET active=1 WHERE id=?1", [id]).unwrap();
     }
     let labels: Vec<String> = options(&render(&mut f.app, &format!("/c/{c}/invoices/new/")), "customer").into_iter().map(|(_, l)| l).filter(|l| l.starts_with("Twin")).collect();
     assert_eq!(labels.len(), 3);

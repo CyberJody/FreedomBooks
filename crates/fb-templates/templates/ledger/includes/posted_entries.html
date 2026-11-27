@@ -1,0 +1,3 @@
+<table class="posted-entries"><caption>Original journal entry</caption>
+<thead><tr><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
+<tbody>{% for line in posted_entries %}<tr><td>{{ line.code }} · {{ line.name }}</td><td class="num">{% if line.debit != '0.00' %}{{ line.debit|money }}{% endif %}</td><td class="num">{% if line.credit != '0.00' %}{{ line.credit|money }}{% endif %}</td></tr>{% endfor %}</tbody></table>

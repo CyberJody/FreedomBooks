@@ -60,10 +60,15 @@ fn owe_record_review_detail_register_and_void_through_the_screens() {
     let owed = format!("/c/{}/sales-tax/owed/", f.c);
     let page = screens::render(&mut f.app, &owed).unwrap();
     assert_eq!(page.status, 200);
-    // The default period is the last whole quarter before today, and 6% of 350.00 is owed to the state.
+    assert!(page.html.contains("value=\"2026-10-01\"") && page.html.contains("value=\"2026-12-31\""));
+    let reports = screens::render(&mut f.app, &format!("/c/{}/reports/", f.c)).unwrap().html;
+    assert!(reports.contains(&owed) && reports.contains("What you owe"));
+    // Read the prior quarter explicitly. Six percent of 350.00 is owed to the state.
+    let page = screens::render(&mut f.app, &format!("{owed}?start=2026-07-01&end=2026-09-30")).unwrap();
     assert!(page.html.contains("value=\"2026-07-01\"") && page.html.contains("value=\"2026-09-30\""), "{}", page.html);
     assert!(page.html.contains("State Revenue") && page.html.contains("21.00"));
-    assert!(page.html.contains("No payments recorded yet."));
+    // Worker item 29: the list follows the dates shown.
+    assert!(page.html.contains("Payments made from 2026-07-01 to 2026-09-30") && page.html.contains("No payments in these dates."));
     let pay_link = format!("/c/{}/sales-tax/payments/new/?agency={}&amp;start=2026-07-01&amp;end=2026-09-30&amp;amount=21.00", f.c, f.agency);
     assert!(page.html.contains(&pay_link), "Record payment is prefilled with the agency, period and balance");
 
@@ -126,6 +131,10 @@ fn owe_record_review_detail_register_and_void_through_the_screens() {
 
     // Void: a date before the payment is refused; then the reversal posts and the amount is owed again.
     let void = format!("/c/{}/sales-tax/payments/{id}/void/", f.c);
+    // Worker item 10 and review S3: the form starts on the payment's own date, marked for the
+    // earlier-month notice (review S1).
+    let form = screens::render(&mut f.app, &void).unwrap().html;
+    assert!(form.contains("name=\"date\" value=\"2026-10-20\" data-month-notice=\"2026-11-11\""), "{form}");
     let Outcome::Invalid { html } = submit(&mut f.app, &void, vec![("expected_revision", "1".into()), ("date", "2026-10-19".into()), ("reason", "Paid the wrong agency".into())]) else { panic!() };
     assert!(html.contains("cannot be before the payment date"));
     let out = submit(&mut f.app, &void, vec![("expected_revision", "1".into()), ("date", "2026-10-25".into()), ("reason", "Paid the wrong agency".into())]);

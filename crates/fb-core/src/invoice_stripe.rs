@@ -440,7 +440,7 @@ pub fn post_payment(
                 return Err(bad());
             }
             let receipt =
-                sales::record_receipt_tx(tx, actor, c, &input, Some(&review.receipt), false)?;
+                sales::record_receipt_tx(tx, actor, c, &input, Some(&review.receipt), false, false)?;
             tx.execute(
                 "UPDATE invoice_stripe_payment SET revision=revision+1,receipt_id=?2 WHERE id=?1",
                 params![review.payment, text(&receipt, "id")?],

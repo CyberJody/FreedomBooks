@@ -31,8 +31,8 @@ module.exports=async()=>{
     },company);
     await page.goto(`fb://app/c/${company}/journals/new/`);
     await page.fill('#id_date','2026-10-10');await page.fill('#id_entry_number','REPORT-1');await page.fill('#id_memo','Report flow evidence');
-    await page.selectOption('#id_lines-0-account',ids.bank);await page.fill('#id_lines-0-debit','1234.56');
-    await page.selectOption('#id_lines-1-account',ids.income);await page.fill('#id_lines-1-credit','1234.56');
+    await page.fill('#id_lines-0-account-search','Checking');await page.press('#id_lines-0-account-search','Enter');await page.fill('#id_lines-0-debit','1234.56');
+    await page.fill('#id_lines-1-account-search','Service income');await page.press('#id_lines-1-account-search','Enter');await page.fill('#id_lines-1-credit','1234.56');
     await Promise.all([page.waitForURL(/journals\/[0-9a-f-]+\/$/),page.click('button:has-text("Save draft")')]);
     ids.journal=/journals\/([0-9a-f-]+)\/$/.exec(page.url())[1];
     await Promise.all([page.waitForURL(/journals\/[0-9a-f-]+\/$/),page.click('button:has-text("Post journal")')]);

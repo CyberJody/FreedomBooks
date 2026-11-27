@@ -557,3 +557,64 @@ fn reopening_refuses_lost_tax_owners_and_changed_account_evidence_with_all_guard
         assert!(Book::open(&path, &[31;32]).is_err(), "{attack}: corrupted book must refuse to reopen");
     }
 }
+
+/// Worker item 26: Pay bills suggested check 127, which had gone out on a sales tax payment whose
+/// Reference was "Check 127" (that form has no check-number box). The next suggested check number steps
+/// over a number a tax payment's reference names, on that bank only, and other references (a
+/// confirmation number) never move it.
+#[test]
+fn the_next_check_number_steps_over_one_a_tax_payment_reference_names() {
+    let mut f = Fx::new();
+    let group = f.group.clone();
+    f.invoice("2026-08-10", "1000.00", Some(&group));
+    let (bank1, bank2) = (f.bank, f.bank2);
+    let next = |f: &mut Fx, bank: AccountId| crate::checks::next_number(&mut f.book, f.actor, f.co, bank).unwrap();
+    assert_eq!(next(&mut f, bank1), "1");
+    let mut p = f.input(&f.state_agency(), "2026-10-15", "5.00");
+    p["reference"] = json!("Check 1");
+    f.pay(&p).unwrap();
+    let mut p = f.input(&f.state_agency(), "2026-10-16", "5.00");
+    p["reference"] = json!("Confirmation 88812345");
+    f.pay(&p).unwrap();
+    assert_eq!(next(&mut f, bank1), "2");
+    assert_eq!(next(&mut f, bank2), "1", "another bank account is not affected");
+    // A warning can name it before the number is used again.
+    let bank = f.bank.to_db();
+    let earlier = |f: &Fx, n: &str| crate::checks::earlier_use(f.book.connection(), f.co, &bank, n).unwrap();
+    let live = earlier(&f, "1").unwrap();
+    assert!(live.is_tax_payment());
+    assert_eq!(live.text(), "sales tax payment STP-000001 (reference “Check 1”)");
+    assert_eq!(earlier(&f, "2"), None);
+    // Review 2, S1: a voided tax payment says so.
+    let id: String = f.book.connection().query_row("SELECT id FROM salestax_payment WHERE reference='Check 1'", [], |r| r.get(0)).unwrap();
+    void_payment(&mut f.book, f.actor, f.co, &id, Some(1), &json!("2026-10-20"), &json!("Check lost in the mail")).unwrap();
+    let voided = earlier(&f, "1").unwrap();
+    assert!(voided.is_tax_payment());
+    assert_eq!(voided.text(), "sales tax payment STP-000001 (reference “Check 1”), which was voided");
+}
+
+/// Review 2, S2: with a check numbering preference set, the next suggested number (`check_next`) also
+/// steps over a number a sales tax payment's Reference names, keeping the preference's width.
+#[test]
+fn a_numbering_preference_steps_over_a_tax_payment_reference_too() {
+    let mut f = Fx::new();
+    let group = f.group.clone();
+    f.invoice("2026-08-10", "1000.00", Some(&group));
+    // Changing numbering needs an administrator.
+    f.book.connection().execute("UPDATE fb_user SET is_staff=1 WHERE id=?1", [f.actor.to_db()]).unwrap();
+    let bank = f.bank;
+    let before = crate::numbering::settings(&mut f.book, f.actor, f.co).unwrap().as_array().unwrap().iter()
+        .find(|r| r["kind"] == "CHECK" && r["bank_id"] == json!(bank.to_db())).unwrap().clone();
+    crate::numbering::set_next(&mut f.book, f.actor, f.co, crate::numbering::Change { kind: "CHECK", bank: Some(bank), next: "0500", expected_next: s(&before, "next"), expected_revision: before["revision"].as_i64().unwrap() }).unwrap();
+    let next = |f: &mut Fx| crate::checks::next_number(&mut f.book, f.actor, f.co, bank).unwrap();
+    assert_eq!(next(&mut f), "0500");
+    let mut p = f.input(&f.state_agency(), "2026-10-15", "5.00");
+    p["reference"] = json!("Check 0500");
+    f.pay(&p).unwrap();
+    assert_eq!(next(&mut f), "0501");
+    let mut p = f.input(&f.state_agency(), "2026-10-16", "5.00");
+    p["reference"] = json!("Check 501");
+    f.pay(&p).unwrap();
+    assert_eq!(next(&mut f), "0502");
+    assert_eq!(crate::checks::next_number(&mut f.book, f.actor, f.co, f.bank2).unwrap(), "1", "another bank account is not affected");
+}

@@ -159,6 +159,19 @@ fn receipt(f: &mut Fixture) -> String {
 }
 
 #[test]
+fn write_check_with_a_blank_number_saves_a_bank_debit() {
+    let mut f = fixture();
+    let path = format!("/c/{}/checks/new/", f.c);
+    let mut fields = check_fields(&f, "00000000-0000-4000-8000-000000007049");
+    fields.retain(|(key, _)| key != "print_later");
+    set(&mut fields, "check_number", "");
+    let id = saved(post(&mut f.app, &path, &fields));
+    let detail = screens::render(&mut f.app, &format!("/c/{}/checks/{id}/", f.c)).unwrap().html;
+    assert!(detail.contains("EFT-M1"));
+    assert_eq!(count(&mut f.app, "checks_check"), 1);
+}
+
+#[test]
 fn check_form_ignores_unchanged_whitespace_extras_and_records_only_after_review() {
     let mut f = fixture();
     let id = check(&mut f);

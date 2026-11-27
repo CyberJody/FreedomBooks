@@ -462,3 +462,31 @@ fn late_audit_failure_atomic_public_and_composed() {
         .unwrap();
     assert!(f.book.check().unwrap().is_empty());
 }
+
+#[test]
+fn blank_number_assigns_a_bank_debit_reference_once() {
+    let mut f = Fx::new();
+    let mut manual = f.payload();
+    manual["check_number"] = json!("EFT-M1");
+    f.save(&manual);
+    let mut debit = f.payload();
+    debit["check_number"] = json!("");
+    let saved = f.save(&debit);
+    assert_eq!(saved["current"]["check_number"], "EFT-M2");
+    assert_eq!(f.save(&debit)["id"], saved["id"]);
+    let recorded = f.post(&saved);
+    assert_eq!(recorded["state"], "RECORDED");
+    f.void(&recorded);
+    let mut next = f.payload();
+    next["check_number"] = json!("");
+    assert_eq!(f.save(&next)["current"]["check_number"], "EFT-M3");
+
+    let mut typed = f.payload();
+    typed["bank_id"] = json!(f.bank2.to_db());
+    typed["check_number"] = json!("eft-m1");
+    f.save(&typed);
+    let mut second_bank = f.payload();
+    second_bank["bank_id"] = json!(f.bank2.to_db());
+    second_bank["check_number"] = json!("");
+    assert_eq!(f.save(&second_bank)["current"]["check_number"], "EFT-M1");
+}

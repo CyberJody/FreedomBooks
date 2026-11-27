@@ -27,7 +27,8 @@ fn all_frozen_python_vectors_match() {
                 fx.user,
                 co,
                 Model::Customer,
-                &json!({"display_name":"Email","email":args[0]}),
+                // A name of its own per vector: a new customer may not take an active one's name (worker item 23).
+                &json!({"display_name":format!("Email {i}"),"email":args[0]}),
                 None,
             )
             .map(|_| json!(true)),

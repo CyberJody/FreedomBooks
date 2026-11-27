@@ -328,13 +328,13 @@ impl App {
             RecoverySet::default()
         };
         let name = self.open_mut()?.owner_name.clone();
-        storage::change(
-            &mut self.open_mut()?.book,
-            actor,
-            change,
-            new_codes.then_some(recovery.hashes.as_slice()),
-        )?;
-        // Revoke every AI grant, form and previous management capability while retaining this
+        let anchors = self.ai_anchor_directory().ok();
+        self.open_mut()?.book.write(|tx| {
+            let approvals = crate::ai::account_approvals(tx, actor, |_| true)?;
+            storage::change(tx, actor, change, new_codes.then_some(recovery.hashes.as_slice()))?;
+            crate::ai::revoke_account_approvals(tx, anchors.as_deref(), actor, approvals, true)
+        })?;
+        // Revoke the previous session grants, forms and management capabilities while retaining this
         // freshly reauthenticated person's session. Confirmation proved the new factor too.
         self.finish_sign_in(actor, name)?;
         self.identity.mfa.recovery_display = recovery.plain;

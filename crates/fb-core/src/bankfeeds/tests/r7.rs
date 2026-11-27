@@ -158,11 +158,11 @@ fn r7_reopen_after_feed_name_and_ledger_edits() {
     let mut f=Fx::new();f.connected_books();let mut count=0;
     for active in [false,true] {for postable in [false,true] {for kind in ["ASSET","LIABILITY","INCOME","EXPENSE","EQUITY"] {
         let code=format!("R7{count:03}");
-        let id=services::save_account(&mut f.book,f.u,f.c,AccountInput::new(&code,"Unused mapped").kind("ASSET")).unwrap().id;
+        let id=services::save_account(&mut f.book,f.u,f.c,AccountInput::new(&code,&format!("Unused mapped {code}")).kind("ASSET")).unwrap().id;
         let feed=f.feed("ACT-savings");map_account(&mut f.book,f.u,f.c,&feed,&json!(id.to_db()), &SecretSet::none()).unwrap();
-        services::save_account(&mut f.book,f.u,f.c,AccountInput::new(&code,"Changed mapped").kind(kind).active(active).postable(postable).edit(id)).unwrap();
+        services::save_account(&mut f.book,f.u,f.c,AccountInput::new(&code,&format!("Changed mapped {code}")).kind(kind).active(active).postable(postable).edit(id)).unwrap();
         f.reopen_clean();map_account(&mut f.book,f.u,f.c,&feed,&Value::Null, &SecretSet::none()).unwrap();f.reopen_clean();
-        services::save_account(&mut f.book,f.u,f.c,AccountInput::new(&code,"Restored").kind("ASSET").edit(id)).unwrap();count+=1;
+        services::save_account(&mut f.book,f.u,f.c,AccountInput::new(&code,&format!("Restored {code}")).kind("ASSET").edit(id)).unwrap();count+=1;
     }}}
     r5_finish(&mut f);eprintln!("R7 {count} account-edit combinations reopen");
 }

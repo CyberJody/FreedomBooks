@@ -18,14 +18,14 @@ macro_rules! trailing_digits {
 }
 
 macro_rules! receipt_source {
-    ($kind:literal) => {
+    ($kind:literal, $amount_hit:literal) => {
         concat!(
             "SELECT s.id AS id, d.number AS number, '' AS alt, s.date AS date,
             coalesce(p.display_name, json_extract(s.data,'$.customer_snapshot.display_name'), '') AS name, s.amount AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM sales_receiptreversal z WHERE z.receipt_id=s.id) THEN 'VOID' ELSE 'RECORDED' END AS status,
             coalesce(json_extract(s.data,'$.memo'),'') AS memo,
             trim(coalesce(json_extract(s.data,'$.reference'),'') || ' ' || coalesce((SELECT c.order_reference FROM prepayments_customerdeposit c WHERE c.receipt_id=s.id),'')) AS reference,
-            '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            '' AS extra, ", $amount_hit, " AS amount_hit, d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN sales_receipt s ON s.identity_id=d.id AND s.kind=d.kind
             LEFT JOIN directory_customer p ON p.id=s.customer_id AND p.company_id=d.company_id
             WHERE d.company_id=?1 AND d.kind='",
@@ -193,6 +193,9 @@ pub struct Hit {
     pub detail: String,
     /// The query is this document's number (or check number, reference or entry number).
     pub exact: bool,
+    /// Worker item 35: what matched when the row does not show it (the tax, a line's amount or rate,
+    /// the subtotal, or the reference), such as "Tax 53.13"; empty otherwise.
+    pub matched: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -204,12 +207,19 @@ pub struct Group {
 }
 
 /// The columns every document source yields: id, number, alt, date, name, amount, status, memo,
-/// reference, extra text, amount_hit, ordinal. `?1` is the company, `?4` the amount.
+/// reference, extra text, amount_hit, ordinal. `?1` is the company, `?4` the amount in cents and `?9`
+/// the same amount as the documents store it in their JSON (`53.13`). Worker item 21: an amount also
+/// finds a document by a line's amount or rate, or its tax or subtotal, not only by its total;
+/// `amount_hit` names which ('tax', 'subtotal', 'line' or 'rate'; '' for none, worker item 35).
 fn document_source(kind: Kind) -> Option<&'static str> {
     Some(match kind {
         Kind::Invoice => "SELECT inv.id AS id, coalesce(h.source_number, d.number) AS number, '' AS alt, r.date AS date,
             coalesce(p.display_name, json_extract(r.data,'$.customer_snapshot.display_name'), '') AS name, r.total AS amount, r.state AS status,
-            coalesce(json_extract(r.data,'$.memo'),'') AS memo, '' AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            coalesce(json_extract(r.data,'$.memo'),'') AS memo, '' AS reference, '' AS extra,
+            CASE WHEN ?4 IS NULL THEN '' WHEN json_extract(r.data,'$.tax')=?9 THEN 'tax' WHEN json_extract(r.data,'$.subtotal')=?9 THEN 'subtotal'
+              WHEN EXISTS(SELECT 1 FROM sales_invoiceline l WHERE l.revision_id=r.id AND l.amount=?4) THEN 'line'
+              WHEN EXISTS(SELECT 1 FROM sales_invoiceline l WHERE l.revision_id=r.id AND json_extract(l.data,'$.rate')=?9) THEN 'rate' ELSE '' END AS amount_hit,
+            d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN sales_invoice inv ON inv.identity_id=d.id
             JOIN sales_invoicerevision r ON r.invoice_id=inv.id AND r.number=inv.revision
             LEFT JOIN sales_importinvoice h ON h.invoice_id=inv.id AND h.company_id=d.company_id
@@ -218,26 +228,41 @@ fn document_source(kind: Kind) -> Option<&'static str> {
         Kind::Estimate => "SELECT e.id AS id, d.number AS number, '' AS alt, r.date AS date,
             coalesce(p.display_name, json_extract(r.data,'$.customer_snapshot.display_name'), '') AS name, r.total AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM sales_estimateconversion v WHERE v.estimate_id=e.id) THEN 'CONVERTED' ELSE r.state END AS status,
-            coalesce(json_extract(r.data,'$.memo'),'') AS memo, '' AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            coalesce(json_extract(r.data,'$.memo'),'') AS memo, '' AS reference, '' AS extra,
+            CASE WHEN ?4 IS NULL THEN '' WHEN json_extract(r.data,'$.tax')=?9 THEN 'tax' WHEN json_extract(r.data,'$.subtotal')=?9 THEN 'subtotal'
+              WHEN EXISTS(SELECT 1 FROM sales_estimateline l WHERE l.revision_id=r.id AND l.amount=?4) THEN 'line'
+              WHEN EXISTS(SELECT 1 FROM sales_estimateline l WHERE l.revision_id=r.id AND json_extract(l.data,'$.rate')=?9) THEN 'rate' ELSE '' END AS amount_hit,
+            d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN sales_estimate e ON e.identity_id=d.id
             JOIN sales_estimaterevision r ON r.estimate_id=e.id AND r.number=e.revision
             LEFT JOIN directory_customer p ON p.id=r.customer_id AND p.company_id=d.company_id
             WHERE d.company_id=?1 AND d.kind='EST'",
         Kind::SalesReceipt | Kind::Payment | Kind::CustomerDeposit => match kind {
-            Kind::SalesReceipt => receipt_source!("SR"),
-            Kind::Payment => receipt_source!("RCP"),
-            _ => receipt_source!("CDP"),
+            Kind::SalesReceipt => receipt_source!("SR", "coalesce((SELECT CASE WHEN json_extract(x.data,'$.tax')=?9 THEN 'tax'
+                WHEN json_extract(x.data,'$.subtotal')=?9 THEN 'subtotal'
+                WHEN EXISTS(SELECT 1 FROM sales_salesreceiptline l WHERE l.sale_id=x.id AND l.amount=?4) THEN 'line'
+                WHEN EXISTS(SELECT 1 FROM sales_salesreceiptline l WHERE l.sale_id=x.id AND json_extract(l.data,'$.rate')=?9) THEN 'rate' ELSE '' END
+                FROM sales_salesreceipt x WHERE x.receipt_id=s.id AND ?4 IS NOT NULL), '')"),
+            Kind::Payment => receipt_source!("RCP", "''"),
+            _ => receipt_source!("CDP", "''"),
         },
         Kind::CreditMemo => "SELECT m.id AS id, d.number AS number, '' AS alt, m.date AS date,
             coalesce(p.display_name, json_extract(m.data,'$.customer_snapshot.display_name'), '') AS name, m.total AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM credits_creditmemovoid z WHERE z.credit_memo_id=m.id) THEN 'VOID' ELSE 'RECORDED' END AS status,
-            coalesce(json_extract(m.data,'$.memo'),'') AS memo, '' AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            coalesce(json_extract(m.data,'$.memo'),'') AS memo, '' AS reference, '' AS extra,
+            CASE WHEN ?4 IS NULL THEN '' WHEN json_extract(m.data,'$.tax')=?9 THEN 'tax' WHEN json_extract(m.data,'$.subtotal')=?9 THEN 'subtotal'
+              WHEN EXISTS(SELECT 1 FROM credits_creditmemoline l WHERE l.credit_memo_id=m.id AND l.amount=?4) THEN 'line'
+              WHEN EXISTS(SELECT 1 FROM credits_creditmemoline l WHERE l.credit_memo_id=m.id AND json_extract(l.data,'$.rate')=?9) THEN 'rate' ELSE '' END AS amount_hit,
+            d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN credits_creditmemo m ON m.identity_id=d.id
             LEFT JOIN directory_customer p ON p.id=m.customer_id AND p.company_id=d.company_id
             WHERE d.company_id=?1 AND d.kind='CM'",
         Kind::Bill => "SELECT b.id AS id, d.number AS number, r.reference AS alt, r.date AS date,
             coalesce(v.display_name, json_extract(r.vendor_snapshot,'$.display_name'), '') AS name, r.total AS amount, b.state AS status,
-            r.memo AS memo, r.reference AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            r.memo AS memo, r.reference AS reference, '' AS extra,
+            CASE WHEN ?4 IS NULL THEN '' WHEN EXISTS(SELECT 1 FROM payables_billline l WHERE l.revision_id=r.id AND l.amount=?4) THEN 'line'
+              WHEN EXISTS(SELECT 1 FROM payables_billline l WHERE l.revision_id=r.id AND l.rate=?4) THEN 'rate' ELSE '' END AS amount_hit,
+            d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN payables_bill b ON b.identity_id=d.id
             JOIN payables_billrevision r ON r.bill_id=b.id AND r.number=b.revision
             LEFT JOIN directory_vendor v ON v.id=r.vendor_id AND v.company_id=d.company_id
@@ -245,26 +270,29 @@ fn document_source(kind: Kind) -> Option<&'static str> {
         Kind::BillPayment => "SELECT x.id AS id, d.number AS number, x.reference AS alt, x.date AS date,
             coalesce(v.display_name, json_extract(x.vendor_snapshot,'$.display_name'), '') AS name, x.amount AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM payables_paymentreversal z WHERE z.payment_id=x.id) THEN 'VOID' ELSE 'RECORDED' END AS status,
-            x.memo AS memo, x.reference AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            x.memo AS memo, x.reference AS reference, '' AS extra, '' AS amount_hit, d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN payables_billpayment x ON x.identity_id=d.id
             LEFT JOIN directory_vendor v ON v.id=x.vendor_id AND v.company_id=d.company_id
             WHERE d.company_id=?1 AND d.kind='BPAY'",
         Kind::Check => "SELECT k.id AS id, d.number AS number, r.check_number AS alt, r.date AS date, r.payee_name AS name,
-            r.total AS amount, k.state AS status, r.memo AS memo, '' AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            r.total AS amount, k.state AS status, r.memo AS memo, '' AS reference, '' AS extra,
+            CASE WHEN ?4 IS NULL THEN '' WHEN EXISTS(SELECT 1 FROM checks_checkline l WHERE l.revision_id=r.id AND l.amount=?4) THEN 'line'
+              WHEN EXISTS(SELECT 1 FROM checks_checkline l WHERE l.revision_id=r.id AND l.rate=?4) THEN 'rate' ELSE '' END AS amount_hit,
+            d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN checks_check k ON k.identity_id=d.id
             JOIN checks_checkrevision r ON r.document_id=k.id AND r.number=k.revision
             WHERE d.company_id=?1 AND d.kind='CHK'",
         Kind::Deposit => "SELECT x.id AS id, d.number AS number, '' AS alt, x.date AS date, coalesce(a.name,'') AS name, x.amount AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM banking_depositreversal z WHERE z.deposit_id=x.id) THEN 'VOID' ELSE 'RECORDED' END AS status,
             coalesce(json_extract(x.data,'$.memo'),'') AS memo, coalesce(json_extract(x.data,'$.reference'),'') AS reference,
-            '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            '' AS extra, '' AS amount_hit, d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN banking_deposit x ON x.identity_id=d.id
             LEFT JOIN ledger_account a ON a.id=x.bank_id AND a.company_id=d.company_id
             WHERE d.company_id=?1 AND d.kind='DEP'",
         Kind::Transfer => "SELECT t.id AS id, d.number AS number, '' AS alt, t.date AS date,
             coalesce(fa.name,'') || ' → ' || coalesce(ta.name,'') AS name, t.amount AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM transfers_transfervoid z WHERE z.transfer_id=t.id) THEN 'VOID' ELSE 'RECORDED' END AS status,
-            t.memo AS memo, '' AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            t.memo AS memo, '' AS reference, '' AS extra, '' AS amount_hit, d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN transfers_transfer t ON t.identity_id=d.id
             LEFT JOIN ledger_account fa ON fa.id=t.from_account_id AND fa.company_id=d.company_id
             LEFT JOIN ledger_account ta ON ta.id=t.to_account_id AND ta.company_id=d.company_id
@@ -272,7 +300,7 @@ fn document_source(kind: Kind) -> Option<&'static str> {
         Kind::TaxPayment => "SELECT t.id AS id, d.number AS number, '' AS alt, t.date AS date, t.agency_name AS name,
             t.tax_amount+t.penalty_amount AS amount,
             CASE WHEN EXISTS(SELECT 1 FROM salestax_paymentvoid z WHERE z.payment_id=t.id) THEN 'VOID' ELSE 'RECORDED' END AS status,
-            t.memo AS memo, t.reference AS reference, '' AS extra, 0 AS amount_hit, d.ordinal AS ordinal
+            t.memo AS memo, t.reference AS reference, '' AS extra, '' AS amount_hit, d.ordinal AS ordinal
             FROM documents_documentidentity d JOIN salestax_payment t ON t.identity_id=d.id
             WHERE d.company_id=?1 AND d.kind='STP' AND t.company_id=d.company_id",
         // Journal entries made by hand (and their reversals); document journals are found through
@@ -282,7 +310,7 @@ fn document_source(kind: Kind) -> Option<&'static str> {
             CASE WHEN EXISTS(SELECT 1 FROM ledger_journal z WHERE z.reversal_of_id=j.id) THEN 'REVERSED' ELSE j.status END AS status,
             j.memo AS memo, '' AS reference,
             coalesce((SELECT group_concat(l.description || ' ' || l.name, ' ') FROM ledger_journalline l WHERE l.journal_id=j.id),'') AS extra,
-            (?4 IS NOT NULL AND EXISTS(SELECT 1 FROM ledger_journalline l WHERE l.journal_id=j.id AND (l.debit=?4 OR l.credit=?4))) AS amount_hit,
+            CASE WHEN ?4 IS NOT NULL AND EXISTS(SELECT 1 FROM ledger_journalline l WHERE l.journal_id=j.id AND (l.debit=?4 OR l.credit=?4)) THEN 'line' ELSE '' END AS amount_hit,
             j.number AS ordinal
             FROM ledger_journal j WHERE j.company_id=?1 AND j.source_id IS NULL",
         _ => return None,
@@ -294,17 +322,18 @@ fn document_source(kind: Kind) -> Option<&'static str> {
 /// Wraps a document source with the match and the order. Parameters: ?1 company, ?2 lowercased text,
 /// ?3 the number's digits (or NULL), ?4 the amount in cents (or NULL), ?5 text matching allowed,
 /// ?6 the row limit, ?7 the query is all digits (partial-number matching is then left out: `10`
-/// would match every number with a 1 and a 0 in it).
+/// would match every number with a 1 and a 0 in it), ?9 the amount as stored text.
 fn document_query(source: &str) -> String {
     format!(
-        "SELECT id, number, alt, date, name, amount, status, memo, reference, exact FROM (
+        "SELECT id, number, alt, date, name, amount, status, memo, reference, exact, amount_hit, ref_hit FROM (
            SELECT *, (fb_lower(number)=?2 OR (alt<>'' AND fb_lower(alt)=?2)
-              OR (?3 IS NOT NULL AND ({num}=?3 OR (alt<>'' AND {alt}=?3)))) AS exact
+              OR (?3 IS NOT NULL AND ({num}=?3 OR (alt<>'' AND {alt}=?3)))) AS exact,
+              (?5 AND instr(fb_lower(reference),?2)>0) AS ref_hit
            FROM ({source})
          ) WHERE exact
             OR (?5 AND (instr(fb_lower(name),?2)>0 OR instr(fb_lower(memo),?2)>0 OR instr(fb_lower(reference),?2)>0
                 OR instr(fb_lower(extra),?2)>0 OR (NOT ?7 AND (instr(fb_lower(number),?2)>0 OR instr(fb_lower(alt),?2)>0))))
-            OR (?4 IS NOT NULL AND (amount=?4 OR amount_hit))
+            OR (?4 IS NOT NULL AND (amount=?4 OR amount_hit<>''))
          ORDER BY exact DESC, date DESC, ordinal DESC LIMIT ?6",
         num = trailing_digits!("number"),
         alt = trailing_digits!("alt"),
@@ -344,7 +373,7 @@ pub fn find(book: &mut Book, actor: UserId, c: CompanyId, terms: &Terms, per_kin
         let mut groups = Vec::new();
         use fb_db::rusqlite::types::Value as Sql;
         let text = |v: &Option<String>| v.clone().map_or(Sql::Null, Sql::Text);
-        // ?1..?8 (see `document_query` and `name_query`); each statement binds those it uses.
+        // ?1..?9 (see `document_query` and `name_query`); each statement binds those it uses.
         let values = [
             Sql::Text(c.to_db()),
             Sql::Text(terms.lower.clone()),
@@ -354,6 +383,7 @@ pub fn find(book: &mut Book, actor: UserId, c: CompanyId, terms: &Terms, per_kin
             Sql::Integer(limit),
             Sql::Integer(terms.digits_only().into()),
             text(&terms.phone),
+            terms.amount.map_or(Sql::Null, |c| Sql::Text(format!("{}.{:02}", c / 100, c % 100))),
         ];
         for kind in Kind::ALL {
             let sql = match (document_source(kind), name_query(kind)) {
@@ -367,20 +397,41 @@ pub fn find(book: &mut Book, actor: UserId, c: CompanyId, terms: &Terms, per_kin
             }
             let mut rows = st.raw_query();
             let mut hits = Vec::new();
+            let document = document_source(kind).is_some();
             while let Some(r) = rows.next()? {
                 let memo: String = r.get(7)?;
                 let reference: String = r.get(8)?;
+                let detail = first_line(if memo.trim().is_empty() { &reference } else { &memo });
+                let exact: bool = r.get(9)?;
+                let amount = r.get::<_, Option<i64>>(5)?;
+                let alt: String = r.get(2)?;
+                let (amount_hit, ref_hit): (String, bool) = if document { (r.get(10)?, r.get(11)?) } else { (String::new(), false) };
+                let matched = if exact || (amount.is_some() && amount == terms.amount) {
+                    String::new()
+                } else {
+                    let query_amount = terms.amount.map(|c| Money::from_db(c).to_string()).unwrap_or_default();
+                    match amount_hit.as_str() {
+                        "tax" => format!("Tax {query_amount}"),
+                        "subtotal" => format!("Subtotal {query_amount}"),
+                        "line" => format!("Line amount {query_amount}"),
+                        "rate" => format!("Rate {query_amount}"),
+                        // A bill's or bill payment's reference is already shown beside its number.
+                        _ if ref_hit && alt != reference && !fb_db::collation::lower(&detail).contains(&terms.lower) => format!("Reference {}", first_line(&reference)),
+                        _ => String::new(),
+                    }
+                };
                 hits.push(Hit {
                     kind,
                     id: r.get(0)?,
                     number: r.get(1)?,
-                    alt: r.get(2)?,
+                    alt,
                     date: r.get(3)?,
                     name: r.get(4)?,
-                    amount: r.get::<_, Option<i64>>(5)?.map(Money::from_db),
+                    amount: amount.map(Money::from_db),
                     status: r.get(6)?,
-                    detail: first_line(if memo.trim().is_empty() { &reference } else { &memo }),
-                    exact: r.get(9)?,
+                    detail,
+                    exact,
+                    matched,
                 });
             }
             drop(rows);
@@ -388,6 +439,10 @@ pub fn find(book: &mut Book, actor: UserId, c: CompanyId, terms: &Terms, per_kin
             hits.truncate(per_kind);
             for hit in &mut hits {
                 settle(q, hit)?;
+                // A journal's amount is its debits: a line equal to that is already shown.
+                if hit.kind == Kind::JournalEntry && hit.amount.and_then(Money::to_db) == terms.amount {
+                    hit.matched.clear();
+                }
             }
             if !hits.is_empty() {
                 groups.push(Group { kind, hits, more });

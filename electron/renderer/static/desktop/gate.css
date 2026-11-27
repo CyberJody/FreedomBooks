@@ -18,6 +18,7 @@ body.gate-page main.gate { flex: 1; display: flex; justify-content: center; padd
 .gate-steps li[aria-current=step] { background: #ebe1f0; color: #41244c; font-weight: 650; }
 .gate-steps li[aria-current=step] span { background: #684276; color: #fff; }
 .gate-steps li.done span { background: #4f7b55; color: #fff; }
+.gate-steps li[hidden] { display: none; }
 .gate-step-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #6b6070; font-weight: 700; margin: 0; }
 .gate-version { color: #4f4656; }
 .gate-file { font-size: 13px; color: #4f4656; background: #faf8fb; border: 1px solid #ece6ee; border-radius: 7px; padding: 10px 12px; }
@@ -33,3 +34,13 @@ body.gate-page main.gate { flex: 1; display: flex; justify-content: center; padd
 .gate-tag { display: inline-block; font-size: 11px; background: #ebe4ee; color: #41244c; border-radius: 10px; padding: 2px 8px; white-space: nowrap; }
 body.gate-page footer { color: #6b6070; }
 @media (max-width: 600px) { .gate-card { padding: 22px 18px; } .gate-books li { flex-direction: column; align-items: flex-start; } }
+
+.gate-protect [hidden] { display: none; }
+@media (max-height: 850px) and (min-width: 750px) {
+  body.gate-page main.gate { padding: 12px 16px; }
+  .gate-card { max-width: 740px; padding: 12px 24px; }
+  .gate-card h1, .gate-card form p { margin: 4px 0 8px; }
+  .gate-card .gate-protect { margin-bottom: 8px; }
+  #own-password-fields:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  #own-password-fields .help { grid-column: 1 / -1; }
+}

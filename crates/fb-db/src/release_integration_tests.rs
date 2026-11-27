@@ -61,7 +61,7 @@ fn release_integration_authenticates_populated_source_histories_and_reopens() {
         test_support::assert_desktop_user_backfill(&book.conn);
         let upgraded_schema=schema_hashes(&book.conn).unwrap();
         for (object,hash) in prior_schema {
-            if !["table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid","view:fb_json_invalid","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) {assert_eq!(upgraded_schema[&object],hash,"{label}: changed {object}");}
+            if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid","view:fb_json_invalid","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) {assert_eq!(upgraded_schema[&object],hash,"{label}: changed {object}");}
         }
         let fresh=Book::create(&dir.path().join("fresh.fbbook"),&key).unwrap();assert_eq!(schema_hashes(&book.conn).unwrap(),schema_hashes(&fresh.conn).unwrap());
         assert!(book.check().unwrap().is_empty());drop(book);

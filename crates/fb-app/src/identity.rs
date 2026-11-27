@@ -110,6 +110,19 @@ fn verifies(password: &str, hash: &str) -> bool {
 }
 
 impl App {
+    pub fn connection_keys_changed(&mut self) -> AppResult<()> {
+        self.prepared_connection = None;
+        // A first connection can be made after sign-in. Prepare this session just as sign-in
+        // would, including masks and any credentials saved under a superseded device key.
+        if let Ok(session) = self.authenticated_session()
+            && let Err(error) = self.restore_connections_for(session.actor)
+        {
+            self.lock();
+            return Err(error);
+        }
+        Ok(())
+    }
+
     /// Invalidates form, review, dialog, recovery and agent capabilities. Monotonic for this App's
     /// entire lifetime, including book close/reopen. Never cache authority across this generation.
     pub(crate) fn invalidate_identity(&mut self) {
@@ -194,7 +207,12 @@ impl App {
         company: Option<CompanyId>,
         permission: Permission,
     ) -> AppResult<AuthenticatedSession> {
-        let session = self.authenticated_session()?;
+        let session = match self.ai.operation_actor(company)? {
+            Some(actor) => AuthenticatedSession {
+                actor, generation: self.session_generation(), role: Role::Administrator,
+            },
+            None => self.authenticated_session()?,
+        };
         if permission == Permission::Administer && session.role != Role::Administrator {
             return Err(invalid("An administrator is required for this action."));
         }
@@ -374,9 +392,16 @@ impl App {
             return Err(invalid("Set an individual password for the new user."));
         }
         let id = user.unwrap_or_default();
+        let anchors = self.ai_anchor_directory().ok();
+        let password_reset = user.is_some() && hash.is_some() && session.actor != id;
         let open = self.open.as_mut().ok_or(AppError::Locked)?;
         open.book.write(|tx| {
             let actor=fb_core::services::authenticated(tx,session.actor)?;
+            let revoke = if user.is_some() {
+                crate::ai::account_approvals(tx, id, |company| {
+                    !active || role != Role::Administrator || password_reset || !companies.contains(&company)
+                })?
+            } else { Vec::new() };
             if user.is_none() {
                 tx.execute("INSERT INTO fb_user(id,username,is_active,is_staff,is_superuser) VALUES(?1,?2,?3,?4,0)",params![id.to_db(),name,active,role==Role::Administrator])?;
                 tx.execute("INSERT INTO desktop_user(user_id,role,password_hash) VALUES(?1,?2,?3)",params![id.to_db(),role.as_str(),hash])?;
@@ -394,6 +419,7 @@ impl App {
                 let c=CompanyId::parse(c).ok_or_else(||fb_core::FbError::validation("Invalid company."))?;
                 fb_core::services::audit(tx,&actor,c,if user.is_none(){"user.created"}else{"user.changed"},format!("user:{}",id.to_db()),json!({"username":name,"role":role.as_str(),"active":active,"password_changed":hash.is_some(),"companies":companies.iter().map(|c|c.to_db()).collect::<Vec<_>>()}))?;
             }
+            crate::ai::revoke_account_approvals(tx, anchors.as_deref(), id, revoke, false)?;
             Ok::<_,fb_core::FbError>(id)
         })?;
         // Any roster change revokes outstanding authority, including self-demotion and password reset.
@@ -404,25 +430,50 @@ impl App {
 }
 
 impl App {
-    pub(crate) fn restore_connections_for(&mut self, actor: UserId) -> AppResult<()> {
-        let open = self.open.take().ok_or(AppError::Locked)?;
+    fn connection_device_key(&self) -> Option<MasterKey> {
+        match (self.connection_keys, self.device_key.as_ref()) {
+            (crate::session::ConnectionKeys::Deferred | crate::session::ConnectionKeys::Unavailable, _) | (_, None) => None,
+            (_, Some(key)) => Some(MasterKey::new(**key)),
+        }
+    }
+
+    pub(crate) fn prepare_connections_for_write(&mut self) -> AppResult<()> {
+        use crate::credentials::{BookCredentials, wrapping_key};
         let failed = || invalid("The stored connection credentials could not be restored.");
-        let key = match (self.connection_keys, self.device_key.as_ref()) {
-            (crate::session::ConnectionKeys::Unavailable, _) | (_, None) => None,
-            (_, Some(k)) => Some(MasterKey::new(**k)),
-        };
+        let device = self.connection_device_key();
+        let book = &mut self.open.as_mut().ok_or(AppError::Locked)?.book;
+        let connection = book.connection_id();
+        if self.prepared_connection == Some(connection) { return Ok(()); }
+        if let Some(device) = device {
+            let legacy = if self.legacy_credentials { Some(&**self.backups.open_book()?.1) } else { None };
+            let alternates: Vec<&[u8; 32]> = self.device_alternates.iter().map(|key| &**key).collect();
+            BookCredentials::prepare_bankfeeds_for_write(book, &device, legacy, &alternates).map_err(|_| failed())?;
+        } else {
+            let throwaway = crate::keys::new_master_key().map_err(|e| invalid(&e.to_string()))?;
+            let key = wrapping_key(&throwaway).map_err(|_| failed())?;
+            BookCredentials::release_bankfeeds_unavailable(book, &key).map_err(|_| failed())?;
+        }
+        self.prepared_connection = Some(connection);
+        Ok(())
+    }
+
+    pub(crate) fn restore_connections_for(&mut self, actor: UserId) -> AppResult<()> {
+        let mut open = self.open.take().ok_or(AppError::Locked)?;
+        let failed = || invalid("The stored connection credentials could not be restored.");
+        let key = self.connection_device_key();
         let Some(device) = key else {
             // The keyring can't be used this launch: nothing is read, flagged or migrated. Writes
             // still need every active connection's mask released for this session only.
             let throwaway = crate::keys::new_master_key().map_err(|e| invalid(&e.to_string()))?;
-            let vault = crate::credentials::BookCredentials::new(open.book, actor, &throwaway).map_err(|_| failed())?;
-            let waiting = vault.release_bankfeeds_unavailable().map_err(|_| failed())?;
-            let book = vault.into_book().map_err(|_| failed())?;
-            self.open = Some(crate::session::Open { book, ..open });
+            let wrapping = crate::credentials::wrapping_key(&throwaway).map_err(|_| failed())?;
+            let waiting = crate::credentials::BookCredentials::release_bankfeeds_unavailable(&mut open.book, &wrapping).map_err(|_| failed())?;
+            self.prepared_connection = Some(open.book.connection_id());
+            self.open = Some(open);
             self.vault_key = None;
             if waiting > 0 && self.bankfeeds_enabled() {
                 self.messages.push(crate::session::CONNECTIONS_WAITING.into());
             }
+            self.prune_ai_after_signin();
             return Ok(());
         };
         let legacy = if self.legacy_credentials {
@@ -435,6 +486,7 @@ impl App {
             .map_err(|_| failed())?;
         let reconnect = vault.restore_bankfeeds().map_err(|_| failed())?;
         let book = vault.into_book().map_err(|_| failed())?;
+        self.prepared_connection = Some(book.connection_id());
         self.open = Some(crate::session::Open { book, ..open });
         self.vault_key = crate::credentials::wrapping_key(&device).ok();
         if self.bankfeeds_enabled() {
@@ -445,7 +497,18 @@ impl App {
                 self.messages.push(crate::session::reconnect_notice(&name));
             }
         }
+        self.prune_ai_after_signin();
         Ok(())
+    }
+
+    fn prune_ai_after_signin(&mut self) {
+        if self.ai_prune_missing_anchors().is_err() {
+            fb_diag::record(fb_diag::Entry {
+                source: "rust", op: "ai_prune_missing_anchors".into(),
+                kind: "error".into(), outcome: vec!["AI approval cleanup failed; sign-in continued"],
+                book_open: Some(true), ..Default::default()
+            });
+        }
     }
 }
 

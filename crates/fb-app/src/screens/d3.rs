@@ -238,7 +238,7 @@ fn record_vm(mut r: Value, m: Model) -> Value {
     r["get_kind_display"] = json!(if r["kind"] == "SERVICE" {
         "Service"
     } else {
-        "Non-stock"
+        "Product (no stock tracking)"
     });
     r
 }
@@ -435,6 +435,9 @@ fn listing(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<(Strin
             })
             .collect())
     })?;
+    if m == Model::Customer {
+        activity::annotate_customers(app, c, &mut rows)?;
+    }
     if m == Model::Vendor {
         vendors::annotate_list(app, c, &mut rows, get(params, "sort").unwrap_or(""))?;
         put(&mut vm, "sort", get(params, "sort").filter(|s| ["balance", "overdue"].contains(s)).unwrap_or(""));
@@ -470,7 +473,7 @@ fn listing(app: &mut App, route: &Route, params: Posted<'_>) -> AppResult<(Strin
         if errors.is_empty() { 200 } else { 400 },
     ))
 }
-fn contact_fields() -> Vec<Field> {
+fn contact_fields(m: Model) -> Vec<Field> {
     let mut fields = vec![];
     for (name, label, max) in [
         ("display_name", "Display name", 120),
@@ -493,7 +496,8 @@ fn contact_fields() -> Vec<Field> {
             // SIM-FIX item 4 (deliberate divergence): v1 says "use town or email", but there is no Town
             // field. Lists take a town only from line 2 of a billing address (party_display), and new
             // text refuses line breaks (SEC-FIX1), so desktop records are told apart by email, then number.
-            f=f.required().help("Required. Two customers or vendors may share a name; lists tell them apart by email, or else by a number.");
+            // Worker item 23: a new or renamed record may no longer share an active one's name.
+            f=f.required().help(format!("Required. No other active {} can have the same name.", m.name()));
         }
         fields.push(f);
     }
@@ -536,10 +540,10 @@ fn fields_for(app: &mut App, c: CompanyId, m: Model) -> AppResult<Vec<Field>> {
         vec![Field::new("kind","Type",Widget::Select{choices:choices(&[("SERVICE","Service"),("NONSTOCK","Product (no stock tracking)")])}).required(),
         Field::new("code","Name",Widget::Text).required().attr("maxlength","120").help("Each item needs its own name."),
         Field::new("description","Description",Widget::Textarea{cols:40,rows:3}).attr("maxlength","2000").help("Fills the description when you pick this item on a sale."),
-        Field::new("sale_rate","Sales price or rate",Widget::Text).required().attr("inputmode","decimal").attr("maxlength","100"),
+        Field::new("sale_rate","Sales price or rate",Widget::Text).required().help("Enter the price for one unit. Enter 0.00 for an item with no sales charge.").attr("inputmode","decimal").attr("maxlength","100"),
         Field::new("purchase_cost","Purchase cost",Widget::Text).attr("inputmode","decimal").attr("maxlength","100").help("Optional.")]
     } else {
-        contact_fields()
+        contact_fields(m)
     };
     if m == Model::Customer {
         f.push(
@@ -640,6 +644,12 @@ fn form(
     let (m, _, _) = kind(route)?;
     let r = record(app, route)?;
     let mut vm = context(app, route, r.as_ref())?;
+    if m == Model::Item {
+        // Worker item 7: a new item's Taxable box follows its type only while the company charges
+        // sales tax; with sales tax off, choosing Product leaves it as it is.
+        let charge = app.open_mut()?.book.read(|tx| fb_core::salestax::settings_for(tx, c))?["charge_tax"] == true;
+        put(&mut vm, "charge_tax", charge);
+    }
     let mut fs = fields_for(app, c, m)?;
     let mut stale = vec![];
     for f in &mut fs {
@@ -708,12 +718,26 @@ fn form(
     }
     put(&mut vm, "stale", stale);
     put(&mut vm, "csrf_token", token(app, path));
+    put(&mut vm, "then", back_to(m, route, Some(params)).or_else(|| back_to(m, route, posted)).map(|(then, _, _)| then));
     put(
         &mut vm,
         "form",
         forms::bind(&decorate(fs, errors), &nonfield(errors, "__all__")),
     );
     draw(app, "directory/form.html", &vm)
+}
+/// A new customer opened from the sales receipt form (`?then=sales_receipt`, worker item 13), or a new
+/// vendor from the bill form (`?then=bill`, worker item 36), kept in the form: where to go back to after
+/// the save, as (then, route, query parameter for the new record).
+fn back_to(m: Model, route: &Route, p: Option<Posted<'_>>) -> Option<(&'static str, &'static str, &'static str)> {
+    if route.args.contains_key("record_id") {
+        return None;
+    }
+    match (m, p.and_then(|p| get(p, "then"))) {
+        (Model::Customer, Some("sales_receipt")) => Some(("sales_receipt", "sales_receipts:new", "customer")),
+        (Model::Vendor, Some("bill")) => Some(("bill", "bills:new", "vendor")),
+        _ => None,
+    }
 }
 fn submit_record(app: &mut App, route: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
     let c = arg_company(route)?;
@@ -872,18 +896,21 @@ fn submit_record(app: &mut App, route: &Route, path: &str, p: Posted<'_>) -> App
         record_id: route.args.get("record_id").cloned(),
         values,
     }) {
-        Ok(Outcome::Done { data }) => Ok(Outcome::Redirect {
-            location: url(
-                "directory:detail",
-                &[
-                    &c.to_db(),
-                    &route.args["kind"],
-                    data["id"].as_str().unwrap(),
-                ],
-            ),
-        }),
+        Ok(Outcome::Done { data }) => {
+            if m == Model::Customer {
+                app.messages.push("Customer saved.".into());
+            }
+            let id = data["id"].as_str().unwrap();
+            let location = match back_to(m, route, Some(p)) {
+                Some((_, form, parameter)) => format!("{}?{parameter}={id}", url(form, &[&c.to_db()])),
+                None => url("directory:detail", &[&c.to_db(), &route.args["kind"], id]),
+            };
+            Ok(Outcome::Redirect { location })
+        }
         Err(AppError::Core(FbError::Validation(e))) => {
-            errors.insert("__all__".into(), e);
+            // Worker item 23: a name another active record has is shown at the name.
+            let field = if e.iter().any(|m| m.starts_with("A customer named ") || m.starts_with("A vendor named ")) { "display_name" } else { "__all__" };
+            errors.insert(field.into(), e);
             Ok(Outcome::Invalid {
                 html: form(app, route, &[], path, Some(p), &errors)?,
             })
@@ -932,6 +959,7 @@ fn detail(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<String> {
     let (m, _, _) = kind(route)?;
     let r = record(app, route)?.unwrap();
     let mut vm = context(app, route, Some(&r))?;
+    put(&mut vm, "saved_notices", std::mem::take(&mut app.messages));
     let fs = fields_for(app, c, m)?;
     let mut fields = vec![];
     for name in m.fields() {
@@ -950,7 +978,7 @@ fn detail(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<String> {
             v = json!(if v == "SERVICE" {
                 "Service"
             } else {
-                "Non-stock"
+                "Product (no stock tracking)"
             });
         } else if name == "tax_status" {
             v = json!(if v == "EXEMPT" { "Exempt" } else { "Taxable" });

@@ -135,6 +135,9 @@ const REPORTS: &[(&str, &[Dest])] = &[
         Dest { description: "Debit and credit balances of every account on a date.", ..dest("trial_balance", "Trial balance", "trial-balance", Link::Route("trial_balance"), &[Rule::Route(&["trial_balance"])]) },
         Dest { new_label: "New journal entry", record: "Journal entry", description: "Every journal entry, posted and draft. Make a journal entry from here.", ..dest("journals", "Journal entries", "journal", Link::Route("company"), &[Rule::Route(&["company", "journal_new", "journal", "journal_edit", "journal_post", "journal_reverse"])]) },
     ]),
+    ("Sales tax", &[
+        Dest { description: "Sales tax owed by agency for a filing period.", ..dest("tax_owed", "What you owe", "sales-tax", Link::Route("salestax:what_you_owe"), &[]) },
+    ]),
     ("Activity", &[
         Dest { description: "Who changed what, and when.", ..dest("history", "Audit history", "history", Link::Route("history"), &[Rule::Route(&["history"])]) },
     ]),
@@ -276,6 +279,8 @@ pub struct Nav {
     pub settings_frame: bool,
     /// The heading icon: the place's own icon (a tab or section), else the sidebar entry's.
     pub icon: String,
+    /// The viewer can record changes in their companies.
+    pub write: bool,
     /// The viewer is an administrator (Create company in the company menu).
     pub admin: bool,
     /// The title bar's "+ New" menu, without the entries the viewer may not use (empty for read-only
@@ -441,7 +446,7 @@ fn leaf_label(place: &Dest, route: &str) -> String {
 /// The navigation for one page. `company_id` is the open company (None on the Companies page and
 /// before sign-in); `current` is where the request is.
 pub fn build(company_id: Option<&str>, current: &Current<'_>, viewer: &Viewer) -> Result<Nav, String> {
-    let mut nav = Nav { companies_current: company_id.is_none(), admin: viewer.admin, ..Nav::default() };
+    let mut nav = Nav { companies_current: company_id.is_none(), admin: viewer.admin, write: viewer.write, ..Nav::default() };
     let Some(company) = company_id else { return Ok(nav) };
     let visible = |d: &Dest| d.access.allows(viewer);
     for (label, dests) in NEW_MENU {

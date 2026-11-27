@@ -134,6 +134,7 @@ fn credit_and_deposit_lifecycles_through_forms_tie_out() {
     location(f.reviewed(&format!("{cm}apply/"), &p, "apply"));
     let html = screens::render(&mut f.app, &cm).unwrap().html;
     assert!(html.contains("15.00"));
+    assert!(html.contains("Credit memo applied."));
     let unapply = html
         .split("href=\"")
         .map(|s| s.split('"').next().unwrap())
@@ -146,6 +147,9 @@ fn credit_and_deposit_lifecycles_through_forms_tie_out() {
     let p = pairs(
         json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":"2026-10-04","amount":"2.00","bank":f.bank,"method":"CASH","check_number":"","memo":"Refund"}),
     );
+    let refund_form = screens::render(&mut f.app, &format!("{cm}refund/")).unwrap().html;
+    assert_eq!(field(&refund_form, "date"), "2026-10-02");
+    assert_eq!(field(&refund_form, "check_number"), "1");
     let refund = location(f.reviewed(&format!("{cm}refund/"), &p, "record"));
     let p = pairs(json!({"expected_revision":"1","date":"2026-10-05","reason":"Correct refund"}));
     location(submit(&mut f.app, &format!("{refund}void/"), &p));
@@ -278,6 +282,7 @@ fn credit_memo_saved_twice_records_once_and_shows_the_first() {
     let path = format!("/c/{}/credit-memos/new/", f.c);
     let p = f.credit_fields();
     let first = location(submit(&mut f.app, &path, &p));
+    assert!(screens::render(&mut f.app, &first).unwrap().html.contains("Credit memo saved."));
     let journals = count(&mut f.app, "ledger_journal");
     assert_eq!(location(submit(&mut f.app, &path, &p)), first);
     assert_eq!(count(&mut f.app, "credits_creditmemo"), 1);

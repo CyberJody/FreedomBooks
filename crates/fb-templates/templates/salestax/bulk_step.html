@@ -10,7 +10,7 @@
 <div class="bulk-part"><label>{{ form.f.items.widget|safe }} {{ form.f.items.label }}</label>
 {% if preview.items %}<p class="helptext">{{ preview.items|length }} item{{ preview.items|length|pluralize }} currently not taxable will become Taxable:</p>
 <ul class="bulk-list">{% for i in item_rows %}<li>{{ i.code }}{% if i.description %} <span class="helptext">— {{ i.description|truncatechars(60) }}</span>{% endif %}</li>{% endfor %}{% if preview.items|length > 50 %}<li class="helptext">…and {{ preview.items|length|add("-50") }} more</li>{% endif %}</ul>
-{% else %}<p class="helptext">Every non-stock item is already taxable.</p>{% endif %}</div>
+{% else %}<p class="helptext">Every product (no stock tracking) is already taxable.</p>{% endif %}</div>
 <div class="actions"><button type="submit" name="decision" value="apply">Apply selected</button><button type="submit" class="secondary" name="decision" value="skip">Skip</button></div>
 </form>
 {% endblock %}

@@ -114,6 +114,8 @@ pub(crate) fn check_next(
     let used = stmt
         .query_map(params![co.to_db(), bank.to_db()], |r| r.get::<_, String>(0))?
         .collect::<Result<BTreeSet<_>, _>>()?;
+    // Worker item 26: a number a sales tax payment's reference names is stepped over too.
+    let named = crate::check_numbers::tax_payment_numbers(q, co, &bank.to_db())?;
     let mut next = start
         .parse::<u128>()
         .map_err(|_| FbError::validation("Invalid check numbering settings."))?;
@@ -124,7 +126,7 @@ pub(crate) fn check_next(
                 "This check sequence is exhausted. Choose a new starting number.",
             ));
         }
-        if !used.contains(&text) {
+        if !used.contains(&text) && !named.contains(&next) {
             return Ok(Some(text));
         }
         next += 1;

@@ -206,6 +206,19 @@ pub fn save_record_tx(
         }
         full_clean(model, &obj)?;
         validate(conn, company, model, &obj)?;
+        // Worker item 23: a new or renamed customer (or vendor) may not take the name of another active
+        // one in the company (ignoring case and outer spaces): two "Juniper Print" invite invoices to
+        // the wrong one. Duplicates made before this rule, and archived records, are left alone, and a
+        // record that keeps its name can still be edited.
+        if model != Model::Item
+            && before.as_ref().is_none_or(|b| b["display_name"] != obj["display_name"])
+            && let Some(other) = name_taken(conn, company, model, obj["display_name"].as_str().unwrap_or(""), obj["id"].as_str().unwrap_or(""))?
+        {
+            return Err(FbError::validation(format!(
+                "A {} named “{other}” already exists. Choose a different name.",
+                model.name()
+            )));
+        }
         if model == Model::Item
             && before.as_ref().is_some_and(|b| b["kind"] == "SERVICE")
             && obj["kind"] != "SERVICE"
@@ -233,6 +246,14 @@ pub fn save_record_tx(
         )?;
         Ok(obj)
     })
+}
+/// The display name of another active customer (or vendor) of the company with this name, compared
+/// without case and outer spaces.
+fn name_taken(conn: &(impl fb_db::Query + ?Sized), company: CompanyId, model: Model, name: &str, except: &str) -> FbResult<Option<String>> {
+    let wanted = fb_db::collation::lower(py::py_strip(name));
+    let mut st = conn.prepare(&format!("SELECT display_name FROM {} WHERE company_id=?1 AND active=1 AND id<>?2", model.table()))?;
+    let names = st.query_map(params![company.to_db(), except], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+    Ok(names.into_iter().find(|n| fb_db::collation::lower(py::py_strip(n)) == wanted))
 }
 fn full_clean(model: Model, obj: &Value) -> FbResult<()> {
     let mut errors = Vec::new();
@@ -379,6 +400,13 @@ pub fn set_active(book: &mut Book, actor: UserId, company: CompanyId, model: Mod
         let before = obj.clone();
         if active {
             validate(tx, company, model, &obj)?;
+            // Review 2, N1 (worker item 23): reactivating may not make a second active customer (or
+            // vendor) with one name. Nothing is changed; twins already active in a book stay as they are.
+            if model != Model::Item
+                && let Some(other) = name_taken(tx, company, model, obj["display_name"].as_str().unwrap_or(""), id)?
+            {
+                return Err(FbError::validation(format!("An active {} named “{other}” exists. Rename one of them first.", model.name())));
+            }
         }
         obj["active"] = json!(active);
         persist(tx, model, &obj, true)?;

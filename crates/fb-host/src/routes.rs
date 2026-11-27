@@ -33,6 +33,7 @@ pub const HOST_ONLY: &[&str] = &[
     "backups:page",
     "bankfeeds:connect",
     "bankfeeds:forget",
+    "bankfeeds:sync",
     "login",
     "logout",
 ];
@@ -41,7 +42,7 @@ pub const HOST_ONLY: &[&str] = &[
 /// still apply, and `fb_remote_proto::policy` still refuses host-only form actions on them).
 pub const ALLOWED: &[&str] = &[
     "account_edit", "account_new", "accounts", "balance_sheet",
-    "bankfeeds:accounts", "bankfeeds:list", "bankfeeds:review", "bankfeeds:rule_edit", "bankfeeds:rule_new", "bankfeeds:rules", "bankfeeds:sync",
+    "bankfeeds:accounts", "bankfeeds:list", "bankfeeds:review", "bankfeeds:rule_edit", "bankfeeds:rule_new", "bankfeeds:rules",
     "bills:calendar", "bills:detail", "bills:edit", "bills:list", "bills:new", "bills:post", "bills:review", "bills:revision", "bills:void",
     "checks:detail", "checks:edit", "checks:list", "checks:new", "checks:number", "checks:record", "checks:review", "checks:revision", "checks:void",
     "company", "company_edit", "company_home", "company_new",

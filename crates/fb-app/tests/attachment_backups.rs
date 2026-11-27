@@ -65,6 +65,17 @@ impl Books {
         format!("/c/{}/journals/{}/", self.co.to_db(), id.to_db())
     }
 
+    /// Another posted journal on the accounts `journal` made.
+    fn another_journal(&mut self) -> String {
+        let o = self.app.open_mut().unwrap();
+        let mut id = |code: &str| fb_core::AccountId::parse(&o.book.read(|q| q.query_row("SELECT id FROM ledger_account WHERE code=?1", [code], |r| r.get::<_, String>(0))).unwrap()).unwrap();
+        let (cash, equity) = (id("1000"), id("3000"));
+        let lines = vec![services::line(cash).debit("5").build(), services::line(equity).credit("5").build()];
+        let j = services::save_draft(&mut o.book, o.owner, self.co, services::DraftInput::new("2026-10-02", "Synthetic second entry", lines)).unwrap();
+        let id = services::post_journal(&mut o.book, o.owner, self.co, j.id, None).unwrap().id;
+        format!("/c/{}/journals/{}/", self.co.to_db(), id.to_db())
+    }
+
     /// Post the page's Attach form, then hand the chosen file back as the main process does.
     fn attach(&mut self, page: &str, name: &str, data: &[u8]) -> String {
         let html = screens::render(&mut self.app, page).unwrap().html;
@@ -456,7 +467,8 @@ fn a_bad_further_wrap_record_does_not_break_a_good_attachment() {
     assert_eq!(restore_elsewhere(&archive, PASSWORD, b.co, &id), PDF);
 }
 
-/// The same bytes attached again (the de-duplicating path) after a re-wrap and a password change.
+/// The same bytes attached again (the de-duplicating path) after a re-wrap and a password change. On
+/// another entry: the same file twice on one document is refused (worker item 44).
 #[test]
 fn the_same_file_attached_again_after_a_rewrap_and_a_password_change_reads() {
     let mut b = Books::first_run(Some(PASSWORD));
@@ -466,7 +478,8 @@ fn the_same_file_attached_again_after_a_rewrap_and_a_password_change_reads() {
     b.app.change_protection(PASSWORD, Some(NEW_PASSWORD)).unwrap();
     b.password = Some(NEW_PASSWORD);
     assert_eq!(b.read_back(&id), PDF);
-    let again = b.attach(&page, "again.pdf", PDF);
+    let other = b.another_journal();
+    let again = b.attach(&other, "again.pdf", PDF);
     assert_eq!(b.read_back(&again), PDF);
     assert_eq!(b.stored_name(&again), b.stored_name(&id), "one stored file");
 }
@@ -642,9 +655,9 @@ fn a_genuine_legacy_backup_opens_without_exposing_legacy_wraps_or_other_company_
     let history = screens::render(&mut app, &format!("/c/{}/history/", co.to_db())).unwrap().html;
     let csv = screens::render(&mut app, &format!("/c/{}/history/?format=csv", co.to_db())).unwrap().html;
     assert!(csv.starts_with('\u{feff}'), "the CSV export is exercised");
-    let token = app.ai_grant(co, "Synthetic legacy history reader", fb_app::ai::Permission::ReadOnly).unwrap()["token"].as_str().unwrap().to_owned();
-    let ai = app.ai_call(&token, &serde_json::json!({"operation":"app_AuditHistory","arguments":{"limit":100}}).to_string()).unwrap().to_string();
-    for shown in [&history, &csv, &ai] {
+    let ai = app.ai_grant(co, "Synthetic legacy history reader", fb_app::ai::Permission::ReadOnly);
+    assert_eq!(ai.unwrap_err().to_string(), "books_closed", "restored preview grants no AI access");
+    for shown in [&history, &csv] {
         assert!(!shown.contains(meta["other_attachment"].as_str().unwrap()));
         assert!(!shown.contains(&other_name));
         for file in old_detail["files"].as_array().unwrap() {

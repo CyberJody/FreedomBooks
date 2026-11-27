@@ -1,21 +1,38 @@
 'use strict';
-// Runs as an Electron utility invocation so the same OS key store can unseal the grant.
+// The launcher shares the desktop's OS key store and reads its live endpoint without opening books.
 function start(file,apiMode=false) {
   const {app,safeStorage}=require('electron');
+  const fs=require('node:fs'),path=require('node:path');
   const identity=require('./identity.cjs');
+  const approval=require('./ai-approval.cjs');
+  const {refusal}=require('../agent/refusal.cjs');
+  const override=require('./development.cjs').userData(app);
   identity.configure(app);
-  // Match the desktop's OSCrypt/keyring profile without taking its instance lock.
-  app.setPath('userData',require('./development.cjs').userData(app) || identity.settingsDir(app));
+  app.setPath('userData',override || identity.settingsDir(app));
+  // A tool launched by a service may have a different XDG data home. The configured file names
+  // the profile whose sealed epoch and live endpoint it uses.
+  const sealed=typeof file==='string'?path.resolve(file):null;
+  const directory=sealed && path.dirname(sealed);
+  const root=directory && path.dirname(directory);
   app.whenReady().then(()=>{
-    if (!safeStorage.isEncryptionAvailable() || (process.platform==='linux' && safeStorage.getSelectedStorageBackend()==='basic_text')) throw new Error('OS store unavailable');
-    // Reload before each call: a normal restart rotates the endpoint and session token in this file.
-    const load=()=>require('./ai-approval.cjs').read(file,safeStorage,{legacy:true});
-    load();
+    const load=()=>{
+      if (!approval.usable(safeStorage)) throw refusal('keyring_unavailable');
+      if (!root || path.basename(directory)!=='ai-connections' || !fs.existsSync(sealed)) throw refusal('approval_gone');
+      let epoch;
+      try {epoch=approval.epoch(root,safeStorage);}
+      catch (e) {throw refusal(e.code==='ENOENT'?'approval_gone':'keyring_unavailable');}
+      let saved;
+      try {saved=approval.read(sealed,safeStorage);}
+      catch {throw refusal('approval_gone');}
+      if (saved.epoch!==epoch) throw refusal('approval_gone');
+      const live=approval.runtime(root,safeStorage);
+      return {id:saved.id,token:saved.token,...live};
+    };
     const server=require('../agent/mcp.cjs').serve(load,process.stdin,process.stdout,{apiMode});
     const finish=()=>{server.done().finally(()=>app.quit());};
     process.stdin.on('end',finish);
     process.stdin.on('close',finish);
     process.stdin.resume();
-  }).catch(()=>{process.stderr.write('FreedomBooks connection unavailable. Open FreedomBooks, sign in to the approved company and unlock the desktop keyring. Forgotten or older session-only connections require setup in Settings.\n');app.exit(1);});
+  }).catch(()=>{app.exit(1);});
 }
 module.exports={start};

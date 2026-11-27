@@ -217,7 +217,43 @@ fn persist_item(conn: &Writer<'_>, company: CompanyId, v: &Value) -> FbResult<()
 }
 /// `input`: name, description, rate, agency_id/new_agency_name; optional item_id/expected_revision.
 pub fn save_rate(book: &mut Book, actor: UserId, company: CompanyId, input: &Value) -> FbResult<Value> {
-    book.write(|tx| save_rate_tx(tx, actor, company, input))
+    book.write(|tx| {
+        let rate = save_rate_tx(tx, actor, company, input)?;
+        if input["item_id"].is_null() {
+            fill_default_tax_tx(tx, actor, company)?;
+        }
+        Ok(rate)
+    })
+}
+/// Worker item 27: the company's one active sales tax item, when that is a rate (not a group).
+fn only_rate(conn: &(impl fb_db::Query + ?Sized), company: CompanyId) -> FbResult<Option<Value>> {
+    let active = list(conn, company)?.into_iter().filter(|v| v["active"] == true).collect::<Vec<_>>();
+    Ok(match active.as_slice() {
+        [one] if one["kind"] == "RATE" => Some(one.clone()),
+        _ => None,
+    })
+}
+/// Worker item 27: a first rate added while sales tax is on with no default becomes the default for
+/// new sales forms (an audited settings change), so they do not all start at "Choose sales tax".
+fn fill_default_tax_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId) -> FbResult<()> {
+    let user = services::access(tx, actor, company)?;
+    let before = settings_for(tx, company)?;
+    if before["charge_tax"] != true || !before["default_item_id"].is_null() || before.get("id").is_none() {
+        return Ok(());
+    }
+    let Some(rate) = only_rate(tx, company)? else { return Ok(()) };
+    let mut after = before.clone();
+    after["default_item_id"] = rate["id"].clone();
+    after["revision"] = json!(documents::next_revision(before["revision"].as_i64().unwrap())?);
+    persist_settings(tx, company, &after)?;
+    services::audit(
+        tx,
+        &user,
+        company,
+        "salestax.settings.updated",
+        format!("salestaxsettings:{}", after["id"].as_str().unwrap()),
+        json!({"before":settings_snapshot(&before),"after":settings_snapshot(&after)}),
+    )
 }
 fn save_rate_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, input: &Value) -> FbResult<Value> {
         let user=services::access(tx,actor,company)?;
@@ -312,6 +348,16 @@ fn save_settings_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, input: &
         for k in ["charge_tax", "default_item_id", "owed_basis", "filing_frequency"] {
             after[k] = input[k].clone();
         }
+        // Worker item 27: turning sales tax on with no default, while the company has exactly one
+        // active rate (and no group), makes that rate the default for new sales forms.
+        let default_set = if after["charge_tax"] == true && before["charge_tax"] != true && after["default_item_id"].is_null() {
+            only_rate(tx, company)?
+        } else {
+            None
+        };
+        if let Some(rate) = &default_set {
+            after["default_item_id"] = rate["id"].clone();
+        }
         after["id"] = before.get("id").cloned().unwrap_or_else(|| json!(fb_ids::new_v7().to_string()));
         after["revision"] = json!(documents::next_revision(before["revision"].as_i64().unwrap())?);
         persist_settings(tx, company, &after)?;
@@ -323,6 +369,16 @@ fn save_settings_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, input: &
             format!("salestaxsettings:{}", after["id"].as_str().unwrap()),
             json!({"before":settings_snapshot(&before),"after":settings_snapshot(&after)}),
         )?;
+        if let Some(rate) = default_set {
+            after["default_tax_set"] = rate["name"].clone();
+        }
+        // Worker item 17: turning sales tax on chooses the collected-tax account when the chart has
+        // one and none is chosen (an audited Accounting setup change). Not part of the stored settings.
+        if after["charge_tax"] == true && before["charge_tax"] != true
+            && let Some(label) = crate::first_run::fill_collected_tax_tx(tx, actor, company)?
+        {
+            after["collected_tax_set"] = json!(label);
+        }
         Ok((after, offer))
 }
 pub fn set_item_active(

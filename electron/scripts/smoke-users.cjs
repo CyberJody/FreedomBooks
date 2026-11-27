@@ -53,7 +53,7 @@ async function main(){
     assert.ok(JSON.parse(await native('aiRequestAsync',[readerGrant.token])).operations.length>0);
     pass('native boundary refuses read-only writes, write grants and non-admin user management while allowing read-only AI');
     await signout();await signin('Avery Owner');await page.waitForURL(/\/home\/$/);
-    await assert.rejects(()=>native('aiRequestAsync',[readerGrant.token]),/unauthorized/);
+    await assert.rejects(()=>native('aiRequestAsync',[readerGrant.token]),/approval_gone/);
     const old=JSON.parse(await native('render',[`/c/${company}/lists/customers/new/`]));const stale=/name="fb_command_token" value="([0-9a-f]{64})"/.exec(old.html)[1];
     await signout();await signin('Pat Bookkeeper');await page.waitForURL(/\/home\/$/);
     await assert.rejects(()=>native('run',[JSON.stringify({type:'SubmitForm',path:`/c/${company}/lists/customers/new/`,token:stale,fields:[['display_name','Stale owner form']]})]),/expired/);pass('switching to another person invalidates the previous person’s form');

@@ -152,7 +152,10 @@ pub(super) fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, String> {
 }
 
 /// After the chooser (`chosen` is empty when it was cancelled): `attachments.views._add` on the picked file,
-/// then back to the owner's page with the panel note. A cancel is silent, like closing a browser chooser.
+/// then back to the owner's page with the panel note. Worker item 41: a chooser that returned no file says
+/// so (it used to be silent, so an Enter or double-click that returned nothing looked like an attach).
+/// Worker item 44: the same file (by content hash) is refused on the same document and attached with a
+/// warning when another document already has it.
 /// `receipt_key` wraps the new file's key; `master_key` only reads an identical file attached before the
 /// receipt-key fix, whose key it may still wrap.
 pub(crate) fn picked(app: &mut App, pick: Pick, chosen: Option<&Path>, book: &Path, receipt_key: &[u8; 32], master_key: &[u8; 32]) -> AppResult<Outcome> {
@@ -166,13 +169,40 @@ pub(crate) fn picked(app: &mut App, pick: Pick, chosen: Option<&Path>, book: &Pa
                 let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                 let open = app.open_mut()?;
                 let actor = open.owner;
-                let result = a::storage::Store::for_book(book, receipt_key)
-                    .and_then(|files| files.with_legacy(master_key))
-                    .and_then(|files| a::add(&mut open.book, &files, actor, c, &o, &data, &name, &request_key, &limits));
+                let copies = open.book.read(|tx| {
+                    fb_core::services::access(tx, actor, c)?;
+                    a::same_file(tx, c, &data)
+                })?;
+                // A retry of this same form (its request key) is the core's to answer, as before.
+                let key = uuid::Uuid::parse_str(&request_key).map(|u| u.to_string()).unwrap_or_default();
+                let here = copies.iter().find(|(row, owner, _)| *owner == o && row["request_key"].as_str() != Some(key.as_str()));
+                let result = match here {
+                    Some((row, _, number)) => Err(FbError::Refused(format!(
+                        "This file is already attached to {number}, as {}. It was not attached again.",
+                        row["original_name"].as_str().unwrap_or("")
+                    ))),
+                    None => a::storage::Store::for_book(book, receipt_key)
+                        .and_then(|files| files.with_legacy(master_key))
+                        .and_then(|files| a::add(&mut open.book, &files, actor, c, &o, &data, &name, &request_key, &limits)),
+                };
                 match result {
                     Ok((row, created)) => {
                         if created {
                             app.attachment_notes.push(("success".into(), format!("Attached {}.", row["original_name"].as_str().unwrap_or(""))));
+                            let mut elsewhere: Vec<&str> = vec![];
+                            for (_, owner, number) in &copies {
+                                if *owner != o && !elsewhere.contains(&number.as_str()) {
+                                    elsewhere.push(number);
+                                }
+                            }
+                            if !elsewhere.is_empty() {
+                                let list = match elsewhere.as_slice() {
+                                    [one] => (*one).to_owned(),
+                                    [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+                                    [] => String::new(),
+                                };
+                                app.attachment_notes.push(("warning".into(), format!("The same file is also attached to {list}. Check that this is the right document for it.")));
+                            }
                         }
                     }
                     // The same file is already attached in this company and that copy cannot be read.
@@ -195,6 +225,8 @@ pub(crate) fn picked(app: &mut App, pick: Pick, chosen: Option<&Path>, book: &Pa
                 }
             }
         }
+    } else {
+        app.attachment_notes.push(("warning".into(), "No file was chosen, so nothing was attached. Choose a file and click Open.".into()));
     }
     let url = app.open_mut()?.book.read(|tx| owner_url(tx, c, &o))?;
     Ok(Outcome::Redirect { location: format!("{url}#attachments") })

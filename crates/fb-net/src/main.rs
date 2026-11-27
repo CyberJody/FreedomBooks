@@ -314,11 +314,21 @@ fn simplefin_fetch(request: &Request) -> PluginResult<()> {
         errors: set.errors.iter().map(|e| e.message.as_str()).collect(),
     };
     #[derive(Serialize)]
+    struct IdEvidence {
+        account_exact: bool,
+        transactions_exact: Vec<bool>,
+    }
+    let identity_evidence = set.accounts.iter().map(|account| IdEvidence {
+        account_exact: account.remote_id_exact,
+        transactions_exact: account.transactions.iter().map(|transaction| transaction.remote_id_exact).collect(),
+    }).collect();
+    #[derive(Serialize)]
     struct Fetched<'a> {
         ok: bool,
         pull: Pull<'a>,
+        identity_evidence: Vec<IdEvidence>,
     }
-    reply(&Fetched { ok: true, pull });
+    reply(&Fetched { ok: true, pull, identity_evidence });
     Ok(())
 }
 

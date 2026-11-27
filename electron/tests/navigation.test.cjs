@@ -107,6 +107,8 @@ test('while the books are busy nothing moves, nothing throws, and history is kep
 });
 
 test('keys, mouse buttons, the menu and the title bar drive the same actions', () => {
+  // The Find and Home shortcuts use Cmd on macOS and Ctrl elsewhere.
+  const cmd = process.platform === 'darwin' ? 'meta' : 'control';
   const f = fixture();
   f.visit(`fb://app/c/${C}/home/`);
   f.visit(`fb://app/c/${C}/deposits/`);
@@ -119,12 +121,12 @@ test('keys, mouse buttons, the menu and the title bar drive the same actions', (
   f.nav.go.submenu.find(i => i.id === 'go-forward').click();
   assert.equal(f.url(), `fb://app/c/${C}/deposits/`);
   // Find focuses the page's field on company pages only.
-  assert.equal(f.key({ key: 'k', control: true }), true);
-  assert.equal(f.key({ key: 'F', control: true }), true);
+  assert.equal(f.key({ key: 'k', [cmd]: true }), true);
+  assert.equal(f.key({ key: 'F', [cmd]: true }), true);
   assert.equal(f.sent.filter(([c]) => c === 'fb:find').length, 2);
   // Home goes to this company's home page.
   f.visit(`fb://app/c/${C}/bills/new/`);
-  assert.equal(f.key({ key: 'H', control: true, shift: true }), true);
+  assert.equal(f.key({ key: 'H', [cmd]: true, shift: true }), true);
   assert.equal(f.url(), `fb://app/c/${C}/home/`);
   f.nav.go.submenu.find(i => i.label === 'Companies…').click();
   assert.equal(f.url(), 'fb://app/');
@@ -132,7 +134,7 @@ test('keys, mouse buttons, the menu and the title bar drive the same actions', (
   // Other keys pass through to the page.
   assert.equal(f.key({ key: 'ArrowLeft' }), false);
   assert.equal(f.key({ key: 'ArrowLeft', alt: true, shift: true }), false);
-  assert.equal(f.key({ key: 'f', control: true, alt: true }), false);
+  assert.equal(f.key({ key: 'f', [cmd]: true, alt: true }), false);
   // Signed out, Home and Companies do nothing.
   Object.assign(f.session, { signed_in: false, session_generation: 9 });
   assert.equal(f.nav.actions.home(), false);
@@ -177,7 +179,7 @@ test('the main process wires the menu and the window, and the renderer calls are
   assert.match(main, /navigation\.go,\n\s+require\('\.\/navigation\.cjs'\)\.helpMenu/);
   assert.match(main, /calls\['app\.navigate'\] = \(payload\) => navigation\.navigate\(payload\);/);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'preload', 'preload.cjs'), 'utf8');
-  assert.deepEqual([...new Set([...preload.matchAll(/call\('([a-zA-Z.]+)'/g)].map(m => m[1]))].sort(), ['app.chooseBook', 'app.copyDiagnostics', 'app.createBook', 'app.navigate', 'app.openExternal', 'app.openLogFolder', 'app.restoreBook', 'app.unlock', 'books.run', 'hosting.on', 'hosting.repair', 'hosting.revoke', 'remote.connect', 'remote.disconnect', 'remote.forget', 'remote.pair']);
+  assert.deepEqual([...new Set([...preload.matchAll(/call\('([a-zA-Z.]+)'/g)].map(m => m[1]))].sort(), ['app.chooseBook', 'app.copyDiagnostics', 'app.createBook', 'app.navigate', 'app.openExternal', 'app.openLogFolder', 'app.restoreBook', 'app.unlock', 'books.run', 'hosting.on', 'hosting.poll', 'hosting.repair', 'hosting.revoke', 'remote.connect', 'remote.disconnect', 'remote.forget', 'remote.pair']);
   assert.match(preload, /if \(event\.persisted\) window\.location\.reload\(\);/, 'a page from the back-forward cache is loaded fresh');
   assert.match(preload, /form\.setAttribute\('autocomplete', 'off'\);\n\s+if \(fromHistory\) form\.reset\(\);/, 'Back never refills a saving form with what was typed before');
 });

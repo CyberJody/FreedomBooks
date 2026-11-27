@@ -297,6 +297,14 @@ fn account_full_clean(tx: &(impl Query + ?Sized), company: CompanyId, existing: 
     if errors.is_empty() { Ok(()) } else { Err(FbError::Validation(errors)) }
 }
 
+/// Another account of the company with this name, compared trimmed and case-insensitively.
+fn account_name_taken(tx: &(impl Query + ?Sized), company: CompanyId, name: &str, except: Option<AccountId>) -> FbResult<Option<Account>> {
+    let wanted = fb_db::collation::lower(py_strip(name));
+    Ok(store::accounts(tx, company)?
+        .into_iter()
+        .find(|a| Some(a.id) != except && fb_db::collation::lower(py_strip(&a.name)) == wanted))
+}
+
 /// Create or edit an account (FX2 type rules; decision FX2-D4 type-change rule).
 pub fn save_account(book: &mut Book, actor: UserId, company_id: CompanyId, input: AccountInput) -> FbResult<Account> {
     let result = book.write(|tx| save_account_tx(tx, actor, company_id, &input));
@@ -371,6 +379,17 @@ pub(crate) fn save_account_tx(tx: &Writer<'_>, actor: UserId, company_id: Compan
         postable: input.postable,
     };
     account_full_clean(tx, company_id, existing.as_ref().map(|a| a.id), &mut draft)?;
+    // A new or renamed account may not take another account's name (ignoring case and outer spaces):
+    // two "Shop Supplies" invite postings to the wrong one. Duplicates made before this rule are left
+    // alone, and an account that keeps its name can still be edited.
+    if existing.as_ref().is_none_or(|a| a.name != draft.name)
+        && let Some(other) = account_name_taken(tx, company_id, &draft.name, existing.as_ref().map(|a| a.id))?
+    {
+        return Err(FbError::validation(format!(
+            "An account named “{}” already exists ({}). Choose a different name.",
+            other.name, other.code
+        )));
+    }
     let account = Account {
         id: existing.as_ref().map(|a| a.id).unwrap_or_default(),
         company_id,
@@ -994,6 +1013,42 @@ pub(crate) fn reverse_journal_source_tx(tx: &Writer<'_>, actor: UserId, company:
     audit(tx, &user, company, "journal.reversed", format!("journal:{}", original.id),
           json!({"reversal_id": reversal.id.to_string(), "reason": reason, "date": reversal_date.to_string()}))?;
     Ok(reversal)
+}
+
+// ------------------------------------------------------------------ deleting a draft
+
+/// Delete a journal entry draft made by hand. A draft never reached the books (reports and registers
+/// read posted entries only), so a draft, balanced or not, can go, as other drafts can; a posted entry
+/// is corrected by reversal. The audit keeps what the draft held.
+pub fn delete_draft_journal(book: &mut Book, actor: UserId, company: CompanyId, journal_id: JournalId, expected_revision: Option<i64>) -> FbResult<()> {
+    book.write(|tx| delete_draft_journal_tx(tx, actor, company, journal_id, expected_revision))
+}
+
+pub(crate) fn delete_draft_journal_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId, journal_id: JournalId, expected_revision: Option<i64>) -> FbResult<()> {
+    let user = access(tx, actor, company)?;
+    let journal = store::journal_in(tx, journal_id, company)?;
+    source_access(tx, &journal, None)?;
+    if journal.status != Status::Draft || journal.reversal_of_id.is_some() {
+        return Err(FbError::validation("Only a draft journal entry can be deleted. Correct a posted entry by reversing it."));
+    }
+    check_revision(journal.revision, expected_revision)?;
+    let attached: bool = tx.query_row(
+        "SELECT EXISTS(SELECT 1 FROM attachments_attachment WHERE journal_id = ?1)",
+        [journal.id.to_db()],
+        |r| r.get(0),
+    )?;
+    if attached {
+        return Err(FbError::validation("This draft has had files attached, so it is kept. A draft does not change your reports."));
+    }
+    let before = journal_snapshot(tx, &journal)?;
+    store::delete_lines(tx, journal.id)?;
+    tx.execute(
+        "DELETE FROM ledger_journal WHERE id = ?1 AND company_id = ?2 AND status = 'DRAFT'",
+        params![journal.id.to_db(), company.to_db()],
+    )?;
+    audit(tx, &user, company, "journal.deleted", format!("journal:{}", journal.id),
+          json!({"number": journal.display_number(), "before": before}))?;
+    Ok(())
 }
 
 fn source_access(tx: &(impl Query + ?Sized),journal:&Journal,source:Option<&str>)->FbResult<()> {

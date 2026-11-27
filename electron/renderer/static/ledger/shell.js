@@ -35,3 +35,20 @@ document.addEventListener('DOMContentLoaded', function () {
     if (m && m.open && event.relatedTarget && !m.contains(event.relatedTarget)) m.open = false;
   });
 })();
+
+document.addEventListener('change', event => {
+  if (event.target.matches('form[data-submit-status] select[name="status"]')) event.target.form.requestSubmit();
+});
+
+// Once a transfer has an amount, its empty-field message no longer applies.
+document.addEventListener('input', function (event) {
+  const input = event.target;
+  if (!input.matches('#transfer-entry [name="amount"][aria-invalid="true"]') || !input.value.trim()) return;
+  const errors = document.getElementById(input.id + '_error');
+  if (!errors || errors.textContent.trim() !== 'This field is required.') return;
+  const description = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== errors.id);
+  if (description.length) input.setAttribute('aria-describedby', description.join(' '));
+  else input.removeAttribute('aria-describedby');
+  errors.remove();
+  input.removeAttribute('aria-invalid');
+});

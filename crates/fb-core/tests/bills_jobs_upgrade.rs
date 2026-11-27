@@ -70,7 +70,7 @@ fn exercise_upgraded_book(mut book: Book, metadata: &Value, root: &Path) {
 }
 
 #[test]
-fn authentic_format_90_rows_upgrade_through_91_to_92_and_roundtrip_both_features() {
+fn authentic_format_90_rows_upgrade_to_current_and_roundtrip_both_features() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("format90.fbbook");
     let mut archive = tar::Archive::new(std::fs::File::open(fixture("format90.fbbackup")).unwrap());
@@ -88,7 +88,7 @@ fn authentic_format_90_rows_upgrade_through_91_to_92_and_roundtrip_both_features
         Opened::Behind(older) => older,
         Opened::Current(_) => panic!("expected authentic installed-build format 90"),
     };
-    assert_eq!((older.from(), older.to()), (90, 93)); // 0204, 0205, then 0206 (remote host record)
+    assert_eq!((older.from(), older.to()), (90, 97)); // 0204 through 0210
     let snapshot = root.path().join("verified-format90.fbbook");
     older.snapshot(&snapshot, &KEY).unwrap();
     assert_eq!(test_support::snapshot_file(&snapshot, &KEY).unwrap(), before);

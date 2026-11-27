@@ -144,6 +144,8 @@ fn revoked_computers_are_cut_off_and_refused() {
     assert_eq!(c.call(&ClientRequest::Render { target: home() }).unwrap_err(), ClientError::NotPaired);
     assert_eq!(host.sessions(), 1, "the revoked computer's session ended; the other's did not");
     assert_eq!(page(&render(&o, &home())), "home of lee: 0 of 0 entries");
+    host.link.arm_pairing("Jordan Admin").unwrap();
+    assert_eq!(c.hello().unwrap_err(), ClientError::NotPaired, "a new pairing code is on screen when the revoked client tries Connect");
     let devices = host.link.devices().unwrap();
     assert!(devices.iter().find(|d| d.id == paired.device_id).unwrap().revoked_at.is_some());
 }

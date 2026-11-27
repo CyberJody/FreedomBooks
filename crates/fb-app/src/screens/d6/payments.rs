@@ -89,7 +89,7 @@ fn grouped(c: i64) -> String {
 }
 /// Every posted bill with an open balance, with what the screen shows and the payables account
 /// its posting used (the account a payment debits).
-fn open_bills(app: &mut App, c: CompanyId, today: &str) -> AppResult<Vec<Value>> {
+fn open_bills(app: &mut App, c: CompanyId, payment_date: &str) -> AppResult<Vec<Value>> {
     let actor = app.open_mut()?.owner;
     let bills = payables::current_bills(&mut app.open_mut()?.book, actor, c)?;
     let names = labels(app, c)?;
@@ -116,25 +116,20 @@ fn open_bills(app: &mut App, c: CompanyId, today: &str) -> AppResult<Vec<Value>>
         let ap_label = accounts.iter().find(|a| a.id.to_db() == ap).map(|a| a.label()).unwrap_or_default();
         let vendor = s(r, "vendor_id").to_owned();
         let due = s(r, "due_date").to_owned();
-        // Days from the due date to today: positive when overdue.
-        let days = |from: &str, to: &str| -> i64 {
-            let d = |x: &str| chrono::NaiveDate::parse_from_str(x, "%Y-%m-%d").ok();
-            d(from).zip(d(to)).map(|(f, t)| (t - f).num_days()).unwrap_or(0)
-        };
-        let late = days(&due, today);
-        let status = if late > 0 {
-            format!("Overdue {late} day{}", if late == 1 { "" } else { "s" })
-        } else if late == 0 {
-            "Due today".to_owned()
-        } else {
-            let ahead = -late;
-            format!("Due in {ahead} day{}", if ahead == 1 { "" } else { "s" })
+        let late = payment_date.parse::<chrono::NaiveDate>().ok()
+            .zip(due.parse::<chrono::NaiveDate>().ok())
+            .map(|(payment, due)| (payment - due).num_days());
+        let status = match late {
+            Some(n) if n > 0 => format!("Overdue {n} day{}", if n == 1 { "" } else { "s" }),
+            Some(0) => "Due on payment date".into(),
+            Some(n) => format!("Due in {} day{}", -n, if n == -1 { "" } else { "s" }),
+            None => "Choose a payment date".into(),
         };
         let vendor_label = names[&vendor].as_str().map(str::to_owned).unwrap_or_else(|| s(&r["vendor_snapshot"], "display_name").to_owned());
         out.push(json!({
             "id": b["id"], "number": b["number"], "vendor_id": vendor, "vendor": vendor_label,
             "reference": r["reference"], "date": r["date"], "due_date": due,
-            "overdue": late > 0, "status": status,
+            "overdue": late.is_some_and(|n| n > 0), "status": status,
             "total": r["total"], "open": cents_text(open), "open_cents": open,
             "payables_id": ap, "payables_label": ap_label, "revision_id": r["id"],
         }));
@@ -166,6 +161,9 @@ struct Run {
     memo: String,
     ticked: Vec<String>,
     amounts: HashMap<String, String>,
+    /// The page's filters when it was sent (worker item 25: a refused run keeps them).
+    filter_vendor: String,
+    filter_due: String,
 }
 fn run_values(p: Posted<'_>) -> Run {
     let get_all = |k: &str| p.iter().filter(|(n, _)| n == k).map(|(_, v)| v.clone()).collect::<Vec<_>>();
@@ -180,6 +178,8 @@ fn run_values(p: Posted<'_>) -> Run {
         memo: get(p, "memo").unwrap_or("").to_owned(),
         ticked,
         amounts: p.iter().filter_map(|(k, v)| k.strip_prefix("amount-").map(|id| (id.to_owned(), v.clone()))).collect(),
+        filter_vendor: get(p, "filter_vendor").unwrap_or("").to_owned(),
+        filter_due: get(p, "filter_due").unwrap_or("").to_owned(),
     }
 }
 #[derive(Default)]
@@ -187,13 +187,20 @@ struct PayPage {
     errors: Vec<String>,
     row_errors: HashMap<String, String>,
     field_errors: HashMap<String, String>,
+    /// Worker item 26: check numbers used before on the bank account, and the key that confirms them.
+    warnings: Vec<String>,
+    reuse_ok: String,
+    /// How many of `warnings` were a voided check, reversed payment or voided refund, and how many a
+    /// sales tax payment's Reference (review 2, S1: only the first may be called reusable).
+    reuse_released: usize,
+    reuse_tax: usize,
 }
 #[allow(clippy::too_many_arguments)]
 fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, posted: Option<&Run>, page: &PayPage) -> AppResult<String> {
     let c = arg_company(r)?;
     let today = (app.today)().to_string();
     let mut vm = ctx(app, r)?;
-    let rows = open_bills(app, c, &today)?;
+    let rows = open_bills(app, c, posted.map_or(&today, |run| &run.date))?;
     let offered = banks(app, c, &[])?;
     let default = default_bank(app, c, &offered, "SELECT bank_id FROM payables_billpayment WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
     let mut next = json!({});
@@ -205,14 +212,20 @@ fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, poste
     // one vendor all the given bills belong to.
     let wanted = query.iter().filter(|(k, _)| k == "bill").map(|(_, v)| v.clone()).collect::<Vec<_>>();
     let mut filter_vendor = get(query, "vendor").unwrap_or("").to_owned();
-    let filter_due = get(query, "due").filter(|d| fb_db::dates::parse_iso_date(d).is_some()).unwrap_or("").to_owned();
+    let mut filter_due = get(query, "due").unwrap_or("").to_owned();
     let given = rows.iter().filter(|b| wanted.iter().any(|w| w == s(b, "id"))).collect::<Vec<_>>();
     if filter_vendor.is_empty() && !given.is_empty() && given.iter().all(|b| b["vendor_id"] == given[0]["vendor_id"]) {
         filter_vendor = s(given[0], "vendor_id").to_owned();
     }
-    if posted.is_some() {
-        // After a refused save, show every bill so no ticked bill is out of sight.
-        filter_vendor = String::new();
+    if let Some(run) = posted {
+        // Worker item 25: a refused run keeps the filters it was sent with, so a bill the filter hid
+        // does not come back into view unticked (a "tick all" would then include it). Ticked bills and
+        // bills with a problem are shown whatever the filter.
+        filter_vendor = run.filter_vendor.clone();
+        filter_due = run.filter_due.clone();
+    }
+    if fb_db::dates::parse_iso_date(&filter_due).is_none() {
+        filter_due = String::new();
     }
     let mut vendors: Vec<(String, String)> = vec![];
     for b in &rows {
@@ -221,6 +234,9 @@ fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, poste
         }
     }
     vendors.sort_by(|a, b| a.1.cmp(&b.1));
+    if !vendors.iter().any(|(id, _)| *id == filter_vendor) {
+        filter_vendor = String::new();
+    }
     let mut rows = rows;
     for b in &mut rows {
         let id = s(b, "id").to_owned();
@@ -234,7 +250,7 @@ fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, poste
         let shown = (filter_vendor.is_empty() || b["vendor_id"] == filter_vendor) && (filter_due.is_empty() || s(b, "due_date") <= filter_due.as_str());
         b["ticked"] = json!(ticked);
         b["amount"] = json!(amount);
-        b["hidden"] = json!(!shown && !ticked);
+        b["hidden"] = json!(!shown && !ticked && !page.row_errors.contains_key(&id));
         b["error"] = json!(page.row_errors.get(&id));
     }
     let run = posted;
@@ -253,6 +269,10 @@ fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, poste
     put(&mut vm, "filter_vendor", &filter_vendor);
     put(&mut vm, "filter_due", &filter_due);
     put(&mut vm, "errors", &page.errors);
+    put(&mut vm, "warnings", &page.warnings);
+    put(&mut vm, "reuse_ok", &page.reuse_ok);
+    put(&mut vm, "reuse_released", page.reuse_released);
+    put(&mut vm, "reuse_tax", page.reuse_tax);
     put(&mut vm, "field_errors", json!(page.field_errors));
     put(&mut vm, "pay_data", json!({"next_numbers": next, "today": today}));
     put(&mut vm, "csrf_token", token(app, path));
@@ -292,7 +312,6 @@ fn already_paid(app: &mut App, c: CompanyId, run: &str) -> AppResult<bool> {
 }
 fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
     let c = arg_company(r)?;
-    let today = (app.today)().to_string();
     let run = run_values(p);
     let mut page = PayPage::default();
     let mut fe = Errors::new();
@@ -322,7 +341,7 @@ fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppR
         return Ok(Outcome::Redirect { location: format!("{}?paid={key}", url("payments:new", &[&c.to_db()])) });
     }
     // The ticked bills, as the page showed them.
-    let rows = open_bills(app, c, &today)?;
+    let rows = open_bills(app, c, &date)?;
     let mut chosen: Vec<(&Value, i64)> = vec![];
     for id in &run.ticked {
         let Some(b) = rows.iter().find(|b| s(b, "id") == id) else {
@@ -418,6 +437,33 @@ fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppR
     if mismatch {
         page.errors.push("Nothing was paid yet: the amounts, accounts or check numbers below changed since the page was shown. Check the payments and choose Pay selected bills again.".into());
         return Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? });
+    }
+    // Worker item 26: a check number used before on this bank account by a voided check, a reversed
+    // payment or a voided refund (or named in a sales tax payment's reference) may be used again, but
+    // the first send only warns; sending again with the same numbers goes ahead. (After the reviews: a
+    // number still in use is refused there instead.)
+    if run.method == "CHECK" {
+        let mut reused = vec![];
+        let (mut released, mut tax) = (0, 0);
+        for (i, (_, label)) in vendors.iter().enumerate() {
+            let n = &refs[i];
+            if !(1..=20).contains(&n.len()) || !n.bytes().all(|b| b.is_ascii_digit()) {
+                continue;
+            }
+            if let Some(earlier) = app.open_mut()?.book.read(|q| fb_core::checks::earlier_use(q, c, &run.bank, n))? {
+                if earlier.is_tax_payment() { tax += 1 } else { released += 1 }
+                reused.push(format!("Check {n} for {label}: used before by {}.", earlier.text()));
+            }
+        }
+        let confirm = format!("{}:{}", run.bank, refs.join(","));
+        if !reused.is_empty() && get(p, "reuse_ok") != Some(confirm.as_str()) {
+            drop_reviews(app, &tokens);
+            page.warnings = reused;
+            page.reuse_ok = confirm;
+            page.reuse_released = released;
+            page.reuse_tax = tax;
+            return Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? });
+        }
     }
     match app.run(Command::RecordBillPayments { company_id: c.to_db(), payments, review_tokens: tokens }) {
         Ok(Outcome::Done { .. }) => Ok(Outcome::Redirect { location: format!("{}?paid={key}", url("payments:new", &[&c.to_db()])) }),
@@ -553,14 +599,15 @@ fn reverse_form(
     let c = arg_company(r)?;
     let v = record(app, c, &r.args["payment_id"])?;
     let mut vm = ctx(app, r)?;
+    let date = crate::screens::document_date(app, &v);
     put(&mut vm, "payment", v);
     put(
         &mut vm,
         "form",
         bind_fields(
-            reversal_fields(),
+            crate::screens::month_notice(app, reversal_fields()),
             p,
-            &json!({"expected_revision":1,"date":(app.today)().to_string()}),
+            &json!({"expected_revision":1,"date":date}),
             e,
             true,
         ),

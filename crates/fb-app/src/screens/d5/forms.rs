@@ -288,7 +288,7 @@ fn header(app: &mut App, c: CompanyId, r: &Route, prior: Option<&Value>) -> AppR
         }
     } else if action(r) == "refund" {
         fs.extend([date_field("Refund date"),money_field("amount","Refund amount"),select("bank","Pay from (designated bank)","Choose a bank",bank_options(app,c,prior.and_then(|v|v["bank_id"].as_str()))?,true),Field::new("method","Refund method",choices(REFUNDS)).required(),
-            Field::new("check_number","Check number (optional, checks only)",Widget::Text).help("Shares this bank’s check numbers with Write checks and bill payments by check. Leave blank for a handwritten or unnumbered check."),memo(2)]);
+            Field::new("check_number","Check number (optional, checks only)",Widget::Text).attr("data-select-on-focus","").help("Shares this bank’s check numbers with Write checks and bill payments by check. Leave blank for a handwritten or unnumbered check."),memo(2)]);
     }
     Ok(fs)
 }
@@ -396,17 +396,27 @@ fn application_fields(
                     .then(s(a, "id").cmp(s(b, "id")))
             });
             let mut opts = vec![];
+            let mut single_remaining: Option<String> = None;
+            let mut single_id: Option<String> = None;
             for v in ds {
                 let d = source(app, c, s(&v, "id"), true)?;
+                let rem_str = s(&d, "remaining").to_owned();
+                single_id = Some(s(&d, "id").to_owned());
+                single_remaining = Some(rem_str.clone());
                 opts.push((
                     s(&d, "id").into(),
                     format!(
                         "{} · {} · remaining {}",
                         s(&d["identity"], "number"),
                         s(&d, "date"),
-                        s(&d, "remaining")
+                        rem_str
                     ),
                 ));
+            }
+            if opts.len() == 1 {
+                rows.push(json!({"deposit_id": single_id, "remaining": single_remaining}));
+            } else if opts.len() > 1 {
+                rows.push(json!({"multiple": true}));
             }
             fs.push(select("deposit", "Customer deposit", "Choose…", opts, true));
         }
@@ -447,10 +457,12 @@ pub(super) fn page(
     let mut initial =
         json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string()});
     if let Some(src) = &src {
-        initial["date"] = json!(std::cmp::max(
-            (app.today)().to_string(),
+        // An application or refund from a credit memo starts on its source date.
+        initial["date"] = json!(if matches!(a, "apply" | "refund") && !dep {
             s(src, "date").to_string()
-        ));
+        } else {
+            std::cmp::max((app.today)().to_string(), s(src, "date").to_string())
+        });
         initial["amount"] = src[if dep { "remaining" } else { "available" }].clone();
     }
     if let Some(inv) = &inv {
@@ -462,6 +474,27 @@ pub(super) fn page(
     }
     initial["method"] = json!("CHECK");
     initial["destination"] = json!("UNDEPOSITED");
+    if a == "refund" {
+        // Worker item 28: a refund starts on the only bank account, or the one the last refund of its
+        // kind was paid from (the deposit's rule); otherwise the person chooses.
+        let last = if dep {
+            "SELECT bank_id FROM prepayments_depositrefund WHERE company_id=? ORDER BY id DESC LIMIT 1"
+        } else {
+            "SELECT bank_id FROM credits_creditrefund WHERE company_id=? ORDER BY id DESC LIMIT 1"
+        };
+        let choices = bank_options(app, c, None)?;
+        if let Some(bank) = super::super::d6::default_bank_choice(app, c, &choices, last)? {
+            initial["bank"] = json!(bank);
+        }
+        let mut numbers = json!({});
+        let open = app.open_mut()?;
+        for (id, _) in choices {
+            let bank = AccountId::parse(&id).ok_or_else(|| FbError::missing("Account"))?;
+            numbers[&id] = json!(fb_core::checks::next_number(&mut open.book, open.owner, c, bank)?);
+        }
+        initial["check_number"] = numbers[s(&initial, "bank")].clone();
+        put(&mut vm, "next_numbers", numbers);
+    }
     for k in ["customer", "estimate"] {
         if let Some(v) = get(query, k) {
             initial[k] = json!(v);
@@ -472,6 +505,33 @@ pub(super) fn page(
     } else {
         (header(app, c, r, pr.as_ref())?, vec![], 0)
     };
+    // Review S2: an application cannot precede an invoice it pays, so a credit memo's starts on the
+    // later of the memo's date and the newest invoice listed.
+    if a == "apply"
+        && !dep
+        && let Some(newest) = rows.iter().map(|v| s(v, "date")).filter(|d| *d > s(&initial, "date")).max()
+    {
+        initial["date"] = json!(newest);
+    }
+    // FY2025 C-Q2b: when a single deposit is preselected, default the amount to the smaller of the
+    // invoice's open balance and that deposit's remaining balance; when several deposits exist and
+    // none is chosen yet, leave the amount blank rather than risking an over-balance default.
+    if a == "invoice_apply" && dep && let Some(inv) = &inv && let Some(first) = rows.first() {
+        if let Some(id) = first["deposit_id"].as_str() {
+            initial["deposit"] = json!(id);
+            let cap = money(&first["remaining"]);
+            if cap > 0 && cap < money(&inv["outstanding"]) {
+                initial["amount"] = first["remaining"].clone();
+            }
+        } else if first["multiple"] == json!(true) {
+            initial["amount"] = json!("");
+        }
+    } else if a == "apply" && dep && let Some(src) = &src && rows.len() == 1 {
+        let open = money(&rows[0]["outstanding"]);
+        if open > 0 && open < money(&src["remaining"]) {
+            initial["amount"] = rows[0]["outstanding"].clone();
+        }
+    }
     if a == "new" && !dep {
         let ch = credit_choices(app, c, pr.as_ref())?;
         initial["tax_mode"] = json!(ch.tax_initial);
@@ -568,6 +628,9 @@ pub(super) fn reverse_page(
         "unapply" => application(app, c, &r.args[application_arg(r)], deposit(r))?,
         _ => refund(app, c, &r.args[refund_arg(r)], deposit(r))?,
     };
+    // Worker item 10: a void or unapply starts on the date of what it reverses (the person can
+    // choose a later date), so a March document is not reversed in November by default.
+    let date = crate::screens::document_date(app, &value);
     put(
         &mut vm,
         match a {
@@ -583,7 +646,7 @@ pub(super) fn reverse_page(
         },
         value,
     );
-    let mut fs = reversal_fields();
+    let mut fs = crate::screens::month_notice(app, reversal_fields());
     fs[1].label = if a == "unapply" {
         "Unapply date"
     } else {
@@ -596,7 +659,7 @@ pub(super) fn reverse_page(
         bind_fields(
             fs,
             p,
-            &json!({"expected_revision":1,"date":(app.today)().to_string()}),
+            &json!({"expected_revision":1,"date":date}),
             e,
             true,
         ),
@@ -924,6 +987,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             };
             if let Some(mut data) = result_error(app.run(cmd), &mut e)? {
                 if recording {
+                    if !dep && a == "apply" { app.messages.push("Credit memo applied.".into()); }
                     let id = if a == "apply" || a == "invoice_apply" {
                         &source_id
                     } else {
@@ -1025,6 +1089,7 @@ fn credit_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>, prior: Opt
         };
         match recorded {
             Ok(Outcome::Done { data }) => {
+                app.messages.push("Credit memo saved.".into());
                 return Ok(Outcome::Redirect { location: url("credits:detail", &[&c.to_db(), s(&data, "id")]) });
             }
             Err(AppError::Core(FbError::Validation(messages))) => {

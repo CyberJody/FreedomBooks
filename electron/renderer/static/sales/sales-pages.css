@@ -71,3 +71,4 @@ button.danger,.button.danger{background:#8b2316;border-color:#8b2316;color:#fff}
 /* Page button bars are <nav> landmarks; undo the global sidebar styling of nav. */
 nav.action-bar,nav.customer-actions{background:transparent;border-right:0;border-left:0;border-top:0}nav.customer-actions{padding:0;border-bottom:0}
 nav.action-bar{padding:10px 0}
+.receive-payment .amount-extra{margin:8px 0 0;font-size:13px;line-height:1.45}.receive-payment .amount-extra[hidden]{display:none}

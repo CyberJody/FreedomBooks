@@ -267,6 +267,52 @@ pub fn apply_proposal(
     })
 }
 
+/// Worker items 5 and 17: a company made with the standard chart starts with its Accounting setup
+/// filled from that chart (receivables, payables, undeposited funds, collected sales tax and the bank
+/// account), so its first invoice, payment, bill and taxable invoice post instead of staying drafts.
+/// The roles are chosen by the same rule as "Fill from your chart"; nothing posts.
+pub(crate) fn fill_from_chart_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId) -> FbResult<()> {
+    let current = propose(tx, company)?;
+    if current["empty"] == true {
+        return Ok(());
+    }
+    let snapshot = documents::setup_snapshot(tx, company)?;
+    let mut values = json!({});
+    for role in ["receivables", "payables", "undeposited", "collected_tax", "banks"] {
+        values[role] = current["chosen"].get(role).unwrap_or(&snapshot[role]).clone();
+    }
+    fill_tx(tx, actor, company, &values, current["revision"].as_i64())?;
+    Ok(())
+}
+
+/// Worker item 17: turning sales tax on while no collected-tax account is chosen chooses the chart's
+/// one sales tax liability account (the first-run rule), so the first taxable invoice posts. Returns
+/// its label when one was set. A chart without exactly one such account, or a setup that cannot be
+/// saved as it stands, is left as it was; the invoice then says which setting it needs.
+pub(crate) fn fill_collected_tax_tx(tx: &Writer<'_>, actor: UserId, company: CompanyId) -> FbResult<Option<String>> {
+    let setup = documents::setup_snapshot(tx, company)?;
+    if !setup["collected_tax"].is_null() {
+        return Ok(None);
+    }
+    let proposal = propose(tx, company)?;
+    let Some(id) = proposal["chosen"]["collected_tax"].as_str().map(str::to_owned) else {
+        return Ok(None);
+    };
+    let in_use = documents::ROLES.iter().any(|r| setup[*r].as_str() == Some(id.as_str()))
+        || setup["banks"].as_array().is_some_and(|b| b.contains(&json!(id)));
+    if in_use {
+        return Ok(None);
+    }
+    let mut values = setup.clone();
+    values["collected_tax"] = json!(id);
+    match tx.atomic(|| documents::save_setup_tx(tx, actor, company, &values, setup["revision"].as_i64())) {
+        Ok(_) => {}
+        Err(FbError::Validation(_)) => return Ok(None),
+        Err(e) => return Err(e),
+    }
+    Ok(crate::AccountId::parse(&id).map(|a| store::account(tx, a)).transpose()?.flatten().map(|a| a.label()))
+}
+
 pub fn dismiss_first_run(
     book: &mut Book,
     actor: UserId,

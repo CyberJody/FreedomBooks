@@ -23,6 +23,7 @@ fn fixture()->(App,String,String,String,String,String){
 }
 fn save_bill(app:&mut App,c:&str,vendor:&str,expense:&str)->String{
     let path=format!("/c/{c}/bills/new/");let html=screens::render(app,&path).unwrap().html;
+    assert!(html.contains("class=\"col-description\">Description (required)</th>"));
     let out=submit(app,&path,vec![("request_key",field(&html,"request_key")),("expected_revision","0".into()),("vendor",vendor.into()),("date","2026-10-01".into()),("due_date","2026-10-31".into()),("lines-TOTAL_FORMS","3".into()),("lines-INITIAL_FORMS","0".into()),("lines-0-description","Supplies".into()),("lines-0-quantity","2".into()),("lines-0-rate","10.00".into()),("lines-0-expense_account",expense.into())]);
     let Outcome::Redirect{location}=out else{panic!("{out:?}")};location.trim_end_matches('/').rsplit('/').next().unwrap().into()
 }

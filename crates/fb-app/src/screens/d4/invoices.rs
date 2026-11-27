@@ -113,6 +113,9 @@ fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> {
     let c = arg_company(r)?;
     let id = &r.args["invoice_id"];
     let today = (app.today)().to_string();
+    if let Some(journal) = vm["current"]["journal_id"].as_str() {
+        vm["posted_entries"] = json!(posted_entries(app, c, journal)?);
+    }
     vm["invoice_notices"] = json!(std::mem::take(&mut app.messages));
     let o = app.open_mut()?;
     let balances = fb_core::sales::invoice_balances(&mut o.book, o.owner, c)?;
@@ -190,7 +193,18 @@ fn posting_panel(app: &mut App, r: &Route, vm: &mut Value) -> AppResult<()> {
             put(vm, "post_form", forms::bind(&post_fields(None, rev, &key, &Errors::new()), &[]));
             put(vm, "post_csrf", token(app, &url("invoices:post", &[&c.to_db(), id])));
         }
-        Err(FbError::Validation(messages)) => put(vm, "post_problems", messages),
+        Err(FbError::Validation(messages)) => {
+            // Worker items 5 and 17: link straight to the one Accounting setup field a missing
+            // default names ("Configure receivables in Accounting setup first.").
+            let field = fb_core::documents::ROLES.iter().find(|role| {
+                messages.iter().any(|m| *m == format!("Configure {} in Accounting setup first.", role.replace('_', " ")))
+            });
+            if let Some(role) = field {
+                let label = role.replace('_', " ");
+                put(vm, "setup_field", json!({"id": format!("id_{role}"), "label": format!("{}{}", label[..1].to_uppercase(), &label[1..])}));
+            }
+            put(vm, "post_problems", messages)
+        }
         Err(e) => return Err(e.into()),
     }
     Ok(())
@@ -273,7 +287,8 @@ fn void_page(
 ) -> AppResult<(String, u16)> {
     let mut vm = base(app, r)?;
     let rev = vm["invoice"]["revision"].as_i64().unwrap();
-    let mut fields = reversal_fields(p, rev, (app.today)(), false, e);
+    let date = crate::screens::document_date(app, &vm["current"]);
+    let mut fields = crate::screens::month_notice(app, reversal_fields(p, rev, date, false, e));
     // A draft never posted, so deleting it needs no date and the reason is optional.
     if vm["current"]["state"] == "DRAFT" {
         fields.retain(|f| f.name != "date");
@@ -384,6 +399,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     if e.is_empty() {
         match app.run(cmd) {
             Ok(_) => {
+                if r.name == "invoices:post" { app.messages.push("Invoice posted.".into()); }
                 // "Post and email" continues to the email preview, where sending is confirmed.
                 let next = if r.name == "invoices:post" && get(p, "then") == Some("email") {
                     "invoices:email_preview"

@@ -115,15 +115,75 @@ fn a_manual_journal_attaches_through_the_same_chooser() {
     assert!(html.contains(r#"<span class="attachments-count">(1)</span>"#) && html.contains(">scan.png</a>"), "{html}");
 }
 
+/// Worker item 41: a chooser that hands back no file (Cancel; and Enter or a double-click in Electron's own
+/// GTK chooser, used when the desktop has no file-chooser portal, which reports those as a cancel) stores
+/// nothing and says so, instead of looking like an attach that silently did nothing.
 #[test]
-fn cancelling_the_chooser_stores_nothing_and_says_nothing() {
+fn a_chooser_that_returns_no_file_stores_nothing_and_says_so() {
     let mut f = Fixture::new();
     let page = f.invoice();
     let ticket = f.attach(&page);
     assert_eq!(f.picked(&ticket, None), Outcome::Redirect { location: format!("{page}#attachments") });
     assert_eq!(f.count(), 0);
     let html = screens::render(&mut f.app, &page).unwrap().html;
+    assert!(html.contains(r#"<p class="attachments-note attachments-warning" role="status">No file was chosen, so nothing was attached. Choose a file and click Open.</p>"#), "{html}");
+    // The note is shown once: the next visit to the page says nothing.
+    let html = screens::render(&mut f.app, &page).unwrap().html;
     assert!(!html.contains("attachments-note"), "{html}");
+    // The file the Open button returns for the same chooser is attached.
+    let ticket = f.attach(&page);
+    let pdf = f.file("R001.pdf", PDF);
+    f.picked(&ticket, Some(&pdf));
+    assert_eq!(f.count(), 1);
+}
+
+/// Worker item 44: the same receipt (the same bytes, whatever its name) attached twice to one document is
+/// refused with the document named; attached to another document it is kept, with a warning naming the first.
+#[test]
+fn the_same_file_twice_is_refused_on_one_document_and_named_on_another() {
+    let mut f = Fixture::new();
+    let page = f.invoice();
+    let first = f.file("R001-2026-06-06-Stewarts.jpg.pdf", PDF);
+    let ticket = f.attach(&page);
+    f.picked(&ticket, Some(&first));
+    assert_eq!(f.count(), 1);
+    let number = f.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT number FROM documents_documentidentity WHERE kind='INV'", [], |r| r.get::<_, String>(0))).unwrap();
+    // The same bytes under another name, on the same invoice: refused, nothing stored.
+    let copy = f.file("copy of receipt.pdf", PDF);
+    let ticket = f.attach(&page);
+    f.picked(&ticket, Some(&copy));
+    assert_eq!(f.count(), 1);
+    let html = screens::render(&mut f.app, &page).unwrap().html;
+    assert!(html.contains(&format!(r#"role="alert">This file is already attached to {number}, as R001-2026-06-06-Stewarts.jpg.pdf. It was not attached again.</p>"#)), "{html}");
+    assert!(html.contains(r#"<span class="attachments-count">(1)</span>"#), "{html}");
+    // Another file on the same invoice is attached as before.
+    let other = f.file("other.pdf", b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n1 0 obj<</Type/Catalog>>endobj\n% another receipt\ntrailer<</Root 1 0 R>>\n%%EOF\n");
+    let ticket = f.attach(&page);
+    f.picked(&ticket, Some(&other));
+    assert_eq!(f.count(), 2);
+    // The first file on a journal entry: attached, with a warning naming the invoice.
+    let journal = {
+        let id = |f: &mut Fixture, code: &str| f.app.open_mut().unwrap().book.read(|q| q.query_row("SELECT id FROM ledger_account WHERE code=?1", [code], |r| r.get::<_, String>(0))).unwrap();
+        let (b, e) = (fb_core::AccountId::parse(&id(&mut f, "1000")).unwrap(), fb_core::AccountId::parse(&id(&mut f, "4000")).unwrap());
+        let o = f.app.open_mut().unwrap();
+        let j = services::save_draft(&mut o.book, o.owner, f.co, services::DraftInput::new("2026-10-02", "Supplies", vec![services::line(b).debit("10").build(), services::line(e).credit("10").build()])).unwrap();
+        let id = services::post_journal(&mut o.book, o.owner, f.co, j.id, None).unwrap().id;
+        format!("/c/{}/journals/{}/", f.co.to_db(), id.to_db())
+    };
+    let ticket = f.attach(&journal);
+    f.picked(&ticket, Some(&first));
+    assert_eq!(f.count(), 3);
+    let html = screens::render(&mut f.app, &journal).unwrap().html;
+    assert!(html.contains(r#"role="status">Attached R001-2026-06-06-Stewarts.jpg.pdf.</p>"#), "{html}");
+    assert!(html.contains(&format!(r#"<p class="attachments-note attachments-warning" role="status">The same file is also attached to {number}. Check that this is the right document for it.</p>"#)), "{html}");
+    // Once removed from the invoice, the file no longer counts there: it may be attached to it again.
+    let html = screens::render(&mut f.app, &page).unwrap().html;
+    let remove = html.split_once(r#"<form class="attachments-remove-form""#).unwrap().1;
+    let (path, token) = (attr(remove, "action"), value(remove, "fb_command_token"));
+    f.app.run(Command::SubmitForm { path, token, fields: vec![("reason".into(), "Attached twice".into())] }).unwrap();
+    let ticket = f.attach(&page);
+    f.picked(&ticket, Some(&first));
+    assert_eq!(f.count(), 4);
 }
 
 #[test]

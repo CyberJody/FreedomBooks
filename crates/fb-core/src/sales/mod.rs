@@ -9,6 +9,7 @@ pub mod historical;
 mod queries;
 mod receipts;
 pub(crate) use receipts::record_receipt_tx;
+pub(crate) use receipts::review_tx as review_receipt_tx;
 pub(crate) use invoices::save_invoice_tx;
 pub(crate) use queries::invoice_balances_query;
 /// Receipts, credits and deposits applied to one invoice (cents), for Find's payment state.
@@ -18,9 +19,10 @@ pub(crate) fn invoice_settled(conn: &(impl fb_db::Query + ?Sized), key: &str) ->
 pub use estimates::{convert_estimate, estimate, save_estimate, transition_estimate};
 pub use guards::{check, initialize};
 pub use invoices::{post_invoice, review_invoice, save_invoice, void_invoice};
-pub use queries::{customer_activity, invoice_balances};
+pub use queries::{SETTLEMENT_ENTRY_LIMIT, customer_activity, invoice_balance, invoice_balances};
 pub use receipts::{
-    record_receipt, record_sales_receipt, reverse_receipt, review_receipt, review_receipt_form,
+    record_receipt, record_receipt_same_settlement, record_sales_receipt, reverse_receipt,
+    review_receipt, review_receipt_form, review_receipt_form_with_settlement,
     review_sales_receipt, void_sales_receipt,
 };
 
@@ -43,6 +45,10 @@ pub struct Review {
     domain: &'static str,
     digest: String,
     pub display: Value,
+    /// Only a receipt review that was asked for the settlement and listed one: the fingerprint of
+    /// what counted toward each allocated invoice when the review ran. Private like the digest, so
+    /// a caller can never supply or change it, and small whatever the settlement's size.
+    settlement: Option<String>,
 }
 fn invalid_stored() -> FbError {
     FbError::validation("Invalid stored sales evidence. Run the book integrity check.")

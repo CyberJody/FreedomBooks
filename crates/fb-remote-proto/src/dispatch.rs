@@ -35,6 +35,9 @@ struct Session {
     backend: SessionRef,
     last: Instant,
     user: Option<String>,
+    signed_out: bool,
+    identity_revision: u64,
+    identity_changes: usize,
 }
 
 struct Conn {
@@ -214,9 +217,9 @@ impl<B: Backend> Dispatcher<B> {
                     Err(response) => return response,
                 };
                 match other {
-                    ClientRequest::Render { target } => self.render(session, &target),
+                    ClientRequest::Render { target } => self.render(&token, session, &target),
                     ClientRequest::Run { request_id, command } => self.run(&token, session, device, peer, &request_id, &command),
-                    ClientRequest::Query { query } => self.query(session, &query),
+                    ClientRequest::Query { query } => self.query(&token, session, &query),
                     ClientRequest::SignOut => self.sign_out(&token, session, device, peer),
                     ClientRequest::Ping | ClientRequest::Hello { .. } => HostResponse::Pong,
                 }
@@ -224,11 +227,18 @@ impl<B: Backend> Dispatcher<B> {
         }
     }
 
+    fn idle(&self, now: Instant, session: &Session, attached: bool) -> bool {
+        now.saturating_duration_since(session.last) >= self.config.idle
+            && !(attached && session.signed_out && session.identity_changes == 0)
+    }
+
     fn hello(&self, conn: u64, device: &DeviceRef, peer: &str, resume: Option<String>) -> HostResponse {
         let now = Instant::now();
         let resumed = resume.and_then(|token| {
             let mut state = self.state();
-            let live = state.sessions.get(&token).is_some_and(|s| s.device.id == device.id && now.duration_since(s.last) < self.config.idle);
+            let live = state.sessions.get(&token).is_some_and(|s| {
+                s.device.id == device.id && !self.idle(now, s, state.conns.values().any(|c| c.session.as_ref() == Some(&token)))
+            });
             if !live {
                 return None;
             }
@@ -254,7 +264,7 @@ impl<B: Backend> Dispatcher<B> {
                 let token = crate::hex(&bytes);
                 let evicted = {
                     let mut state = self.state();
-                    state.sessions.insert(token.clone(), Session { device: device.clone(), backend, last: now, user: None });
+                    state.sessions.insert(token.clone(), Session { device: device.clone(), backend, last: now, user: None, signed_out: false, identity_revision: 0, identity_changes: 0 });
                     if let Some(c) = state.conns.get_mut(&conn) {
                         c.session = Some(token.clone());
                     }
@@ -272,7 +282,7 @@ impl<B: Backend> Dispatcher<B> {
                 (token, backend, false)
             }
         };
-        let signed_in = self.backend.sign_in_state(backend).ok().as_ref().and_then(vm);
+        let signed_in = self.observed_sign_in(&token, backend, false).ok().as_ref().and_then(vm);
         HostResponse::Session { session: token, signed_in, host_name: self.config.host_name.clone(), resumed: was_resumed }
     }
 
@@ -286,7 +296,7 @@ impl<B: Backend> Dispatcher<B> {
         if session.device.id != device.id {
             return Err(HostResponse::refused(RefusalCode::Unauthenticated, EXPIRED));
         }
-        if now.duration_since(session.last) >= self.config.idle {
+        if self.idle(now, session, true) {
             let expired = state.sessions.remove(&token);
             drop(state);
             if let Some(s) = expired {
@@ -300,14 +310,35 @@ impl<B: Backend> Dispatcher<B> {
         Ok((token, session.backend))
     }
 
-    fn signed_in(&self, session: SessionRef) -> Result<SignInState, HostResponse> {
-        self.backend.sign_in_state(session).map_err(|e| from_backend(e, false))
+    fn begin_identity_change(&self, token: &str) {
+        if let Some(s) = self.state().sessions.get_mut(token) {
+            s.identity_changes += 1;
+            s.identity_revision += 1;
+            s.signed_out = false;
+        }
     }
 
-    fn render(&self, session: SessionRef, target: &str) -> HostResponse {
-        let state = match self.signed_in(session) {
+    fn observed_sign_in(&self, token: &str, session: SessionRef, finishing_change: bool) -> Result<SignInState, BackendError> {
+        let expected_changes = usize::from(finishing_change);
+        let revision = self.state().sessions.get(token).filter(|s| s.identity_changes == expected_changes).map(|s| s.identity_revision);
+        let observed = self.backend.sign_in_state(session);
+        if let Some(s) = self.state().sessions.get_mut(token) {
+            if revision == Some(s.identity_revision) && s.identity_changes == expected_changes
+                && let Ok(identity) = &observed
+            {
+                s.signed_out = matches!(identity, SignInState::SignedOut);
+            }
+            if finishing_change {
+                s.identity_changes -= 1;
+            }
+        }
+        observed
+    }
+
+    fn render(&self, token: &str, session: SessionRef, target: &str) -> HostResponse {
+        let state = match self.observed_sign_in(token, session, false) {
             Ok(s) => s,
-            Err(r) => return r,
+            Err(e) => return from_backend(e, false),
         };
         let signed_in = matches!(state, SignInState::SignedIn(_));
         match policy::render(target, signed_in, self.backend.classify(policy::path_of(target))) {
@@ -331,9 +362,9 @@ impl<B: Backend> Dispatcher<B> {
         if !crate::is_request_id(request_id) {
             return HostResponse::refused(RefusalCode::Invalid, "This request could not be read. Nothing was saved.");
         }
-        let before = match self.signed_in(session) {
+        let before = match self.observed_sign_in(token, session, false) {
             Ok(s) => s,
-            Err(r) => return r,
+            Err(e) => return from_backend(e, false),
         };
         let user = match &before {
             SignInState::SignedIn(s) => Some(s),
@@ -355,9 +386,14 @@ impl<B: Backend> Dispatcher<B> {
                 return HostResponse::refused(RefusalCode::Busy, "A sign-in from this computer is already being checked. Wait a moment, then try again.");
             }
         }
+        let changes_identity = info.sign_in || info.path.as_deref() == Some(policy::SESSION);
+        if changes_identity {
+            self.begin_identity_change(token);
+        }
         let response = self.run_once(token, session, device, peer, request_id, command, &info, user.map(|u| u.user_id.as_str()), user.map(|u| u.user.as_str()));
+        let after = changes_identity.then(|| self.observed_sign_in(token, session, true));
         if info.sign_in {
-            self.after_sign_in(token, session, device, peer, request_id, &before);
+            self.after_sign_in(token, device, peer, request_id, &before, after.and_then(Result::ok).unwrap_or(SignInState::SignedOut));
             self.state().signing_in.remove(&device.id);
         }
         response
@@ -398,8 +434,7 @@ impl<B: Backend> Dispatcher<B> {
         response
     }
 
-    fn after_sign_in(&self, token: &str, session: SessionRef, device: &DeviceRef, peer: &str, request_id: &str, before: &SignInState) {
-        let after = self.backend.sign_in_state(session).unwrap_or(SignInState::SignedOut);
+    fn after_sign_in(&self, token: &str, device: &DeviceRef, peer: &str, request_id: &str, before: &SignInState, after: SignInState) {
         if after != *before {
             // Whoever is signed in changed: no answer stored under the old sign-in may be replayed.
             self.dedupe.forget_session(&device.id, token, Some(request_id));
@@ -424,11 +459,11 @@ impl<B: Backend> Dispatcher<B> {
         }
     }
 
-    fn query(&self, session: SessionRef, query: &str) -> HostResponse {
-        match self.signed_in(session) {
+    fn query(&self, token: &str, session: SessionRef, query: &str) -> HostResponse {
+        match self.observed_sign_in(token, session, false) {
             Ok(SignInState::SignedIn(_)) => {}
             Ok(_) => return HostResponse::refused(RefusalCode::SignInRequired, policy::SIGN_IN_TEXT),
-            Err(r) => return r,
+            Err(e) => return from_backend(e, false),
         }
         if query.len() > 256 * 1024 || crate::strict::parse::<serde_json::Value>(query).is_err() {
             return HostResponse::refused(RefusalCode::Invalid, "This request could not be read.");
@@ -440,11 +475,13 @@ impl<B: Backend> Dispatcher<B> {
     }
 
     fn sign_out(&self, token: &str, session: SessionRef, device: &DeviceRef, peer: &str) -> HostResponse {
+        self.begin_identity_change(token);
         let user = self.state().sessions.get_mut(token).and_then(|s| s.user.take());
         // Whatever happens next, nothing this session's user was answered can be replayed.
         self.dedupe.forget_session(&device.id, token, None);
         match self.backend.sign_out(session) {
             Ok(()) => {
+                let _ = self.observed_sign_in(token, session, true);
                 self.event("sign_out", device, peer, user.as_deref(), "");
                 HostResponse::SignedOut
             }
@@ -556,7 +593,8 @@ impl<B: Backend> Dispatcher<B> {
         let ended: Vec<(String, Session)> = {
             let mut state = self.state();
             state.closed.retain(|_, at| now.duration_since(*at) < CLOSED_MEMORY);
-            let tokens: Vec<String> = state.sessions.iter().filter(|(_, s)| now.duration_since(s.last) >= self.config.idle).map(|(t, _)| t.clone()).collect();
+            let attached: HashSet<_> = state.conns.values().filter_map(|c| c.session.as_ref()).collect();
+            let tokens: Vec<String> = state.sessions.iter().filter(|(t, s)| self.idle(now, s, attached.contains(t))).map(|(t, _)| t.clone()).collect();
             tokens.into_iter().filter_map(|t| state.sessions.remove(&t).map(|s| (t, s))).collect()
         };
         for (t, s) in ended {
@@ -601,9 +639,10 @@ mod tests {
     /// A minimal book: sessions with a signed-in user, a counter of commands that reached it.
     #[derive(Default)]
     struct Fake {
-        users: Mutex<HashMap<u64, Option<(String, String)>>>,
+        users: Mutex<HashMap<u64, SignInState>>,
         next: AtomicU64,
         runs: AtomicU64,
+        status_reads: AtomicU64,
         slow_sign_in: AtomicBool,
         busy_sign_out: AtomicBool,
     }
@@ -611,25 +650,22 @@ mod tests {
     impl Backend for Arc<Fake> {
         fn classify(&self, path: &str) -> Option<Remote> {
             match path {
-                "/desktop/sign-in/" | "/desktop/users/" | "/c/x/home/" => Some(Remote::Allowed),
+                "/desktop/sign-in/" | "/desktop/session/" | "/desktop/users/" | "/c/x/home/" => Some(Remote::Allowed),
                 "/c/x/backups/" => Some(Remote::HostOnly),
                 _ => None,
             }
         }
         fn open_session(&self, _: &DeviceRef) -> Result<SessionRef, BackendError> {
             let n = self.next.fetch_add(1, Ordering::SeqCst);
-            self.users.lock().unwrap().insert(n, None);
+            self.users.lock().unwrap().insert(n, SignInState::SignedOut);
             Ok(SessionRef(n))
         }
         fn close_session(&self, s: SessionRef) {
             self.users.lock().unwrap().remove(&s.0);
         }
         fn sign_in_state(&self, s: SessionRef) -> Result<SignInState, BackendError> {
-            match self.users.lock().unwrap().get(&s.0) {
-                None => Err(BackendError::NoSession),
-                Some(None) => Ok(SignInState::SignedOut),
-                Some(Some((id, role))) => Ok(SignInState::SignedIn(SignedIn { user_id: id.clone(), user: id.clone(), role: role.clone() })),
-            }
+            self.status_reads.fetch_add(1, Ordering::SeqCst);
+            self.users.lock().unwrap().get(&s.0).cloned().ok_or(BackendError::NoSession)
         }
         fn render(&self, _: SessionRef, target: &str) -> Result<Rendered, BackendError> {
             Ok(Rendered { html: format!("page {target}"), status: 200, route: "r".into() })
@@ -639,21 +675,33 @@ mod tests {
             let v: serde_json::Value = serde_json::from_str(command).unwrap();
             let field = |n: &str| v["fields"].as_array().into_iter().flatten().find(|f| f[0] == n).and_then(|f| f[1].as_str()).map(str::to_owned);
             if v["path"] == "/desktop/sign-in/" {
+                if field("action").as_deref() == Some("cancel_mfa") {
+                    self.sign_out(s)?;
+                    return Ok(r#"{"outcome":"redirect","location":"/desktop/sign-in/"}"#.into());
+                }
                 if self.slow_sign_in.load(Ordering::SeqCst) {
                     std::thread::sleep(Duration::from_millis(200));
                 }
                 let user = field("username").unwrap();
                 if field("password").as_deref() == Some("right") {
+                    if user == "mfa" {
+                        self.users.lock().unwrap().insert(s.0, SignInState::MfaPending);
+                        return Ok(r#"{"outcome":"redirect","location":"/desktop/sign-in/"}"#.into());
+                    }
                     let role = if user == "admin" { "admin" } else { "bookkeeper" };
-                    self.users.lock().unwrap().insert(s.0, Some((user, role.into())));
+                    self.users.lock().unwrap().insert(s.0, SignInState::SignedIn(SignedIn { user_id: user.clone(), user, role: role.into() }));
                     return Ok(r#"{"outcome":"redirect","location":"/c/x/home/"}"#.into());
                 }
                 return Ok(r#"{"outcome":"invalid","html":"no"}"#.into());
             }
+            if v["path"] == "/desktop/session/" {
+                self.sign_out(s)?;
+                return Ok(r#"{"outcome":"redirect","location":"/desktop/sign-in/"}"#.into());
+            }
             if v["path"] == "/desktop/users/" {
                 let users = self.users.lock().unwrap();
                 return match users.get(&s.0) {
-                    Some(Some((_, role))) if role == "admin" => Ok(r#"{"outcome":"page","html":"the administrator's user editor"}"#.into()),
+                    Some(SignInState::SignedIn(user)) if user.role == "admin" => Ok(r#"{"outcome":"page","html":"the administrator's user editor"}"#.into()),
                     _ => Err(BackendError::Refused("An administrator is required for this action.".into())),
                 };
             }
@@ -666,7 +714,7 @@ mod tests {
             if self.busy_sign_out.load(Ordering::SeqCst) {
                 return Err(BackendError::Busy);
             }
-            self.users.lock().unwrap().insert(s.0, None);
+            self.users.lock().unwrap().insert(s.0, SignInState::SignedOut);
             Ok(())
         }
     }
@@ -698,6 +746,113 @@ mod tests {
         let b = crate::random::<16>().unwrap();
         let h = crate::hex(&b);
         format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32])
+    }
+
+    fn hello(d: &Dispatcher<Arc<Fake>>, dev: &DeviceRef, conn: u64, resume: Option<String>) -> (String, bool) {
+        let answer = d.handle(conn, dev, "p", ClientRequest::Hello { resume });
+        let HostResponse::Session { session, resumed, .. } = answer else { panic!("{answer:?}") };
+        (session, resumed)
+    }
+
+    fn backdate(d: &Dispatcher<Arc<Fake>>, token: &str) {
+        d.state().sessions.get_mut(token).unwrap().last = Instant::now() - d.config.idle;
+    }
+
+    fn sign_in_page() -> ClientRequest {
+        ClientRequest::Render { target: policy::SIGN_IN.into() }
+    }
+
+    #[test]
+    fn attached_sign_in_page_survives_idle_and_first_password_reaches_book() {
+        let (fake, d, dev, _) = setup();
+        let (token, _) = hello(&d, &dev, 1, None);
+        assert!(matches!(d.handle(1, &dev, "p", sign_in_page()), HostResponse::Page { status: 200, .. }));
+        backdate(&d, &token);
+        let reads = fake.status_reads.load(Ordering::SeqCst);
+        d.sweep();
+        assert_eq!(fake.status_reads.load(Ordering::SeqCst), reads);
+        assert!(matches!(sign_in(&d, &dev, "keeper"), HostResponse::Outcome { outcome } if outcome.contains("/c/x/home/")));
+        assert_eq!(fake.runs.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn attached_signed_out_resume_survives_until_last_connection_goes() {
+        let (fake, d, dev, _) = setup();
+        let (token, _) = hello(&d, &dev, 1, None);
+        backdate(&d, &token);
+        assert_eq!(hello(&d, &dev, 2, Some(token.clone())), (token.clone(), true));
+        d.disconnected(1);
+        backdate(&d, &token);
+        d.sweep();
+        assert_eq!(d.session_count(), 1);
+        d.disconnected(2);
+        let (fresh, resumed) = hello(&d, &dev, 3, Some(token.clone()));
+        assert!(!resumed);
+        assert_ne!(fresh, token);
+        d.sweep();
+        assert!(!d.state().sessions.contains_key(&token));
+        assert_eq!(fake.users.lock().unwrap().len(), 1);
+        d.disconnected(3);
+        assert_eq!(hello(&d, &dev, 4, Some(fresh.clone())), (fresh, true));
+    }
+
+    #[test]
+    fn signed_in_and_mfa_pending_sessions_still_expire_by_request_sweep_and_resume() {
+        for user in ["keeper", "mfa"] {
+            for path in ["request", "sweep", "resume"] {
+                let (fake, d, dev, _) = setup();
+                let (token, _) = hello(&d, &dev, 1, None);
+                assert!(matches!(sign_in(&d, &dev, user), HostResponse::Outcome { .. }));
+                backdate(&d, &token);
+                if path == "resume" {
+                    assert!(!hello(&d, &dev, 2, Some(token.clone())).1);
+                    d.sweep();
+                } else {
+                    if path == "sweep" {
+                        d.sweep();
+                    }
+                    assert!(matches!(d.handle(1, &dev, "p", sign_in_page()), HostResponse::Refused { code: RefusalCode::Unauthenticated, .. }));
+                }
+                assert!(!d.state().sessions.contains_key(&token), "{user} {path}");
+                assert!(!fake.users.lock().unwrap().contains_key(&0));
+            }
+        }
+    }
+
+    #[test]
+    fn sign_out_and_cancel_mfa_restore_attached_idle_exemption() {
+        for (user, path, action) in [("keeper", "", ""), ("keeper", policy::SESSION, "signout"), ("mfa", policy::SIGN_IN, "cancel_mfa")] {
+            let (_, d, dev, _) = setup();
+            let (token, _) = hello(&d, &dev, 1, None);
+            sign_in(&d, &dev, user);
+            if path.is_empty() {
+                assert_eq!(d.handle(1, &dev, "p", ClientRequest::SignOut), HostResponse::SignedOut);
+            } else {
+                assert!(matches!(run(&d, &dev, &uuid(), &post(path, &[("action", action)])), HostResponse::Outcome { .. }));
+            }
+            backdate(&d, &token);
+            d.sweep();
+            assert_eq!(d.session_count(), 1, "{action}");
+        }
+    }
+
+    #[test]
+    fn attached_signed_out_sessions_still_respect_cap_revocation_and_shutdown() {
+        let (fake, d, dev, _) = setup();
+        let (oldest, _) = hello(&d, &dev, 1, None);
+        backdate(&d, &oldest);
+        for conn in 2..=d.config.sessions_per_device as u64 + 1 {
+            hello(&d, &dev, conn, None);
+        }
+        assert_eq!(d.session_count(), d.config.sessions_per_device);
+        assert!(!d.state().sessions.contains_key(&oldest));
+        let other = DeviceRef { id: "other".into(), name: "Other synthetic computer".into() };
+        hello(&d, &other, 10, None);
+        assert!(d.revoke_device(&dev, "admin"));
+        assert_eq!(d.session_count(), 1);
+        d.end_all("synthetic shutdown");
+        assert_eq!(d.session_count(), 0);
+        assert!(fake.users.lock().unwrap().is_empty());
     }
 
     /// The reviewer's [E] sequence (S1): an Administrator's stored answer must never be replayed

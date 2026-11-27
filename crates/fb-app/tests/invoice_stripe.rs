@@ -255,6 +255,27 @@ impl F {
     }
 }
 #[test]
+fn signed_in_owner_can_save_a_first_credential_after_deferred_key_setup() {
+    let mut f = F::new();
+    let key = f.app.device_key.take();
+    f.app.connection_keys = fb_app::ConnectionKeys::Deferred;
+    f.app.os_store_usable = false;
+    f.app.connection_keys_changed().unwrap();
+    let path = f.settings();
+    let page = screens::render(&mut f.app, &path).unwrap().html;
+    assert!(page.contains("when you connect"));
+    assert!(page.contains("name=\"stripe_key\"") && page.contains("name=\"gmail_client_id\""));
+    assert!(!f.app.has_credentials().unwrap());
+    f.app.device_key = key;
+    f.app.connection_keys = fb_app::ConnectionKeys::Ready;
+    f.app.os_store_usable = true;
+    f.app.connection_keys_changed().unwrap();
+    f.connect();
+    f.app.sign_out();
+    assert!(f.app.has_credentials().unwrap(), "startup checks presence before sign-in");
+}
+
+#[test]
 fn connect_create_refresh_review_post_and_print_use_scoped_sealed_key() {
     let mut f = F::new();
     f.connect();
@@ -555,7 +576,8 @@ fn provider_notices_survive_redirect_once_on_the_action_screen() {
     let settings = f.settings();
     let connected = "Stripe is connected for this company and environment.";
     let html = screens::render(&mut f.app, &settings).unwrap().html;
-    assert!(html.contains(&format!("<h1>Edit company</h1><p role=\"status\">{connected}</p>")));
+    // Worker item 30: marked to be brought into view after the page reloads in place.
+    assert!(html.contains(&format!("<h1>Edit company</h1><p role=\"status\" data-reveal>{connected}</p>")));
     assert!(!screens::render(&mut f.app, &settings).unwrap().html.contains(connected));
 
     let page = f.page();

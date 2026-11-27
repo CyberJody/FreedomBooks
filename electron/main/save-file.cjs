@@ -7,6 +7,20 @@ const {randomUUID} = require('node:crypto');
 const MESSAGE = 'Choose a different file name. That location is used by FreedomBooks.';
 const refuse = () => { throw new Error(MESSAGE); };
 
+// The document supplies a suggested basename. The dialog chooses the destination.
+function exportName(name, format = 'csv') {
+  const suffix = format === 'pdf' ? '.pdf' : '.csv';
+  let base = String(name || '').split(/[\\/]/).pop().normalize('NFC');
+  if (base.toLowerCase().endsWith(suffix)) base = base.slice(0, -suffix.length);
+  base = base.replace(/[^\p{L}\p{N} ._()-]/gu, '_').replace(/^[\s._-]+/, '');
+  base = Array.from(base).slice(0, 100).join('').replace(/[\s.]+$/, '');
+  const stem = base.split('.')[0].trimEnd();
+  if (!base || /^(con|prn|aux|nul|(?:com|lpt)[1-9¹²³])$/i.test(stem)) {
+    base = format === 'pdf' ? 'FreedomBooks' : 'export';
+  }
+  return base + suffix;
+}
+
 function stat(file) {
   try { return fs.lstatSync(file); }
   catch (error) { if (error.code === 'ENOENT') return null; throw error; }
@@ -88,7 +102,9 @@ function create({dataDir, bookPath = () => null} = {}) {
     } finally {
       try {
         if (fd !== undefined) fs.closeSync(fd);
-        if (created) fs.unlinkSync(temporary);
+        // Off Linux the temporary name is path-based: after a raced parent swap it may no longer
+        // resolve. Never let that cleanup error hide why the save was refused.
+        if (created) try { fs.unlinkSync(temporary); } catch { /* left in the original folder */ }
       } finally {
         if (dir !== null) fs.closeSync(dir);
       }
@@ -96,4 +112,4 @@ function create({dataDir, bookPath = () => null} = {}) {
   }
   return {validate, write};
 }
-module.exports = {create, MESSAGE};
+module.exports = {create, exportName, MESSAGE};

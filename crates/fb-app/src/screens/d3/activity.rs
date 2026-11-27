@@ -128,6 +128,34 @@ const CUSTOMER_TYPES: &[(&str, &str)] = &[
 fn row(kind: &str, label: &str, date: &Value, number: &Value, route: &str, target: &Value, status: &str, amount: &Value, open: Value) -> Value {
     json!({"kind":kind,"type":label,"date":date,"number":number,"route":route,"target":target,"status":status,"amount":amount,"open":open})
 }
+/// Worker item 24: the Customers list shows what each customer owes and how much of it is overdue, by
+/// the customer page's rule (open invoices' outstanding amounts; overdue once past the due date).
+pub(super) fn annotate_customers(app: &mut App, c: CompanyId, rows: &mut [Value]) -> AppResult<()> {
+    let actor = app.open_mut()?.owner;
+    let today = (app.today)().to_string();
+    let mut owed: std::collections::HashMap<String, (i128, i128)> = std::collections::HashMap::new();
+    for r in fb_core::sales::invoice_balances(&mut app.open_mut()?.book, actor, c)? {
+        if r["state"] != "OPEN" {
+            continue;
+        }
+        let outstanding = money(&r["outstanding"]);
+        let late = outstanding > 0 && r["due_date"].as_str().is_some_and(|d| d < today.as_str());
+        let entry = owed.entry(r["customer_id"].as_str().unwrap_or("").to_owned()).or_default();
+        let overflow = || AppError::Invalid("Activity total overflow.".into());
+        entry.0 = entry.0.checked_add(outstanding).ok_or_else(overflow)?;
+        if late {
+            entry.1 = entry.1.checked_add(outstanding).ok_or_else(overflow)?;
+        }
+    }
+    for r in rows.iter_mut() {
+        let (open, overdue) = owed.get(r["id"].as_str().unwrap_or("")).copied().unwrap_or_default();
+        r["open_balance"] = json!(cash(open));
+        r["open_cents"] = json!(open != 0);
+        r["overdue_balance"] = json!(cash(overdue));
+        r["overdue_cents"] = json!(overdue != 0);
+    }
+    Ok(())
+}
 /// The customer page: what they owe at a glance, and every document with them in one list.
 fn customer(app: &mut App, c: CompanyId, id: &str, p: Posted<'_>, vm: &mut Value) -> AppResult<()> {
     let actor = app.open_mut()?.owner;

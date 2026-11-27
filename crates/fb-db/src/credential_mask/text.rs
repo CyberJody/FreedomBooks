@@ -593,6 +593,25 @@ pub fn check_number_in(description: &str) -> Option<String> {
     })
 }
 
+/// Written-check number parser for 0210 matching: 1..=20 ASCII digits (matching SQL `NOT GLOB '*[^0-9]*'`
+/// and `check_numbers::normalize`), refusing hyphen/slash continuations like `CHECK 123-A`.
+pub fn match_check_number_in(description: &str) -> Option<String> {
+    let s: Vec<char> = description.chars().collect();
+    (0..s.len()).find_map(|i| {
+        if !word_start(&s, i) || !ci_word(&s, i, "check") {
+            return None;
+        }
+        let mut j = skip_spaces(&s, i + 5);
+        if s.get(j) == Some(&'#') {
+            j = skip_spaces(&s, j + 1);
+        }
+        let end = (j..s.len()).find(|&k| !s[k].is_ascii_digit()).unwrap_or(s.len());
+        let ok = (1..=20).contains(&(end - j))
+            && !s.get(end).is_some_and(|&c| is_word(c) || matches!(c, '-' | '/'));
+        ok.then(|| s[j..end].iter().collect())
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

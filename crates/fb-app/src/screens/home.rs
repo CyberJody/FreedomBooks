@@ -51,11 +51,6 @@ fn newest_backup(app: &App, company: CompanyId, today: NaiveDate) -> Option<Resu
 
 /// "Today, 2:05 p.m.", "Yesterday, 9 a.m.", "3 Nov" or "3 Nov 2025", in the display time zone (the one
 /// Audit history uses).
-fn when(stamp: &str, today: NaiveDate) -> String {
-    let zone: chrono_tz::Tz = std::env::var("FB_TIME_ZONE").ok().and_then(|z| z.parse().ok()).unwrap_or(chrono_tz::America::New_York);
-    when_in(stamp, today, zone)
-}
-
 fn when_in(stamp: &str, today: NaiveDate, zone: chrono_tz::Tz) -> String {
     use chrono::{Datelike, Timelike};
     let Ok(t) = chrono::DateTime::parse_from_rfc3339(stamp) else { return String::new() };
@@ -125,7 +120,8 @@ const SETUP_STEPS: &[(&str, &str, &str)] = &[
 pub(super) fn render(app: &mut App, route: &Route) -> AppResult<String> {
     let c = arg_company(route)?;
     let cpk = c.to_db();
-    let today = (app.today)();
+    let zone: chrono_tz::Tz = std::env::var("FB_TIME_ZONE").ok().and_then(|z| z.parse().ok()).unwrap_or(chrono_tz::America::New_York);
+    let today = (app.now)().with_timezone(&zone).date_naive();
     let bankfeeds = app.bankfeeds_enabled();
     let role = app.authenticated_session()?.role;
     let shell = shell(app, Some(c), &Current { route: "company_home", kind: None })?;
@@ -206,7 +202,7 @@ pub(super) fn render(app: &mut App, route: &Route) -> AppResult<String> {
         .filter_map(|d| {
             let (label, route) = kind(d["kind"].as_str()?)?;
             Some(json!({"type": label, "number": d["number"], "party": d["party"], "amount": d["amount"], "state": state_label(d["state"].as_str().unwrap_or("")),
-                        "when": when(d["occurred_at"].as_str().unwrap_or(""), today), "occurred_at": d["occurred_at"], "by": d["by"],
+                        "when": when_in(d["occurred_at"].as_str().unwrap_or(""), today, zone), "occurred_at": d["occurred_at"], "by": d["by"],
                         "href": url(route, &[&cpk, d["document_id"].as_str().unwrap_or_default()])}))
         })
         .collect();

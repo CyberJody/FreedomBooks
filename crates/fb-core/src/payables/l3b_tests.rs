@@ -30,7 +30,7 @@ fn every_purchase_detail_type_matches_at_service_and_sql_boundaries() {
             &mut f.book,
             f.actor,
             f.co,
-            AccountInput::new(&format!("D{index}"), detail.as_str())
+            AccountInput::new(&format!("D{index}"), &format!("Detail {}", detail.as_str()))
                 .kind(detail.kind().as_str())
                 .detail(detail.as_str()),
         )

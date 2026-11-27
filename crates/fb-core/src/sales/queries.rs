@@ -52,6 +52,83 @@ pub(super) fn settled(conn: &(impl Query + ?Sized), key: &str) -> FbResult<i64> 
         .and_then(|n| n.checked_add(dep))
         .ok_or_else(|| FbError::validation("Invoice settlements exceed supported limits."))
 }
+/// The most settlement entries one receipt review lists, counted across all the invoices the
+/// receipt is allocated to. A stated limit rather than paging: above it the review returns no
+/// settlement, and a recording that requires one is refused.
+pub const SETTLEMENT_ENTRY_LIMIT: usize = 500;
+/// The rows of one family for one invoice, or `None` when there are more than `room`: the query
+/// stops at the first row past it.
+fn settlement_entries(
+    conn: &(impl Query + ?Sized),
+    kind: &str,
+    sql: &str,
+    key: &str,
+    room: usize,
+) -> FbResult<Option<Vec<Value>>> {
+    let mut stmt = conn.prepare(sql)?;
+    let entries = stmt
+        .query_map(params![key, i64::try_from(room + 1).unwrap_or(i64::MAX)], |r| {
+            Ok(json!({"id":r.get::<_, String>(0)?,"kind":kind,"amount_cents":r.get::<_, i64>(1)?.to_string(),"date":r.get::<_, String>(2)?,"reversed":r.get::<_, bool>(3)?}))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((entries.len() <= room).then_some(entries))
+}
+/// Everything counted toward one invoice of this company, for a caller that must not record a
+/// receipt beside money it has not seen. Read only for a review made with `include_settlement` and
+/// for a recording that requires the same settlement; no other receipt path comes here.
+/// `entries` lists the same three families `settled` sums (receipt allocations, credit memo
+/// applications, customer deposit applications), the reversed and unapplied ones too, flagged.
+/// `outstanding_cents` is the amount `settled` leaves open, the very number the allocation check
+/// uses, and is null for an invoice that is not open, so it also moves if a family is ever added
+/// there only. `room` is how many more entries the review may list; it is reduced by this
+/// invoice's, and the answer is `None` when the invoice has more than that.
+pub(super) fn settlement(
+    conn: &(impl Query + ?Sized),
+    c: CompanyId,
+    key: &str,
+    room: &mut usize,
+) -> FbResult<Option<Value>> {
+    // Only the current revision's header: the review before this, and the posting after it, load
+    // and check the whole invoice.
+    let header: Option<String> = conn
+        .query_row(
+            "SELECT r.data FROM sales_invoice i JOIN sales_invoicerevision r ON r.invoice_id=i.id AND r.number=i.revision WHERE i.company_id=?1 AND i.id=?2",
+            params![c.to_db(), key],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let h: Value = header
+        .and_then(|data| fb_db::parse_unique_json_as(&data).ok())
+        .ok_or_else(|| FbError::validation("Choose invoices belonging to this company."))?;
+    let total = cents(&h["total"])?;
+    let families = [
+        ("receipt", None, "SELECT a.receipt_id,a.amount,r.date,EXISTS(SELECT 1 FROM sales_receiptreversal z WHERE z.receipt_id=a.receipt_id) FROM sales_receiptallocation a JOIN sales_receipt r ON r.id=a.receipt_id WHERE a.invoice_id=?1 LIMIT ?2"),
+        ("credit", Some("credits_creditapplicationline"), "SELECT l.application_id,l.amount,p.date,EXISTS(SELECT 1 FROM credits_creditunapplication u WHERE u.application_id=l.application_id) FROM credits_creditapplicationline l JOIN credits_creditapplication p ON p.id=l.application_id WHERE l.invoice_id=?1 LIMIT ?2"),
+        ("deposit", Some("prepayments_depositapplication"), "SELECT a.id,a.amount,a.date,EXISTS(SELECT 1 FROM prepayments_depositunapplication u WHERE u.application_id=a.id) FROM prepayments_depositapplication a WHERE a.invoice_id=?1 LIMIT ?2"),
+    ];
+    let mut entries = Vec::new();
+    for (kind, table, sql) in families {
+        if let Some(table) = table
+            && !has(conn, table)?
+        {
+            continue;
+        }
+        let Some(rows) = settlement_entries(conn, kind, sql, key, *room - entries.len())? else {
+            return Ok(None);
+        };
+        entries.extend(rows);
+    }
+    *room -= entries.len();
+    // Oldest first, and one fixed order for the comparison at recording.
+    let order = |v: &Value| [&v["date"], &v["kind"], &v["id"]].map(|part| part.as_str().unwrap_or("").to_owned());
+    entries.sort_by_key(order);
+    let outstanding = if h["state"] == "OPEN" {
+        json!((total - settled(conn, key)?).to_string())
+    } else {
+        Value::Null
+    };
+    Ok(Some(json!({"invoice_id":key,"total_cents":total.to_string(),"outstanding_cents":outstanding,"entries":entries})))
+}
 pub(super) fn refuse_external_invoice_dependencies(
     conn: &(impl Query + ?Sized),
     key: &str,
@@ -93,9 +170,25 @@ pub(crate) fn invoice_balances_query(
     let keys = stmt
         .query_map([c.to_db()], |r| r.get::<_, String>(0))?
         .collect::<Result<Vec<_>, _>>()?;
-    keys.iter().map(|key|{let inv=invoice(conn,c,key)?;let h=&inv["current"];let paid=allocated(conn,key)?;let(cr,dep)=external(conn,key)?;let total=cents(&h["total"])?;let sum=settled(conn,key)?;
- let state=match h["state"].as_str().ok_or_else(invalid_stored)?{"VOID"=>"VOID","DRAFT"=>"DRAFT",_ if sum==total=>"PAID",_ if sum>0=>"PARTIAL",_=>"OPEN"};
- Ok(json!({"invoice_id":key,"customer_id":h["customer_id"],"date":h["date"],"due_date":h["due_date"],"state":h["state"],"total":h["total"],"allocated":cash(paid),"credited":cash(cr),"deposited":cash(dep),"settled":cash(sum),"outstanding":if h["state"]=="OPEN"{cash(total-sum)}else{Value::Null},"payment_state":state}))}).collect()
+    keys.iter().map(|key| invoice_balance(conn, c, key)).collect()
+}
+
+/// Current settlement for one invoice, using the same balance as the invoice list.
+pub fn invoice_balance(conn: &(impl Query + ?Sized), c: CompanyId, key: &str) -> FbResult<Value> {
+    let inv = invoice(conn, c, key)?;
+    let h = &inv["current"];
+    let paid = allocated(conn, key)?;
+    let (cr, dep) = external(conn, key)?;
+    let total = cents(&h["total"])?;
+    let sum = settled(conn, key)?;
+    let state = match h["state"].as_str().ok_or_else(invalid_stored)? {
+        "VOID" => "VOID",
+        "DRAFT" => "DRAFT",
+        _ if sum == total => "PAID",
+        _ if sum > 0 => "PARTIAL",
+        _ => "OPEN",
+    };
+    Ok(json!({"invoice_id":key,"customer_id":h["customer_id"],"date":h["date"],"due_date":h["due_date"],"state":h["state"],"total":h["total"],"allocated":cash(paid),"credited":cash(cr),"deposited":cash(dep),"settled":cash(sum),"outstanding":if h["state"]=="OPEN"{cash(total-sum)}else{Value::Null},"payment_state":state}))
 }
 /// Statement/activity source data only: presentation and aging reports belong to the reports wave.
 pub fn customer_activity(

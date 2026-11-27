@@ -428,16 +428,29 @@ pub(super) fn banks(app: &mut App, c: CompanyId, extra: &[&str]) -> AppResult<Ve
     })?)
 }
 /// The bank account a new document starts on: the only one, else the one the last document of
-/// this kind used (`last_sql` returns one `bank_id` for the company, newest first: ids are time-ordered), else the first.
+/// this kind used (`last_sql` returns one `bank_id` for the company, newest first: ids are time-ordered),
+/// else none, so the person chooses. Worker items 8, 28 and 32: every form that picks a bank account
+/// follows the deposit's rule, rather than starting on the first account in the chart.
 pub(super) fn default_bank(app: &mut App, c: CompanyId, offered: &[Account], last_sql: &str) -> AppResult<Option<String>> {
     if offered.len() <= 1 {
         return Ok(offered.first().map(|a| a.id.to_db()));
     }
+    last_bank(app, c, offered, last_sql)
+}
+/// [`default_bank`] for a form whose bank choices are (id, label) pairs (a blank "Choose…" is skipped).
+pub(super) fn default_bank_choice(app: &mut App, c: CompanyId, choices: &[(String, String)], last_sql: &str) -> AppResult<Option<String>> {
+    let ids = choices.iter().map(|(id, _)| id).filter(|id| !id.is_empty()).collect::<Vec<_>>();
+    if ids.len() == 1 {
+        return Ok(Some(ids[0].clone()));
+    }
+    let last = scoped_rows(app, c, last_sql, &[&c.to_db()])?;
+    Ok(last.first().map(|r| s(r, "bank_id").to_owned()).filter(|id| ids.contains(&id)))
+}
+/// The bank account the last document of this kind used, while it is still offered and usable.
+pub(super) fn last_bank(app: &mut App, c: CompanyId, offered: &[Account], last_sql: &str) -> AppResult<Option<String>> {
     let last = scoped_rows(app, c, last_sql, &[&c.to_db()])?;
     let last = last.first().map(|r| s(r, "bank_id").to_owned());
-    Ok(last
-        .filter(|id| offered.iter().any(|a| a.id.to_db() == *id && a.active && a.postable))
-        .or_else(|| offered.iter().find(|a| a.active && a.postable).map(|a| a.id.to_db())))
+    Ok(last.filter(|id| offered.iter().any(|a| a.id.to_db() == *id && a.active && a.postable)))
 }
 pub(super) fn select(
     name: &str,

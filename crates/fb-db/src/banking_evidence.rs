@@ -101,6 +101,7 @@ pub fn payload(kind: &str, v: &Value) -> bool {
                 && text(&v["actor_name"], 150, true)
                 && strings(&v["company_snapshot"], &["id", "name", "currency"])
                 && v["company_snapshot"]["id"] == v["company_id"]
+                && v.get("adjustments").is_none_or(adjustments)
         }
         "reversal" => {
             strings(
@@ -121,6 +122,19 @@ pub fn payload(kind: &str, v: &Value) -> bool {
         "reconciliation" => reconciliation(v),
         _ => false,
     }
+}
+/// Worker item 47 (migration 0209): a deposit's fee and adjustment lines, when it has any: 1 to 20
+/// `{account_id, amount}`, each a canonical account id and nonzero stored money (signed), one per account.
+pub const MAX_DEPOSIT_ADJUSTMENTS: usize = 20;
+fn adjustments(v: &Value) -> bool {
+    let Some(lines) = v.as_array().filter(|a| (1..=MAX_DEPOSIT_ADJUSTMENTS).contains(&a.len())) else { return false };
+    let mut accounts = std::collections::BTreeSet::new();
+    lines.iter().all(|l| {
+        l.as_object().is_some_and(|m| m.len() == 2)
+            && ids(l, &["account_id"])
+            && money(&l["amount"], true).is_some_and(|n| n != 0)
+            && accounts.insert(l["account_id"].as_str().unwrap_or_default().to_owned())
+    })
 }
 fn reconciliation(v: &Value) -> bool {
     if !strings(

@@ -80,14 +80,16 @@ fn form(
     let prior = prior(app, c, p)?;
     let fs = fields(app, c, prior.as_ref())?;
     let banks = banks(app, c, &[])?;
-    let mut initial = json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string(),"memo":"Funds transfer"});
+    let mut initial = json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string()});
     if banks.len() >= 2 {
-        // Start from the account the last transfer came from, and to the next other account.
-        let from = default_bank(app, c, &banks, "SELECT from_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?
-            .unwrap_or_else(|| banks[0].id.to_db());
-        let to = banks.iter().map(|a| a.id.to_db()).find(|id| *id != from).unwrap_or_default();
-        initial["from_account"] = json!(from);
-        initial["to_account"] = json!(to);
+        // Worker items 28 and 32: start from and to the accounts the last transfer used (the
+        // deposit's rule); before the first transfer neither is chosen, rather than the first
+        // accounts in the chart.
+        let from = default_bank(app, c, &banks, "SELECT from_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
+        let to = default_bank(app, c, &banks, "SELECT to_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?
+            .filter(|to| from.as_ref() != Some(to));
+        initial["from_account"] = json!(from.unwrap_or_default());
+        initial["to_account"] = json!(to.unwrap_or_default());
     }
     put(&mut vm, "form", bind_fields(fs, p, &initial, e, true));
     put(&mut vm, "csrf_token", token(app, path));
@@ -249,14 +251,15 @@ fn void_form(
     let c = arg_company(r)?;
     let v = record(app, c, &r.args["transfer_id"])?;
     let mut vm = ctx(app, r)?;
+    let date = crate::screens::document_date(app, &v);
     put(&mut vm, "transfer", v);
     put(
         &mut vm,
         "form",
         bind_fields(
-            reversal_fields(),
+            crate::screens::month_notice(app, reversal_fields()),
             p,
-            &json!({"expected_revision":1,"date":(app.today)().to_string()}),
+            &json!({"expected_revision":1,"date":date}),
             e,
             true,
         ),

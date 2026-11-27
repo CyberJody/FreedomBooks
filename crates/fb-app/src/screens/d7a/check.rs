@@ -133,7 +133,7 @@ fn header_fields(app: &mut App, c: CompanyId, current: Option<&Value>) -> AppRes
         Field::new("expected_revision","Expected revision",Widget::Hidden).required(),
         select("bank","Bank account","Choose…",bank_choices(app,c,current.map(|r|s(r,"bank_id")))?,true),
         Field::new("date","Date",Widget::Date).required(),
-        Field::new("check_number","Check no.",Widget::Text).help("Checks, bill payments by check and refunds share this bank account's numbers."),
+        Field::new("check_number","Check no.",Widget::Text).attr("data-select-on-focus","").help("Leave blank for a bank debit. FreedomBooks assigns an EFT reference when you save. Checks, bill payments by check and refunds share this bank account's numbers."),
         Field::new("print_later","Print later (no number yet)",Widget::Checkbox{checked:false}),
         Field::new("payee_kind","Pay to",Widget::Radio{choices:vec![("VENDOR".into(),"A vendor".into()),("OTHER".into(),"Someone else (name only)".into())]}).required(),
         select("vendor","Vendor","Choose a vendor",contacts(app,c,true,current.map(|r|s(r,"vendor_id")),"confirm")?,false),
@@ -578,7 +578,7 @@ fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<String> {
 }
 fn action_fields(number: bool) -> Vec<Field> {
     if number {
-        vec![Field::new("expected_revision","Expected revision",Widget::Hidden).required(),Field::new("check_number","Check number used",Widget::Text).required().help("This number shares this bank’s check numbers with Write checks, bill payments by check, and refund checks. A voided number can be used again.")]
+        vec![Field::new("expected_revision","Expected revision",Widget::Hidden).required(),Field::new("check_number","Check number used",Widget::Text).attr("data-select-on-focus","").required().help("This number shares this bank’s check numbers with Write checks, bill payments by check, and refund checks. A voided number can be used again.")]
     } else {
         let mut f = reversal_fields();
         f[1].label = "Void date".into();
@@ -596,7 +596,7 @@ fn action_form(
     let mut vm = context(app, r)?;
     let number = r.name == "checks:number";
     let mut init =
-        json!({"expected_revision":vm["check"]["revision"],"date":(app.today)().to_string()});
+        json!({"expected_revision":vm["check"]["revision"],"date":crate::screens::document_date(app, &vm["current"])});
     if number {
         let actor = app.open_mut()?.owner;
         let bank = AccountId::parse(s(&vm["current"], "bank_id")).unwrap();
@@ -610,7 +610,7 @@ fn action_form(
     put(
         &mut vm,
         "form",
-        bind_fields(action_fields(number), p, &init, e, true),
+        bind_fields(crate::screens::month_notice(app, action_fields(number)), p, &init, e, true),
     );
     put(&mut vm, "csrf_token", token(app, path));
     draw(
@@ -828,13 +828,6 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             &mut e,
             "check_number",
             "Clear the number when the check is marked print later.",
-        );
-    }
-    if !print && (number.is_empty() || e.contains_key("check_number")) {
-        error(
-            &mut e,
-            "check_number",
-            "Enter a check number, or mark the check print later.",
         );
     }
     let ch = choices(app, c, current.as_ref())?;

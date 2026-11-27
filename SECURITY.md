@@ -53,3 +53,38 @@ The built-in key is public: Anyone who gets a copy of this file can open it.
 Own-password books and independent connection credentials have different threat
 boundaries. See [the current key threat model](docs/KEYS-THREAT-MODEL.md) and
 [the key architecture](ARCHITECTURE.md).
+
+## Local AI connections
+
+When an Administrator connects an AI assistant, locked access starts ticked by default (they may
+untick it, or switch it off in Manage AI connections) to authorize a remembered connection to act on
+their behalf while the books are open and the desktop is locked. Each call must match authorization in the encrypted book,
+a proof sealed by the operating system and a revocable anchor in the local app profile. An account
+or two-factor change replaces the book's record with a random value, or removes it, whatever the
+AI connections folder holds, so no file in that folder can turn locked access back on after it. AI traffic
+stays on loopback and uses the existing book lease. The interactive session still requires sign-in.
+Any program running as the same OS user with the keyring unlocked can use the connection as the
+approver within its approved company and permissions. With locked access enabled, the FreedomBooks
+lock does not stop that access. After a reboot, the desktop session and keyring must be usable,
+FreedomBooks must be running, and the original approved books must be open. This does not bypass
+the books' own protection.
+
+Forget replaces the local approval epoch even if book cleanup fails. With the approved books open
+it removes the verifier first, whatever the AI connections folder contains or allows, and restoring
+profile files alone then cannot bring back the locked-access approval. The approver's own switch
+and an account or two-factor change remove or replace the verifier in the same way; none of them
+can be stopped from the AI connections folder. An anchor that can be neither removed nor replaced
+is emptied in place when the file itself can be written; only a small regular file with no other
+name is ever emptied. Forget reports a file it had to leave.
+Closed books, other open books, restored previews and a failed write to the book can leave the
+verifier in place. A program running as the same OS user can cause that failure by holding the
+book's write lock while Forget runs, or while locked access is being turned off. Forget then warns
+that book cleanup did not finish, and the approval can come back with its files. Quitting
+FreedomBooks stops the access; after starting it again, Forget should be chosen straight away. Forget is a
+dependable cut-off only when it ends without that warning. Sign-in attempts to remove verifiers
+whose anchor is missing, empty or not a regular file.
+Restoring the matching files before a successful missing-anchor cleanup can leave the restored
+approval usable even after the next sign-in. Restoring matching older encrypted book contents in
+place and matching profile files can also restore consent. Neither case requires rolling back the
+OS key store. A book restored as a new file identity cannot inherit that approval.
+[AI assistant connections](docs/local-ai.md)

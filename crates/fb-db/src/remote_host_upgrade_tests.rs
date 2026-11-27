@@ -1,6 +1,7 @@
 //! Migration 0206 (the remote-access host record, book format 93): a book at book format 92 upgrades
-//! after a verified backup, keeps every row and prior object byte for byte, adds only the one
-//! `remote_host` table, authenticates and reopens. The table holds at most one bounded record.
+//! after a verified backup, keeps existing rows, authenticates and reopens. Migration 0206 adds only
+//! the `remote_host` table, which holds at most one bounded record. The later migrations extend two
+//! bank-feed table definitions (0207) and rebuild the stored-value view (0208).
 use super::*;
 use std::collections::BTreeSet;
 
@@ -20,7 +21,7 @@ fn boundary() -> usize {
 }
 
 #[test]
-fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_only_the_host_record_added() {
+fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_the_host_record_added() {
     let n = boundary();
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("format-92.fbbook");
@@ -49,7 +50,7 @@ fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_only_the_host_record_
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected the format-92 schema"),
     };
-    assert_eq!((old.from(), old.to()), (92, 93));
+    assert_eq!((old.from(), old.to()), (92, 97));
     let backup = dir.path().join("verified-format-92.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
@@ -58,13 +59,23 @@ fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_only_the_host_record_
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
-    assert_eq!(after.len(), before.len() + REMOTE_HOST_TABLES);
+    assert_eq!(after.len(), before.len() + REMOTE_HOST_TABLES + crate::ai_unattended_upgrade_tests::AI_UNATTENDED_TABLES + crate::bankfeeds_matching_upgrade_tests::TABLES);
     assert!(after["remote_host"].is_empty(), "no book is hosted by the upgrade");
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
-        assert_eq!(&upgraded[object], hash, "changed prior object {object}");
+        if ["table:bankfeeds_account", "table:bankfeeds_transaction"].contains(&object.as_str()) {
+            assert_ne!(&upgraded[object], hash, "0207 must extend {object}");
+        } else if object != "view:fb_value_invalid"
+            && !crate::deposit_adjustments_upgrade_tests::CHANGED.contains(&object.as_str())
+            && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str())
+        {
+            assert_eq!(&upgraded[object], hash, "changed prior object {object}");
+        }
     }
-    let added: BTreeSet<&str> = upgraded.keys().filter(|k| !schema.contains_key(*k)).map(String::as_str).collect();
+    let added: BTreeSet<&str> = upgraded.keys().filter(|k| !schema.contains_key(*k)).map(String::as_str)
+        .filter(|k| !crate::ai_unattended_upgrade_tests::AI_UNATTENDED_OBJECTS.contains(k)
+            && !crate::deposit_adjustments_upgrade_tests::OBJECTS.contains(k)
+            && !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k)).collect();
     assert_eq!(added, REMOTE_HOST_OBJECTS.iter().copied().collect::<BTreeSet<_>>());
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(upgraded, schema_hashes(&fresh.conn).unwrap());

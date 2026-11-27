@@ -365,6 +365,7 @@ pub(super) fn document(app:&mut App,r:&Route,target:&str)->AppResult<(String,u16
     if r.name=="invoices:email_preview" {
         vm["csrf_token"]=json!(token(app,target));
         crate::invoice_email::preview(app,arg_company(r)?,&r.args["invoice_id"],&mut vm)?;
+        vm["invoice_notices"] = json!(std::mem::take(&mut app.messages));
     }
     draw(app,if r.name=="prepayments:print" {"prepayments/print.html"} else if r.name=="invoices:email_preview" {"sales/email/preview.html"} else {"sales/print/document.html"},&mut vm,target,"customer")
 }

@@ -133,6 +133,15 @@ fn company_membership_readonly_writes_and_nonadmin_management_are_enforced() {
     f.app.sign_in("Reader", PASSWORD).unwrap();
     assert!(f.app.authorize(Some(f.company), Permission::Read).is_ok());
     assert!(f.app.authorize(Some(c2), Permission::Read).is_err());
+    let companies = screens::render(&mut f.app, "/").unwrap().html;
+    assert!(!companies.contains("Create company</a>"));
+    for path in ["invoices/new/", "receipts/new/"] {
+        assert!(screens::render(&mut f.app, &format!("/c/{}/{path}", f.company.to_db())).is_err());
+    }
+    for path in ["invoices/", "receipts/"] {
+        let page = screens::render(&mut f.app, &format!("/c/{}/{path}", f.company.to_db())).unwrap();
+        assert!(!page.html.contains("New invoice</a>") && !page.html.contains("Receive payment</a>"));
+    }
     assert!(
         f.app
             .query(Query::Accounts {

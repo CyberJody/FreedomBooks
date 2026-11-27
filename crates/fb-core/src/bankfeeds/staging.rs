@@ -30,6 +30,13 @@ pub struct StagedAccount {
     pub skipped: Vec<String>,
     pub transactions: Vec<StagedTransaction>,
 }
+/// Whether the original provider strings survived parsing before entering the core.
+#[derive(Deserialize)]
+pub struct ProviderIdEvidence {
+    pub account_exact: bool,
+    pub transactions_exact: Vec<bool>,
+}
+
 /// A whole parsed pull (`parse_account_set()`): accounts, skipped reasons and provider error messages.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct StagedPull {
@@ -602,7 +609,7 @@ fn upsert(
     w: &Writes<'_, '_>,
     feed_id: &str,
     t: &StagedTransaction,
-    identity: &str,
+    (identity, provider_id_verified): (&str, bool),
     now: &str,
     counts: &mut Counts,
     inserted: Option<&mut Vec<String>>,
@@ -647,12 +654,15 @@ fn upsert(
         )?;
         let key = fb_ids::new_v7().to_string();
         w.execute(
-            "INSERT INTO bankfeeds_transaction(id,ordinal,feed_account_id,remote_id,posted_on,transacted_on,amount,description,pending,first_seen_at,updated_at,status,accepted_as,journal_id,journal_line_id,reference,reference_url,decided_at,decided_by_id,return_count,remote_identity) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?10,'NEW','',NULL,NULL,'','',NULL,NULL,0,?11)",
-            params![key, ordinal, feed_id, t.remote_id, posted_on, transacted_on, t.amount, t.description, t.pending, now, identity],
+            "INSERT INTO bankfeeds_transaction(id,ordinal,feed_account_id,remote_id,posted_on,transacted_on,amount,description,pending,first_seen_at,updated_at,status,accepted_as,journal_id,journal_line_id,reference,reference_url,decided_at,decided_by_id,return_count,remote_identity,provider_id_verified) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?10,'NEW','',NULL,NULL,'','',NULL,NULL,0,?11,?12)",
+            params![key, ordinal, feed_id, t.remote_id, posted_on, transacted_on, t.amount, t.description, t.pending, now, identity, provider_id_verified],
         )?;
         counts.new += 1;
         return Ok(key);
     };
+    if !provider_id_verified {
+        w.execute("UPDATE bankfeeds_transaction SET provider_id_verified=0 WHERE id=?1 AND provider_id_verified=1", &[&row.id])?;
+    }
     if row.status != "NEW" && row.status != "IGNORED" {
         // Decided values are frozen. A bank revision of the amount is recorded beside the row and reported,
         // and the books change only through the user (review 2026-11-10, code-1 finding 10).
@@ -794,6 +804,7 @@ pub fn store_pull(
         window_start,
         secrets,
         false,
+        None,
     )
 }
 #[allow(clippy::too_many_arguments)]
@@ -807,6 +818,7 @@ pub fn store_pull_for_desktop(
     scheduled: bool,
     window_start: Option<i64>,
     secrets: &SecretSet,
+    identity_evidence: &[ProviderIdEvidence],
 ) -> FbResult<Value> {
     store_pull_mode(
         book,
@@ -819,6 +831,7 @@ pub fn store_pull_for_desktop(
         window_start,
         secrets,
         true,
+        Some(identity_evidence),
     )
 }
 #[allow(clippy::too_many_arguments)]
@@ -833,6 +846,7 @@ fn store_pull_mode(
     window_start: Option<i64>,
     secrets: &SecretSet,
     automatic: bool,
+    identity_evidence: Option<&[ProviderIdEvidence]>,
 ) -> FbResult<Value> {
     let raw = pull;
     let removed = pull_removed(pull);
@@ -861,7 +875,9 @@ fn store_pull_mode(
             None => None,
         };
         let mut recorded = 0i64;
-        for (entry, keys) in pull.accounts.iter().zip(&keys) {
+        for (index, (entry, keys)) in pull.accounts.iter().zip(&keys).enumerate() {
+            let proof = identity_evidence.and_then(|evidence| evidence.get(index));
+            let account_verified = identity_evidence.is_none() || proof.is_some_and(|entry| entry.account_exact);
             bounded(&entry.conn_key, 200)?;
             bounded(&entry.remote_id, 200)?;
             let found: Option<String> = tx
@@ -885,16 +901,16 @@ fn store_pull_mode(
             let feed_id = match found {
                 Some(key) => {
                     w.execute(
-                        "UPDATE bankfeeds_account SET name=?2,org_name=?3,currency=?4,balance=?5,available_balance=?6,balance_at=?7,last_seen_at=?8 WHERE id=?1",
-                        params![key, entry.name, entry.org_name, entry.currency, entry.balance, entry.available, balance_at, now_text],
+                        "UPDATE bankfeeds_account SET name=?2,org_name=?3,currency=?4,balance=?5,available_balance=?6,balance_at=?7,last_seen_at=?8,provider_id_verified=provider_id_verified AND ?9 WHERE id=?1",
+                        params![key, entry.name, entry.org_name, entry.currency, entry.balance, entry.available, balance_at, now_text, account_verified],
                     )?;
                     key
                 }
                 None => {
                     let key = fb_ids::new_v7().to_string();
                     w.execute(
-                        "INSERT INTO bankfeeds_account(id,connection_id,conn_key,remote_id,name,org_name,currency,balance,available_balance,balance_at,ledger_account_id,mapped_at,first_seen_at,last_seen_at,active,conn_key_identity,remote_identity) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,NULL,NULL,?11,?12,1,?13,?14)",
-                        params![key, connection_id, entry.conn_key, entry.remote_id, entry.name, entry.org_name, entry.currency, entry.balance, entry.available, balance_at, py::now_utc(), now_text, keys.conn_key, keys.remote],
+                        "INSERT INTO bankfeeds_account(id,connection_id,conn_key,remote_id,name,org_name,currency,balance,available_balance,balance_at,ledger_account_id,mapped_at,first_seen_at,last_seen_at,active,conn_key_identity,remote_identity,provider_id_verified) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,NULL,NULL,?11,?12,1,?13,?14,?15)",
+                        params![key, connection_id, entry.conn_key, entry.remote_id, entry.name, entry.org_name, entry.currency, entry.balance, entry.available, balance_at, py::now_utc(), now_text, keys.conn_key, keys.remote, account_verified],
                     )?;
                     key
                 }
@@ -904,13 +920,14 @@ fn store_pull_mode(
             reasons.extend(entry.skipped.iter().map(|why| format!("{label}: {why}")));
             skipped += entry.skipped.len() as i64;
             let mut inserted = vec![];
-            for (t, identity) in entry.transactions.iter().zip(&keys.transactions) {
+            for (index, (t, identity)) in entry.transactions.iter().zip(&keys.transactions).enumerate() {
+                let verified = identity_evidence.is_none() || proof.and_then(|a| a.transactions_exact.get(index)) == Some(&true);
                 let before = (counts.new, counts.posted);
                 let id = upsert(
                     w,
                     &feed_id,
                     t,
-                    identity,
+                    (identity, verified),
                     &py::now_utc(),
                     &mut counts,
                     Some(&mut inserted),
@@ -1108,7 +1125,7 @@ pub fn stage_bank_transactions(
                 w,
                 feed_id,
                 t,
-                &identity,
+                (&identity, true),
                 &py::now_utc(),
                 &mut counts,
                 None,

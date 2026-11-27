@@ -193,6 +193,7 @@ fn group_vm(g: &Group, urls: &[String]) -> Value {
                 "status_key": h.status.to_lowercase(),
                 "detail": detail,
                 "exact": h.exact,
+                "matched": h.matched,
             })
         })
         .collect();

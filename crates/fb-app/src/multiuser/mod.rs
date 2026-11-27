@@ -249,6 +249,7 @@ struct Replay {
 struct Slot {
     state: SessionState,
     client: ClientInfo,
+    transport_managed: bool,
     opened: SystemTime,
     last_active: Instant,
     last_active_wall: SystemTime,
@@ -565,6 +566,7 @@ impl SessionHost {
             Slot {
                 state,
                 client: ClientInfo::local(label).cleaned(),
+                transport_managed: false,
                 opened: SystemTime::now(),
                 last_active: now,
                 last_active_wall: SystemTime::now(),
@@ -647,6 +649,14 @@ impl SessionHost {
     }
 
     pub fn open_session_at(&mut self, client: ClientInfo, now: Instant) -> Result<SessionId, HostError> {
+        self.open_slot(client, now, false)
+    }
+
+    pub fn open_transport_session(&mut self, client: ClientInfo) -> Result<SessionId, HostError> {
+        self.open_slot(client, Instant::now(), true)
+    }
+
+    fn open_slot(&mut self, client: ClientInfo, now: Instant, transport_managed: bool) -> Result<SessionId, HostError> {
         self.settle_book_changes();
         if !self.app.is_open() {
             return Err(HostError::NotOpen);
@@ -666,6 +676,7 @@ impl SessionHost {
             Slot {
                 state: SessionState::starting_at(generation),
                 client: client.cleaned(),
+                transport_managed,
                 opened: SystemTime::now(),
                 last_active: now,
                 last_active_wall: SystemTime::now(),
@@ -865,7 +876,7 @@ impl SessionHost {
         let abandoned: Vec<SessionId> = self
             .slots
             .iter()
-            .filter(|(id, s)| !idle.contains(id) && !s.state.signed_in() && now.saturating_duration_since(s.last_active) >= self.policy.abandon_after)
+            .filter(|(id, s)| !s.transport_managed && !idle.contains(id) && !s.state.signed_in() && now.saturating_duration_since(s.last_active) >= self.policy.abandon_after)
             .map(|(id, _)| id.clone())
             .collect();
         for id in &abandoned {

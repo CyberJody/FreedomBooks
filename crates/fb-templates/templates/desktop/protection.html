@@ -6,25 +6,25 @@
 <p>Backups open on any FreedomBooks install. File › Lock, idle lock and switching users still end the individual sign-in session.</p>
 {% elif legacy %}<p>Choose a password to finish setting up recovery and portable backups for these books.</p>
 {% else %}<p>These books are protected with your own password.</p>
-<form class="narrow" method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="ask">
+<form class="narrow" method="post" novalidate>{{ csrf_token|safe }}<input type="hidden" name="action" value="ask">
 <p><label><input type="checkbox" name="ask_password"{% if ask_password %} checked{% endif %}> Also require the book password before user sign-in</label></p>
 <p>{% if os_store %}Normally, sign in with your user name and password, followed by MFA if enabled. This computer keeps the book key in its secure system keyring. Turn this extra prompt on if you also want to enter the book password each time. File › Lock and idle lock still end your user session.{% else %}This computer has no system keyring. Keep asking for your password when opening these books.{% endif %}</p>
-<p><label for="id_current_password">Current password</label><input type="password" id="id_current_password" name="current_password" autocomplete="current-password" required></p><button>Save setting</button></form>
+<p><label for="id_current_password">Current password</label><input type="password" id="id_current_password" title="Enter your current book password to save this setting" name="current_password" autocomplete="current-password" required></p><button>Save setting</button></form>
 <p><a href="/settings/recovery-key/">Show my recovery key</a></p>
 {% endif %}
 {% if builtin or legacy %}<section class="narrow"><h2>{% if legacy %}Set up recovery{% else %}Add my own password{% endif %}</h2>
-<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="{% if legacy %}adopt{% else %}add{% endif %}">
+<form method="post" novalidate>{{ csrf_token|safe }}<input type="hidden" name="action" value="{% if legacy %}adopt{% else %}add{% endif %}">
 <p><label for="id_new_password">New password</label><input type="password" name="new_password" id="id_new_password" autocomplete="new-password" required></p>
 <p><label for="id_repeat_password">Repeat the password</label><input type="password" name="repeat_password" id="id_repeat_password" autocomplete="new-password" required></p>
 <p>Use at least 8 characters. A verified backup is taken before protection changes.</p>{% if builtin %}{% if older_backups %}<p class="notice" id="older-backups">{{ older_backups }}</p>{% endif %}{% endif %}<button>{% if legacy %}Set up recovery{% else %}Add my own password{% endif %}</button></form></section>
 {% else %}<section class="narrow" id="change-password"><h2>Set a new book password</h2>
-<form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="add">
+<form method="post" novalidate>{{ csrf_token|safe }}<input type="hidden" name="action" value="add">
 <p><label for="id_change_current">Current book password or recovery key</label><input type="password" id="id_change_current" name="current_password" autocomplete="off" required></p>
 <p>Forgot the book password? Enter the recovery key from your Emergency Kit instead. This is not your sign-in password.</p>
 <p><label for="id_new_password">New book password</label><input type="password" name="new_password" id="id_new_password" autocomplete="new-password" required></p>
 <p><label for="id_repeat_password">Repeat the new book password</label><input type="password" name="repeat_password" id="id_repeat_password" autocomplete="new-password" required></p>
 <p>Use at least 8 characters. A verified backup is taken first, and you get a new recovery key to save.</p><button>Set new book password</button></form></section>
-<section class="narrow"><h2>Remove my own password</h2><form method="post">{{ csrf_token|safe }}<input type="hidden" name="action" value="remove">
+<section class="narrow"><h2>Remove my own password</h2><form method="post" novalidate>{{ csrf_token|safe }}<input type="hidden" name="action" value="remove">
 <p><label for="id_remove_password">Current password</label><input type="password" id="id_remove_password" name="current_password" autocomplete="current-password" required></p>
 <p><label><input type="checkbox" name="understand" required> Anyone who gets a copy of this file can open it.</label></p>
 <p>A verified backup is taken first. Backups made since recovery keys were added keep the password or recovery key they were made with.</p>{% if older_backups %}<p class="notice" id="older-backups">{{ older_backups }}</p>{% endif %}<button>Remove my own password</button></form></section>{% endif %}

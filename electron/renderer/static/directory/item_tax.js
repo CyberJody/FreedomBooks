@@ -1,6 +1,7 @@
 "use strict";
 // FX1: on a NEW item, Taxable follows the type until the user ticks or clears it:
 // services start not taxable, goods start taxable. Existing items are never changed here.
+// The page loads this only while the company charges sales tax (worker item 7).
 (() => {
   const kind = document.querySelector('select[name="kind"]');
   const taxable = document.querySelector('input[type="checkbox"][name="taxable"]');

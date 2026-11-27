@@ -136,6 +136,52 @@ fn corrupt_envelope_on_an_active_connection_opens_with_reconnect_needed() {
     damaged_connection_opens(Damage::Corrupt);
 }
 
+#[test]
+fn unattended_restart_prepares_all_bank_masks_without_durable_repairs() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("unattended-reconnect.fbbook");
+    let key = MasterKey::new([94; 32]);
+    let mut app = App::new();
+    app.backups.configure(dir.path()).unwrap();
+    let co = app.create_book(&path, &key, "Mask operator", "Synthetic masks").unwrap().company_id;
+    support::sign_in(&mut app);
+    let other_co = {
+        let open = app.open_mut().unwrap();
+        services::create_company(&mut open.book, open.owner, "Synthetic other masks", "USD", true).unwrap().id
+    };
+    let readable = connect(&mut app, co, "Readable", Some(HEALTHY));
+    save_envelope(&mut app, &key, co, &readable, HEALTHY);
+    let other = connect(&mut app, other_co, "Other readable", Some(OTHER));
+    save_envelope(&mut app, &key, other_co, &other, OTHER);
+    let damaged = connect(&mut app, co, "Needs reconnect", None);
+    let forgotten = connect(&mut app, other_co, "Forgotten", None);
+    {
+        let open = app.open_mut().unwrap();
+        bankfeeds::forget(&mut open.book, open.owner, other_co, &forgotten, &bankfeeds::SecretSet::none()).unwrap();
+    }
+    let grant = app.ai_grant(co, "Synthetic mask test", fb_app::ai::Permission::AccountingWrite).unwrap();
+    let proof = app.ai_set_unattended(grant["id"].as_str().unwrap(), &uuid::Uuid::new_v4().to_string(), true).unwrap();
+    app.lock();
+    app.open_book(&path, &key).unwrap();
+    let worker = app.ai_prepare_unattended(&proof.to_string()).unwrap();
+    let request = json!({"operation":"command_SaveCustomer","arguments":{"display_name":"Synthetic HealthyPassword12345678 OtherCoPassword12345678"}}).to_string();
+    let response = app.ai_response(&worker, Some(&request)).unwrap();
+    assert_eq!(response["outcome"], "done", "{response}");
+    assert!(app.authenticated_session().is_err());
+    let open = app.open.as_mut().unwrap();
+    let snapshot = fb_db::test_support::snapshot(open.book.connection()).unwrap();
+    let customer = format!("{:?}", snapshot["directory_customer"]);
+    assert!(customer.contains("Synthetic *** ***"), "{customer}");
+    assert!(!customer.contains("Password12345678"), "{customer}");
+    let reconnect: bool = open.book.read(|tx| tx.query_row("SELECT needs_reconnect FROM bankfeeds_connection WHERE id=?1", [&damaged], |row| row.get(0))).unwrap();
+    assert!(!reconnect);
+    let audit = format!("{:?}", snapshot["ledger_auditevent"]);
+    assert!(!audit.contains("bankfeed.reconnect_required"));
+    support::sign_in(&mut app);
+    assert!(flagged(&mut app, &damaged));
+    assert_eq!(count(&mut app, "SELECT count(*) FROM ledger_auditevent WHERE action='bankfeed.reconnect_required'"), 1);
+}
+
 /// The release is refused for a credential that IS readable, so the write guard stays for every
 /// connection whose mask is expected; a raw Book with one unrestored readable connection can't write.
 #[test]

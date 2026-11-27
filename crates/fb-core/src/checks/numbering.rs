@@ -28,14 +28,22 @@ pub(crate) fn next_number_tx(c: &(impl Query + ?Sized), co: CompanyId, bank: Acc
         let used=rows(c,"SELECT number AS n FROM fb_check_number_used WHERE company_id=?1 AND bank_id=?2",&[&co.to_db(),&bank.to_db()])?;
         let numbers=used.iter().map(|v|s(v,"n")).collect::<BTreeSet<_>>();
         let taken=numbers.iter().filter(|n|digits(n)).filter_map(|n|n.parse::<u128>().ok()).collect::<BTreeSet<_>>();
+        // Worker item 26: also step over a number a sales tax payment's reference names ("Check 127").
+        // Those only block that exact number; they never move the start.
+        let named=crate::check_numbers::tax_payment_numbers(c,co,&bank.to_db())?;
         let start=taken.last().copied().unwrap_or(0)+1;
         for n in start..start+64 {
             let text=n.to_string();
             if text.len()>20 { break; }
-            if !numbers.contains(text.as_str()) { return Ok(text); }
+            if !numbers.contains(text.as_str())&&!named.contains(&n) { return Ok(text); }
         }
-        let mut n=1u128;while taken.contains(&n)||numbers.contains(n.to_string().as_str()){n+=1;}
+        let mut n=1u128;while taken.contains(&n)||named.contains(&n)||numbers.contains(n.to_string().as_str()){n+=1;}
         Ok(n.to_string())
+}
+/// Worker item 26: an earlier use of `number` on `bank` that does not reserve it (see
+/// `check_numbers::earlier_use`), for a warning before the number is used again.
+pub fn earlier_use(c: &(impl Query + ?Sized), co: CompanyId, bank: &str, number: &str) -> FbResult<Option<crate::check_numbers::EarlierUse>> {
+    crate::check_numbers::earlier_use(c, co, bank, number)
 }
 pub fn refuse_conflict(
     c: &(impl Query + ?Sized),

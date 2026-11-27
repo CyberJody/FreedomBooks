@@ -145,7 +145,9 @@ test('a raced parent symlink cannot redirect output into data',t=>{
   rejected(()=>module.create({dataDir,bookPath:()=>book}).write(path.join(output,'invoice.pdf'),'BAD'));
   assert.equal(fs.readFileSync(book,'utf8'),'SYNTHETIC BOOK');
   assert.equal(fs.existsSync(path.join(dataDir,'invoice.pdf')),false);
-  assert.deepEqual(fs.readdirSync(moved),[],'temp cleaned in pinned directory');
+  // Linux pins the directory by descriptor and cleans its temporary file there; elsewhere the
+  // path-based name no longer reaches it after the swap, so only the refusal is guaranteed.
+  if(process.platform==='linux')assert.deepEqual(fs.readdirSync(moved),[],'temp cleaned in pinned directory');
 });
 
 test('exclusive temp creation and fsync failures preserve the existing destination',t=>{

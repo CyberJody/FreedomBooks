@@ -285,11 +285,13 @@ async function heading(page) {
     await page.fill('#id_date', '2026-10-31');
     await page.fill('#id_memo', 'Supplies adjustment');
     await page.check('#id_adjusting');
-    await page.selectOption('#id_lines-0-account', ids.expense);
+    await page.fill('#id_lines-0-account-search', '5000');
+    await page.press('#id_lines-0-account-search', 'Enter');
     await page.fill('#id_lines-0-debit', '12.345');
     await page.fill('#id_lines-0-description', 'Supplies adjustment');
     await page.fill('#id_lines-0-name', 'Dana');
-    await page.selectOption('#id_lines-8-account', ids.income);
+    await page.fill('#id_lines-8-account-search', '4000');
+    await page.press('#id_lines-8-account-search', 'Enter');
     await page.fill('#id_lines-8-credit', '12.35');
     await page.fill('#id_lines-8-description', 'Supplies adjustment');
     await page.waitForFunction(() => document.querySelector('#total-difference').textContent.includes('Balanced'));
@@ -408,8 +410,8 @@ async function heading(page) {
     await page.goto(`fb://app/c/${company}/lists/items/new/`);
     await page.fill('#id_code', 'SEED');
     await page.selectOption('#id_kind', 'NONSTOCK');
-    await page.waitForFunction(() => document.querySelector('#id_taxable').checked);
-    await page.uncheck('#id_taxable');
+    // Taxable follows Product only while sales tax is on (worker-test item 7); either way this item is not taxable.
+    await page.setChecked('#id_taxable', false);
     await page.fill('#id_sale_rate', '9.995');
     await page.selectOption('#id_income_account', ids.income);
     await Promise.all([page.waitForURL(/lists\/items\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Save")')]);

@@ -2,6 +2,7 @@
 // Trusted main/utility code only. No page, preload, generic IPC or agent operation exposes this store.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {endpoint}=require('../agent/mcp.cjs');
+const {refusal}=require('../agent/refusal.cjs');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const HEX=/^[0-9a-f]{64}$/;
 const fields=['version','id','epoch','book_scope','company_id','actor_id','name','permission','approved_at','endpoint','token'];
@@ -15,7 +16,16 @@ function validate(v,file,legacy=false) {
   if(!v || typeof v!=='object' || Array.isArray(v) || !HEX.test(v.token))throw Error('Invalid connection');
   endpoint(v.endpoint);
   if(legacy && v.version===undefined && Object.keys(v).every(k=>['endpoint','token'].includes(k)))return v;
-  if(Object.keys(v).length!==fields.length || fields.some(k=>!Object.hasOwn(v,k)) || v.version!==2 || !UUID.test(v.id) || !UUID.test(v.epoch) || path.basename(file)!==v.id+'.sealed' || !HEX.test(v.book_scope) || !UUID.test(v.company_id) || !UUID.test(v.actor_id) || !['read_only','accounting_write'].includes(v.permission) || typeof v.name!=='string' || !v.name.trim() || v.name.length>80 || /[\x00-\x1f\x7f]/.test(v.name) || typeof v.approved_at!=='string' || v.approved_at.length>40 || !Number.isFinite(Date.parse(v.approved_at)))throw Error('Invalid saved approval');
+  if(Object.keys(v).length!==fields.length+Number(Object.hasOwn(v,'unattended'))+Number(Object.hasOwn(v,'locked_access_off')) || fields.some(k=>!Object.hasOwn(v,k)) || v.version!==2 || !UUID.test(v.id) || !UUID.test(v.epoch) || path.basename(file)!==v.id+'.sealed' || !HEX.test(v.book_scope) || !UUID.test(v.company_id) || !UUID.test(v.actor_id) || !['read_only','accounting_write'].includes(v.permission) || typeof v.name!=='string' || !v.name.trim() || v.name.length>80 || /[\x00-\x1f\x7f]/.test(v.name) || typeof v.approved_at!=='string' || v.approved_at.length>40 || !Number.isFinite(Date.parse(v.approved_at)))throw Error('Invalid saved approval');
+  if(Object.hasOwn(v,'locked_access_off')){
+    const off=v.locked_access_off;
+    if(v.unattended || !off || Object.keys(off).length!==2 || !['disabled','revoked'].includes(off.reason) || typeof off.at!=='string' || off.at.length>40 || !Number.isFinite(Date.parse(off.at)))throw Error('Invalid locked access status');
+  }
+  if (Object.hasOwn(v,'unattended')) {
+    const p = v.unattended;
+    if (!p || Object.keys(p).length!==7 || p.id!==v.id || p.epoch!==v.epoch || p.actor!==v.actor_id || p.company!==v.company_id ||
+        p.name!==v.name || p.permission!==v.permission || !HEX.test(p.secret)) throw Error('Invalid unattended proof');
+  }
   return v;
 }
 function unseal(file,storage) {
@@ -53,4 +63,20 @@ function epoch(root,storage,{create=false}={}) {
   if(!v || Object.keys(v).length!==2 || v.version!==1 || !UUID.test(v.epoch))throw Error('Invalid approval epoch');
   return v.epoch;
 }
-module.exports={scope,read,write,validate,epoch,rotateEpoch,UUID};
+const runtimeFile=root=>path.join(root,'ai-connections','.endpoint.sealed');
+function runtime(root,storage) {
+  let value;
+  try { value=unseal(runtimeFile(root),storage); endpoint(value.endpoint); }
+  catch { throw refusal('app_not_running'); }
+  if (!HEX.test(value.cookie)) throw refusal('app_not_running');
+  return value;
+}
+function publish(root,storage,value) {atomic(runtimeFile(root),value,storage);}
+function unpublish(root,storage,cookie) {
+  try {if(runtime(root,storage).cookie===cookie)fs.rmSync(runtimeFile(root),{force:true});}catch{/* A stopped endpoint also fails its challenge. */}
+}
+function usable(storage) {
+  try{return storage.isEncryptionAvailable() && (process.platform!=='linux' || storage.getSelectedStorageBackend()!=='basic_text');}
+  catch{return false;}
+}
+module.exports={scope,read,write,validate,epoch,rotateEpoch,runtime,publish,unpublish,usable,UUID};

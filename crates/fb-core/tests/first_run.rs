@@ -237,7 +237,8 @@ fn company_scope_inactive_candidates_and_bounded_scans() {
             &mut f,
             c,
             &format!("A{n:02}"),
-            "Other asset",
+            // Account names are unique in a company (worker item 2).
+            &format!("Other asset {n}"),
             "OTHER_CURRENT_ASSET",
         );
     }

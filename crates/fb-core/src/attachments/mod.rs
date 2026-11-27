@@ -227,6 +227,24 @@ fn owner_rows(c: &(impl Query + ?Sized), co: CompanyId, o: &Owner) -> FbResult<V
         &[&co.to_db(), &d, &j],
     )
 }
+/// Worker item 44: the company's attachments, not removed, of the same file as `data` (the same content hash
+/// as uploaded, `original_sha256`, before any photo reduction), oldest first, each with its owner and that
+/// owner's number (`INV-000006`, `J000025`). Read only; the caller checks company access.
+pub fn same_file(c: &(impl Query + ?Sized), co: CompanyId, data: &[u8]) -> FbResult<Vec<(Value, Owner, String)>> {
+    let sha = storage::hex(&Sha256::digest(data));
+    rows(
+        c,
+        "SELECT * FROM attachments_attachment WHERE company_id=? AND original_sha256=? AND deleted=0 ORDER BY uploaded_at,id",
+        &[&co.to_db(), &sha],
+    )?
+    .into_iter()
+    .map(|row| {
+        let o = owner_of(&row)?;
+        let (_, number) = target(c, co, &o)?;
+        Ok((row, o, number))
+    })
+    .collect()
+}
 pub fn panel_rows(c: &(impl Query + ?Sized), co: CompanyId, o: &Owner) -> FbResult<Vec<Value>> {
     let mut rows = owner_rows(c, co, o)?;
     rows.sort_by_key(|r| r["deleted"] == true);

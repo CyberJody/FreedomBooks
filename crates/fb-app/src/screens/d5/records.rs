@@ -358,6 +358,9 @@ pub(super) fn detail(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(Stri
     let src = source(app, c, id, dep)?;
     let mut vm = ctx(app, r)?;
     put(&mut vm, "state_label", &src["state_label"]);
+    if !dep {
+        put(&mut vm, "posted_entries", super::super::d4::posted_entries(app, c, s(&src, "journal_id"))?);
+    }
     // Rates and quantities as the invoice page shows them (two places for a rate).
     let mut lines = src["lines"].as_array().cloned().unwrap_or_default();
     super::super::d4::fixed_document(&mut json!({}), &mut lines);

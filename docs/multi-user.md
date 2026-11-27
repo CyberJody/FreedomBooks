@@ -106,7 +106,11 @@ person (swapped for each request) or shared, with the reason written next to it.
   generation began each one: only that session polls or cancels it, and nobody else can start another
   for that company until it ends, its owner signs out, or it is 10 minutes old. A second person sees
   "Someone else is connecting this company's account right now".
-- The AI loopback listener stays bound to the host desktop's own session.
+- The AI loopback listener runs only on the computer with the books. Attended approvals use the
+  host desktop's signed-in session. When an Administrator connects an AI assistant, working
+  while that desktop is signed out is ticked by default (and can be unticked or switched off in
+  Manage AI connections). It uses the approver's current role and company access, and
+  shares the book lease with connected people. [AI assistant connections](local-ai.md)
 - Stale-edit detection is per route-addressed record. A save that changes a record through another
   record's page (for example a payment changing an invoice's balance) relies on the core's revision and
   balance checks.

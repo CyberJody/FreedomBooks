@@ -170,6 +170,11 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
         // 0206 remote host record: one row whose key CHECK(id = 1) cannot change; the record itself is
         // rewritten by the host by design (fb-db remote_host_upgrade_tests attacks its bounds).
         "remote_host",
+        // 0208 consent can be retired or renewed. fb-db ai_unattended_upgrade_tests checks its scope keys.
+        "desktop_ai_unattended",
+        // 0210 multi-entry matches: immutable while MATCHED (updates always refused; deleted only on Return
+        // to review); fb-db bankfeeds_matching_upgrade_tests and bankfeeds/tests.rs attack its guards.
+        "bankfeeds_transaction_match",
     ].iter()).map(|s| s.to_string()).collect::<Vec<_>>();
     expected.sort();
     assert_eq!(

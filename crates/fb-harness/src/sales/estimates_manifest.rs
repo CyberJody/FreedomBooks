@@ -164,6 +164,9 @@ mod tests {
         runner.run();
         let base = runner.dump();
         assert!(check(&scenario, &base).is_empty());
+        // Review 2, N2: every step of the base run has the outcome the scenario intends.
+        let unexpected: Vec<&Value> = base["outcomes"].as_array().unwrap().iter().filter(|o| o.get("unexpected").is_some()).collect();
+        assert!(unexpected.is_empty(), "{unexpected:?}");
         for (field, needle) in [
             ("estimates", "inventory"),
             ("history", "revision"),

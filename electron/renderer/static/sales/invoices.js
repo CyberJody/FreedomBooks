@@ -47,7 +47,8 @@
       const account = read(row, 'income_account');
       if (account) account.value = item?.income_account || '';
       if (item) {
-        read(row, 'description').value = item.description || '';
+        // A line needs a description: an item saved without one gives its name (worker item 6).
+        read(row, 'description').value = item.description || item.code || '';
         read(row, 'rate').value = item.rate === 'None' ? '' : item.rate;
         if (!read(row, 'quantity').value) read(row, 'quantity').value = '1';
       }

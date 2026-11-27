@@ -1,5 +1,6 @@
 {% for field in line.hidden_fields %}{{ field.widget|safe }}{{ field.errors|safe }}{% endfor %}{{ line.non_field_errors|safe }}
-{% for field in line.visible_fields %}{% if field.name != 'DELETE' %}<div class="line-field" data-field="{{ field.name }}">{{ field.label_tag|safe }}{{ field.widget|safe }}{{ field.errors|safe }}{% if field.name == 'item' %}<span class="invoice-kind" data-line-kind></span>{% endif %}</div>{% endif %}{% endfor %}
+{% for field in line.visible_fields %}{% if field.name != 'DELETE' %}<div class="line-field" data-field="{{ field.name }}">{{ field.label_tag|safe }}{{ field.widget|safe }}{% if field.name != 'quantity' and field.name != 'rate' and field.name != 'taxable' %}{{ field.errors|safe }}{% endif %}{% if field.name == 'item' %}<span class="invoice-kind" data-line-kind></span>{% endif %}</div>{% endif %}{% endfor %}
 <div class="line-amount"><span>Amount</span><output data-line-amount>—</output></div>
 <div class="invoice-remove"><span hidden>{{ line.f.DELETE.widget|safe }}</span><button type="button" data-remove-line aria-label="Remove line" title="Remove line">×</button></div>
+{# Worker item 12: the narrow number columns' errors read across the whole line (.invoice-editor .errorlist spans the row). #}{% for field in line.visible_fields %}{% if field.name == 'quantity' or field.name == 'rate' or field.name == 'taxable' %}{{ field.errors|safe }}{% endif %}{% endfor %}
 <p class="invoice-line-help" data-line-help hidden></p>

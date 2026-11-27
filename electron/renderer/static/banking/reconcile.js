@@ -16,11 +16,7 @@
     var negative = value < 0n;
     if (negative) { value = -value; }
     var rest = String(value % 100n);
-    return (negative ? '-' : '') + String(value / 100n) + '.' + (rest.length < 2 ? '0' + rest : rest);
-  }
-  function shown(value, negate) {
-    if (negate && value !== 0n) { value = -value; }
-    return money(value);
+    return (negative ? '-' : '') + (value / 100n).toLocaleString('en-US') + '.' + (rest.length < 2 ? '0' + rest : rest);
   }
   var sign = BigInt(form.getAttribute('data-sign') === '-1' ? -1 : 1);
   var beginning = cents(form.getAttribute('data-beginning'));
@@ -41,7 +37,7 @@
     });
     var cleared = beginning + sign * (debit - credit);
     var difference = ending - cleared;
-    set('cleared-debit', shown(debit, sign !== 1n)); set('cleared-credit', shown(credit, sign === 1n));
+    set('cleared-debit', money(debit)); set('cleared-credit', money(credit));
     set('count-debit', String(nDebit)); set('count-credit', String(nCredit));
     set('cleared-balance', money(cleared)); set('difference', money(difference));
     var box = document.getElementById('difference-box');

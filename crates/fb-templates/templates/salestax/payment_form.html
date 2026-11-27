@@ -13,9 +13,9 @@
 </details>
 <div class="field field-memo">{{ form.f.memo.label_tag|safe }}{{ form.f.memo.widget|safe }}{{ form.f.memo.errors|safe }}</div>
 {% if review %}<section class="tax-review" id="tax-review" aria-labelledby="tax-review-title"><h2 id="tax-review-title">Check before recording</h2>
-<p>{{ review.total }} {{ company.currency }} to {{ review.agency.display_name }}. Owed to {{ review.agency.display_name }} on the payment date: {{ review.owed_to_agency }}; all agencies: {{ review.owed_on_date }}.</p>
+<p>{{ review.total|money }} {{ company.currency }} to {{ review.agency.display_name }}. Owed to {{ review.agency.display_name }} on the payment date: {{ review.owed_to_agency }}; all agencies: {{ review.owed_on_date }}.</p>
 {% for w in review.warnings %}<p class="notice warning" role="alert">{{ w }}</p>{% endfor %}
-<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for e in review.entries %}<tr><td>{{ e.account }}</td><td class="amount">{% if e.debit %}{{ e.debit }}{% endif %}</td><td class="amount">{% if e.credit %}{{ e.credit }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th scope="col">Account</th><th scope="col" class="amount">Debit</th><th scope="col" class="amount">Credit</th></tr></thead><tbody>{% for e in review.entries %}<tr><td>{{ e.account }}</td><td class="amount">{% if e.debit %}{{ e.debit|money }}{% endif %}</td><td class="amount">{% if e.credit %}{{ e.credit|money }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 <p class="helptext">If you change anything above, review again.</p></section>{% endif %}
 <p class="form-actions"><button type="submit" name="action" value="review"{% if review %} class="secondary"{% endif %}>Review</button>{% if review %} <button type="submit" name="action" value="record">Record payment</button>{% endif %}</p>
 </form>

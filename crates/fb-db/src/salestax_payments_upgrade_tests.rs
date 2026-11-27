@@ -66,7 +66,7 @@ fn a_book_at_the_previous_schema_is_backed_up_upgraded_and_reopens_unchanged() {
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected the previous schema"),
     };
-    assert_eq!(old.to() - old.from(), 6);
+    assert_eq!(old.to() - old.from(), 10);
     // The verified backup is the prior book, cell for cell and object for object.
     let backup = dir.path().join("verified-0195.fbbook");
     old.snapshot(&backup, &key).unwrap();
@@ -82,12 +82,15 @@ fn a_book_at_the_previous_schema_is_backed_up_upgraded_and_reopens_unchanged() {
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
-    assert_eq!(after.len(), before.len() + 4 + crate::job_tickets_upgrade_tests::JOB_TICKET_TABLES + crate::remote_host_upgrade_tests::REMOTE_HOST_TABLES);
+    assert_eq!(after.len(), before.len() + 4 + crate::job_tickets_upgrade_tests::JOB_TICKET_TABLES + crate::remote_host_upgrade_tests::REMOTE_HOST_TABLES + crate::ai_unattended_upgrade_tests::AI_UNATTENDED_TABLES + crate::bankfeeds_matching_upgrade_tests::TABLES);
     assert!(after["salestax_payment"].is_empty() && after["salestax_paymentvoid"].is_empty());
 
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
-        if !REBUILT.contains(&object.as_str()) && !["view:fb_value_invalid","view:fb_json_invalid"].contains(&object.as_str()) {
+        if !REBUILT.contains(&object.as_str()) && !["view:fb_value_invalid","view:fb_json_invalid","table:bankfeeds_account","table:bankfeeds_transaction"].contains(&object.as_str())
+            && !crate::deposit_adjustments_upgrade_tests::CHANGED.contains(&object.as_str())
+            && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str())
+        {
             assert_eq!(&upgraded[object], hash, "changed prior object {object}");
         }
     }
@@ -113,7 +116,9 @@ fn a_book_at_the_previous_schema_is_backed_up_upgraded_and_reopens_unchanged() {
         assert!(next_view.contains(arm.trim().trim_end_matches(';')), "lost value predicate: {arm}");
     }
     let added: BTreeSet<&str> = upgraded.keys().filter(|k| !schema.contains_key(*k)).map(String::as_str)
-        .filter(|k| !crate::job_tickets_upgrade_tests::JOB_TICKET_OBJECTS.contains(k) && !crate::remote_host_upgrade_tests::REMOTE_HOST_OBJECTS.contains(k)).collect();
+        .filter(|k| !crate::job_tickets_upgrade_tests::JOB_TICKET_OBJECTS.contains(k) && !crate::remote_host_upgrade_tests::REMOTE_HOST_OBJECTS.contains(k)
+            && !crate::ai_unattended_upgrade_tests::AI_UNATTENDED_OBJECTS.contains(k) && !crate::deposit_adjustments_upgrade_tests::OBJECTS.contains(k)
+            && !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k)).collect();
     assert_eq!(added, BTreeSet::from([
         "table:salestax_payment", "table:salestax_paymentvoid", "view:salestax_payment_invalid",
         // 0204 adds these objects; every prior object outside the two shared views stays exact.

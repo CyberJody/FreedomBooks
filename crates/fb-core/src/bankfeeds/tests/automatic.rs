@@ -49,7 +49,7 @@ fn download(f: &mut Fx) -> Item {
         NOW,
         false,
         None,
-        &SecretSet::none(),
+        &SecretSet::none(), &[],
     )
     .unwrap();
     f.item("AUTO-1")
@@ -293,7 +293,7 @@ fn credit_card_payment_posts_balanced_transfer_and_counterpart_is_held() {
         NOW,
         false,
         None,
-        &SecretSet::none(),
+        &SecretSet::none(), &[],
     )
     .unwrap();
     let side = f.item("CARD-SIDE");
@@ -329,7 +329,7 @@ fn generic_staging_pending_items_and_cross_company_calls_cannot_auto_post() {
         NOW,
         false,
         None,
-        &SecretSet::none(),
+        &SecretSet::none(), &[],
     )
     .unwrap();
     assert_eq!(f.count("SELECT count(*) FROM bankfeeds_auto_queue"), 0);
@@ -343,7 +343,7 @@ fn generic_staging_pending_items_and_cross_company_calls_cannot_auto_post() {
         NOW,
         false,
         None,
-        &SecretSet::none(),
+        &SecretSet::none(), &[],
     )
     .unwrap();
     let i = f.item("PENDING-AUTO");
@@ -390,7 +390,7 @@ fn inactive_connection_is_held_and_pending_withdrawal_cleans_derived_state() {
         "2026-10-29T12:00:00Z",
         false,
         Some(1793059200),
-        &SecretSet::none(),
+        &SecretSet::none(), &[],
     )
     .unwrap();
     assert_eq!(
@@ -421,7 +421,7 @@ fn changed_download_invalidates_queue_and_any_does_not_override_direction_or_sco
     other.feed_account_id = f.feed("ACT-savings");
     assert!(!policy.matches(&other));
     let changed = StagedPull { accounts: vec![acct("ACT-checking", "Business Checking", vec![tx("AUTO-1", "2026-11-05", -5901, "ACME INTERNET")])], ..Default::default() };
-    store_pull_for_desktop(&mut f.book, f.u, f.c, &f.conn, &changed, NOW, false, None, &SecretSet::none()).unwrap();
+    store_pull_for_desktop(&mut f.book, f.u, f.c, &f.conn, &changed, NOW, false, None, &SecretSet::none(), &[]).unwrap();
     assert!(!auto_post(&mut f.book, f.u, f.c, &i.id, &SecretSet::none()).unwrap());
     assert_eq!(f.count("SELECT count(*) FROM ledger_journal"), 0);
     assert_eq!(f.count("SELECT count(*) FROM bankfeeds_rule_review"), 1);
@@ -543,7 +543,7 @@ fn imported_policy_and_queue_identities_are_permanent() {
     f.journal("2026-11-05", "500", "100", "59.00");
     assert!(!auto_post(&mut f.book, f.u, f.c, &held.id, &SecretSet::none()).unwrap());
     let pull = StagedPull { accounts: vec![acct("ACT-checking", "Business Checking", vec![tx("AUTO-2", "2026-11-06", -6100, "ACME INTERNET")])], ..StagedPull::default() };
-    store_pull_for_desktop(&mut f.book, f.u, f.c, &f.conn, &pull, NOW, false, None, &SecretSet::none()).unwrap();
+    store_pull_for_desktop(&mut f.book, f.u, f.c, &f.conn, &pull, NOW, false, None, &SecretSet::none(), &[]).unwrap();
     for table in ["bankfeeds_rule_policy", "bankfeeds_auto_queue", "bankfeeds_rule_review"] {
         assert_eq!(f.count(&format!("SELECT count(*) FROM {table}")), 1, "{table}");
     }

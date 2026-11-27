@@ -47,7 +47,7 @@ fn desktop() -> (tempfile::TempDir, String) {
 }
 
 fn state() -> serde_json::Value {
-    hosting::state(&mut app().unwrap()).unwrap()
+    hosting::state(&mut app().unwrap(), hosting::DOOR_WAIT).unwrap()
 }
 
 fn on() -> Result<(), String> {
@@ -138,6 +138,8 @@ fn the_desktop_hosts_a_second_computer_and_both_work_on_one_book() {
     // Host-only work stays on the host.
     assert!(matches!(c.call(&ClientRequest::Render { target: "/settings/book-protection/".into() }).unwrap(), HostResponse::Refused { code: RefusalCode::HostOnly, .. }));
     let s = state();
+    assert_eq!(s["company"], company);
+    assert_eq!(s["signed_in"], serde_json::json!([[KEEPER, "Synthetic laptop"]]));
     let devices = s["devices"].as_array().unwrap();
     assert_eq!(devices.len(), 1);
     assert_eq!(devices[0]["name"], "Synthetic laptop");
@@ -300,6 +302,30 @@ fn hold_books(hold: Duration) -> std::thread::JoinHandle<()> {
     t
 }
 
+#[test]
+fn a_busy_host_skips_the_screen_poll_and_executes_the_confirmed_revoke_on_the_worker() {
+    let _turn = turn();
+    let (_dir, _company) = desktop();
+    on().unwrap();
+    let laptop = pair("Synthetic laptop");
+    let s = state();
+    let device = s["devices"][0]["id"].as_str().unwrap().to_owned();
+    let generation = s["generation"].as_str().unwrap().to_owned();
+    let revoke = |generation| crate::hosting_in(&mut app().unwrap(), &crate::HostingAction::Revoke { device: device.clone(), generation });
+    assert!(revoke("stale".into()).unwrap_err().reason.contains("user changed"));
+    let client = connect(&laptop);
+    let held = hold_books(hosting::DOOR_WAIT + Duration::from_millis(500));
+    let started = std::time::Instant::now();
+    assert_eq!(crate::hosting_state(Some(true)).unwrap_err().reason, "BUSY");
+    assert!(started.elapsed() < Duration::from_millis(500));
+    let result: serde_json::Value = serde_json::from_str(&revoke(generation).unwrap()).unwrap();
+    held.join().unwrap();
+    assert_eq!(result["revoked"], true);
+    client.close();
+    assert!(Client::new(s["addr"].as_str().unwrap(), &laptop.identity, laptop.host_pin, Box::new(|_| {})).unwrap().hello().is_err());
+    hosting::stop(&mut app().unwrap()).unwrap();
+}
+
 /// Review S1: the host's Lock while a remote request holds the books returns at once, and the host
 /// person is signed out before anything else runs for the window, or when hosting ends first.
 #[test]
@@ -395,4 +421,47 @@ fn a_revocation_while_hosting_is_off_survives_an_older_backup() {
     let err = hosting::repair(&mut app().unwrap(), "audit-rolled-back", "Synthetic host").unwrap_err();
     assert!(err.reason.contains("nothing to repair"), "{}", err.reason);
     assert!(std::fs::read_dir(&folder).unwrap().flatten().all(|e| !e.file_name().to_string_lossy().contains(".rolled-back-")));
+}
+
+#[test]
+fn a_connected_computer_hears_why_the_host_stopped_or_closed_the_books() {
+    let _turn = turn();
+    for closing in [false, true] {
+        let (_dir, _) = desktop();
+        on().unwrap();
+        let client = connect(&pair("Synthetic laptop"));
+        let shutdown = std::thread::spawn(move || {
+            if closing {
+                crate::lock().unwrap();
+            } else {
+                hosting::stop(&mut app().unwrap()).unwrap();
+            }
+        });
+        // Stop immediately after the preceding probe: the next idle probe still gets the reason.
+        std::thread::sleep(Duration::from_secs(1));
+        let reply = client.call(&ClientRequest::Ping);
+        client.close();
+        shutdown.join().unwrap();
+        let expected = if closing { "The host closed these books." } else { hosting::STOPPED };
+        assert!(matches!(reply, Ok(HostResponse::Refused { code: RefusalCode::HostLocked, ref message }) if message == expected), "{reply:?}");
+    }
+}
+
+#[test]
+fn stop_and_close_do_not_wait_five_seconds_for_a_silent_computer() {
+    let _turn = turn();
+    for closing in [false, true] {
+        let (_dir, _company) = desktop();
+        on().unwrap();
+        let silent = connect(&pair("Synthetic silent laptop"));
+        let started = std::time::Instant::now();
+        if closing {
+            crate::lock().unwrap();
+        } else {
+            hosting::stop(&mut app().unwrap()).unwrap();
+        }
+        // Allow for gateway process teardown after the 1.5-second notice window.
+        assert!(started.elapsed() < Duration::from_millis(2500), "{:?}", started.elapsed());
+        silent.close();
+    }
 }

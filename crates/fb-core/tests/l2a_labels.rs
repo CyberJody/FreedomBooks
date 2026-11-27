@@ -20,6 +20,10 @@ fn duplicate_names_use_town_then_email_then_id_and_include_archived_peers() {
         None,
     )
     .unwrap();
+    // Worker item 23 (2026-11-23): a new or reactivated record may not take an active one's name, so the
+    // twin is made with the first archived, then the first is set active in the book directly (as a
+    // duplicate made before the rule is).
+    directory::set_active(&mut f.book, f.user, c, Model::Customer, a["id"].as_str().unwrap(), false).unwrap();
     let b = directory::save_record(
         &mut f.book,
         f.user,
@@ -29,6 +33,7 @@ fn duplicate_names_use_town_then_email_then_id_and_include_archived_peers() {
         None,
     )
     .unwrap();
+    f.book.connection().execute("UPDATE directory_customer SET active=1 WHERE id=?1", [a["id"].as_str().unwrap()]).unwrap();
     let aid = a["id"].as_str().unwrap();
     let bid = b["id"].as_str().unwrap();
     let map = p::contact_label_map(f.book.connection(), c, Model::Customer, None).unwrap();

@@ -142,6 +142,13 @@ fn two_computers_and_the_host_user_share_one_book_with_separate_sessions() {
     assert_eq!(outcome(&sign_in(&cb, READER, PASSWORD))["outcome"], "redirect");
     assert!(page(&render(&ca, &home)).contains("First synthetic company"));
 
+    // Filtered print views use the host session and the exact token from the print button.
+    let print = format!("/c/{first}/reports/profit-and-loss/?start=2026-01-01&end=2026-03-31&output=print");
+    let report = render(&cb, &print);
+    let button = page(&report).split_once("id=\"print-now\"").unwrap().1;
+    let approved = submit_with(&cb, &print, &token(button), &[("action", "desktop_print")], &request_id());
+    assert_eq!(outcome(&approved)["data"]["target"], print, "{approved:?}");
+
     // The bookkeeper saves a customer through the real form; a retry of the same request is
     // answered from the first run and saves nothing more.
     let before = o.customers();
@@ -270,4 +277,79 @@ fn unclassified_screens_and_host_only_actions_never_reach_the_book() {
     }
     assert_eq!(events(), before, "nothing was written to the book");
     assert!(page(&render(&c, &format!("/c/{first}/home/"))).contains("First synthetic company"));
+}
+
+#[test]
+fn a_connected_bookkeeper_can_acknowledge_missing_dates_but_cannot_sync_the_bank() {
+    use fb_core::bankfeeds as bf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    struct SyntheticBank(Arc<AtomicUsize>);
+    impl fb_app::net::NetHost for SyntheticBank {
+        fn call(&mut self, request: &serde_json::Value) -> Result<serde_json::Value, String> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            assert_eq!(request["op"], "simplefin_claim");
+            Ok(serde_json::json!({"ok":true, "host":"fixture.test",
+                "record":r#"{"access_url":"https://SyntheticUser1234:SyntheticPassword1234@fixture.test/access"}"#}))
+        }
+    }
+
+    let o = office();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let conn = {
+        let mut host = o.shared.lease("test", &mut |_| {}).unwrap();
+        let local = host.open_session(ClientInfo::local("Host desktop")).unwrap();
+        host.dispatch(&local, Request::SignIn { username: OWNER.into(), password: OWNER_PASSWORD.into() }).unwrap();
+        host.with_session(&local, |app| {
+            app.simplefin = true;
+            app.os_store_usable = true;
+            app.net = Some(Box::new(SyntheticBank(calls.clone())));
+            let conn = fb_app::plugins::bankfeed_connect(app, o.first, "synthetic-token", "Synthetic bank").unwrap().unwrap();
+            let open = app.open_mut().unwrap();
+            let pull = bf::StagedPull::default();
+            let secrets = bf::SecretSet::none();
+            bf::store_pull(&mut open.book, open.owner, o.first, &conn, &pull, "2024-01-01T12:00:00Z", false, None, &secrets).unwrap();
+            let start = bf::begin_sync(&mut open.book, open.owner, o.first, &conn, "2024-06-01T12:00:00Z", 0, true).unwrap();
+            bf::store_pull(&mut open.book, open.owner, o.first, &conn, &pull, "2024-06-01T12:00:00Z", false, Some(start), &secrets).unwrap();
+            conn
+        }).unwrap()
+    };
+    let c = connect(&o.link.addr, &o.pair("Front desk"));
+    assert_eq!(outcome(&sign_in(&c, KEEPER, PASSWORD))["outcome"], "redirect");
+    let list = format!("/c/{}/bank-feeds/", o.first);
+    let sync = format!("{list}{conn}/sync/");
+    let accounts = format!("{list}{conn}/accounts/");
+    let rendered = render(&c, &list);
+    let html = page(&rendered);
+    let action_token = |path| token(html.split_once(&format!("action=\"{path}\"")).unwrap().1);
+    let events = || {
+        let mut host = o.shared.lease("test", &mut |_| {}).unwrap();
+        host.host_app().open.as_mut().unwrap().book.read(|q| q.query_row("SELECT count(*) FROM ledger_auditevent", [], |r| r.get::<_, i64>(0))).unwrap()
+    };
+    let before = events();
+    let refused = submit_with(&c, &sync, &action_token(&sync), &[], &request_id());
+    assert!(matches!(refused, HostResponse::Refused { code: RefusalCode::HostOnly, message } if message == fb_remote_proto::policy::HOST_ONLY_TEXT));
+    assert_eq!(events(), before);
+    assert!(html.contains(&format!("<form method=\"post\" action=\"{accounts}\"")));
+    assert!(html.contains("I have checked these dates"));
+    let checked = submit_with(&c, &accounts, &action_token(&accounts), &[("action", "gap_reviewed")], &request_id());
+    assert_eq!(outcome(&checked)["location"], list);
+    assert!(!page(&render(&c, &list)).contains("I have checked these dates"));
+    assert_eq!(events(), before + 1);
+    assert_eq!(calls.load(Ordering::SeqCst), 1, "only the host's initial synthetic claim contacted the bank");
+}
+
+#[test]
+fn saving_a_user_on_the_host_confirms_once_on_the_connected_sign_in_page() {
+    let o = office();
+    let c = connect(&o.link.addr, &o.pair("Front desk"));
+    assert_eq!(outcome(&sign_in(&c, OWNER, OWNER_PASSWORD))["outcome"], "redirect");
+    let company = o.first.to_db();
+    let saved = submit(&c, "/desktop/users/", &[
+        ("action", "save"), ("username", "Synthetic new user"), ("role", "bookkeeper"),
+        ("active", "on"), ("company", &company), ("password", PASSWORD), ("password_repeat", PASSWORD),
+    ], &request_id());
+    assert_eq!(outcome(&saved)["location"], "/desktop/sign-in/", "{saved:?}");
+    let confirmation = "User saved. Sign in again to continue.";
+    assert!(page(&render(&c, "/desktop/sign-in/")).contains(confirmation));
+    assert!(!page(&render(&c, "/desktop/sign-in/")).contains(confirmation));
 }

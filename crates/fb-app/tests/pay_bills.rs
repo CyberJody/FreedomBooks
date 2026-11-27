@@ -115,11 +115,17 @@ fn bank_type_accounts_are_bank_accounts_without_a_designation_step() {
     let values = json!({"request_key":uuid(),"date":"2026-11-02","from_account_id":f.bank,"to_account_id":other,"amount":"5.00","memo":""});
     let err = try_command(&mut f.app, json!({"type":"ReviewTransfer","company_id":f.c,"values":values})).unwrap_err();
     assert!(err.contains("is not an active bank account"), "{err}");
-    // …unless the owner adds it in Accounting setup.
+    // A new designation is refused at both entry points, even when supplied directly by ID.
     let rev = current_revision(&mut f.app, &f.c);
-    command(&mut f.app, json!({"type":"SaveSetup","company_id":f.c,"expected_revision":rev,"receivables_id":null,"undeposited_id":null,"payables_id":f.ap,"bank_ids":[other]}));
-    assert_eq!(banks(&mut f.app, &f.c).len(), 3);
-    try_command(&mut f.app, json!({"type":"ReviewTransfer","company_id":f.c,"values":values})).unwrap();
+    let audits = count(&mut f.app, "SELECT count(*) FROM ledger_auditevent");
+    let err = try_command(&mut f.app, json!({"type":"SaveSetup","company_id":f.c,"expected_revision":rev,"payables_id":f.ap,"bank_ids":[other]})).unwrap_err();
+    assert!(err.contains("1200 · Account 1200 is not a Bank-type account."), "{err}");
+    let setup_path = format!("/c/{}/accounting-setup/", f.c);
+    let out = submit(&mut f.app, &setup_path, vec![("expected_revision".into(),rev.to_string()),("banks".into(),other)]);
+    let Outcome::Invalid { html } = out else { panic!("{out:?}") };
+    assert!(html.contains("1200 · Account 1200 is not a Bank-type account."));
+    assert_eq!(current_revision(&mut f.app, &f.c), rev);
+    assert_eq!(count(&mut f.app, "SELECT count(*) FROM ledger_auditevent"), audits);
     // An inactive Bank-type account stops being offered and comes back when reactivated; each
     // change is in the audit history as an accounting setup change.
     let audits = count(&mut f.app, "SELECT count(*) FROM ledger_auditevent WHERE action='accounting.setup'");
@@ -148,7 +154,31 @@ fn bank_type_accounts_are_bank_accounts_without_a_designation_step() {
     // Accounting setup explains that Bank-type accounts are automatic and offers only others.
     let html = screens::render(&mut f.app, &format!("/c/{}/accounting-setup/", f.c)).unwrap().html;
     assert!(html.contains("Every active account of type Bank is a bank account"), "{html}");
-    assert!(html.contains("Other accounts used as bank accounts"));
+    assert!(html.contains("Previously designated bank accounts"));
+    let non_banks = html.split("name=\"banks\"").nth(1).unwrap().split("</select>").next().unwrap();
+    assert!(non_banks.contains(&petty));
+    assert!(!non_banks.contains(&f.ap));
+    let rev = current_revision(&mut f.app, &f.c);
+    let audit_count = count(&mut f.app, "SELECT count(*) FROM ledger_auditevent");
+    let current_banks = banks(&mut f.app, &f.c);
+    command(&mut f.app, json!({"type":"SaveSetup","company_id":f.c,"expected_revision":rev,"payables_id":f.ap,"bank_ids":current_banks}));
+    assert_eq!(current_revision(&mut f.app, &f.c), rev);
+    assert_eq!(count(&mut f.app, "SELECT count(*) FROM ledger_auditevent"), audit_count);
+
+    // An older designation can outlive the active account. The form identifies it on display
+    // and on save, and the owner can remove it by clearing the selection.
+    command(&mut f.app, json!({"type":"SaveAccount","company_id":f.c,"account_id":petty,"code":"1030","name":"Account 1030","detail_type":"OTHER_CURRENT_ASSET","active":false}));
+    let html = screens::render(&mut f.app, &setup_path).unwrap().html;
+    assert!(html.contains("1030 · Account 1030 (unavailable — replace or clear)"));
+    let rev = current_revision(&mut f.app, &f.c);
+    let fields = vec![("expected_revision".into(),rev.to_string()),("payables".into(),f.ap.clone())];
+    let mut keep = fields.clone();
+    keep.push(("banks".into(),petty.clone()));
+    let Outcome::Invalid {html} = submit(&mut f.app, &setup_path, keep) else { panic!("invalid bank retained") };
+    assert!(html.contains("1030 · Account 1030 is unavailable as a bank account. Replace or clear it."));
+    assert_eq!(current_revision(&mut f.app, &f.c), rev);
+    assert!(matches!(submit(&mut f.app, &setup_path, fields), Outcome::Redirect {..}));
+    assert!(!banks(&mut f.app, &f.c).contains(&petty));
 }
 
 #[test]
@@ -199,8 +229,12 @@ fn pay_bills_pays_several_vendors_with_partial_amounts_in_one_run() {
     for n in [&a1n, &a2n, &b1n] {
         assert!(html.contains(n.as_str()));
     }
-    assert!(html.contains("Overdue 10 days") && html.contains("Due today") && html.contains("Due in 10 days"), "{html}");
+    assert!(html.contains("Overdue 10 days") && html.contains("Due on payment date") && html.contains("Due in 10 days"), "{html}");
     assert!(!html.contains("Synthetic") && !html.contains("RECORD ONLY") && !html.contains("Choose vendor to load"));
+    let mut backdated = pay_fields(&f, &html, &[], "1001");
+    backdated.iter_mut().find(|(key, _)| key == "date").unwrap().1 = "2026-11-01".into();
+    let (backdated, _) = html_of(&submit(&mut f.app, &path, backdated));
+    assert!(backdated.contains("Overdue 1 day<") && backdated.contains("Due in 9 days"));
     // Arriving from a bill ticks it with its full balance and shows its vendor.
     let from_bill = screens::render(&mut f.app, &format!("{path}?bill={a1}")).unwrap().html;
     assert!(from_bill.contains(&format!("id=\"pay-{a1}\" checked")) && from_bill.contains(&format!("name=\"amount-{a1}\" value=\"100.00\"")));
@@ -242,6 +276,8 @@ fn pay_bills_pays_several_vendors_with_partial_amounts_in_one_run() {
     assert_eq!(count(&mut f.app, "SELECT count(*) FROM ledger_auditevent WHERE action='payment.recorded'"), 2);
     let refs: Vec<(String, i64)> = f.app.open_mut().unwrap().book.read(|tx| tx.prepare("SELECT reference,amount FROM payables_billpayment ORDER BY reference")?.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?.collect::<Result<_, _>>()).unwrap();
     assert_eq!(refs, vec![("1001".to_owned(), 12000), ("1002".to_owned(), 23000)]);
+    let paid = screens::render(&mut f.app, &format!("/c/{}/bills/{a1}/", f.c)).unwrap().html;
+    assert!(paid.contains(&format!("{a1n} · Paid · USD")) && paid.contains("Current bill state: Paid"));
     // A2 keeps 30.00 open; the others are paid.
     let html = screens::render(&mut f.app, &path).unwrap().html;
     assert!(html.contains(&a2n) && !html.contains(&a1n) && !html.contains(&b1n));

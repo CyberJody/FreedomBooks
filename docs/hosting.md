@@ -62,9 +62,12 @@ working for them.
 ## Paired computers
 
 The Hosting screen lists every paired computer with when it was paired, by whom, when it was last
-seen and whether it is connected now.
+seen and whether it is connected now. The list refreshes automatically. “Now” means a computer
+is connected. Times show the host computer’s time zone. The remote session count includes sessions
+kept briefly for a reconnect. An administrator at the host can open **Settings › Users** to see
+who is signed in and which computer each person is using.
 
-To **revoke** a computer (a lost laptop, someone leaving), choose **Revoke** next to it. It is cut off
+To **revoke** a computer (a lost laptop, someone leaving), choose **Revoke** next to it and confirm. It is cut off
 at once and can only come back by pairing again with a new code. You can revoke a computer while
 hosting is off too. The revocation is kept in the books themselves and written into the list of
 paired computers and the audit log (with your name) at once, so neither putting back an older copy
@@ -77,19 +80,27 @@ the revocation is saved.
 
 - **Locking the host computer** (File › Lock, the idle lock, or the computer sleeping or locking its
   screen) signs out **only the person at the host**, at once, even while a connected person's work is
-  running. The books stay open for the people connected.
+  running. The books stay open for connected people and for [AI approvals configured to work while
+  locked](local-ai.md#choose-when-the-connection-can-work). Attended AI connections resume when the
+  approving person signs in at the host and opens the approved company.
 - **For books protected by a book password, Lock does not ask for that password again while
   hosting.** The books stay open, so the book's key stays in this computer's memory until hosting
   stops or FreedomBooks quits; after Lock, a user's own password is what is asked. Quitting (or
   stopping hosting and then locking) is what closes the books. While hosting, the host computer's own
   screen lock and disk encryption matter more.
-- **Closing the books or quitting** on the host stops hosting for everyone, and tells them.
+- **Closing the books or quitting** on the host stops hosting for everyone and pauses unattended AI
+  access. Unattended approvals resume when the same books reopen, including when hosting resumes
+  after a restart.
 - **Backups, restores and changing the book password or key** can only be done at the host computer.
   They go ahead even when others are signed in; those people are signed out and told why.
-- A connected person who does nothing for 15 minutes is signed out (only them).
+- A connected person who does nothing for 15 minutes is signed out. Locking a connected computer
+  also signs out only that person and brings back this host's sign-in screen. If the host is
+  temporarily unreachable, the connected computer waits on a locked screen and reconnects
+  automatically using its saved pairing.
 - Some things can only be done at the host computer: unlocking or restoring books, book protection,
   the recovery key and Emergency Kit, backups, attachments, AI connections, and connecting bank
-  feeds, Gmail or Stripe.
+  feeds, Gmail or Stripe. Sync bank feeds at the host too. Connected bookkeepers can review the
+  downloaded transactions and acknowledge missing dates after checking the bank statement.
 
 ## Audit log
 

@@ -94,16 +94,23 @@ pub fn auto_post(
                 "This rule needs a different category and a nonzero amount.",
             ));
         }
+        let abs_amount = magnitude(&item)?;
         if !match_candidates(tx, co, &item, 1)?.is_empty()
             || !receipt_candidates(tx, co, &item, 1)?.is_empty()
+            || has_multi_match_group(&multi_match_candidates(tx, co, &item, MULTI_MATCH_POOL_LIMIT)?, abs_amount)
         {
             return Err(err(
                 "Possible existing transaction or receipt. Review and match it before creating anything new.",
             ));
         }
+        if already_recorded(tx, co, &item)?.is_some() {
+            return Err(err(
+                "Possible duplicate or already-recorded transaction. Review before posting.",
+            ));
+        }
         // Include already-linked entries: match_candidates deliberately omits them.
         let (debit, credit) = direction(&item)?;
-        let duplicate:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id WHERE j.company_id=?1 AND l.account_id=?2 AND j.status='POSTED' AND l.debit=?3 AND l.credit=?4 AND abs(julianday(j.date)-julianday(?5))<=5) OR EXISTS(SELECT 1 FROM bankfeeds_transaction b WHERE b.feed_account_id=?6 AND b.id<>?7 AND b.amount=?8 AND coalesce(b.posted_on,b.transacted_on)=?5 AND b.description=?9)",params![co.to_db(),mapped,debit,credit,item.date(),item.feed_account_id,item.id,item.amount,item.description],|r|r.get(0))?;
+        let duplicate:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id WHERE j.company_id=?1 AND l.account_id=?2 AND j.status='POSTED' AND l.debit=?3 AND l.credit=?4 AND (abs(julianday(j.date)-julianday(?5))<=5 OR (?8<0 AND (julianday(?5)-julianday(j.date)) BETWEEN -5 AND 180 AND EXISTS(SELECT 1 FROM fb_check_number_live h WHERE h.company_id=j.company_id AND h.bank_id=?2 AND h.identity_id=j.source_id AND h.number<>'' AND h.number NOT GLOB '*[^0-9]*')))) OR EXISTS(SELECT 1 FROM bankfeeds_transaction b WHERE b.feed_account_id=?6 AND b.id<>?7 AND b.amount=?8 AND coalesce(b.posted_on,b.transacted_on)=?5 AND b.description=?9) OR EXISTS(SELECT 1 FROM bankfeeds_transaction b JOIN bankfeeds_account bf ON bf.id=b.feed_account_id JOIN bankfeeds_connection bc ON bc.id=bf.connection_id WHERE bc.company_id=?1 AND b.id<>?7 AND b.status='MATCHED' AND b.amount=?8 AND abs(julianday(coalesce(b.posted_on,b.transacted_on))-julianday(?5))<=5 AND EXISTS(SELECT 1 FROM bankfeeds_transaction_match m JOIN ledger_journalline ml ON ml.id=m.journal_line_id JOIN ledger_journal mj ON mj.id=m.journal_id WHERE m.transaction_id=b.id AND ml.account_id=?2 AND mj.company_id=?1 AND mj.status='POSTED'))",params![co.to_db(),mapped,debit,credit,item.date(),item.feed_account_id,item.id,item.amount,item.description],|r|r.get(0))?;
         if duplicate {
             return Err(err(
                 "Possible duplicate or already-recorded transaction. Review before posting.",

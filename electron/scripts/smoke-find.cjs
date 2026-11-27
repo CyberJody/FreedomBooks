@@ -38,6 +38,10 @@ const key = () => crypto.randomUUID();
     // First run: books, then the owner's password.
     await page.fill('#id_owner_name', 'Riley Sample');
     await page.fill('#id_company_name', 'Harbor Street Bakery');
+    // The seed below makes its own chart and Accounting setup (revision 0), so start from the empty chart
+    // (the standard one, the default since the first-run chart choice, already has "Undeposited Funds"
+    // and fills the setup).
+    if (await page.locator('#id_starter_chart').count()) await page.selectOption('#id_starter_chart', 'empty');
     await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$|\/home\/$/), page.getByRole('button', { name: 'Create books', exact: true }).click()]);
     if (page.url().endsWith('/desktop/sign-in/')) {
       await page.fill('#id_password', PASSWORD);
@@ -226,7 +230,7 @@ const key = () => crypto.randomUUID();
     assert.equal(await page.evaluate(() => document.activeElement.matches('details.titlebar-new > summary')), true);
     pass('Escape closes "+ New" and returns focus to its button');
     const entries = await page.$$eval('.new-menu a', a => a.map(x => [x.textContent, x.getAttribute('href')]));
-    assert.deepEqual(entries.map(e => e[0]), ['Invoice', 'Receive payment', 'Sales receipt', 'Estimate', 'Credit memo', 'Bill', 'Pay bills', 'Write check', 'Deposit', 'Transfer', 'Journal entry']);
+    assert.deepEqual(entries.map(e => e[0]), ['Invoice', 'Receive payment', 'Sales receipt', 'Estimate', 'Credit memo', 'Job ticket', 'Enter time', 'Bill', 'Pay bills', 'Write check', 'Deposit', 'Transfer', 'Journal entry']);
     const headings = [];
     for (const [label, href] of entries) {
       await page.locator('details.titlebar-new > summary').click();

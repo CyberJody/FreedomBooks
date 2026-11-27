@@ -184,6 +184,69 @@ fn msg<T: std::fmt::Debug>(r: FbResult<T>) -> String {
     r.unwrap_err().message()
 }
 
+fn assert_candidate_blocks_accept(f: &mut Fx, transaction_id: &str, expected_candidates: Value, mut input: Value) {
+    let (_, rows) = review_snapshot(&mut f.book, f.u, f.c).unwrap();
+    let row = rows.iter().find(|row| row.item.id == transaction_id).unwrap();
+    assert_eq!(serde_json::to_value(&row.candidates).unwrap(), expected_candidates);
+    let before = fb_db::test_support::snapshot(f.book.connection()).unwrap();
+    let mut guarded = input.clone();
+    guarded["preconditions"] = json!({
+        "id": row.item.id, "status": row.item.status, "return_count": row.item.return_count,
+        "amount_cents": row.item.amount.to_string(), "date": row.item.date(),
+        "feed_account_id": row.item.feed_account_id, "mapped_account_id": row.mapped_account_id,
+        "require_no_candidates": true,
+    });
+    assert!(msg(accept(&mut f.book, f.u, f.c, transaction_id, &guarded, &f.secrets)).contains("Bank review precondition failed"));
+    assert_eq!(fb_db::test_support::snapshot(f.book.connection()).unwrap(), before);
+
+    let journals = f.count("SELECT count(*) FROM ledger_journal");
+    let audits = f.count("SELECT count(*) FROM ledger_auditevent");
+    input["preconditions"] = guarded["preconditions"].clone();
+    input["preconditions"].as_object_mut().unwrap().remove("require_no_candidates");
+    if expected_candidates["match"].as_i64() > Some(0) {
+        // Worker item 40: without the guard, a new entry next to the one it could match still needs the
+        // user's explicit confirmation (`record_again`), like a row that looks already recorded.
+        assert!(msg(accept(&mut f.book, f.u, f.c, transaction_id, &input, &f.secrets)).contains("looks already recorded as"));
+        assert_eq!(fb_db::test_support::snapshot(f.book.connection()).unwrap(), before);
+        input["record_again"] = json!(true);
+    }
+    assert_eq!(accept(&mut f.book, f.u, f.c, transaction_id, &input, &f.secrets).unwrap().status, "ACCEPTED");
+    assert_eq!(f.count("SELECT count(*) FROM ledger_journal"), journals + 1);
+    assert!(f.count("SELECT count(*) FROM ledger_auditevent") > audits);
+}
+
+#[test]
+fn no_candidate_guard_stops_duplicate_manual_entries() {
+    let mut f = Fx::new();
+    f.connected_books();
+    f.journal("2026-10-01", "500", "100", "84.19");
+    let id = f.item("TX-1001").id;
+    let input = json!({"kind":"JOURNAL","account_id":f.acc("500")});
+    assert_candidate_blocks_accept(&mut f, &id, json!({"match":1,"receipt":0,"recorded":false}), input);
+}
+
+#[test]
+fn no_candidate_guard_stops_duplicate_transfer_legs() {
+    let mut f = Fx::new();
+    f.connected_books();
+    f.accept("TX-1005", json!({"kind":"TRANSFER","transfer_account_id":f.acc("101")})).unwrap();
+    let id = f.item("TX-2001").id;
+    let input = json!({"kind":"JOURNAL","account_id":f.acc("410")});
+    assert_candidate_blocks_accept(&mut f, &id, json!({"match":1,"receipt":0,"recorded":false}), input);
+}
+
+#[test]
+fn no_candidate_guard_stops_receipts_waiting_to_be_deposited() {
+    let mut f = Fx::new();
+    f.connected_books();
+    for _ in 0..4 {
+        f.undeposited("2500.00", "2026-10-04");
+    }
+    let id = f.item("TX-1003").id;
+    let input = json!({"kind":"JOURNAL","account_id":f.acc("410")});
+    assert_candidate_blocks_accept(&mut f, &id, json!({"match":0,"receipt":3,"recorded":false}), input);
+}
+
 #[test]
 fn sanitize_and_default_check_numbers_follow_python() {
     let mut f = Fx::new();
@@ -302,6 +365,9 @@ fn mapping_rules() {
     assert_eq!(f.count("SELECT count(*) FROM bankfeeds_account WHERE ledger_account_id IS NOT NULL"), 1);
     assert_eq!(msg(map_account(&mut f.book, f.outsider, f.other, &checking, &other, &SecretSet::none())), "Choose a downloaded account of this company.");
     assert_eq!(f.count("SELECT count(*) FROM ledger_auditevent WHERE action='bankfeed.mapped'"), 3);
+    let target = MappingTarget::Existing(Some(f.a["100"]));
+    let two = [(checking, target.clone()), (f.feed("ACT-savings"), target)];
+    assert!(msg(save_mappings(&mut f.book, f.u, f.c, &f.conn, &two, &f.secrets)).contains("selected for two"));
     let codes: Vec<String> = mappable_accounts(&mut f.book, f.u, f.c).unwrap().into_iter().map(|a| a.code).collect();
     assert_eq!(codes, ["100", "101", "220"]);
     f.reopen_clean();
@@ -1309,7 +1375,7 @@ fn r2_every_mapping_and_rule_account_edit_can_reopen() {
         for id in [spare,f.a["500"]] {
             let code=if id==spare {"150"} else {"500"};
             for (active,postable) in [(true,true),(false,true),(true,false)] {
-                let result=services::save_account(&mut f.book,f.u,f.c,AccountInput::new(code,"Changed").kind(kind).active(active).postable(postable).edit(id));
+                let result=services::save_account(&mut f.book,f.u,f.c,AccountInput::new(code,&format!("Changed {code}")).kind(kind).active(active).postable(postable).edit(id));
                 if result.is_ok() { accepted+=1; f.reopen_clean(); }
             }
         }
@@ -1398,6 +1464,49 @@ fn fix2_reactivation_checks_every_mapping_condition_and_books_stay_openable() {
 }
 
 #[test]
+fn populated_format_93_feeds_upgrade_without_losing_rows_or_decisions() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut f = Fx::new_in(dir.path());
+    f.connected_books();
+    assert_eq!(f.accept("TX-1001", json!({"kind":"JOURNAL","account_id":f.acc("500")})).unwrap().status, "ACCEPTED");
+    f.journal("2026-10-20", "100", "410", "3.12");
+    let interest = f.item("TX-1006");
+    let line = suggest(&mut f.book, f.u, f.c, &interest.id).unwrap().matches[0].line_id.clone();
+    assert_eq!(f.accept("TX-1006", json!({"kind":"MATCH","journal_line_id":line})).unwrap().status, "MATCHED");
+    let ignored = f.item("TX-1004");
+    ignore(&mut f.book, f.u, f.c, &ignored.id, &f.secrets).unwrap();
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_account WHERE provider_id_verified = 1"), 3);
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_transaction WHERE provider_id_verified = 1"), 10);
+
+    let copy_path = dir.path().join("format-93.fbbook");
+    let copy = fb_db::test_support::populated_copy(f.book.connection(), &copy_path, &[91; 32], "0206_remote_host", true).unwrap();
+    let fb_db::Opened::Behind(mut old) = Book::open_staged(&copy_path, &[91; 32]).unwrap() else {
+        panic!("expected a format-93 book before upgrade");
+    };
+    assert_eq!((old.from(), old.to()), (93, 97)); // 0207, 0208, 0209 and 0210
+    for table in ["bankfeeds_account", "bankfeeds_transaction"] {
+        let has_provenance: bool = old.read(|q| {
+            let stmt = q.prepare(&format!("SELECT * FROM {table}"))?;
+            Ok::<_, fb_db::rusqlite::Error>(stmt.column_names().any(|name| name == "provider_id_verified"))
+        }).unwrap();
+        assert!(!has_provenance, "{table}");
+    }
+    let upgraded = old.upgrade().unwrap();
+    assert_eq!(fb_db::test_support::snapshot(upgraded.connection()).unwrap(), copy.expected);
+    for (table, rows) in [("bankfeeds_account", 3), ("bankfeeds_transaction", 10)] {
+        let unverified: i64 = upgraded.connection().query_row(
+            &format!("SELECT count(*) FROM {table} WHERE provider_id_verified = 0"), [], |row| row.get(0)
+        ).unwrap();
+        assert_eq!(unverified, rows, "{table}");
+    }
+    assert!(upgraded.check().unwrap().is_empty());
+    drop(upgraded);
+    let reopened = Book::open(&copy_path, &[91; 32]).unwrap();
+    assert_eq!(fb_db::test_support::snapshot(reopened.connection()).unwrap(), copy.expected);
+    assert!(reopened.check().unwrap().is_empty());
+}
+
+#[test]
 fn fix2_book_from_0134_upgrades_to_0135_and_opens() {
     let mut f = Fx::new();
     f.connected_books();
@@ -1473,7 +1582,7 @@ fn r3_service_edits_after_every_accept_kind_reopen() {
             let account = f.a[code];
             let original_kind = if ["500", "410"].contains(&code) { if code == "500" { "EXPENSE" } else { "INCOME" } } else if code == "220" { "LIABILITY" } else { "ASSET" };
             for (new_kind, active, postable) in [(original_kind, false, true), (original_kind, true, false), ("EQUITY", true, true), (original_kind, true, true)] {
-                if services::save_account(&mut f.book, f.u, f.c, AccountInput::new(code, "Edited after accept").kind(new_kind).active(active).postable(postable).edit(account)).is_ok() {
+                if services::save_account(&mut f.book, f.u, f.c, AccountInput::new(code, &format!("Edited after accept {code}")).kind(new_kind).active(active).postable(postable).edit(account)).is_ok() {
                     successful += 1;
                 }
                 f.reopen_clean();
@@ -2423,4 +2532,377 @@ fn fix5_no_sql_path_makes_two_rows_with_one_identity() {
     assert!(e.contains("UNIQUE constraint failed: bankfeeds_account.connection_id, bankfeeds_account.conn_key_identity, bankfeeds_account.remote_identity"), "{e}");
     q.execute_batch("ROLLBACK").unwrap();
     r5_finish(&mut f);
+}
+
+#[test]
+fn fy2025_late_clearing_check_matching_wrong_numbers_ambiguity_and_duplicate_guard() {
+    let mut f = Fx::new();
+    f.connected_books();
+    let checking = f.a["100"].to_db();
+    let expense = f.a["500"].to_db();
+    let write_check = |f: &mut Fx, date: &str, number: &str, amount: &str, payee: &str| -> (String, String) {
+        let saved = checks::save_check(
+            &mut f.book,
+            f.u,
+            f.c,
+            &json!({
+                "request_key": fb_ids::new_v7().to_string(),
+                "bank_id": checking,
+                "payee_kind": "OTHER",
+                "payee_name": payee,
+                "date": date,
+                "check_number": number,
+                "memo": format!("Check {number}"),
+                "lines": [{"tab": "EXPENSE", "account_id": expense, "description": payee, "rate": amount}],
+            }),
+        )
+        .unwrap();
+        let id = saved["id"].as_str().unwrap().to_owned();
+        let rev = checks::review_check(&mut f.book, f.u, f.c, &id, Some(1)).unwrap();
+        let rec = checks::record_check(&mut f.book, f.u, f.c, &id, Some(1), &rev).unwrap();
+        let jid = rec["current"]["journal_id"].as_str().unwrap().to_owned();
+        let lid: String = f
+            .book
+            .connection()
+            .query_row("SELECT id FROM ledger_journalline WHERE journal_id=?1 AND account_id=?2", params![&jid, &checking], |r| r.get(0))
+            .unwrap();
+        (jid, lid)
+    };
+
+    // 1. Check 1003 written 2026-03-11 for $350.00, cleared 6 days later on 2026-03-17.
+    let (_j1003, l1003) = write_check(&mut f, "2026-03-11", "1003", "350.00", "Valley Tax Prep");
+    // Check 1004 for the same $350.00, written 2 days before clearing (wrong number!).
+    let (_j1004, l1004) = write_check(&mut f, "2026-03-15", "1004", "350.00", "Other Tax Prep");
+    // Check 1005 written 181 days before clearing (outside 180-day window).
+    let (_j1005, l1005) = write_check(&mut f, "2025-09-17", "1005", "350.00", "Stale Check");
+
+    let pull = StagedPull {
+        accounts: vec![acct("ACT-checking", "Checking", vec![
+            tx("TX-CHK-1003", "2026-03-17", -35000, "CHECK 1003"),
+            tx("TX-CHK-1005", "2026-03-17", -35000, "CHECK 1005"),
+            tx("TX-CHK-AMB", "2026-04-20", -35000, "CHECK PAID"),
+        ])],
+        ..Default::default()
+    };
+    f.sync(&pull);
+
+    // Suggestion for CHECK 1003 finds ONLY check 1003 (not wrong-number 1004 even though 1004 is 2 days away, and not stale 1005).
+    let item_1003 = f.item("TX-CHK-1003");
+    let cands_1003 = f.book.read(|q| match_candidates(q, f.c, &item_1003, 10)).unwrap();
+    assert_eq!(cands_1003.len(), 1);
+    assert_eq!(cands_1003[0].line_id, l1003);
+    let sug = suggest(&mut f.book, f.u, f.c, &item_1003.id).unwrap();
+    assert_eq!(sug.kind, "MATCH");
+    assert_eq!(sug.matches[0].line_id, l1003);
+
+    // Duplicate prevention: trying to record CHECK 1003 as a new check without record_again is refused!
+    let dup = f.accept("TX-CHK-1003", json!({"kind": "CHECK", "account_id": expense, "payee_name": "Valley Tax Prep"}));
+    assert!(dup.is_err(), "late-clearing check must trigger duplicate guard");
+
+    // Wrong check number (1004) is refused by both service and SQL trigger.
+    assert!(f.accept("TX-CHK-1003", json!({"kind": "MATCH", "journal_line_id": l1004})).is_err());
+    let sql_wrong = f.book.connection().execute(
+        "UPDATE bankfeeds_transaction SET status='MATCHED',accepted_as='MATCH',journal_id=?1,journal_line_id=?2,reference='CHK-wrong',reference_url='journal:x',decided_at='2026-10-28T12:00:00.000000Z',decided_by_id=?3 WHERE id=?4",
+        params![_j1004, l1004, f.u.to_db(), item_1003.id],
+    );
+    assert!(sql_wrong.is_err(), "SQL trigger must refuse wrong check number");
+
+    // Stale check 1005 (181 days old) is neither offered nor accepted.
+    let item_1005 = f.item("TX-CHK-1005");
+    assert!(f.book.read(|q| match_candidates(q, f.c, &item_1005, 10)).unwrap().is_empty());
+    assert!(f.accept("TX-CHK-1005", json!({"kind": "MATCH", "journal_line_id": l1005})).is_err());
+
+    // Ambiguous description without check number ("CHECK PAID") offers BOTH 1004 (closer) and 1003.
+    let item_amb = f.item("TX-CHK-AMB");
+    let amb = f.book.read(|q| match_candidates(q, f.c, &item_amb, 10)).unwrap();
+    assert_eq!(amb.len(), 2);
+    assert_eq!(amb[0].line_id, l1004);
+    assert_eq!(amb[1].line_id, l1003);
+
+    // Matching CHECK 1003 to Check 1003 (6 days after issue) succeeds cleanly!
+    let matched = f.accept("TX-CHK-1003", json!({"kind": "MATCH", "journal_line_id": l1003})).unwrap();
+    assert_eq!(matched.status, "MATCHED");
+    assert_eq!(matched.journal_line_id.as_deref(), Some(l1003.as_str()));
+
+    // Generated EFT-<n> check reference must NOT get the 180-day written-check window (stays 5-day).
+    let (_jeft, left) = write_check(&mut f, "2026-03-01", "EFT-99", "225.00", "Auto Debit");
+    // 20-digit written check number IS parsed and enforced.
+    let (_j20a, l20a) = write_check(&mut f, "2026-03-01", "12345678901234567890", "225.00", "Long Check A");
+    let (_j20b, l20b) = write_check(&mut f, "2026-03-14", "12345678901234567899", "225.00", "Long Check B");
+    f.sync(&StagedPull {
+        accounts: vec![acct("ACT-checking", "Checking", vec![
+            tx("TX-EFT-LATE", "2026-03-15", -22500, "AUTO DEBIT ACH"),
+            tx("TX-LONG-CHK", "2026-03-15", -22500, "CHECK 12345678901234567890"),
+        ])],
+        ..Default::default()
+    });
+    assert!(f.accept("TX-EFT-LATE", json!({"kind": "MATCH", "journal_line_id": left})).is_err(), "EFT reference must not get 180-day check window");
+    assert!(f.accept("TX-LONG-CHK", json!({"kind": "MATCH", "journal_line_id": l20b})).is_err(), "20-digit wrong check number must be refused");
+    assert_eq!(f.accept("TX-LONG-CHK", json!({"kind": "MATCH", "journal_line_id": l20a})).unwrap().status, "MATCHED");
+    assert!(f.book.check().unwrap().is_empty());
+}
+
+#[test]
+fn fy2025_multi_entry_match_exact_total_exclusivity_return_and_stale() {
+    let mut f = Fx::new();
+    f.connected_books();
+    let checking = f.a["100"].to_db();
+    // Reproduce the $373.74 NY sales tax withdrawal paid by two posted entries ($277.49 + $96.25).
+    let j1 = f.journal("2026-03-20", "500", "100", "277.49");
+    let j2 = f.journal("2026-03-20", "500", "100", "96.25");
+    let j3 = f.journal("2026-03-20", "500", "100", "50.00");
+    let line_of = |f: &Fx, jid: &str| -> String {
+        f.book
+            .connection()
+            .query_row("SELECT id FROM ledger_journalline WHERE journal_id=?1 AND account_id=?2", params![jid, &checking], |r| r.get(0))
+            .unwrap()
+    };
+    let (l1, l2, l3) = (line_of(&f, &j1), line_of(&f, &j2), line_of(&f, &j3));
+
+    let pull = StagedPull {
+        accounts: vec![acct("ACT-checking", "Checking", vec![
+            tx("TX-NY-TAX", "2026-03-20", -37374, "NYS DTF SALES TAX PAYMNT"),
+            tx("TX-OTHER", "2026-03-20", -27749, "OTHER PAYMENT"),
+            tx("TX-OTHER-MULTI", "2026-03-20", -14625, "COMBINED OTHER"),
+        ])],
+        ..Default::default()
+    };
+    f.sync(&pull);
+
+    // Wrong total refused; duplicate line refused.
+    assert!(msg(f.accept("TX-NY-TAX", json!({"kind": "MATCH", "journal_line_ids": [&l1, &l3]}))).contains("327.49"));
+    assert!(msg(f.accept("TX-NY-TAX", json!({"kind": "MATCH", "journal_line_ids": [&l1, &l1]}))).contains("only once"));
+
+    // Exact total ($277.49 + $96.25 = $373.74) succeeds.
+    let done = f.accept("TX-NY-TAX", json!({"kind": "MATCH", "journal_line_ids": [&l1, &l2]})).unwrap();
+    assert_eq!(done.status, "MATCHED");
+    assert_eq!(done.accepted_as, "MATCH");
+    let entries = f.book.read(|q| matched_entries(q, f.c, &done)).unwrap();
+    assert_eq!(entries.len(), 2);
+    assert!(f.book.check().unwrap().is_empty());
+
+    // Exclusive use: neither l1 nor l2 can be matched by another bank transaction (single or multi).
+    let item_other = f.item("TX-OTHER");
+    assert!(f.book.read(|q| match_candidates(q, f.c, &item_other, 10)).unwrap().is_empty());
+    assert!(f.accept("TX-OTHER", json!({"kind": "MATCH", "journal_line_id": &l1})).is_err());
+    assert!(f.accept("TX-OTHER-MULTI", json!({"kind": "MATCH", "journal_line_ids": [&l2, &l3]})).is_err());
+
+    // SQL trigger refuses deleting bankfeeds_transaction_match while parent is MATCHED.
+    assert!(f.book.connection().execute("DELETE FROM bankfeeds_transaction_match WHERE transaction_id=?1", [&done.id]).is_err());
+
+    // Return to review frees both lines cleanly and passes book.check().
+    let back = return_to_review(&mut f.book, f.u, f.c, &done.id, &SecretSet::none()).unwrap();
+    assert_eq!(back.status, "NEW");
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_transaction_match"), 0);
+    assert!(f.book.check().unwrap().is_empty());
+    assert_eq!(f.book.read(|q| match_candidates(q, f.c, &item_other, 10)).unwrap().len(), 1);
+
+    // Re-match and reverse the second journal -> stale_decision detects it!
+    let rematched = f.accept("TX-NY-TAX", json!({"kind": "MATCH", "journal_line_ids": [&l1, &l2]})).unwrap();
+    services::reverse_journal(&mut f.book, f.u, f.c, j2.parse().unwrap(), "2026-03-21", "Test reversal").unwrap();
+    let stale = f.book.read(|q| stale_decision(q, &rematched)).unwrap();
+    assert!(stale.is_some(), "reversing a multi-matched entry must flag stale_decision");
+
+    // 12 matched entries exceed 60 chars if joined verbatim -> reference is compact and passes book.check().
+    let mut twelve_lines = vec![];
+    for _ in 0..12 {
+        let j = f.journal("2026-04-10", "500", "100", "10.00");
+        twelve_lines.push(line_of(&f, &j));
+    }
+    f.sync(&StagedPull {
+        accounts: vec![acct("ACT-checking", "Checking", vec![tx("TX-TWELVE", "2026-04-10", -12000, "BATCH 12")])],
+        ..Default::default()
+    });
+    let batch = f.accept("TX-TWELVE", json!({"kind": "MATCH", "journal_line_ids": twelve_lines})).unwrap();
+    assert_eq!(batch.status, "MATCHED");
+    assert!(batch.reference.chars().count() <= 60 && batch.reference.contains("+ 11 more"), "{}", batch.reference);
+    assert_eq!(f.book.read(|q| matched_entries(q, f.c, &batch)).unwrap().len(), 12);
+    // Audit event records matched_lines (journal_id + journal_line_id pairs).
+    let audit_detail: String = f.book.connection().query_row(
+        "SELECT detail FROM ledger_auditevent WHERE action='bankfeed.accepted' AND target=?1 ORDER BY occurred_at DESC LIMIT 1",
+        [format!("bankfeedtransaction:{}", batch.id)],
+        |r| r.get(0),
+    ).unwrap();
+    let parsed_audit: Value = serde_json::from_str(&audit_detail).unwrap();
+    assert_eq!(parsed_audit["matched_lines"].as_array().unwrap().len(), 12);
+    assert!(parsed_audit["matched_lines"][0]["journal_line_id"].is_string());
+
+    // Commit-time composite FK prevents committing match rows attached to a NEW transaction.
+    let j_new_a = f.journal("2026-04-15", "500", "100", "20.00");
+    let j_new_b = f.journal("2026-04-15", "500", "100", "30.00");
+    let l_new_a = line_of(&f, &j_new_a);
+    let _l_new_b = line_of(&f, &j_new_b);
+    f.sync(&StagedPull {
+        accounts: vec![acct("ACT-checking", "Checking", vec![tx("TX-ORPHAN", "2026-04-15", -5000, "ORPHAN TEST")])],
+        ..Default::default()
+    });
+    let orphan_id = f.item("TX-ORPHAN").id;
+    let commit_orphan: FbResult<()> = f.book.write(|tx| {
+        tx.execute(
+            "INSERT INTO bankfeeds_transaction_match(transaction_id,journal_id,journal_line_id) VALUES(?1,?2,?3)",
+            params![&orphan_id, &j_new_a, &l_new_a],
+        )?;
+        Ok(())
+    });
+    assert!(commit_orphan.is_err(), "committing bankfeeds_transaction_match on a NEW transaction must fail deferred FK");
+
+    // Auto-post refuses duplicating a withdrawal already multi-matched on a replaced connection.
+    let j_r1 = f.journal("2026-04-20", "500", "100", "40.00");
+    let j_r2 = f.journal("2026-04-20", "500", "100", "60.00");
+    let (l_r1, l_r2) = (line_of(&f, &j_r1), line_of(&f, &j_r2));
+    f.sync(&StagedPull {
+        accounts: vec![acct("ACT-checking", "Checking", vec![tx("TX-ORIG-MULTI", "2026-04-20", -10000, "MULTI AUTO DUP")])],
+        ..Default::default()
+    });
+    f.accept("TX-ORIG-MULTI", json!({"kind": "MATCH", "journal_line_ids": [&l_r1, &l_r2]})).unwrap();
+    // Unmap and disconnect old connection, create replacement connection mapped to Checking, import auto-post rule, and pull the same withdrawal.
+    f.map("ACT-checking", None).unwrap();
+    forget(&mut f.book, f.u, f.c, &f.conn, &f.secrets).unwrap();
+    let conn2 = connect(&mut f.book, f.u, f.c, &json!("Replacement"), "bridge.simplefin.org", &f.secrets).unwrap()["id"].as_str().unwrap().to_owned();
+    store_pull(
+        &mut f.book,
+        f.u,
+        f.c,
+        &conn2,
+        &StagedPull {
+            accounts: vec![acct("ACT-checking-2", "Checking 2", vec![])],
+            ..Default::default()
+        },
+        "2026-04-20T12:00:00Z",
+        false,
+        None,
+        &f.secrets,
+    )
+    .unwrap();
+    let feed2: String = f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE connection_id=?1", [&conn2], |r| r.get(0)).unwrap();
+    save_mappings(&mut f.book, f.u, f.c, &conn2, &[(feed2.clone(), MappingTarget::Existing(Some(f.a["100"])))], &f.secrets).unwrap();
+    let import_src = qbo::Import {
+        hash: "b".repeat(64),
+        rows: vec![qbo::parse_row(
+            2,
+            "Auto multi dup",
+            &json!({"ruleConditions":[{"ruleType":1,"value":"MULTI AUTO DUP"},{"ruleType":10,"value":"-1"}],"isAndRule":true}).to_string(),
+            &json!({"ruleActions":[{"actionType":0,"value":"Office"},{"actionType":8,"value":true}]}).to_string(),
+        )],
+    };
+    qbo::import_rules(
+        &mut f.book,
+        f.u,
+        f.c,
+        &import_src,
+        &[qbo::Selection {
+            row: 2,
+            preserve_auto_post: true,
+            account_id: f.a["500"].to_db(),
+            scope: feed2,
+            kind: "EXPENSE".into(),
+            payee_id: String::new(),
+            payee_table: String::new(),
+        }],
+        true,
+        &f.secrets,
+    )
+    .unwrap();
+    store_pull_for_desktop(
+        &mut f.book,
+        f.u,
+        f.c,
+        &conn2,
+        &StagedPull {
+            accounts: vec![acct("ACT-checking-2", "Checking 2", vec![tx("TX-REDOWNLOAD", "2026-04-20", -10000, "MULTI AUTO DUP")])],
+            ..Default::default()
+        },
+        "2026-04-21T12:00:00Z",
+        false,
+        None,
+        &f.secrets,
+        &[],
+    )
+    .unwrap();
+    let dup_item = f.book.read(|q| {
+        let id: String = q.query_row("SELECT id FROM bankfeeds_transaction WHERE remote_id='TX-REDOWNLOAD'", [], |r| r.get(0))?;
+        item(q, f.c, &id)
+    }).unwrap();
+    assert!(f.book.read(|q| already_recorded(q, f.c, &dup_item)).unwrap().is_some(), "already_recorded must detect earlier multi-matched row");
+    let posted_auto = auto_post(&mut f.book, f.u, f.c, &dup_item.id, &f.secrets).unwrap();
+    assert!(!posted_auto, "auto-post must refuse duplicating an earlier multi-matched row");
+    assert_eq!(f.book.read(|q| item(q, f.c, &dup_item.id)).unwrap().status, "NEW");
+    // Even after linking the first replacement row and receiving a second copy with shifted date/description, auto-post still refuses!
+    link_existing(&mut f.book, f.u, f.c, &dup_item.id, None, &f.secrets).unwrap();
+    store_pull_for_desktop(
+        &mut f.book,
+        f.u,
+        f.c,
+        &conn2,
+        &StagedPull {
+            accounts: vec![acct("ACT-checking-2", "Checking 2", vec![tx("TX-REDOWNLOAD-2", "2026-04-21", -10000, "MULTI AUTO DUP REVISED")])],
+            ..Default::default()
+        },
+        "2026-04-22T12:00:00Z",
+        false,
+        None,
+        &f.secrets,
+        &[],
+    )
+    .unwrap();
+    let dup_item2_id: String = f.book.connection().query_row("SELECT id FROM bankfeeds_transaction WHERE remote_id='TX-REDOWNLOAD-2'", [], |r| r.get(0)).unwrap();
+    assert!(!auto_post(&mut f.book, f.u, f.c, &dup_item2_id, &f.secrets).unwrap(), "auto-post must refuse even after an earlier link hides the group from already_recorded");
+    assert_eq!(f.book.read(|q| item(q, f.c, &dup_item2_id)).unwrap().status, "NEW");
+
+    // Auto-post also refuses when unmatched partial entries ($40 + $60) can already satisfy a $100 withdrawal,
+    // even if 55 closer full-amount $100 entries exist (full-amount entries never crowd out partial candidates).
+    let _g1 = f.journal("2026-05-08", "500", "100", "40.00");
+    let _g2 = f.journal("2026-05-08", "500", "100", "60.00");
+    for _ in 0..55 {
+        let _ = f.journal("2026-05-10", "500", "100", "100.00");
+    }
+    store_pull_for_desktop(
+        &mut f.book,
+        f.u,
+        f.c,
+        &conn2,
+        &StagedPull {
+            accounts: vec![acct("ACT-checking-2", "Checking 2", vec![tx("TX-UNMATCHED-GROUP", "2026-05-10", -10000, "MULTI AUTO DUP")])],
+            ..Default::default()
+        },
+        "2026-05-11T12:00:00Z",
+        false,
+        None,
+        &f.secrets,
+        &[],
+    )
+    .unwrap();
+    let grp_item = f.book.read(|q| {
+        let id: String = q.query_row("SELECT id FROM bankfeeds_transaction WHERE remote_id='TX-UNMATCHED-GROUP'", [], |r| r.get(0))?;
+        item(q, f.c, &id)
+    }).unwrap();
+    let partials = f.book.read(|q| multi_match_candidates(q, f.c, &grp_item, 50)).unwrap();
+    assert!(partials.len() >= 2 && has_multi_match_group(&partials, 10000), "55 full-amount entries must not crowd out $40 + $60 partial group");
+    // Even with 50 closer same-day $1.00 entries filling ranks 1..=50 and $40 + $60 from the previous day
+    // at ranks 51..=52, auto-post uses the same MULTI_MATCH_POOL_LIMIT (200) as accept and holds the $100 row.
+    for _ in 0..50 {
+        let _ = f.journal("2026-05-20", "500", "100", "1.00");
+    }
+    let _u1 = f.journal("2026-05-19", "500", "100", "40.00");
+    let _u2 = f.journal("2026-05-19", "500", "100", "60.00");
+    store_pull_for_desktop(
+        &mut f.book,
+        f.u,
+        f.c,
+        &conn2,
+        &StagedPull {
+            accounts: vec![acct("ACT-checking-2", "Checking 2", vec![tx("TX-ONLY-GROUP", "2026-05-20", -10000, "MULTI AUTO DUP")])],
+            ..Default::default()
+        },
+        "2026-05-21T12:00:00Z",
+        false,
+        None,
+        &f.secrets,
+        &[],
+    )
+    .unwrap();
+    let only_grp_id: String = f.book.connection().query_row("SELECT id FROM bankfeeds_transaction WHERE remote_id='TX-ONLY-GROUP'", [], |r| r.get(0)).unwrap();
+    assert!(!auto_post(&mut f.book, f.u, f.c, &only_grp_id, &f.secrets).unwrap(), "auto-post must hold when unmatched partial lines at ranks 51..=52 sum to the withdrawal");
+    assert_eq!(f.book.read(|q| item(q, f.c, &only_grp_id)).unwrap().status, "NEW");
+    assert!(f.book.check().unwrap().is_empty());
 }

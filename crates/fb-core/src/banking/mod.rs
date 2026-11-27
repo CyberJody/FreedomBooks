@@ -11,7 +11,7 @@ pub use cleared::{
     is_register_account, refuse_cleared_reversal, reverse_journal, set_cleared, set_cleared_tx,
 };
 pub use deposits::{
-    deposit, deposit_status, record_deposit, record_deposit_tx, refuse_live_deposit, release_dates,
+    deposit, deposit_status, fee_account, record_deposit, record_deposit_tx, record_receipt_net, refuse_live_deposit, release_dates,
     reverse_deposit, reverse_deposit_tx, review_deposit, review_deposit_tx,
 };
 use fb_db::rusqlite::{OptionalExtension, params};
@@ -19,7 +19,7 @@ use fb_db::{Query, Writer};
 pub use reconcile::{
     begin, figures, reconcile_now, reconciliation, report, save_ticks, screen, undo_last, words,
 };
-pub use register::{build, build_on, register_accounts, register_balances, source_metadata};
+pub use register::{build, build_on, build_page_on, RegisterPage, register_accounts, register_balances, source_metadata};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};

@@ -27,7 +27,7 @@ test('only this computer’s private addresses are offered; never all interfaces
   assert.equal(hosting.hostOf('192.168.1.20:47100'), '192.168.1.20');
 });
 
-const RUNNING = {available: true, open: true, admin: true, running: true, addr: '192.168.1.20:47100', bind: '192.168.1.20:47100', fingerprint: 'AB12-CD34', sessions: 2,
+const RUNNING = {generation: '123', available: true, open: true, admin: true, running: true, addr: '192.168.1.20:47100', bind: '192.168.1.20:47100', fingerprint: 'AB12-CD34', sessions: 2,
   pairing: {code: 'ABCD-EFGH-JKMN-PQRS', seconds: 420}, audit: {lines: 12, error: null},
   devices: [{id: 'a'.repeat(32), name: '<b>Front</b> desk', paired_at: 1, paired_by: 'Owner', revoked: false, recorded: false, connected: true, last_seen: 2},
     {id: 'b'.repeat(32), name: 'Old laptop', paired_at: 1, revoked: true, recorded: false, unsaved: 'The list of paired computers could not be saved (read-only).'}]};
@@ -149,4 +149,54 @@ test('Restart hosting is one native call (it checks the Administrator first); th
   assert.equal(hosting.statusLabel({running: false, connected: 0}), '');
   const main = fs.readFileSync(path.join(__dirname, '..', 'main', 'main.cjs'), 'utf8');
   assert.match(main, /return hostingTitle \? `\$\{title\} — \$\{hostingTitle\}` : title;/, 'S5: the window title outside the Hosting screen');
+});
+
+test('a hosting administrator sees the local and remote signed-in names escaped on Users', () => {
+  const {c} = controller({hostingActive: () => true, hostingState: () => JSON.stringify({
+    running: true, admin: true, admin_name: 'Pat', signed_in: [['Casey', '<Office>']],
+  })});
+  assert.match(c.usersPage('<!-- hosting-presence -->'), /Pat · this computer.*Casey · &lt;Office&gt;/);
+});
+
+test('Hosting shows live presence, retained sessions, local time zone and the current company', () => {
+  const html = hosting.page({...RUNNING, company:'a'.repeat(36), sessions:1, audit:{lines:1}});
+  assert.match(html, /1 computer connected now\. 1 remote session, including/);
+  assert.match(html, /1 entry, checked/);
+  assert.match(html, /<td>Now<\/td>/);
+  assert.match(html, /href="\/c\/a{36}\/home\/"/);
+  assert.doesNotMatch(html, /docs\/hosting\.md/);
+});
+test('Stop with a connected computer and Revoke require confirmation', async () => {
+  for (const answer of [false,true]) {
+    let stops=0, revokes=0, held=false;
+    const prompts=[];
+    const c=hosting.create({native:{
+      hostingStatus:()=>JSON.stringify({connected:1}), hostingState:()=>{assert.equal(held,false); return JSON.stringify(RUNNING);},
+      hostingOffAsync:async()=>{ stops++; }, hostingRevokeAsync:async(device,generation)=>{assert.equal(device,RUNNING.devices[0].id); assert.equal(generation,RUNNING.generation); revokes++; return '{"revoked":true}';},
+    }, confirm:async message=>{prompts.push(message); return answer;}, exclusive:fn=>fn(), os:{networkInterfaces:()=>IFACES}});
+    c.render();
+    held=true;
+    await c.off();
+    await c.revoke({device:'a'.repeat(32)});
+    assert.deepEqual(prompts, ['Stop hosting?', 'Revoke <b>Front</b> desk?']);
+    assert.equal(stops,Number(answer));
+    assert.equal(revokes,Number(answer));
+  }
+});
+
+test('Hosting refreshes when the connection list changes and stays still on an unchanged tick', () => {
+  let s = {...RUNNING};
+  let held = false;
+  const {c} = controller({hostingState: skipIfBusy => {
+    if (held) { assert.equal(skipIfBusy, true); throw new Error('BUSY'); }
+    return JSON.stringify(s);
+  }});
+  c.render();
+  assert.equal(c.poll(), null);
+  s = {...s, devices: []};
+  held = true;
+  assert.equal(c.poll(), null);
+  held = false;
+  assert.match(c.poll(), /No computer is paired yet/);
+  assert.equal(c.poll(), null);
 });

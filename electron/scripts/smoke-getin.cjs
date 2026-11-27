@@ -66,12 +66,13 @@ async function main() {
   try {
     // First run.
     let s=await launch(keyringA);
-    assert.match(await text(s),/Step 1 of 3/i);
+    assert.match(await text(s),/Step 1 of 2/i);
     assert.match(await text(s),/also your user name for signing in/);
     assert.equal(await s.page.locator('nav').count(),0,'no sidebar on the first-run screen');
     await shot(s,'01-first-run-step1');
     await s.page.fill('#id_owner_name',OWNER);await s.page.fill('#id_company_name','Harbor Street Bakery');
     await s.page.check('#id_protect');await s.page.fill('#id_lock_password',BOOK_PASSWORD);await s.page.fill('#id_lock_password2',BOOK_PASSWORD);
+    assert.match(await text(s),/Step 1 of 3/i,'a book password adds the recovery-key step');
     await s.page.getByRole('button',{name:'Create books',exact:true}).click();
     await s.page.waitForURL(/\/desktop\/sign-in\/$/);
     const step2=await text(s);

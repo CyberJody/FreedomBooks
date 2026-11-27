@@ -92,8 +92,9 @@ fn ticket_time_and_invoice_through_the_screens() {
     let bad = invalid(post(&mut f.app, &detail, &[("action", "add_time"), ("date", "2026-11-14"), ("item", &f.support), ("hours", "three"), ("worker", &f.owner), ("billable", "on")]));
     assert!(bad.contains("Enter hours such as 3.5"));
     let saved = redirect(post(&mut f.app, &detail, &[("action", "add_time"), ("date", "2026-11-14"), ("item", &f.support), ("hours", "3.5h"), ("rate", ""), ("worker", &f.owner), ("notes", "Replaced switch"), ("billable", "on")]));
-    assert_eq!(saved, detail);
-    let page = render(&mut f.app, &detail).html;
+    assert_eq!(saved, format!("{detail}?date=2026-11-14"));
+    let page = render(&mut f.app, &saved).html;
+    assert!(page.contains("name=\"date\" value=\"2026-11-14\""));
     assert!(page.contains("Added 3.50 h of On-Site Support (437.50)."));
     assert!(page.contains("id=\"ticket-hours\">3.50<") && page.contains("id=\"ticket-unbilled\">437.50<"));
     // Invoice it: a draft invoice for the tavern, and the time shows as billed.

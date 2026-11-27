@@ -68,7 +68,7 @@ function hostOf(bind) {
 function when(seconds) {
   if (!seconds) return 'never';
   const d = new Date(seconds * 1000);
-  return d.toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'short'});
+  return d.toLocaleString(undefined, {year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short'});
 }
 
 function shell(inner) {
@@ -90,7 +90,7 @@ function devicesTable(s) {
     if (d.unsaved) warnings.push(d.unsaved);
     if (d.revoked && d.recorded === false) warnings.push('This revocation is not saved in the books yet. It is in force now; keep this screen open until this warning goes away.');
     const revoke = !d.revoked ? `<form method="post" action="${PATH}" data-gate="hosting-revoke"><input type="hidden" name="device" value="${escape(d.id)}"><button type="submit" class="secondary">Revoke</button></form>` : '';
-    return `<tr data-device="${escape(d.id)}"><td>${escape(d.name)}</td><td>${escape(when(d.paired_at))}${d.paired_by ? ` by ${escape(d.paired_by)}` : ''}</td><td>${escape(d.revoked ? '—' : when(d.last_seen))}</td><td>${escape(status)}${warnings.map(w => `<div class="fb-remote-warning" role="alert">Not saved: ${escape(w)}</div>`).join('')}</td><td>${revoke}</td></tr>`;
+    return `<tr data-device="${escape(d.id)}"><td>${escape(d.name)}</td><td>${escape(when(d.paired_at))}${d.paired_by ? ` by ${escape(d.paired_by)}` : ''}</td><td>${escape(d.connected && !d.revoked ? 'Now' : d.last_seen ? when(d.last_seen) : '—')}</td><td>${escape(status)}${warnings.map(w => `<div class="fb-remote-warning" role="alert">Not saved: ${escape(w)}</div>`).join('')}</td><td>${revoke}</td></tr>`;
   }).join('');
   if (!rows) return '<p>No computer is paired yet.</p>';
   return `<table class="fb-hosting-devices"><thead><tr><th>Computer</th><th>Paired</th><th>Last seen</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -107,20 +107,22 @@ function page(s, {choices = [], errors = [], notices = [], port = DEFAULT_PORT} 
   const problem = s.problem ? `<section class="fb-remote-errors" role="alert"><h2>Hosting did not start</h2><p>${escape(s.problem.message)}</p>
 <form method="post" action="${PATH}" data-gate="hosting-repair"><input type="hidden" name="kind" value="${escape(s.problem.kind)}"><button type="submit">${escape(REPAIRS[s.problem.kind] || 'Repair')}</button></form>
 <p>The repair is recorded in the new remote-access audit log with your name. Nothing in the books themselves changes.</p></section>` : '';
+  const back = /^[0-9a-f-]{36}$/.test(s.company) ? `/c/${s.company}/home/` : '/';
+  const connected = (s.devices || []).filter(d => d.connected && !d.revoked).length;
   const audit = s.audit || {};
   const paused = audit.error || audit.record_error;
   const health = s.running ? `<section><h2>Audit log</h2>${paused
     ? `<div class="fb-remote-errors" role="alert"><p>Remote access is paused: ${escape(paused)}</p><p>Restarting hosting checks and repairs the log, and records the repair.</p><form method="post" action="${PATH}" data-gate="hosting-restart"><button type="submit">Restart hosting</button></form></div>`
-    : `<p>${escape(audit.lines)} entries, checked when hosting started and kept in step with the books. Each entry is chained and sealed, so editing, removing or putting back an older copy is detected.</p>`}</section>` : '';
+    : `<p>${escape(audit.lines)} ${audit.lines === 1 ? 'entry' : 'entries'}, checked when hosting started and kept in step with the books. Each entry is chained and sealed, so editing, removing or putting back an older copy is detected.</p>`}</section>` : '';
   let main;
   if (s.running) {
     const pairing = s.pairing
-      ? `<p class="fb-hosting-code">Pairing code: <strong><code id="fb-hosting-code">${escape(s.pairing.code)}</code></strong></p><p>On the other computer choose <em>File › Connect to a FreedomBooks host…</em> and enter the address above, this code and a name for that computer. The code works once, for about ${escape(Math.max(1, Math.ceil(s.pairing.seconds / 60)))} more minute(s).</p>
+      ? `<p class="fb-hosting-code">Pairing code: <strong><code id="fb-hosting-code">${escape(s.pairing.code)}</code></strong></p><p>On the other computer choose <em>File › Connect to a FreedomBooks host…</em> and enter the address above, this code and a name for that computer. The code works once, for about ${escape(Math.max(1, Math.ceil(s.pairing.seconds / 60)))} more ${s.pairing.seconds <= 60 ? 'minute' : 'minutes'}.</p>
 <form method="post" action="${PATH}" data-gate="hosting-cancel"><button type="submit" class="secondary">Cancel this code</button></form>`
       : `<form method="post" action="${PATH}" data-gate="hosting-pair"><button type="submit">Pair a computer…</button></form>`;
     main = `<section><h2>Hosting is on</h2><p>Address to give the other computers: <strong><code id="fb-hosting-addr">${escape(s.addr)}</code></strong></p>
 <p>This computer’s fingerprint: <code>${escape(s.fingerprint)}</code> (the other computer shows it after pairing; they should match).</p>
-<p>${escape(s.sessions)} connected session(s). While hosting, locking this computer signs out only you; the books stay open here for the people connected. Closing the books or quitting stops hosting and tells them.</p>
+<p>${connected} ${connected === 1 ? 'computer' : 'computers'} connected now. ${escape(s.sessions)} remote ${s.sessions === 1 ? 'session' : 'sessions'}, including sessions kept temporarily for reconnection. While hosting, locking this computer signs out only you; the books stay open here for the people connected. Closing the books or quitting stops hosting and tells them.</p>
 <form method="post" action="${PATH}" data-gate="hosting-off"><button type="submit" class="secondary">Stop hosting</button></form></section>
 <section><h2>Pair a computer</h2>${pairing}</section>`;
   } else {
@@ -132,8 +134,8 @@ ${choices.length ? `<form method="post" action="${PATH}" data-gate="hosting-on">
 <button type="submit">Turn on hosting</button></form>` : '<p class="fb-remote-warning">This computer has no private network address right now (a home or office network, or Tailscale). Connect to one, then open this screen again.</p>'}</section>`;
   }
   return shell(`${head}${problem}${main}${health}<section><h2>Paired computers</h2>${devicesTable(s)}</section>
-<p class="fb-hosting-note">Hosting works only inside your own network or tailnet; there is no port forwarding or internet exposure. See the Hosting guide (docs/hosting.md) for limits.</p>
-<p><a href="/">Back to the books</a></p>`);
+<p class="fb-hosting-note">Hosting works only inside your own network or tailnet; there is no port forwarding or internet exposure. See the FreedomBooks Hosting guide for network limits.</p>
+<p><a href="${back}">Back to the books</a></p>`);
 }
 
 // What the window title says while hosting (S5): visible to whoever is at the host, signed in or not.
@@ -145,13 +147,20 @@ function statusLabel(s) {
 
 // The controller main.cjs uses. `native` is fb-node; `exclusive` runs one long task at a time.
 // `onStatus` hears {running, bind, connected} after every change and every watch tick.
-function create({native, exclusive, os, loopback = false, onNotice = () => {}, onStatus = () => {}, note = () => {}}) {
+function create({native, exclusive, os, confirm, loopback = false, onNotice = () => {}, onStatus = () => {}, note = () => {}}) {
   let flashed = {errors: [], notices: []};
   let watching = null; // {address, interface, netmask}
   let timer = null;
+  let displayed = '';
+  let devices = [];
+  let generation;
+  // Pairing seconds tick continuously. Refresh on a changed minute or a change to the
+  // computers, audit, saved settings or active pairing, without disturbing port entry.
+  const signature = s => JSON.stringify({...s, pairing: s.pairing && {...s.pairing, seconds: Math.ceil(s.pairing.seconds / 60)}});
+
 
   const current = () => addresses(os.networkInterfaces(), {loopback});
-  const state = () => JSON.parse(native.hostingState());
+  const state = (skipIfBusy = false) => JSON.parse(native.hostingState(skipIfBusy));
   // The listening address and connected computers, with nobody signed in (fb-node hosting_status).
   const status = () => JSON.parse(native.hostingStatus());
   function publish() {
@@ -196,14 +205,38 @@ function create({native, exclusive, os, loopback = false, onNotice = () => {}, o
     Promise.resolve().then(() => exclusive(() => native.hostingEndAsync(reason))).then(() => { flash('notices', reason); publish(); onNotice(reason); }, e => note('hosting-network', e));
   }
 
+  function display(s) {
+    displayed = signature(s);
+    devices = s.devices || [];
+    generation = s.generation;
+    const shown = flashed;
+    flashed = {errors: [], notices: []};
+    return page(s, {choices: current(), ...shown});
+  }
+
   return {
     PATH,
     handles: pathname => pathname === PATH,
+    usersPage(html) {
+      if (!html.includes('<!-- hosting-presence -->') || !native.hostingActive()) return html;
+      let s;
+      try { s = state(); } catch (e) { note('hosting-presence', e); return html; }
+      if (!s.admin || !s.running) return html;
+      const rows = [[s.admin_name, 'this computer'], ...(s.signed_in || [])];
+      return html.replace('<!-- hosting-presence -->', () => `<section><h2>Signed in now</h2><ul>${rows.map(([user, computer]) => `<li>${escape(user)} · ${escape(computer)}</li>`).join('')}</ul></section>`);
+    },
     render() {
       let s;
       try { s = state(); } catch (e) { s = {available: true, open: true, admin: false}; flash('errors', e.message || e); }
-      const shown = flashed; flashed = {errors: [], notices: []};
-      return page(s, {choices: current(), ...shown});
+      return display(s);
+    },
+    poll() {
+      let s;
+      try { s = state(true); } catch (e) {
+        if (e.message !== 'BUSY') note('hosting-poll', e);
+        return null;
+      }
+      return signature(s) === displayed ? null : display(s);
     },
     async on({address, port}) {
       const choice = current().find(c => c.address === address);
@@ -216,12 +249,20 @@ function create({native, exclusive, os, loopback = false, onNotice = () => {}, o
       publish();
       return r;
     },
-    off: async () => { const r = await task(() => native.hostingOffAsync()); publish(); return r; },
+    off: async () => {
+      const accepted = generation;
+      if (status().connected && !await confirm('Stop hosting?', 'Connected computers will lose access to these books.', 'Stop hosting')) return {outcome:'done'};
+      const r = await task(() => native.hostingOffAsync(accepted)); publish(); return r;
+    },
     pair: () => task(() => native.hostingPairAsync()),
     cancel: () => task(() => native.hostingCancelPairAsync()),
     async revoke({device}) {
       try {
-        const r = JSON.parse(await exclusive(() => native.hostingRevokeAsync(device)));
+        const accepted = generation;
+        const name = devices.find(d => d.id === device)?.name || 'this computer';
+        if (!await confirm(`Revoke ${name}?`, 'It will need a new pairing code to connect again.', 'Revoke')) return {outcome:'done'};
+        const r = JSON.parse(await exclusive(() => native.hostingRevokeAsync(device, accepted), {bindSession: false}));
+        if (r.revoked && !r.already) flash('notices', `${name} was revoked.`);
         if (r.unsaved) flash('notices', `Revoked, but not saved yet: ${r.unsaved}`);
         if (r.record_unsaved) flash('notices', r.record_unsaved);
         if (r.already) flash('notices', 'That computer was already revoked.');

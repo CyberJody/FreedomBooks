@@ -147,6 +147,10 @@ mod desktop_upgrade_tests;
 mod open_tests;
 #[cfg(test)]
 mod remote_host_upgrade_tests;
+#[cfg(test)]
+mod ai_unattended_upgrade_tests;
+#[cfg(test)]
+mod deposit_adjustments_upgrade_tests;
 
 /// Numbered migrations; `PRAGMA user_version` records how many are applied.
 pub const MIGRATIONS: &[(&str, &str)] = &[
@@ -243,6 +247,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ("0204_recurring_bills", include_str!("../sql/0204_recurring_bills.sql")),
     ("0205_job_tickets", include_str!("../sql/0205_job_tickets.sql")),
     ("0206_remote_host", include_str!("../sql/0206_remote_host.sql")),
+    ("0207_bankfeed_id_provenance", include_str!("../sql/0207_bankfeed_id_provenance.sql")),
+    ("0208_ai_unattended", include_str!("../sql/0208_ai_unattended.sql")),
+    ("0209_deposit_adjustments", include_str!("../sql/0209_deposit_adjustments.sql")),
+    ("0210_bankfeeds_matching", include_str!("../sql/0210_bankfeeds_matching.sql")),
 ];
 
 /// Violation queries run on every open: each returns rows only when the books break a ledger rule
@@ -526,6 +534,7 @@ fn hex(key: &Key) -> String {
 // the book descriptor's OS lock excludes other processes opening hardlink aliases.
 struct ProcessBookGuard {
     _sidecar: std::fs::File,
+    _inode: InodeLock,
     book: std::fs::File,
     path: std::path::PathBuf,
     admission: std::sync::Mutex<()>,
@@ -554,9 +563,36 @@ impl ProcessBookGuard {
         Ok(())
     }
 }
-fn lock_book_file(file: &std::fs::File) -> Result<(), DbError> {
-    match file.try_lock() {
-        Ok(()) => Ok(()),
+/// The OS lock that keeps other processes from opening this book's inode under another name.
+/// Elsewhere it is a lock on the book file itself. On macOS `flock` and SQLite's own `fcntl`
+/// locks are one lock, so SQLite would find its book busy: there the lock is on a sidecar named
+/// by the inode, beside the book (a link or rename in the same folder maps to the same sidecar,
+/// and opening refuses a book with more than one link). Like `<book>.lock`, it is never unlinked.
+struct InodeLock(#[allow(dead_code)] Option<std::fs::File>);
+fn lock_book_file(file: &std::fs::File, _path: &Path) -> Result<InodeLock, DbError> {
+    #[cfg(target_os = "macos")]
+    let (holder, keep) = {
+        use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+        let meta = file.metadata().map_err(DbError::Io)?;
+        let folder = _path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+        let name = folder.join(format!(".freedombooks-inode-{}-{}.lock", meta.dev(), meta.ino()));
+        // As for `<book>.lock`, the book folder is trusted; still refuse a redirected sidecar.
+        let not_file = || DbError::Pragma("Book lock is not a regular file".into());
+        match std::fs::symlink_metadata(&name) {
+            Ok(m) if !m.file_type().is_file() => return Err(not_file()),
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(DbError::Io(e)),
+        }
+        let sidecar = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).mode(0o600)
+            .open(&name).map_err(DbError::Io)?;
+        if !sidecar.metadata().map_err(DbError::Io)?.is_file() { return Err(not_file()); }
+        (sidecar, true)
+    };
+    #[cfg(not(target_os = "macos"))]
+    let (holder, keep) = (file.try_clone().map_err(DbError::Io)?, false);
+    match holder.try_lock() {
+        Ok(()) => Ok(InodeLock(keep.then_some(holder))),
         Err(std::fs::TryLockError::WouldBlock) => Err(DbError::Pragma("This book is already open.".into())),
         Err(std::fs::TryLockError::Error(e)) => Err(DbError::Io(e)),
     }
@@ -573,6 +609,9 @@ fn check_recovery_marker(path: &Path) -> Result<(), DbError> {
         Ok(_) => Err(DbError::Pragma("This book is already open or has an interrupted protection change. Recover it before opening.".into())),
     }
 }
+
+/// The replacement inode's OS lock, held until maintenance finishes.
+pub struct ReplacementLock { _file: std::fs::File, _inode: InodeLock }
 
 /// A reservation on an already-open book; no new same-process connections may share its guard.
 pub struct ProtectionLease { guard: Arc<ProcessBookGuard> }
@@ -594,10 +633,10 @@ impl MaintenanceGuard {
         self._guard.ensure_single_link()
     }
     /// Lock the replacement inode before publication, until maintenance finishes.
-    pub fn lock_replacement(&self, path: &Path) -> Result<std::fs::File, DbError> {
+    pub fn lock_replacement(&self, path: &Path) -> Result<ReplacementLock, DbError> {
         let file = std::fs::OpenOptions::new().read(true).write(true).open(path).map_err(DbError::Io)?;
-        lock_book_file(&file)?;
-        Ok(file)
+        let inode = lock_book_file(&file, path)?;
+        Ok(ReplacementLock { _file: file, _inode: inode })
     }
 }
 
@@ -676,8 +715,8 @@ fn process_book_lock(path: &Path, create: bool, maintenance: bool) -> Result<Arc
         #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
         options.open(&canonical).map_err(fail)?
     } else { OpenOptions::new().read(true).write(true).open(&canonical).map_err(fail)? };
-    lock_book_file(&book)?;
-    let guard = Arc::new(ProcessBookGuard { _sidecar: file, book, path: canonical.clone(), admission: Default::default(), maintenance: std::sync::atomic::AtomicBool::new(maintenance) });
+    let inode = lock_book_file(&book, &canonical)?;
+    let guard = Arc::new(ProcessBookGuard { _sidecar: file, _inode: inode, book, path: canonical.clone(), admission: Default::default(), maintenance: std::sync::atomic::AtomicBool::new(maintenance) });
     guard.verify()?;
     if !maintenance {
         guard.ensure_single_link()?;
@@ -1612,3 +1651,5 @@ mod salestax_payments_upgrade_tests;
 mod recurring_upgrade_tests;
 #[cfg(test)]
 mod job_tickets_upgrade_tests;
+#[cfg(test)]
+mod bankfeeds_matching_upgrade_tests;

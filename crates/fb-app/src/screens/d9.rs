@@ -29,6 +29,8 @@ fn base(app: &mut App, r: &Route, path: &str) -> AppResult<Value> {
     let mut vm = super::d6::ctx(app, r)?;
     put(&mut vm, "csrf_token", token(app, path));
     put(&mut vm, "secrets_ok", app.os_store_usable);
+    put(&mut vm, "keyring_deferred", app.connection_keys == crate::ConnectionKeys::Deferred);
+    put(&mut vm, "builtin", app.builtin());
     put(&mut vm, "keyring_required", crate::net::BANK_KEYRING_REQUIRED);
     Ok(vm)
 }
@@ -136,7 +138,8 @@ fn list_page(app: &mut App, r: &Route, path: &str, notice: Option<(String, bool)
         let mine: Vec<Value> = gaps.iter().filter(|g| conn["pk"] == g.connection_id.as_str()).map(|g| json!({"from": g.from, "to": g.to})).collect();
         if !mine.is_empty() {
             conn["gaps"] = json!(mine);
-            conn["gap_token"] = json!(token(app, &sync));
+            let accounts = format!("/c/{c}/bank-feeds/{}/accounts/", conn["pk"].as_str().unwrap_or(""));
+            conn["gap_token"] = json!(token(app, &accounts));
         }
     }
     put(&mut vm, "connections", connections);
@@ -177,8 +180,13 @@ fn connection(app: &mut App, r: &Route) -> AppResult<Value> {
 fn connect_page(app: &mut App, r: &Route, path: &str, posted: Option<Posted<'_>>, e: &Errors) -> AppResult<String> {
     let mut vm = base(app, r, path)?;
     let label = match posted { Some(p) => get(p, "label").map(str::to_owned), None => Some(bf::DEFAULT_LABEL.to_owned()) };
+    // Worker item 38: the suggested name is selected when the box is clicked, so typing replaces it.
+    let mut name = Field::new("label", "Connection name", Widget::Text).attr("maxlength", "120");
+    if label.as_deref() == Some(bf::DEFAULT_LABEL) {
+        name = name.attr("data-select-on-focus", "");
+    }
     let fields = vec![
-        Field::new("label", "Connection name", Widget::Text).attr("maxlength", "120").required().value_opt(label),
+        name.required().value_opt(label),
         // A pasted token is never echoed back into the page.
         Field::new("setup_token", "Setup token", Widget::Textarea { cols: 40, rows: 4 }).attr("autocomplete", "off").attr("spellcheck", "false").required().value_opt(posted.map(|_| String::new())),
     ];
@@ -205,7 +213,8 @@ fn submit_connect(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
 fn feeds(tx: &(impl Query + ?Sized), connection_id: &str) -> Result<Vec<Value>, FbError> {
     let mut st = tx.prepare(
         "SELECT f.id,f.name,f.org_name,f.remote_id,f.currency,f.balance,f.balance_at,f.ledger_account_id,
-            (SELECT count(*) FROM bankfeeds_transaction t WHERE t.feed_account_id=f.id AND t.status='NEW')
+            (SELECT count(*) FROM bankfeeds_transaction t WHERE t.feed_account_id=f.id AND t.status='NEW'),
+            (SELECT a.code || ' · ' || a.name FROM ledger_account a WHERE a.id=f.ledger_account_id)
          FROM bankfeeds_account f WHERE f.connection_id=?1 ORDER BY f.org_name COLLATE fb_text,f.name COLLATE fb_text,f.first_seen_at,f.id",
     )?;
     Ok(st
@@ -214,27 +223,39 @@ fn feeds(tx: &(impl Query + ?Sized), connection_id: &str) -> Result<Vec<Value>, 
             let at: Option<String> = r.get(6)?;
             Ok(json!({"pk": r.get::<_, String>(0)?, "name": name, "org_name": org, "label": if org.is_empty() { name.clone() } else { format!("{org} · {name}") },
                 "remote_id": r.get::<_, String>(3)?, "currency": r.get::<_, String>(4)?, "balance": r.get::<_, Option<i64>>(5)?.map(cents),
-                "balance_at": at, "balance_at_display": stamp(at.as_deref(), "%Y-%m-%d"), "ledger_account_id": r.get::<_, Option<String>>(7)?, "new_count": r.get::<_, i64>(8)?}))
+                "balance_at": at, "balance_at_display": stamp(at.as_deref(), "%Y-%m-%d"), "ledger_account_id": r.get::<_, Option<String>>(7)?, "new_count": r.get::<_, i64>(8)?, "mapped_label": r.get::<_, Option<String>>(9)?}))
         })?
         .collect::<Result<Vec<_>, _>>()?)
+}
+// New selections in the mapping form are limited to bank and card accounts. The core
+// mapping service also supports historical asset and liability mappings.
+fn mapping_choices(app: &mut App, c: CompanyId) -> AppResult<Vec<(String, String)>> {
+    let open = app.open_mut()?;
+    let accounts = bf::mappable_accounts(&mut open.book, open.owner, c)?;
+    Ok(accounts.iter()
+        .filter(|a| matches!(a.detail_type.as_str(), "BANK" | "CREDIT_CARD"))
+        .map(|a| (a.id.to_db(), account_label(a)))
+        .collect())
 }
 fn accounts_page(app: &mut App, r: &Route, path: &str, posted: Option<Posted<'_>>, e: &Errors, errors: &[String]) -> AppResult<String> {
     let c = arg_company(r)?;
     let conn = connection(app, r)?;
-    let owner = actor(app)?;
     let mut vm = base(app, r, path)?;
-    let mappable = bf::mappable_accounts(&mut app.open_mut()?.book, owner, c)?;
     let conn_id = conn["pk"].as_str().unwrap_or("").to_owned();
     let rows = app.open_mut()?.book.read(|tx| feeds(tx, &conn_id))?;
     let mut choices = vec![(String::new(), "— not mapped —".to_owned())];
-    choices.extend(mappable.iter().map(|a| (a.id.to_db(), account_label(a))));
+    choices.extend(mapping_choices(app, c)?);
     choices.push(("__new__".into(), "Add new account…".into()));
     let mut fields = vec![];
     let mut pairs = vec![];
     for feed in &rows {
         let name = format!("map_{}", feed["pk"].as_str().unwrap_or(""));
         let value = match posted { Some(p) => get(p, &name).map(str::to_owned), None => feed["ledger_account_id"].as_str().map(str::to_owned) };
-        let f = Field::new(&name, feed["label"].as_str().unwrap_or(""), Widget::Select { choices: choices.clone() }).value_opt(value);
+        let mut row_choices = choices.clone();
+        if let Some(old) = feed["ledger_account_id"].as_str() && !choices.iter().any(|(id, _)| id == old) {
+            row_choices.push((old.to_owned(), format!("{} (existing mapping)", feed["mapped_label"].as_str().unwrap_or(""))));
+        }
+        let f = Field::new(&name, feed["label"].as_str().unwrap_or(""), Widget::Select { choices: row_choices }).value_opt(value);
         let f = f.clone().errors(e.get(&name).cloned().unwrap_or_default());
         let feed_id = feed["pk"].as_str().unwrap_or("");
         let creating = f.value.as_deref() == Some("__new__");
@@ -267,10 +288,9 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
     let c = arg_company(r)?;
     let conn = connection(app, r)?;
     let owner = actor(app)?;
-    let mappable = bf::mappable_accounts(&mut app.open_mut()?.book, owner, c)?;
+    let choices = mapping_choices(app, c)?;
     let conn_id = conn["pk"].as_str().unwrap_or("").to_owned();
     let rows = app.open_mut()?.book.read(|tx| feeds(tx, &conn_id))?;
-    let choices: Vec<(String, String)> = mappable.iter().map(|a| (a.id.to_db(), account_label(a))).collect();
     let mut e = Errors::new();
     let mut wanted = vec![];
     for feed in &rows {
@@ -288,7 +308,11 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
             };
             bf::MappingTarget::New { name, kind }
         } else {
-            let id = model_choice(p, &name, &choices, false, &mut e);
+            let id = if let Some(old) = feed["ledger_account_id"].as_str() && get(p, &name) == Some(old) {
+                Some(old.to_owned())
+            } else {
+                model_choice(p, &name, &choices, false, &mut e)
+            };
             bf::MappingTarget::Existing(id.as_deref().and_then(AccountId::parse))
         };
         wanted.push((feed_id.to_owned(), target));
@@ -299,6 +323,7 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
             Ok(()) => {
                 // A replacement connection's first download is staged before it is mapped: say now how many
                 // of its transactions are already in the books, so none is recorded twice.
+                app.messages.push("Bank account mappings saved.".into());
                 let recorded = app.open_mut()?.book.read(|tx| bf::already_recorded_count(tx, c))?;
                 if recorded > 0 {
                     app.messages.push(format!(
@@ -489,7 +514,10 @@ fn submit_rule(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
             "amount_max": if amount_max.is_empty() { Value::Null } else { json!(amount_max) },
             "account_id": account, "payee_name": payee_name, "active": active});
         match bf::save_rule(&mut app.open_mut()?.book, owner, c, &values, &bf::SecretSet::none()) {
-            Ok(_) => return Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/rules/", c.to_db()) }),
+            Ok(_) => {
+                app.messages.push("Rule saved.".into());
+                return Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/rules/", c.to_db()) });
+            }
             Err(err) => error(&mut e, "__all__", messages(err)?),
         }
     }
@@ -536,18 +564,18 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     let c = arg_company(r)?;
     match r.name.as_str() {
         "bankfeeds:connect" => submit_connect(app, r, path, p),
-        "bankfeeds:accounts" => submit_accounts(app, r, path, p),
         "bankfeeds:forget" => {
             let conn = connection(app, r)?;
             crate::plugins::bankfeed_forget(app, c, conn["pk"].as_str().unwrap_or(""))?;
             Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) })
         }
-        "bankfeeds:sync" if get(p, "action") == Some("gap_reviewed") => {
+        "bankfeeds:accounts" | "bankfeeds:sync" if get(p, "action") == Some("gap_reviewed") => {
             let conn = connection(app, r)?;
             let owner = actor(app)?;
             bf::review_sync_gap(&mut app.open_mut()?.book, owner, c, conn["pk"].as_str().unwrap_or(""), &bf::SecretSet::none())?;
             Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) })
         }
+        "bankfeeds:accounts" => submit_accounts(app, r, path, p),
         "bankfeeds:sync" => {
             let conn = connection(app, r)?;
             let label = conn["label"].as_str().unwrap_or("").to_owned();

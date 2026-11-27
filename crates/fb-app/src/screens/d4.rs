@@ -46,26 +46,72 @@ pub(crate) fn run_d4_command(app: &mut App, cmd: Command) -> AppResult<Outcome> 
         company_id,
         sales_receipt,
         values,
+        include_settlement,
     } = &cmd
     {
         let c = crate::session::company(company_id)?;
         let input = receipt_input(values, *sales_receipt);
+        if !*include_settlement {
+            let o = app.open_mut()?;
+            let (cap, vm) =
+                fb_core::sales::review_receipt_form(&mut o.book, o.owner, c, &input, *sales_receipt)?;
+            let key = invoices::remember(app, cap);
+            return Ok(Outcome::Done {
+                data: json!({"review":vm,"token":key}),
+            });
+        }
+        // Asked for: the settlement is read once, in the review's own transaction, and the review
+        // is kept for the approval that made it. Nobody else can record with its token.
+        if !app.ai.calling() {
+            return Err(AppError::Invalid(
+                "Only an AI connection can ask for the settlement.".into(),
+            ));
+        }
         let o = app.open_mut()?;
-        let (cap, vm) =
-            fb_core::sales::review_receipt_form(&mut o.book, o.owner, c, &input, *sales_receipt)?;
-        let key = invoices::remember(app, cap);
-        return Ok(Outcome::Done {
-            data: json!({"review":vm,"token":key}),
-        });
+        let (cap, vm, settlement) = fb_core::sales::review_receipt_form_with_settlement(
+            &mut o.book,
+            o.owner,
+            c,
+            &input,
+            *sales_receipt,
+        )?;
+        let key = app.ai.remember_receipt_review(cap).ok_or_else(|| {
+            AppError::Invalid("Only an AI connection can ask for the settlement.".into())
+        })?;
+        let mut data = json!({"review":vm,"token":key,"settlement":settlement});
+        if settlement.is_none() {
+            data["settlement_unavailable"] = json!(format!(
+                "more than {} entries",
+                fb_core::sales::SETTLEMENT_ENTRY_LIMIT
+            ));
+        }
+        return Ok(Outcome::Done { data });
     }
     let receipt_review = if let Command::RecordCustomerReceipt { review_token, .. } = &cmd {
-        app.sales_reviews.remove(review_token)
+        // A review made with `include_settlement` is found only by the approval that made it.
+        app.ai
+            .take_receipt_review(review_token)
+            .or_else(|| app.sales_reviews.remove(review_token))
     } else {
         None
     };
     let o = app.open_mut()?;
     let (book, actor) = (&mut o.book, o.owner);
     let data = match cmd {
+        Command::RecordCustomerReceipt {
+            company_id,
+            sales_receipt,
+            values,
+            require_same_settlement: true,
+            ..
+        } => fb_core::sales::record_receipt_same_settlement(
+            book,
+            actor,
+            crate::session::company(&company_id)?,
+            &receipt_input(&values, sales_receipt),
+            receipt_review.as_ref(),
+            sales_receipt,
+        )?,
         Command::RecordCustomerReceipt {
             company_id,
             sales_receipt,
@@ -319,14 +365,30 @@ fn display_revision(h: &mut Value) {
         s => s,
     });
 }
+pub(super) fn posted_entries(app: &mut App, c: CompanyId, journal: &str) -> AppResult<Vec<Value>> {
+    let open = app.open_mut()?;
+    Ok(open.book.read(|tx| -> Result<_, FbError> {
+        fb_core::services::access(tx, open.owner, c)?;
+        let mut st = tx.prepare(
+            "SELECT a.code, a.name, l.debit, l.credit FROM ledger_journalline l
+             JOIN ledger_journal j ON j.id=l.journal_id JOIN ledger_account a ON a.id=l.account_id
+             WHERE j.company_id=?1 AND a.company_id=?1 AND j.id=?2 ORDER BY l.position,l.id"
+        )?;
+        Ok(st.query_map(params![c.to_db(), journal], |r| {
+            Ok(json!({"code":r.get::<_,String>(0)?, "name":r.get::<_,String>(1)?,
+                "debit":cash(i128::from(r.get::<_,i64>(2)?)), "credit":cash(i128::from(r.get::<_,i64>(3)?))}))
+        })?.collect::<Result<_, _>>()?)
+    })?)
+}
 fn references(tx: &(impl Query + ?Sized), source: &str) -> Result<Vec<Value>, FbError> {
     let mut st=tx.prepare("SELECT role,account_code,account_name,account_kind FROM documents_documentaccount WHERE source_id=?1 ORDER BY role")?;
     Ok(st.query_map([source],|r|Ok(json!({"role":r.get::<_,String>(0)?,"account_code":r.get::<_,String>(1)?,"account_name":r.get::<_,String>(2)?,"account_kind":r.get::<_,String>(3)?})))?.collect::<Result<_,_>>()?)
 }
+/// `date` is the void date offered: the document's own date (worker item 10), which the person can change.
 fn reversal_fields(
     p: Option<Posted<'_>>,
     revision: i64,
-    today: chrono::NaiveDate,
+    date: String,
     _sales: bool,
     e: &Errors,
 ) -> Vec<Field> {
@@ -337,7 +399,7 @@ fn reversal_fields(
             .value_opt(v("expected_revision", revision.to_string())),
         Field::new("date", "Void date", Widget::Date)
             .required()
-            .value_opt(v("date", today.to_string())),
+            .value_opt(v("date", date)),
         Field::new("reason", "Reason", Widget::Textarea { cols: 40, rows: 2 })
             .required()
             .attr("maxlength", "500")

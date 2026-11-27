@@ -23,7 +23,7 @@ pub fn ai_context(company_id: String) -> Result<String> {
 }
 
 #[napi]
-pub fn ai_grant(company_id: String, name: String, permission: String) -> Result<String> {
+pub fn ai_grant(company_id: String, name: String, permission: String, id: Option<String>) -> Result<String> {
     guarded("ai_grant", Class::Write, |app| {
         let company = fb_app::session::company(&company_id).map_err(app_error)?;
         let permission = match permission.as_str() {
@@ -31,7 +31,7 @@ pub fn ai_grant(company_id: String, name: String, permission: String) -> Result<
             "accounting_write" => fb_app::ai::Permission::AccountingWrite,
             _ => return Err(fail("Invalid permission.")),
         };
-        Ok(app.ai_grant(company, &name, permission).map_err(app_error)?.to_string())
+        Ok(app.ai_grant_remembered(company, &name, permission, id.as_deref()).map_err(app_error)?.to_string())
     })
 }
 #[napi]
@@ -49,6 +49,7 @@ pub fn ai_revoke(id: String) -> Result<()> {
 pub fn ai_invalidate() -> Result<()> {
     guarded("ai_invalidate", Class::Read, |app| {
         app.ai.invalidate();
+        app.ai.clear_unattended();
         Ok(())
     })
 }
@@ -57,18 +58,42 @@ pub fn ai_generation() -> Result<String> {
     guarded("ai_generation", Class::Read, |app| Ok(app.ai.generation().to_string()))
 }
 #[napi]
-pub fn ai_request_async(token: String, request: Option<String>) -> Result<AsyncTask<AgentWork>> {
-    if token.len() != 64
+pub fn ai_set_unattended(id: String, epoch: String, enabled: bool) -> Result<String> {
+    guarded("ai_set_unattended", Class::Write, |app| {
+        Ok(app.ai_set_unattended(&id, &epoch, enabled).map_err(app_error)?.to_string())
+    })
+}
+#[napi]
+pub fn ai_unattended_status(proof: String) -> Result<Option<String>> {
+    let proof = Zeroizing::new(proof);
+    guarded("ai_unattended_status", Class::Read, |app| {
+        Ok(app.ai_unattended_status(&proof).map_err(app_error)?.map(|event| event.to_string()))
+    })
+}
+#[napi]
+pub fn ai_forget_all() -> Result<bool> {
+    guarded("ai_forget_all", Class::Write, |app| app.ai_forget_all().map_err(app_error))
+}
+#[napi]
+pub fn ai_request_async(token: String, request: Option<String>, proof: Option<String>) -> Result<AsyncTask<AgentWork>> {
+    if token.len() != 64 || proof.as_ref().is_some_and(|p| p.len() > 4096)
         || request
             .as_ref()
             .is_some_and(|r| r.len() > fb_app::commands::MAX_REQUEST_BYTES)
     {
         return Err(fail("Invalid agent request."));
     }
-    let generation = guarded("ai_request_async", Class::Read, |app| app.ai_session(&token).map_err(app_error))?;
+    let proof = proof.map(Zeroizing::new);
+    let (generation, token) = guarded("ai_request_async", Class::Read, |app| {
+        let token = if let Some(proof) = proof.as_ref() {
+            app.ai_prepare_unattended(proof).map_err(app_error)?
+        } else { token };
+        let token = Zeroizing::new(token);
+        Ok((app.ai_session(&token).map_err(app_error)?, token))
+    })?;
     Ok(AsyncTask::new(AgentWork {
         generation,
-        token: Zeroizing::new(token),
+        token,
         request: request.map(Zeroizing::new),
     }))
 }
@@ -80,7 +105,7 @@ pub struct AgentWork {
 impl AgentWork {
     fn current(&self, app: &mut fb_app::App) -> Result<()> {
         if self.generation != app.ai_session(&self.token).map_err(app_error)? {
-            return Err(fail("The active user or AI connection changed. Reconnect the AI."));
+            return Err(fail(if self.generation.0 == 0 { "books_closed" } else { "paused_signed_out" }));
         }
         Ok(())
     }
@@ -96,14 +121,12 @@ impl Task for AgentWork {
             let value = app
                 .ai_response(&self.token, self.request.as_deref().map(|s| s.as_str()))
                 .map_err(app_error)?;
+            self.current(app).map_err(|_| fail(if self.request.is_some() { "outcome_unknown" } else { "paused_signed_out" }))?;
             Ok(value.to_string())
         }))
     }
     fn resolve(&mut self, _env: Env, output: String) -> Result<String> {
-        guarded("ai_resolve", Class::Read, |app| {
-            self.current(app)?;
-            Ok(output)
-        })
+        Ok(output)
     }
 }
 

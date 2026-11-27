@@ -37,6 +37,7 @@ pub fn register(env: &mut Environment<'_>) {
             "from" => "Transfer from",
             "to" => "Transfer to",
             "expense" => "Expense account",
+            "adjustment" => "Fee or adjustment",
             _ => "Account",
         };
         if ((kind.as_deref() == Some("BILL") && prefix == "expense")

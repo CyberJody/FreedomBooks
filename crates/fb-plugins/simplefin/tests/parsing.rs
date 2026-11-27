@@ -370,3 +370,20 @@ fn local_date_is_the_display_zone_calendar_date_like_python_epoch_to_date() {
     assert_eq!(local_date(Some(1_700_013_600), chrono_tz::UTC).as_deref(), Some("2023-11-15"));
     assert_eq!(local_date(None, zone), None);
 }
+
+#[test]
+fn provider_ids_report_exact_wire_strings_only() {
+    let mut entry = account();
+    entry["id"] = json!(" <i>ACT</i> ");
+    entry["transactions"] = json!([
+        {"id":"ordinary","amount":"-42.00","posted":1793534400},
+        {"id":"<i>altered</i>","amount":"-42.00","posted":1793534400},
+        {"id":123,"amount":"-42.00","posted":1793534400}
+    ]);
+    let parsed = parse_account_set(&json!({"accounts":[entry]})).unwrap();
+    let row = &parsed.accounts[0];
+    assert_eq!(row.remote_id, "ACT");
+    assert!(!row.remote_id_exact);
+    assert_eq!(row.transactions.iter().map(|t| (t.remote_id.as_str(), t.remote_id_exact)).collect::<Vec<_>>(),
+        [("ordinary", true), ("altered", false), ("123", false)]);
+}

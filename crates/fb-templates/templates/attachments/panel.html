@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="{{ static('attachments/attachments.css') }}">
 <section class="attachments-panel" id="attachments" aria-labelledby="attachments-title">
 <h2 id="attachments-title">Attachments <span class="attachments-count">({{ files|length }})</span></h2>
-{% for note in notes %}<p class="attachments-note {% if note.level_tag == 'error' %}attachments-error{% else %}attachments-ok{% endif %}" role="{% if note.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ note.message }}</p>{% endfor %}
+{% for note in notes %}<p class="attachments-note {% if note.level_tag == 'error' %}attachments-error{% elif note.level_tag == 'warning' %}attachments-warning{% else %}attachments-ok{% endif %}" role="{% if note.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ note.message }}</p>{% endfor %}
 {% if files %}<table class="attachments-table"><thead><tr><th>File</th><th>Type</th><th class="num">Size</th><th>Added</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
 {% for file in files %}<tr><td class="attachments-name"><a href="{{ url('attachments:download', company.pk, file.pk) }}" download>{{ file.original_name }}</a></td><td>{{ file.type_label }}</td><td class="num">{{ file.size|filesize }}</td><td>{{ file.uploaded_by_name }} · {{ file.uploaded_at|date('Y-m-d H:i') }} UTC</td>
 <td class="attachments-actions"><a class="attachments-download" href="{{ url('attachments:download', company.pk, file.pk) }}" download>Download</a>
