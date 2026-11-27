@@ -16,13 +16,15 @@
 //! sales document's saved tax snapshot (rate/group members and their agencies); tax that no snapshot names
 //! (a manual combined rate, an imported invoice, or an older document) is shown as not linked to an agency.
 use crate::checks::support::*;
-use crate::reports::financial::{Basis, Books, share};
+use crate::reports::financial::{Basis, Books};
 use crate::{AccountId, Book, CompanyId, FbError, FbResult, Money, UserId, directory, documents, py, services};
 use chrono::NaiveDate;
 use fb_db::rusqlite::params;
 use fb_db::{Query, Writer};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+mod breakdown;
 
 /// Document kind of a sales tax payment identity.
 pub const KIND: &str = "STP";
@@ -326,45 +328,6 @@ fn tax_accounts(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<BTreeSet<A
     let ids = st.query_map([co.to_db()], |r| r.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
     Ok(ids.iter().filter_map(|i| AccountId::parse(i)).collect())
 }
-/// Per sales document identity: positive tax cents per agency from its saved tax snapshot.
-fn weights(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<HashMap<String, Vec<(String, Money)>>> {
-    let mut out: HashMap<String, Vec<(String, Money)>> = HashMap::new();
-    for sql in [
-        "SELECT i.identity_id,r.data FROM sales_invoice i JOIN sales_invoicerevision r ON r.invoice_id=i.id WHERE i.company_id=?1 AND r.journal_id IS NOT NULL ORDER BY r.number",
-        "SELECT r.identity_id,x.data FROM sales_receipt r JOIN sales_salesreceipt x ON x.receipt_id=r.id WHERE r.company_id=?1",
-        "SELECT identity_id,data FROM credits_creditmemo WHERE company_id=?1",
-    ] {
-        let mut st = q.prepare(sql)?;
-        for row in st.query_map([co.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
-            let (identity, raw) = row?;
-            if out.contains_key(&identity) {
-                continue;
-            }
-            let data: Value = fb_db::parse_unique_json_as(&raw).map_err(|_| err("Invalid stored sales document."))?;
-            let mut by: BTreeMap<String, i128> = BTreeMap::new();
-            for m in data["tax_snapshot"]["members"].as_array().into_iter().flatten() {
-                let (Some(agency), Some(tax)) = (m["agency_id"].as_str(), m["tax"].as_str()) else { continue };
-                let Ok(n) = crate::calculations::unit_rate(&json!(tax)) else { continue };
-                *by.entry(agency.to_owned()).or_default() += n.mantissa();
-            }
-            let list: Vec<(String, Money)> = by.into_iter().filter(|(_, n)| *n > 0).map(|(a, n)| (a, Money::from_cents(n))).collect();
-            out.insert(identity, list);
-        }
-    }
-    Ok(out)
-}
-/// Split signed `amount` across agencies in proportion to `w`; magnitude first, so a reversal mirrors
-/// its original exactly. Returns None when nothing attributes it.
-fn attribute(w: Option<&Vec<(String, Money)>>, amount: Money) -> FbResult<Option<BTreeMap<String, Money>>> {
-    let Some(w) = w.filter(|w| !w.is_empty()) else { return Ok(None) };
-    let total: Money = w.iter().map(|(_, n)| *n).sum();
-    let magnitude = Money::from_cents(amount.cents().abs());
-    let parts = share(w, total, magnitude)?;
-    Ok(Some(parts.into_iter().map(|(k, v)| (k, if amount.cents() < 0 { -v } else { v })).collect()))
-}
-
-// Keep ordinary JSON numbers compatible; aggregates wider than i64 use decimal
-// strings, because JSON consumers cannot universally preserve a wider integer.
 fn cents_json(n: i128) -> Value {
     i64::try_from(n).map_or_else(|_| json!(n.to_string()), |n| json!(n))
 }
@@ -375,12 +338,12 @@ pub fn report_cents(value: &Value) -> Option<i128> {
 
 #[derive(Default, Clone, Copy)]
 struct Figures {
-    opening: i128,
-    collected: i128,
-    paid: i128,
+    opening: Money,
+    collected: Money,
+    paid: Money,
 }
 impl Figures {
-    fn add(&mut self, before: bool, collected: i128, paid: i128) {
+    fn add(&mut self, before: bool, collected: Money, paid: Money) {
         if before {
             self.opening += collected - paid;
         } else {
@@ -390,8 +353,9 @@ impl Figures {
     }
     fn json(self) -> Value {
         let balance = self.opening + self.collected - self.paid;
-        json!({"opening":money(self.opening),"collected":money(self.collected),"paid":money(self.paid),"balance":money(balance),
-            "opening_cents":cents_json(self.opening),"collected_cents":cents_json(self.collected),"paid_cents":cents_json(self.paid),"balance_cents":cents_json(balance)})
+        json!({"opening":self.opening.to_string(),"collected":self.collected.to_string(),"paid":self.paid.to_string(),"balance":balance.to_string(),
+            "opening_cents":cents_json(self.opening.cents()),"collected_cents":cents_json(self.collected.cents()),
+            "paid_cents":cents_json(self.paid.cents()),"balance_cents":cents_json(balance.cents())})
     }
 }
 fn parse(d: &str) -> FbResult<NaiveDate> {
@@ -418,7 +382,7 @@ pub fn owed(q: &(impl Query + ?Sized), co: CompanyId, start: Option<&str>, end: 
         return Err(err("The start date must not be after the end date."));
     }
     let accounts = tax_accounts(q, co)?;
-    let w = weights(q, co)?;
+    let mut sales = breakdown::Sales::load(q, co, basis, start_d, end_d)?;
     let mut paid_by: HashMap<String, String> = HashMap::new();
     {
         let mut st = q.prepare("SELECT identity_id,agency_id FROM salestax_payment WHERE company_id=?1")?;
@@ -431,23 +395,17 @@ pub fn owed(q: &(impl Query + ?Sized), co: CompanyId, start: Option<&str>, end: 
     let mut unlinked = Figures::default();
     let mut book_total = Figures::default();
     let before = |d: NaiveDate| start_d.is_some_and(|s| d < s);
-    let credit = |identity: Option<&str>, d: NaiveDate, net_credit: Money, agencies: &mut BTreeMap<String, Figures>, unlinked: &mut Figures| -> FbResult<()> {
+    let mut credit = |identity: Option<&str>, d: NaiveDate, net_credit: Money, agencies: &mut BTreeMap<String, Figures>, unlinked: &mut Figures| {
         let b = before(d);
         if let Some(agency) = identity.and_then(|i| paid_by.get(i)) {
-            agencies.entry(agency.clone()).or_default().add(b, 0, -net_credit.cents());
-            return Ok(());
+            agencies.entry(agency.clone()).or_default().add(b, Money::ZERO, -net_credit);
+            return;
         }
-        match attribute(identity.and_then(|i| w.get(i)), net_credit)? {
-            Some(parts) => {
-                for (agency, n) in parts {
-                    agencies.entry(agency).or_default().add(b, n.cents(), 0);
-                }
-            }
-            None => unlinked.add(b, net_credit.cents(), 0),
+        if !sales.add_tax(identity, b, net_credit) {
+            unlinked.add(b, net_credit, Money::ZERO);
         }
-        Ok(())
     };
-    if !accounts.is_empty() {
+    if !accounts.is_empty() || basis == Basis::Cash {
         let mut st = q.prepare("SELECT l.account_id,l.debit,l.credit,j.date,j.source_id,coalesce(s.kind,'') FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id JOIN ledger_account a ON a.id=l.account_id LEFT JOIN documents_documentidentity s ON s.id=j.source_id WHERE j.company_id=?1 AND a.company_id=?1 AND j.status='POSTED' AND j.date<=?2 AND l.account_id IN(SELECT account_id FROM fb_control_accounts WHERE company_id=?1 AND role='collected_tax') ORDER BY j.date,j.number,l.position")?;
         let rows = st.query_map(params![co.to_db(), end], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?, r.get::<_, String>(3)?, r.get::<_, Option<String>>(4)?, r.get::<_, String>(5)?)))?
             .collect::<Result<Vec<_>, _>>()?;
@@ -459,21 +417,25 @@ pub fn owed(q: &(impl Query + ?Sized), co: CompanyId, start: Option<&str>, end: 
             if basis == Basis::Cash && ["INV", "BILL", "CM"].contains(&kind.as_str()) {
                 continue;
             }
-            credit(source.as_deref(), parse(&d)?, Money::from_db(credit_cents) - Money::from_db(debit), &mut agencies, &mut unlinked)?;
+            credit(source.as_deref(), parse(&d)?, Money::from_db(credit_cents) - Money::from_db(debit), &mut agencies, &mut unlinked);
         }
         let books = Books::load(q, co, basis, end_d)?;
         if basis == Basis::Cash {
             for row in books.recognition_rows(None, Some(end_d), Some(&accounts))? {
-                credit(Some(row.document.identity.as_str()), row.date, row.credit - row.debit, &mut agencies, &mut unlinked)?;
+                credit(Some(row.document.identity.as_str()), row.date, row.credit - row.debit, &mut agencies, &mut unlinked);
             }
+            sales.recognise_gross(&books);
         }
         // The balance-sheet figures for the same basis; any difference is shown as not linked to an agency.
-        let net = |nets: HashMap<AccountId, (Money, i64)>| -> i128 { accounts.iter().map(|a| -nets.get(a).map(|n| n.0.cents()).unwrap_or(0)).sum() };
+        let net = |nets: HashMap<AccountId, (Money, i64)>| -> Money {
+            accounts.iter().map(|a| -nets.get(a).map(|n| n.0).unwrap_or_default()).sum()
+        };
         let through = net(books.nets(None, Some(end_d))?);
-        let opening = match start_d { Some(s) => net(books.nets(None, s.pred_opt())?), None => 0 };
-        let period_paid: i128 = agencies.values().map(|f| f.paid).sum();
+        let opening = match start_d { Some(s) => net(books.nets(None, s.pred_opt())?), None => Money::ZERO };
+        let period_paid = agencies.values().map(|f| f.paid).sum();
         book_total = Figures { opening, collected: through - opening + period_paid, paid: period_paid };
     }
+    let (breakdown, breakdown_total) = sales.finish(&mut agencies, &mut unlinked, book_total.collected)?;
     let mut sum = unlinked;
     for f in agencies.values() {
         sum.opening += f.opening;
@@ -497,12 +459,12 @@ pub fn owed(q: &(impl Query + ?Sized), co: CompanyId, start: Option<&str>, end: 
         v
     }).collect();
     rows.sort_by(|a, b| fb_db::collation::upper(s(a, "name")).cmp(&fb_db::collation::upper(s(b, "name"))).then_with(|| s(a, "agency_id").cmp(s(b, "agency_id"))));
-    let show_unlinked = unlinked.opening != 0 || unlinked.collected != 0 || unlinked.paid != 0;
+    let show_unlinked = !unlinked.opening.is_zero() || !unlinked.collected.is_zero() || !unlinked.paid.is_zero();
     let mut u = unlinked.json();
     u["name"] = json!(UNLINKED);
     Ok(json!({"basis":basis.as_str(),"basis_label":if basis==Basis::Cash{"Cash basis: tax is owed when the customer pays"}else{"Accrual basis: tax is owed as of the invoice date"},
         "start":start,"end":end,"agencies":rows,"unlinked":if show_unlinked{u}else{Value::Null},"total":book_total.json(),
-        "accounts":accounts.iter().map(|a|a.to_db()).collect::<Vec<_>>()}))
+        "breakdown":breakdown,"breakdown_total":breakdown_total,"accounts":accounts.iter().map(|a|a.to_db()).collect::<Vec<_>>()}))
 }
 fn agencies_of(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<Vec<Value>> {
     agencies(q, co)

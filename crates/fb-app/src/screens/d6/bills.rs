@@ -783,7 +783,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         let rev = integer(p, "expected_revision", 1, None, true, &mut e).unwrap_or(0);
         let rt = clean_text(p, "review_token", 1000, true, true, &mut e);
         if e.is_empty()
-            && result_error(
+            && result_nonfield_error(
                 app.run(Command::PostBill {
                     company_id: c.to_db(),
                     bill_id: r.args["bill_id"].clone(),
@@ -962,6 +962,7 @@ fn post_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: i6
     // `fresh` is the revision this very save produced. A re-sent copy of an older page can come
     // back with a draft edited since (same request key and fields): never post that one.
     let changed = revision != fresh;
+    let mut form_errors = Errors::new();
     match app.run(Command::ReviewBill {
         company_id: c.to_db(),
         bill_id: id.clone(),
@@ -984,10 +985,13 @@ fn post_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: i6
                 {
                     return Ok(Outcome::Redirect { location: detail });
                 }
-                extra["post_notice"] = json!(format!(
-                    "Saved as a draft, not posted: {}",
-                    nonfield(&e, "__all__").join(" ")
-                ));
+                let notice = nonfield(&e, "__all__")
+                    .into_iter()
+                    .chain(nonfield(&e, "date"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                extra["post_notice"] = json!(format!("Saved as a draft, not posted: {notice}"));
+                form_errors = e;
             } else if changed {
                 extra["post_notice"] = json!(
                     "Not posted: this draft was changed after that page was shown. Check it and choose Save and post again."
@@ -1011,7 +1015,7 @@ fn post_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: i6
         args: [("company_id".to_owned(), c.to_db()), ("bill_id".to_owned(), id)].into(),
     };
     Ok(Outcome::Invalid {
-        html: form(app, &route, &edit, None, &Errors::new(), &[], &extra)?,
+        html: form(app, &route, &edit, None, &form_errors, &[], &extra)?,
     })
 }
 fn calendar(app: &mut App, r: &Route, p: Posted<'_>) -> AppResult<(String, u16)> {

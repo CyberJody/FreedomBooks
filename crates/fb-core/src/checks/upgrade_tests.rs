@@ -146,6 +146,25 @@ fn populated_prior_prefixes_upgrade_and_tampered_schema_is_not_repaired() {
                     line["origin_position"] = Value::Null;
                 }
             }
+            if let Some(companies) = copied
+                .get_mut("ledger_company")
+                .and_then(Value::as_array_mut)
+            {
+                for company in companies {
+                    let obj = company.as_object_mut().unwrap();
+                    obj.entry("fiscal_year_start_month").or_insert_with(|| json!(1));
+                    obj.entry("closing_date").or_insert(Value::Null);
+                    obj.entry("period_policy_revision").or_insert_with(|| json!(0));
+                }
+            }
+            if let Some(customers) = copied
+                .get_mut("directory_customer")
+                .and_then(Value::as_array_mut)
+            {
+                for customer in customers {
+                    customer.as_object_mut().unwrap().entry("default_terms").or_insert(Value::Null);
+                }
+            }
             for (table, rows) in copied.as_object().unwrap() {
                 assert_eq!(&before[table], rows, "prior {table}");
             }

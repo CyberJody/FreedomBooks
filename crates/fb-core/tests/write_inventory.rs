@@ -48,7 +48,9 @@ impl<'a> Visit<'a> for Calls {
                 // Makes a restored copy the working books: one Book::write that records the audit event.
                 | ("crates/fb-app/src/books.rs", "audit_made_main", "write")
                 // "Host these books": one Book::write of the single remote_host record (no accounting rows).
-                | ("crates/fb-app/src/hosting.rs", "save_host_record", "write" | "execute"));
+                | ("crates/fb-app/src/hosting.rs", "save_host_record", "write" | "execute")
+                // Backup archive file writer (CopyWorker::write, not a Book::write database mutation).
+                | ("crates/fb-app/src/screens/backups.rs", "write_copy", "write"));
             assert!(allowed || !["connection", "transaction", "transaction_with_behavior", "execute", "execute_batch", "write"].contains(&method.as_str()), "{}:{}: unreviewed desktop writer: {method}", self.path, self.function);
         }
         visit::visit_expr_method_call(self, item);

@@ -58,6 +58,9 @@ static ACTIVE: AtomicBool = AtomicBool::new(false);
 /// so Lock never fails because a remote request holds the books; it is applied before anything
 /// else at the next desktop call (`ensure_local`, `settle`) and when hosting ends.
 static LOCAL_LOCK: AtomicBool = AtomicBool::new(false);
+/// Navigating to `/hosting/` while hosting is active clears any pending restore prompt; if the
+/// hosted lease times out during the render, apply the clear on the next local session turn.
+static LOCAL_ABANDON_RESTORE: AtomicBool = AtomicBool::new(false);
 /// What the trusted main process needs with nobody signed in at the host: the listening address
 /// and the computers connected (the network watch and the window title). No secret.
 static STATUS: Mutex<Option<(String, Weak<Dispatcher<SessionBackend>>)>> = Mutex::new(None);
@@ -285,10 +288,13 @@ pub(crate) fn request_local_lock() -> bool {
     true
 }
 
-/// A Lock recorded while hosting that hosting ended before applying: the door's person signs out.
+/// A Lock (or deferred restore-prompt clear) recorded while hosting that hosting ended before applying.
 fn settle(door: &mut App) {
     if LOCAL_LOCK.swap(false, Ordering::SeqCst) {
         door.sign_out();
+    }
+    if LOCAL_ABANDON_RESTORE.swap(false, Ordering::SeqCst) {
+        door.backups.abandon_restore();
     }
 }
 
@@ -331,6 +337,9 @@ fn ensure_local(host: &mut SessionHost, local: &mut SessionId) -> Result<()> {
         // Still pending: nothing runs for the local session until it is applied.
         LOCAL_LOCK.store(true, Ordering::SeqCst);
         return Err(host_error(e));
+    }
+    if LOCAL_ABANDON_RESTORE.swap(false, Ordering::SeqCst) {
+        let _ = host.with_session(local, |app| app.backups.abandon_restore());
     }
     Ok(())
 }
@@ -862,7 +871,10 @@ pub(crate) fn repair(door: &mut App, kind: &str, host_name: &str) -> Result<Stri
 }
 
 /// What the Hosting screen shows. Never waits more than the door does; no secret is included.
-pub(crate) fn state(door: &mut App, wait: Duration) -> Result<serde_json::Value> {
+pub(crate) fn state(door: &mut App, wait: Duration, clear_restore: bool) -> Result<serde_json::Value> {
+    if clear_restore {
+        LOCAL_ABANDON_RESTORE.store(true, Ordering::SeqCst);
+    }
     let mut slot = lock(&HOSTED);
     let helper = HELPER.get().is_some();
     let last = {
@@ -879,7 +891,9 @@ pub(crate) fn state(door: &mut App, wait: Duration) -> Result<serde_json::Value>
         Some(h) => {
             let mut lease = lease(&h.shared, wait)?;
             ensure_local(&mut lease, &mut h.local)?;
-            let (admin, generation, company) = lease.with_session(&h.local, |app| (app.hosting_administrator().ok(), app.session_generation(), fb_app::screens::frame_company(app))).unwrap_or_default();
+            let (admin, generation, company) = lease.with_session(&h.local, |app| {
+                (app.hosting_administrator().ok(), app.session_generation(), fb_app::screens::frame_company(app))
+            }).unwrap_or_default();
             let record = lease.host_app().host_record().ok().flatten();
             (admin, generation, company, record, true, false)
         }

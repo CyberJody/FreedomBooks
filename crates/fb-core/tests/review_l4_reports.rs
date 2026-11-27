@@ -32,14 +32,14 @@ fn review_share_remainder_award_returns_error_without_panic() {
 #[test]
 fn review_ledger_field_errors_suppress_range_clean() {
     let input = RangeInput { preset: Some("custom"), ..Default::default() };
-    let got = params::ledger_range(&input, None, Some("bogus"), day("2026-10-29")).unwrap_err().messages();
+    let got = params::ledger_range(&input, None, Some("bogus"), day("2026-10-29"), 1).unwrap_err().messages();
     assert_eq!(got, vec!["Select a valid choice. bogus is not one of the available choices."]);
 }
 
 #[test]
 fn review_ledger_field_errors_suppress_ordering_error() {
     let input = RangeInput { start: Some("2026-12-01"), end: Some("2026-01-01"), ..Default::default() };
-    let got = params::ledger_range(&input, Some("bad"), None, day("2026-10-29")).unwrap_err().messages();
+    let got = params::ledger_range(&input, Some("bad"), None, day("2026-10-29"), 1).unwrap_err().messages();
     assert_eq!(got, vec!["Choose an account from the list."]);
 }
 
@@ -53,7 +53,7 @@ fn review_page_python_integer_underscores_are_accepted() { assert_eq!(params::pa
 #[test]
 fn review_report_form_rejects_digits_unknown_to_frozen_python_unicode() {
     let input = RangeInput { end: Some("\u{10d42}\u{10d40}\u{10d42}\u{10d46}-10-31"), ..Default::default() };
-    let got = params::range(&input, day("2026-10-29"));
+    let got = params::range(&input, day("2026-10-29"), 1);
     assert!(got.is_err(), "new Unicode digits were accepted as a year: {got:?}");
     assert_eq!(got.unwrap_err().messages(), vec!["Enter a valid date."]);
 }

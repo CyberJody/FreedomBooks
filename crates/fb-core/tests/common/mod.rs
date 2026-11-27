@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 //! Shared fixtures for the translated ledger tests.
 
+use fb_core::model::Journal;
 use fb_core::services::{self, AccountInput, DraftInput, line};
 use fb_core::{AccountId, Book, CompanyId, JournalId, UserId, users};
-use fb_core::model::Journal;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -39,11 +39,20 @@ impl Fx {
     }
 
     pub fn company(&mut self, name: &str) -> CompanyId {
-        services::create_company(&mut self.book, self.user, name, "USD", false).unwrap().id
+        services::create_company(&mut self.book, self.user, name, "USD", false)
+            .unwrap()
+            .id
     }
 
     pub fn account(&mut self, company: CompanyId, code: &str, name: &str, kind: &str) -> AccountId {
-        services::save_account(&mut self.book, self.user, company, AccountInput::new(code, name).kind(kind)).unwrap().id
+        services::save_account(
+            &mut self.book,
+            self.user,
+            company,
+            AccountInput::new(code, name).kind(kind),
+        )
+        .unwrap()
+        .id
     }
 
     /// `chart()`: a company with 1000 Cash (asset) and 3000 Capital (equity).
@@ -55,12 +64,26 @@ impl Fx {
     }
 
     /// `draft()`: debit cash / credit equity for `amount` on `date`.
-    pub fn draft(&mut self, company: CompanyId, cash: AccountId, equity: AccountId, amount: &str, date: &str) -> Journal {
+    pub fn draft(
+        &mut self,
+        company: CompanyId,
+        cash: AccountId,
+        equity: AccountId,
+        amount: &str,
+        date: &str,
+    ) -> Journal {
         services::save_draft(
             &mut self.book,
             self.user,
             company,
-            DraftInput::new(date, "Synthetic contribution", vec![line(cash).debit(amount).credit("0").build(), line(equity).debit("0").credit(amount).build()]),
+            DraftInput::new(
+                date,
+                "Synthetic contribution",
+                vec![
+                    line(cash).debit(amount).credit("0").build(),
+                    line(equity).debit("0").credit(amount).build(),
+                ],
+            ),
         )
         .unwrap()
     }
@@ -70,19 +93,35 @@ impl Fx {
     }
 
     pub fn count(&self, sql: &str) -> i64 {
-        self.book.connection().query_row(sql, [], |r| r.get(0)).unwrap()
+        self.book
+            .connection()
+            .query_row(sql, [], |r| r.get(0))
+            .unwrap()
     }
 
     pub fn audit_count(&self, action: &str) -> i64 {
-        self.book.connection().query_row("SELECT count(*) FROM ledger_auditevent WHERE action = ?1", [action], |r| r.get(0)).unwrap()
+        self.book
+            .connection()
+            .query_row(
+                "SELECT count(*) FROM ledger_auditevent WHERE action = ?1",
+                [action],
+                |r| r.get(0),
+            )
+            .unwrap()
     }
 
     pub fn journal(&self, id: JournalId) -> Journal {
-        fb_core::store::journal(self.book.connection(), id).unwrap().unwrap()
+        fb_core::store::journal(self.book.connection(), id)
+            .unwrap()
+            .unwrap()
     }
 
     pub fn line_amounts(&self, journal: JournalId, account: AccountId) -> (String, String) {
-        let l = fb_core::store::lines(self.book.connection(), journal).unwrap().into_iter().find(|l| l.account_id == account).unwrap();
+        let l = fb_core::store::lines(self.book.connection(), journal)
+            .unwrap()
+            .into_iter()
+            .find(|l| l.account_id == account)
+            .unwrap();
         (l.debit.to_string(), l.credit.to_string())
     }
 }
@@ -97,7 +136,8 @@ pub fn attack(book: &Book, sql: &str) -> Option<String> {
         Ok(()) => None,
         Err(e) => Some(fb_db::constraint_of(e).unwrap_or_else(|| format!("other: {e}"))),
     };
-    conn.execute_batch("ROLLBACK TO attack; RELEASE attack").unwrap();
+    conn.execute_batch("ROLLBACK TO attack; RELEASE attack")
+        .unwrap();
     outcome
 }
 
@@ -107,7 +147,8 @@ pub fn attack_message(book: &Book, sql: &str) -> Option<String> {
     conn.execute_batch("SAVEPOINT attack").unwrap();
     let result = conn.execute_batch(sql);
     let outcome = result.err().map(|e| e.to_string());
-    conn.execute_batch("ROLLBACK TO attack; RELEASE attack").unwrap();
+    conn.execute_batch("ROLLBACK TO attack; RELEASE attack")
+        .unwrap();
     outcome
 }
 

@@ -24,6 +24,12 @@ pub fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -> AppRe
     crate::net::bankfeed_sync(app, co, connection_id)
 }
 
+/// Refresh downloaded account metadata without importing transactions.
+pub fn bankfeed_discover(app: &mut App, co: CompanyId, connection_id: &str) -> AppResult<Result<String, Refusal>> {
+    app.authorize(Some(co), crate::identity::Permission::Write)?;
+    crate::net::bankfeed_discover(app, co, connection_id)
+}
+
 /// `bankfeeds.services.forget`: deactivate in the core, then wipe the vault envelope.
 pub fn bankfeed_forget(app: &mut App, co: CompanyId, connection_id: &str) -> AppResult<()> {
     app.authorize(Some(co), crate::identity::Permission::Administer)?;

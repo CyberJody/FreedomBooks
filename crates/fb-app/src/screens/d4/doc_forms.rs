@@ -102,12 +102,15 @@ pub(in crate::screens) fn choices(
                     ),
                 );
                 ch.tax_initial = "KEEP".into();
-                if let Some(id) = h["tax_item_id"].as_str()
-                    && let Ok(item) = fb_core::salestax::item(tx, c, id)
-                    && item["active"] == true
-                    && fb_core::salestax::same_snapshot(tx, c, &h["tax_snapshot"], &item)?
-                {
-                    ch.tax_initial = format!("T{id}");
+                if let Some(id) = h["tax_item_id"].as_str() {
+                    let choice = format!("T{id}");
+                    if ch.tax.iter().any(|(value, _)| value == &choice)
+                        && let Ok(item) = fb_core::salestax::item(tx, c, id)
+                        && item["active"] == true
+                        && fb_core::salestax::same_snapshot(tx, c, &h["tax_snapshot"], &item)?
+                    {
+                        ch.tax_initial = choice;
+                    }
                 }
             } else {
                 ch.tax_initial = "NONE".into();
@@ -161,6 +164,9 @@ fn fields(
     let today = (app.today)();
     let v = |k: &str, initial: Option<String>| super::super::d2::data_value(p, k, initial);
     let initial = |k: &str| current.and_then(|h| h[k].as_str()).map(str::to_owned);
+    let preset = preset.filter(|id| ch.customers.iter().any(|(choice, _)| choice == id));
+    let (customer_terms, customer_tax) = ch.customer_defaults(preset);
+    let automatic = if current.is_none() { "1" } else { "" };
     let on = |k: &str| p.is_some_and(|p| super::super::d2::checked(p, k));
     let mut header = vec![
         Field::new("request_key", "Request key", Widget::Hidden)
@@ -207,7 +213,9 @@ fn fields(
             },
         )
         .required()
-        .value_opt(v("tax_mode", Some(ch.tax_initial.clone()))),
+        .value_opt(v("tax_mode", Some(current.map_or(customer_tax, |_| ch.tax_initial.as_str()).to_owned()))),
+        Field::new("tax_header_auto", "", Widget::Hidden)
+            .value_opt(v("tax_header_auto", Some(automatic.to_owned()))),
         Field::new(
             "refresh_customer",
             "Update this estimate with the customer's current name and address",
@@ -248,14 +256,15 @@ fn fields(
                 field.value = Some(if field.name == "keep_archived" && choice_current.is_some() { "1" } else { "" }.into());
             }
         }
-        // A new invoice is Net 30; a saved one shows the term its dates match, else Custom.
-        let due = initial("due_date").or(Some((today + chrono::Duration::days(30)).to_string()));
-        let shown = if current.is_some() { term_for(initial("date").as_deref(), due.as_deref()) } else { "30" };
+        let due = if current.is_some() { initial("due_date") } else { standard_due(today, customer_terms) };
+        let shown = if current.is_some() { term_for(initial("date").as_deref(), due.as_deref()) } else { customer_terms };
         header.extend([
             Field::new("due_date", "Due date", Widget::Date)
                 .required()
                 .value_opt(v("due_date", due)),
             terms_with(p, Some(shown)),
+            Field::new("terms_auto", "", Widget::Hidden)
+                .value_opt(v("terms_auto", Some(automatic.to_owned()))),
         ]);
     }
     Ok((decorate(header, e), ch))
@@ -315,8 +324,42 @@ pub(in crate::screens) fn term_for(date: Option<&str>, due: Option<&str>) -> &'s
         _ => "",
     }
 }
-pub(in crate::screens) fn terms_valid(p: Posted<'_>) -> bool {
-    TERMS.iter().any(|(v, _)| Some(*v) == Some(get(p, "terms").unwrap_or("")))
+pub(super) fn standard_due(date: chrono::NaiveDate, terms: &str) -> Option<String> {
+    let days = terms.parse().ok()?;
+    let due = date.checked_add_days(chrono::Days::new(days))?.to_string();
+    fb_db::dates::parse_iso_date(&due)
+}
+
+pub(super) fn clean_due(
+    p: Posted<'_>,
+    date: &str,
+    existing_due: Option<&str>,
+    errors: &mut Errors,
+) -> Option<String> {
+    let terms = get(p, "terms").unwrap_or("");
+    if !TERMS.iter().any(|(value, _)| *value == terms) {
+        error(errors, "terms", format!("Select a valid choice. {terms} is not one of the available choices."));
+        return None;
+    }
+    if terms.is_empty() {
+        return clean_date(p, "due_date", true, errors);
+    }
+    // Preserve exact legacy retries where format-97 forms stored a submitted due date
+    // that differed from `date + terms`, while still computing standard terms authoritatively
+    // for every new submission or changed retry.
+    if let Some(prior) = existing_due
+        && let Some(raw) = get(p, "due_date")
+        && let Ok(parsed) = py::form_date(raw)
+        && parsed.to_string() == prior
+    {
+        return Some(prior.to_owned());
+    }
+    let date = py::form_date(date).ok()?;
+    let due = standard_due(date, terms);
+    if due.is_none() {
+        error(errors, "due_date", "The due date for these terms is outside the supported calendar.");
+    }
+    due
 }
 /// Terms with the initial choice shown when the form first opens.
 pub(in crate::screens) fn terms_with(p: Option<Posted<'_>>, initial: Option<&str>) -> Field {
@@ -576,6 +619,7 @@ pub(in crate::screens) fn page_for(
     let flags = if kind == KindForm::Estimate { item_flags(app, c, lines)? } else { HashMap::new() };
     put(&mut vm, "formset", formset_with(kind, &ch, p, lines, e, non, &flags));
     put(&mut vm, "catalog", ch.catalog);
+    put(&mut vm, "company_tax_default", &ch.company_tax_default);
     put(&mut vm, "customer_tax", ch.customer_tax);
     put(&mut vm, "current", current);
     let (key, template) = if kind == KindForm::Estimate {
@@ -864,16 +908,16 @@ pub(in crate::screens) fn submit(
         );
     }
     let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
-    let second = clean_date(
-        p,
-        if kind == KindForm::Estimate {
-            "expiry"
-        } else {
-            "due_date"
-        },
-        kind == KindForm::Invoice,
-        &mut e,
-    );
+    let second = if kind == KindForm::Estimate {
+        clean_date(p, "expiry", false, &mut e)
+    } else {
+        clean_due(
+            p,
+            &date,
+            retry.as_ref().and_then(|v| v["current"]["due_date"].as_str()),
+            &mut e,
+        )
+    };
     let memo = if kind == KindForm::Invoice { invoice_text(p, "memo", 2000, false, &mut e) } else { clean_text(p, "memo", 2000, false, true, &mut e) };
     let tax = get(p, "tax_mode").unwrap_or("").to_owned();
     if !ch.tax.iter().any(|(id, _)| id == &tax) {
@@ -882,14 +926,6 @@ pub(in crate::screens) fn submit(
             "tax_mode",
             if tax.is_empty() {"This field is required.".to_owned()}
             else {format!("Select a valid choice. {tax} is not one of the available choices.")},
-        );
-    }
-    if kind == KindForm::Invoice && !terms_valid(p)
-    {
-        error(
-            &mut e,
-            "terms",
-            format!("Select a valid choice. {} is not one of the available choices.", get(p, "terms").unwrap_or("")),
         );
     }
     let (lines, non) = clean_lines(p, kind, &ch, lines.len(), &mut e);

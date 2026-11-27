@@ -35,6 +35,34 @@ function controller(native, output = saves.create({bookPath:()=>JSON.parse(nativ
     if (win.isDestroyed() || win.webContents.getURL() !== url.href) throw new Error('The print view changed. Open it again and retry.');
     return target;
   }
+  const printQuery = url => url.searchParams.getAll('output').at(-1) === 'print'
+    || url.searchParams.getAll('print').at(-1) === '1';
+  async function reportPrintUrl(win, page, accepted) {
+    if (printQuery(page)) return page;
+    const href = await win.webContents.executeJavaScript(
+      'document.querySelector("a[data-report-print]")?.getAttribute("href") ?? null',
+    );
+    requireSession(accepted);
+    if (win.isDestroyed() || win.webContents.getURL() !== page.href) {
+      throw new Error('The print view changed. Open it again and retry.');
+    }
+    if (!href) {
+      page.search += (page.search ? '&' : '?') + 'output=print';
+      return page;
+    }
+    const url = new URL(href, page);
+    if (url.protocol !== page.protocol || url.host !== page.host || url.pathname !== page.pathname
+      || url.username || url.password || url.hash || !printQuery(url)) {
+      throw new Error('Open a printable document or report first.');
+    }
+    if (url.searchParams.has(PAGE_KEY)) {
+      if (!remote?.active() || url.searchParams.getAll(PAGE_KEY).some(marker => marker !== accepted)) {
+        throw new Error('Open a printable document or report first.');
+      }
+      return new URL(targetOf(url, accepted), page);
+    }
+    return url;
+  }
   async function perform(win, action, expected, accepted = generation()) {
     if (busy) throw new Error('A print action is already open.');
     busy = true;
@@ -42,19 +70,22 @@ function controller(native, output = saves.create({bookPath:()=>JSON.parse(nativ
       requireSession(accepted);
       if (!expected && win && !win.isDestroyed() && canPrint()) {
         const original = win.webContents.getURL();
-        const url = new URL(original);
+        let url = new URL(original);
         if (url.protocol === 'fb:' && url.host === 'app') {
-          url.hash='';
+          const originalTarget = targetOf(url, accepted);
           if (/^\/c\/[0-9a-f-]{36}\/(?:invoices|estimates|sales-receipts|customer-deposits)\/[0-9a-f-]{36}\/(?:revisions\/\d+\/)?$/.test(url.pathname)) {
             url.pathname += 'print/';
-          } else if (/^\/c\/[0-9a-f-]{36}\/(?:reports\/(?:profit-and-loss|balance-sheet|general-ledger)|accounts\/[0-9a-f-]{36}\/register|reconciliations\/[0-9a-f-]{36})\/$/.test(url.pathname)) {
-            url.searchParams.set('output','print');
+          } else if (/^\/c\/[0-9a-f-]{36}\/(?:reports\/(?:profit-and-loss|balance-sheet|general-ledger|ar-aging|ap-aging|vendor-1099|customer-statements|cash-flow|comparative-profit-and-loss|sales-by-customer-item|schedule-c|asset-depreciation)|accounts\/[0-9a-f-]{36}\/register|reconciliations\/[0-9a-f-]{36})\/$/.test(url.pathname)) {
+            url = await reportPrintUrl(win, url, accepted);
           }
+          url.hash = '';
           const target = targetOf(url, accepted);
-          if (target !== targetOf(new URL(original), accepted)) {
+          if (target !== originalTarget) {
             if (!await printable(target, accepted)) throw new Error('Open a printable document or report first.');
             if (win.isDestroyed() || win.webContents.getURL() !== original) throw new Error('The print view changed. Open it again and retry.');
-            if (remote?.active()) url.searchParams.set(PAGE_KEY, accepted);
+            if (remote?.active() && !url.searchParams.has(PAGE_KEY)) {
+              url.search += `${url.search ? '&' : '?'}${PAGE_KEY}=${accepted}`;
+            }
             await win.loadURL(url.href);
             requireSession(accepted);
           }
@@ -62,7 +93,12 @@ function controller(native, output = saves.create({bookPath:()=>JSON.parse(nativ
       }
       const target = await current(win, expected, accepted);
       const recovery = !remote?.active() && target === '/settings/emergency-kit/' ? JSON.parse(native.recoveryExport()) : null;
-      const options = {printBackground:true, pageSize:'Letter', landscape:/\/accounts\/[^/]+\/register\//.test(target)};
+      const printUrl = new URL(target, 'fb://app');
+      const wideComparison = /^\/c\/[^/]+\/reports\/comparative-profit-and-loss\/$/.test(printUrl.pathname)
+        && printUrl.searchParams.getAll('period').at(-1) !== 'fiscal_years';
+      const assetSchedule = /^\/c\/[^/]+\/reports\/asset-depreciation\/$/.test(printUrl.pathname);
+      const landscape = assetSchedule || wideComparison || /\/accounts\/[^/]+\/register\//.test(printUrl.pathname);
+      const options = {printBackground:true, pageSize:'Letter', landscape};
       if (action === 'print') {
         if (win.webContents.getPrintersAsync) {
           let printers;

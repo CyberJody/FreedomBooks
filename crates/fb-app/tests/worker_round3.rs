@@ -1,4 +1,4 @@
-//! Bookkeeper rounds 6 and 7 and the Neon tests of 2026-11-24 (fix list items 37-45).
+//! Bookkeeper rounds 6 and 7 and the Neon tests of 2026-11-24 (internal test notes, fix list items 37-45).
 //! Page behaviour is tested in `electron/tests/worker-fixes-3.test.cjs`; this file tests what the server draws
 //! and decides. Item 41 and 44 tests are in `attach_flow.rs`.
 mod support;

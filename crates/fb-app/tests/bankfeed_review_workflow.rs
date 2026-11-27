@@ -385,7 +385,7 @@ fn blank_number_and_transfer_target_survive_row_error_and_ignore_is_unchanged() 
     assert_eq!(status, 400);
     assert!(row(&html, pk).contains("value=\"TRANSFER\" selected"));
     assert!(row(&html, pk).contains(&format!("name=\"number_{pk}\" value=\"\"")));
-    assert!(row(&html, pk).contains(&format!("value=\"{}\" selected>Unavailable bank", f.bank)));
+    assert!(row(&html, pk).contains(&format!("value=\"{}\" selected>Unavailable account", f.bank)));
     assert_eq!(
         f.count("SELECT count(*) FROM ledger_journal WHERE status='POSTED'"),
         0
@@ -488,6 +488,7 @@ fn accepted_rule_reuses_reviewed_values(kind: &str) {
                 ("name".into(), "Reviewed office rule".into()),
                 ("match_text".into(), "OFFICE".into()),
                 ("sign".into(), "ANY".into()),
+                ("feed_account".into(), String::new()),
                 ("account".into(), f.expense.clone()),
                 ("payee_name".into(), "Reviewed vendor".into()),
                 ("active".into(), "on".into()),
@@ -505,6 +506,51 @@ fn accepted_rule_reuses_reviewed_values(kind: &str) {
         f.count("SELECT count(*) FROM ledger_journal WHERE status='POSTED'"),
         1
     );
+}
+
+#[test]
+fn rule_from_review_preselects_its_feed_and_stays_scoped_when_saved() {
+    let mut f = Fixture::new();
+    let source = &f.items["OFFICE debit"];
+    let feed = source.feed_account_id.clone();
+    let form = format!("/c/{}/bank-feeds/rules/new/", f.company);
+    let html = screens::render(&mut f.app, &format!("{form}?from={}", source.ordinal)).unwrap().html;
+    assert!(html.contains("Applies to") && html.contains("Any feed account"));
+    assert!(html.contains(&format!("value=\"{feed}\" selected")));
+    let token = f.app.tokens.mint(&form);
+    let result = f.app.run_renderer(Command::SubmitForm {
+        path: form, token,
+        fields: vec![
+            ("name".into(), "Checking-only rule".into()), ("match_text".into(), "OFFICE".into()),
+            ("sign".into(), "ANY".into()), ("account".into(), f.expense.clone()),
+            ("feed_account".into(), feed.clone()), ("active".into(), "on".into()),
+        ],
+    }).unwrap();
+    assert!(matches!(result, Outcome::Redirect { .. }));
+    let rules = format!("/c/{}/bank-feeds/rules/", f.company);
+    let html = screens::render(&mut f.app, &rules).unwrap().html;
+    assert!(html.contains("Synthetic bank · Checking"));
+    let html = f.render("");
+    assert!(row(&html, f.items["OFFICE debit"].ordinal).contains("Checking-only rule"));
+    assert!(!row(&html, f.items["OFFICE card charge"].ordinal).contains("Checking-only rule"));
+
+    let (rule, scope): (String, String) = f.app.open_mut().unwrap().book.read(|q| q.query_row(
+        "SELECT id,feed_account_id FROM bankfeeds_rule WHERE name='Checking-only rule'", [], |r| Ok((r.get(0)?,r.get(1)?)),
+    )).unwrap();
+    assert_eq!(scope, feed);
+    let edit = format!("/c/{}/bank-feeds/rules/{rule}/edit/", f.company);
+    assert!(screens::render(&mut f.app, &edit).unwrap().html.contains(&format!("value=\"{feed}\" selected")));
+    let token = f.app.tokens.mint(&edit);
+    let result = f.app.run_renderer(Command::SubmitForm {
+        path: edit, token,
+        fields: vec![
+            ("name".into(), "Renamed checking rule".into()), ("match_text".into(), "OFFICE".into()),
+            ("sign".into(), "ANY".into()), ("account".into(), f.expense.clone()),
+            ("active".into(), "on".into()),
+        ],
+    }).unwrap();
+    assert!(matches!(result, Outcome::Redirect { .. }));
+    assert_eq!(f.count(&format!("SELECT count(*) FROM bankfeeds_rule WHERE name='Renamed checking rule' AND feed_account_id='{feed}'")), 1);
 }
 
 #[test]
@@ -561,6 +607,7 @@ fn invalid_rule_keeps_reviewed_values_and_does_not_create_a_rule() {
                 ("name".into(), "Edited rule name".into()),
                 ("match_text".into(), "OFFICE".into()),
                 ("sign".into(), "OUT".into()),
+                ("feed_account".into(), String::new()),
                 ("account".into(), f.expense.clone()),
                 ("amount_min".into(), "25.00".into()),
                 ("amount_max".into(), "10.00".into()),
@@ -782,4 +829,63 @@ fn review_count_and_missing_category_follow_the_visible_rows_and_fields() {
     assert_eq!(status, 400);
     let category = row(&html, pk).split_once("class=\"cell-cat\"").unwrap().1.split("</td>").next().unwrap();
     assert!(category.contains("Choose a category for this transaction."));
+}
+
+#[test]
+fn create_rule_from_disconnected_feed_requires_explicit_scope_choice() {
+    let mut f = Fixture::new();
+    let item = f.items["OFFICE debit"].clone();
+    let conn_id: String = f
+        .app
+        .open_mut()
+        .unwrap()
+        .book
+        .read(|q| q.query_row("SELECT id FROM bankfeeds_connection LIMIT 1", [], |r| r.get(0)))
+        .unwrap();
+    {
+        let o = f.app.open_mut().unwrap();
+        bf::forget(&mut o.book, o.owner, f.company, &conn_id, &bf::SecretSet::none()).unwrap();
+    }
+    let path = format!("/c/{}/bank-feeds/rules/new/?from={}", f.company, item.ordinal);
+    let html = screens::render(&mut f.app, &path).unwrap().html;
+    assert!(html.contains("__choose_scope__"), "{html}");
+    assert!(html.contains("Choose a feed scope (source feed is disconnected)"), "{html}");
+
+    let post_path = format!("/c/{}/bank-feeds/rules/new/", f.company);
+    let base = vec![
+        ("name".into(), "Office rule".into()),
+        ("match_text".into(), "OFFICE".into()),
+        ("sign".into(), "OUT".into()),
+        ("account".into(), f.expense.clone()),
+        ("active".into(), "on".into()),
+    ];
+    for scope in [None, Some("__choose_scope__")] {
+        let mut fields = base.clone();
+        if let Some(scope) = scope {
+            fields.push(("feed_account".into(), scope.into()));
+        }
+        let token = f.app.tokens.mint(&post_path);
+        let Outcome::Invalid { html } = f.app.run_renderer(Command::SubmitForm {
+            path: post_path.clone(), token, fields,
+        }).unwrap() else {
+            panic!("expected form rejection");
+        };
+        assert!(html.contains("id_feed_account_error") &&
+            html.contains("Choose Any feed account or an active feed account."), "{html}");
+        assert_eq!(f.count("SELECT count(*) FROM bankfeeds_rule"), 0);
+    }
+
+    let token = f.app.tokens.mint(&post_path);
+    let mut fields = base;
+    fields.push(("feed_account".into(), String::new()));
+    let Outcome::Redirect { .. } = f
+        .app
+        .run_renderer(Command::SubmitForm {
+            path: post_path, token, fields,
+        })
+        .unwrap()
+    else {
+        panic!("expected redirect after explicit any-feed choice");
+    };
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_rule WHERE feed_account_id IS NULL"), 1);
 }

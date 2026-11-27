@@ -46,7 +46,7 @@ fn every_form_date_caller_rejects_digits_newer_than_frozen_python() {
     // Digits Python 3.13 knows are still accepted.
     assert_eq!(fb_core::py::form_date("\u{662}\u{660}\u{662}\u{666}-10-31").unwrap(), day("2026-10-31"));
     let input = RangeInput { start: Some("\u{6f2}\u{6f0}\u{6f2}\u{6f6}-10-01"), end: Some("2026-10-31"), ..Default::default() };
-    assert_eq!(params::range(&input, day("2026-10-29")).unwrap().start, Some(day("2026-10-01")));
+    assert_eq!(params::range(&input, day("2026-10-29"), 1).unwrap().start, Some(day("2026-10-01")));
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn ledger_cross_field_rules_wait_for_every_field() {
     let today = day("2026-10-29");
     // Field errors come in field order and suppress the range rules.
     let input = RangeInput { preset: Some("bogus"), start: Some("bad"), ..Default::default() };
-    let got = params::ledger_range(&input, Some("x"), Some("nope"), today).unwrap_err().messages();
+    let got = params::ledger_range(&input, Some("x"), Some("nope"), today, 1).unwrap_err().messages();
     assert_eq!(
         got,
         vec![
@@ -66,10 +66,10 @@ fn ledger_cross_field_rules_wait_for_every_field() {
     );
     // With every field valid the range rule still runs.
     let input = RangeInput { preset: Some("custom"), ..Default::default() };
-    assert_eq!(params::ledger_range(&input, None, Some(""), today).unwrap_err().messages(), vec!["Enter a \"To\" date for a custom range."]);
+    assert_eq!(params::ledger_range(&input, None, Some(""), today, 1).unwrap_err().messages(), vec!["Enter a \"To\" date for a custom range."]);
     let input = RangeInput { start: Some("2026-12-01"), end: Some("2026-01-01"), ..Default::default() };
     assert_eq!(
-        params::ledger_range(&input, None, None, today).unwrap_err().messages(),
+        params::ledger_range(&input, None, None, today, 1).unwrap_err().messages(),
         vec!["The \"From\" date must not be after the \"To\" date."]
     );
 }

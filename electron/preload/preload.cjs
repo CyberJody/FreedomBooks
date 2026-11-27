@@ -28,7 +28,10 @@ function stampLink(anchor, marker) {
   if (!sameOrigin(anchor.href)) return;
   const target = pageURL(anchor.href);
   if (!target.search || target.searchParams.get(PAGE_KEY) === marker) return;
-  target.searchParams.set(PAGE_KEY, marker);
+  // Append the marker without re-encoding existing query values (e.g. %2A / ~ from Rust urlencode).
+  const parts = target.search.slice(1).split('&').filter(part => !new URLSearchParams(part).has(PAGE_KEY));
+  parts.push(`${PAGE_KEY}=${encodeURIComponent(marker)}`);
+  target.search = '?' + parts.join('&');
   anchor.href = target.href;
 }
 function stampWithin(root, marker) {
@@ -95,16 +98,30 @@ document.addEventListener('click', async (event) => {
 }, true);
 
 // D8 report CSVs keep the GET links and use the existing typed export/Save-dialog path.
+const REPORT_EXPORTS = {
+  'profit-and-loss': 'profit_loss',
+  'balance-sheet': 'balance_sheet',
+  'general-ledger': 'general_ledger',
+  'ar-aging': 'ar_aging',
+  'ap-aging': 'ap_aging',
+  'vendor-1099': 'vendor_1099',
+  'customer-statements': 'reports:customer_statements',
+  'cash-flow': 'reports:cash_flow',
+  'comparative-profit-and-loss': 'reports:comparative_profit_and_loss',
+  'sales-by-customer-item': 'reports:sales_by_customer_item',
+  'schedule-c': 'reports:schedule_c_activity',
+  'asset-depreciation': 'reports:asset_depreciation_schedule',
+};
 document.addEventListener('click', async event => {
   const anchor = event.target.closest && event.target.closest('a[href]');
   if (!anchor || event.defaultPrevented || event.button !== 0) return;
   const target = new URL(anchor.href, window.location.href);
-  const match = /^\/c\/([0-9a-f-]{36})\/reports\/(profit-and-loss|balance-sheet|general-ledger)\/$/.exec(target.pathname);
-  if (target.origin !== window.location.origin || !match || target.searchParams.get('output') !== 'csv') return;
+  const match = /^\/c\/([0-9a-f-]{36})\/reports\/([a-z0-9-]+)\/$/.exec(target.pathname);
+  if (target.origin !== window.location.origin || !match || !Object.hasOwn(REPORT_EXPORTS, match[2]) ||
+      target.searchParams.getAll('output').at(-1) !== 'csv') return;
   event.preventDefault();
   try {
-    const names = {'profit-and-loss':'profit_loss','balance-sheet':'balance_sheet','general-ledger':'general_ledger'};
-    follow(await call('books.run', {type:'ExportReport', company_id:match[1], report:names[match[2]], filters:hostFields(target)}));
+    follow(await call('books.run', {type:'ExportReport', company_id:match[1], report:REPORT_EXPORTS[match[2]], filters:hostFields(target)}));
   } catch (e) { window.alert(String(e.message || e)); }
 }, true);
 
@@ -199,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // dates switches the preset to Custom, so the preset never silently overrides them. A query whose
 // start/end disagree with its preset (typed or bookmarked) shows the dates the report used in the address.
 document.addEventListener('DOMContentLoaded', () => {
-  const preset = document.querySelector('form.report-controls select#report-preset');
+  const preset = document.querySelector('form.report-controls select#report-preset, form.tax-period select#report-preset');
   const form = preset && preset.form;
   const start = form && form.querySelector('input[name=start]');
   const end = form && form.querySelector('input[name=end]');
@@ -229,7 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (key !== 'start' && key !== 'end') pairs.push([key, value]);
     else if (!placed) { placed = true; pairs.push(['start', r[0]], ['end', r[1]]); }
   }
-  window.history.replaceState(null, '', `${url.pathname}?${new URLSearchParams(pairs)}${url.hash}`);
+  let query = new URLSearchParams(pairs).toString();
+  if (form.hasAttribute('data-worksheet-target-limit')) {
+    query = query.replaceAll('*', '%2A').replaceAll('%7E', '~');
+  }
+  window.history.replaceState(null, '', `${url.pathname}?${query}${url.hash}`);
 });
 
 // One bridged submit per form at a time: a second click while the first command is in flight would only

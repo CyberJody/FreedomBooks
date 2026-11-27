@@ -15,6 +15,7 @@ use fb_db::{
 type Errors = HashMap<String, Vec<String>>;
 mod company_documents;
 mod invoice_preferences;
+mod periods;
 const REQUIRED: &str = "This field is required.";
 const CHOICE: &str = "Select a valid choice. That choice is not one of the available choices.";
 
@@ -99,6 +100,16 @@ pub(in crate::screens) fn formset_error_count(e: &Errors, p: Option<Posted<'_>>,
 
 pub(super) fn error(errors: &mut Errors, key: &str, message: impl Into<String>) {
     errors.entry(key.into()).or_default().push(message.into());
+}
+pub(super) fn posting_errors(errors: &mut Errors, nonfield_key: &str, messages: Vec<String>) {
+    let (dates, other): (Vec<_>, Vec<_>) = messages.into_iter()
+        .partition(|message| fb_core::periods::is_closed_message(message));
+    for message in dates {
+        error(errors, "date", message);
+    }
+    if !other.is_empty() {
+        error(errors, nonfield_key, other.join("; "));
+    }
 }
 pub(super) fn decorate(fields: Vec<Field>, errors: &Errors) -> Vec<Field> {
     fields
@@ -241,6 +252,7 @@ pub(super) fn render(
     path: &str,
 ) -> AppResult<(String, u16)> {
     match route.name.as_str() {
+        "company:periods" => Ok((periods::page(app, route, path)?, 200)),
         "home" => {
             let mut vm = ctx(app, route)?;
             let rows = app.query(crate::Query::Companies)?;
@@ -1136,6 +1148,7 @@ pub(super) fn is_form(name: &str) -> bool {
             | "journal_post"
             | "journal_reverse"
             | "documents:setup"
+            | "company:periods"
             | "setup_fill"
             | "setup_done"
     )
@@ -1153,6 +1166,7 @@ pub(super) fn submit(
         "company_edit" if get(fields,"action")==Some("set_next_number") => submit_numbering(app,route,path,fields),
         "journal_edit" if get(fields, "action") == Some("delete_draft") => submit_journal_delete(app, route, fields),
         "journal_new" | "journal_edit" => submit_journal(app, route, path, fields),
+        "company:periods" => periods::submit(app, route, path, fields),
         "journal_post" | "journal_reverse" => submit_journal_action(app, route, fields),
         "setup_fill" => {
             let c = arg_company(route)?;
@@ -1658,7 +1672,11 @@ fn submit_journal_action(app: &mut App, route: &Route, fields: Posted<'_>) -> Ap
             location: url("journal", &[&c.to_db(), data["id"].as_str().unwrap()]),
         }),
         Err(AppError::Core(FbError::Validation(e))) if reversing => {
-            errors.insert("__all__".into(), e);
+            if e.iter().any(|message| fb_core::periods::is_closed_message(message)) {
+                posting_errors(&mut errors, "__all__", e);
+            } else {
+                errors.insert("__all__".into(), e);
+            }
             Ok(Outcome::Invalid { html: audit::journal_page_with(app, route, Some((fields, &errors)))? })
         }
         Err(AppError::Core(FbError::Validation(e))) => Ok(Outcome::Invalid {

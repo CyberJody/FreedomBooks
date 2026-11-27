@@ -24,6 +24,7 @@ pub struct Bridge {
     pub accounts: Value,
     pub claimed: bool,
     pub requests: Vec<String>,
+    pub account_queries: Vec<String>,
 }
 pub struct FakeBridge {
     pub server: FakeServer,
@@ -31,7 +32,7 @@ pub struct FakeBridge {
 }
 impl FakeBridge {
     pub fn start(user: &str, pass: &str, accounts: Value) -> Self {
-        let state = Arc::new(Mutex::new(Bridge { user: user.into(), pass: pass.into(), accounts, claimed: false, requests: vec![] }));
+        let state = Arc::new(Mutex::new(Bridge { user: user.into(), pass: pass.into(), accounts, claimed: false, requests: vec![], account_queries: vec![] }));
         let captured = state.clone();
         let server = FakeServer::start(move |request| {
             let mut s = captured.lock().unwrap();
@@ -46,6 +47,7 @@ impl FakeBridge {
                 return FakeResponse::new(200, format!("http://{}:{}@{host}/simplefin", enc(&s.user), enc(&s.pass)));
             }
             if request.method == "GET" && request.target.starts_with("/simplefin/accounts") {
+                s.account_queries.push(request.target.split_once('?').map_or("", |(_, query)| query).to_owned());
                 let expected = format!("Basic {}", STANDARD.encode(format!("{}:{}", s.user, s.pass)));
                 if request.header("Authorization") != Some(expected.as_str()) {
                     return FakeResponse::new(403, "");
@@ -65,7 +67,7 @@ impl FakeBridge {
     }
     pub fn reset(&self, user: &str, pass: &str, accounts: Value) {
         let mut s = self.state.lock().unwrap();
-        *s = Bridge { user: user.into(), pass: pass.into(), accounts, claimed: false, requests: vec![] };
+        *s = Bridge { user: user.into(), pass: pass.into(), accounts, claimed: false, requests: vec![], account_queries: vec![] };
     }
 }
 

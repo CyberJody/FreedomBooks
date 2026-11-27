@@ -26,6 +26,9 @@ pub enum DirectoryValues {
         notes: String,
         tax_status: Option<String>,
         exemption_number: Option<String>,
+        default_terms: Option<String>,
+        #[serde(default)]
+        terms_shown: bool,
     },
     Vendor {
         display_name: String,

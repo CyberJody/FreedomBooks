@@ -99,6 +99,8 @@ fn exchange_common(app: &mut App, s: &mut SessionState) {
         device_key: _,           // installation wrapping key, independent of who is signed in
         connection_keys: _,      // installation key status
         device_alternates: _,    // superseded installation keys
+        remote_session: _,       // transport context set while a request runs
+        scheduled_retry: _,      // local-profile retry delay
         book_change_pending: _,  // the host's pending change of main books
         plugins: _,              // build feature flags
         simplefin: _,

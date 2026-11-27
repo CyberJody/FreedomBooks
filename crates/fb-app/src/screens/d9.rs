@@ -214,7 +214,8 @@ fn feeds(tx: &(impl Query + ?Sized), connection_id: &str) -> Result<Vec<Value>, 
     let mut st = tx.prepare(
         "SELECT f.id,f.name,f.org_name,f.remote_id,f.currency,f.balance,f.balance_at,f.ledger_account_id,
             (SELECT count(*) FROM bankfeeds_transaction t WHERE t.feed_account_id=f.id AND t.status='NEW'),
-            (SELECT a.code || ' · ' || a.name FROM ledger_account a WHERE a.id=f.ledger_account_id)
+            (SELECT a.code || ' · ' || a.name FROM ledger_account a WHERE a.id=f.ledger_account_id),
+            f.import_state,f.import_from_date,f.active
          FROM bankfeeds_account f WHERE f.connection_id=?1 ORDER BY f.org_name COLLATE fb_text,f.name COLLATE fb_text,f.first_seen_at,f.id",
     )?;
     Ok(st
@@ -223,7 +224,8 @@ fn feeds(tx: &(impl Query + ?Sized), connection_id: &str) -> Result<Vec<Value>, 
             let at: Option<String> = r.get(6)?;
             Ok(json!({"pk": r.get::<_, String>(0)?, "name": name, "org_name": org, "label": if org.is_empty() { name.clone() } else { format!("{org} · {name}") },
                 "remote_id": r.get::<_, String>(3)?, "currency": r.get::<_, String>(4)?, "balance": r.get::<_, Option<i64>>(5)?.map(cents),
-                "balance_at": at, "balance_at_display": stamp(at.as_deref(), "%Y-%m-%d"), "ledger_account_id": r.get::<_, Option<String>>(7)?, "new_count": r.get::<_, i64>(8)?, "mapped_label": r.get::<_, Option<String>>(9)?}))
+                "balance_at": at, "balance_at_display": stamp(at.as_deref(), "%Y-%m-%d"), "ledger_account_id": r.get::<_, Option<String>>(7)?, "new_count": r.get::<_, i64>(8)?, "mapped_label": r.get::<_, Option<String>>(9)?,
+                "import_state": r.get::<_, String>(10)?, "import_from_date": r.get::<_, Option<String>>(11)?, "active": r.get::<_, bool>(12)?}))
         })?
         .collect::<Result<Vec<_>, _>>()?)
 }
@@ -271,7 +273,14 @@ fn accounts_page(app: &mut App, r: &Route, path: &str, posted: Option<Posted<'_>
             ("".into(), "Choose account type…".into()), ("CHECKING".into(), "Checking".into()),
             ("SAVINGS".into(), "Savings".into()), ("CREDIT_CARD".into(), "Credit card".into())
         ] }).required().value(kind).errors(e.get(&type_key).cloned().unwrap_or_default());
-        pairs.push(json!([feed, forms::BoundField::from(&f), forms::BoundField::from(&new_name), forms::BoundField::from(&new_type), creating]));
+        let import_key = format!("import_from_{feed_id}");
+        let import_date = Field::new(&import_key, "Import from", Widget::Date)
+            .value_opt(posted.and_then(|p| get(p, &import_key)).or_else(|| feed["import_from_date"].as_str()).map(str::to_owned))
+            .errors(e.get(&import_key).cloned().unwrap_or_default());
+        let configure = feed["active"] == true && conn["connected"] == true
+            && conn["needs_reconnect"] != true && feed["import_state"] != "ACTIVE";
+        pairs.push(json!([feed, forms::BoundField::from(&f), forms::BoundField::from(&new_name),
+            forms::BoundField::from(&new_type), creating, configure, forms::BoundField::from(&import_date)]));
         fields.push(f);
     }
     let mut conn = conn;
@@ -280,6 +289,7 @@ fn accounts_page(app: &mut App, r: &Route, path: &str, posted: Option<Posted<'_>
     put(&mut vm, "rows", pairs);
     put(&mut vm, "form", forms::bind(&fields, &[]));
     put(&mut vm, "errors", errors);
+    put(&mut vm, "messages", std::mem::take(&mut app.messages));
     let currency = vm["company"]["currency"].clone();
     put(&mut vm, "company_currency", currency);
     draw(app, "bankfeeds/accounts.html", &vm)
@@ -293,9 +303,30 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
     let rows = app.open_mut()?.book.read(|tx| feeds(tx, &conn_id))?;
     let mut e = Errors::new();
     let mut wanted = vec![];
+    let mut import_settings = vec![];
     for feed in &rows {
         let feed_id = feed["pk"].as_str().unwrap_or("");
         let name = format!("map_{feed_id}");
+        let import_key = format!("import_from_{feed_id}");
+        if let Some(date) = get(p, &import_key) {
+            let state = get(p, &format!("import_state_{feed_id}")).unwrap_or("");
+            let expected = get(p, &format!("import_expected_{feed_id}")).unwrap_or("");
+            let valid = |date: &str| date.is_empty() || fb_db::dates::parse_iso_date(date).as_deref() == Some(date);
+            if !valid(date) {
+                error(&mut e, &import_key, "Enter a valid date.");
+            } else if !["PENDING", "READY"].contains(&state) || !valid(expected) {
+                error(&mut e, &import_key, "Reload Bank feed accounts and enter the import start again.");
+            } else {
+                import_settings.push(bf::ImportSettings {
+                    feed_account_id: feed_id.to_owned(), expected_state: state.to_owned(),
+                    expected_date: (!expected.is_empty()).then(|| expected.to_owned()),
+                    import_from_date: (!date.is_empty()).then(|| date.to_owned()),
+                });
+            }
+        }
+        if get(p, &name).is_none() {
+            continue;
+        }
         let target = if get(p, &name) == Some("__new__") {
             let name_key = format!("name_{feed_id}");
             let type_key = format!("type_{feed_id}");
@@ -319,11 +350,13 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
     }
     let mut errors = vec![];
     if e.is_empty() {
-        match bf::save_mappings(&mut app.open_mut()?.book, owner, c, &conn_id, &wanted, &bf::SecretSet::none()) {
+        match bf::save_mappings_and_import_settings(&mut app.open_mut()?.book, owner, c, &conn_id, &wanted, &import_settings, &bf::SecretSet::none()) {
             Ok(()) => {
                 // A replacement connection's first download is staged before it is mapped: say now how many
                 // of its transactions are already in the books, so none is recorded twice.
-                app.messages.push("Bank account mappings saved.".into());
+                app.messages.push(if import_settings.is_empty() { "Bank account mappings saved." } else {
+                    "Bank account mappings and import settings saved. Sync now to download transactions."
+                }.into());
                 let recorded = app.open_mut()?.book.read(|tx| bf::already_recorded_count(tx, c))?;
                 if recorded > 0 {
                     app.messages.push(format!(
@@ -374,7 +407,12 @@ fn rules_page(app: &mut App, r: &Route, path: &str, error_text: Option<String>) 
             .iter()
             .map(|rule| {
                 let a = AccountId::parse(&rule.account_id).map(|id| store::account(tx, id)).transpose()?.flatten();
-                let scope=match &rule.policy {Some(p) if p.scope!="ALL"=>bf::feed(tx,&p.scope)?.map(|f|f.label()).unwrap_or_else(||"Unavailable feed".into()),_=>"All accounts".into()};
+                let id = rule.policy.as_ref().map(|p| p.scope.as_str()).filter(|id| *id != "ALL")
+                    .or(rule.feed_account_id.as_deref());
+                let scope = match id {
+                    Some(id) => bf::feed(tx,id)?.map(|f| f.label()).unwrap_or_else(|| "Unavailable feed".into()),
+                    None => "Any feed account".into(),
+                };
                 Ok(json!({"pk": rule.id, "name": rule.name, "match_text": rule.match_text, "sign_display": sign_display(&rule.sign), "scope_label":scope,
                     "amount_min": rule.amount_min.map(cents), "amount_max": rule.amount_max.map(cents),
                     "account": {"code": a.as_ref().map(|a| a.code.clone()), "name": a.as_ref().map(|a| a.name.clone())},
@@ -447,6 +485,22 @@ fn rule_choices(app: &mut App, r: &Route, rule: Option<&bf::Rule>) -> AppResult<
     }
     Ok(accounts.iter().map(|a| (a.id.to_db(), account_label(a))).collect())
 }
+fn rule_feed_choices(app: &mut App, c: CompanyId, retained: Option<&str>) -> AppResult<Vec<(String, String)>> {
+    Ok(app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let mut st = tx.prepare(
+            "SELECT f.id,f.name,f.org_name,f.active AND c.active FROM bankfeeds_account f
+              JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1
+              AND ((f.active=1 AND c.active=1) OR f.id=?2)
+              ORDER BY f.org_name COLLATE fb_text,f.name COLLATE fb_text,f.id",
+        )?;
+        Ok(st.query_map(params![c.to_db(), retained], |r| {
+            let (id, name, org, active): (String, String, String, bool) = (r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?);
+            let label = if org.is_empty() { name } else { format!("{org} · {name}") };
+            Ok((id, if active { label } else { format!("{label} (disconnected)") }))
+        })?.collect::<Result<_, _>>()?)
+    })?)
+}
+
 fn rule_page(app: &mut App, r: &Route, path: &str, params: Posted<'_>, posted: Option<Posted<'_>>, e: &Errors) -> AppResult<String> {
     let c = arg_company(r)?;
     let rule = rule_at(app, r)?;
@@ -460,6 +514,7 @@ fn rule_page(app: &mut App, r: &Route, path: &str, params: Posted<'_>, posted: O
         initial.insert("amount_min", rule.amount_min.map(cents));
         initial.insert("amount_max", rule.amount_max.map(cents));
         initial.insert("account", Some(rule.account_id.clone()));
+        initial.insert("feed_account", rule.feed_account_id.clone());
         initial.insert("payee_name", Some(rule.payee_name.clone()));
         active_initial = rule.active;
     } else {
@@ -473,11 +528,31 @@ fn rule_page(app: &mut App, r: &Route, path: &str, params: Posted<'_>, posted: O
     };
     let mut account_choices = vec![(String::new(), "---------".to_owned())];
     account_choices.extend(choices);
+    const DISCONNECTED_SCOPE: &str = "__choose_scope__";
+    let mut feed_choices = vec![(String::new(), "Any feed account".to_owned())];
+    feed_choices.extend(rule_feed_choices(app, c, rule.as_ref().and_then(|r| r.feed_account_id.as_deref()))?);
+    let mut feed_value = value("feed_account");
+    if rule.is_none()
+        && let Some(selected) = feed_value.as_deref().filter(|id| !id.is_empty())
+        && !feed_choices.iter().any(|(id, _)| id == selected)
+    {
+        feed_choices.insert(
+            0,
+            (
+                DISCONNECTED_SCOPE.into(),
+                "Choose a feed scope (source feed is disconnected)".into(),
+            ),
+        );
+        if posted.is_none() {
+            feed_value = Some(DISCONNECTED_SCOPE.into());
+        }
+    }
     let active = match posted { Some(p) => checked(p, "active"), None => active_initial };
     let fields = vec![
         Field::new("name", "Rule name", Widget::Text).attr("maxlength", "120").required().value_opt(value("name")),
         Field::new("match_text", "Bank description contains", Widget::Text).attr("maxlength", "200").required().value_opt(value("match_text")),
-        Field::new("sign", "Applies to", Widget::Select { choices: vec![("ANY".into(), "Money in or out".into()), ("IN".into(), "Money in".into()), ("OUT".into(), "Money out".into())] }).required().value_opt(value("sign")),
+        Field::new("feed_account", "Applies to", Widget::Select { choices: feed_choices }).value_opt(feed_value),
+        Field::new("sign", "Direction", Widget::Select { choices: vec![("ANY".into(), "Money in or out".into()), ("IN".into(), "Money in".into()), ("OUT".into(), "Money out".into())] }).required().value_opt(value("sign")),
         Field::new("amount_min", "Minimum amount", Widget::Text).attr("inputmode", "decimal").attr("maxlength", "32").value_opt(value("amount_min")),
         Field::new("amount_max", "Maximum amount", Widget::Text).attr("inputmode", "decimal").attr("maxlength", "32").value_opt(value("amount_max")),
         Field::new("account", "Category (account)", Widget::Select { choices: account_choices }).required().value_opt(value("account")),
@@ -505,6 +580,16 @@ fn submit_rule(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
     let amount_min = char_field(p, "amount_min", 32, false, &mut e);
     let amount_max = char_field(p, "amount_max", 32, false, &mut e);
     let account = model_choice(p, "account", &choices, true, &mut e);
+    let prior_scope = rule.as_ref().and_then(|r| r.feed_account_id.as_deref());
+    let feed_choices = rule_feed_choices(app, c, prior_scope)?;
+    let feed = match get(p, "feed_account") {
+        None if rule.is_some() => prior_scope.map(str::to_owned),
+        None | Some("__choose_scope__") => {
+            error(&mut e, "feed_account", "Choose Any feed account or an active feed account.");
+            None
+        }
+        Some(_) => model_choice(p, "feed_account", &feed_choices, false, &mut e),
+    };
     let payee_name = char_field(p, "payee_name", 120, false, &mut e);
     let active = checked(p, "active");
     if e.is_empty() {
@@ -512,7 +597,7 @@ fn submit_rule(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
         let values = json!({"rule_id": rule.as_ref().map(|x| x.id.clone()), "name": name, "match_text": match_text, "sign": sign,
             "amount_min": if amount_min.is_empty() { Value::Null } else { json!(amount_min) },
             "amount_max": if amount_max.is_empty() { Value::Null } else { json!(amount_max) },
-            "account_id": account, "payee_name": payee_name, "active": active});
+            "account_id": account, "feed_account_id": feed, "payee_name": payee_name, "active": active});
         match bf::save_rule(&mut app.open_mut()?.book, owner, c, &values, &bf::SecretSet::none()) {
             Ok(_) => {
                 app.messages.push("Rule saved.".into());
@@ -576,6 +661,21 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             Ok(Outcome::Redirect { location: format!("/c/{}/bank-feeds/", c.to_db()) })
         }
         "bankfeeds:accounts" => submit_accounts(app, r, path, p),
+        "bankfeeds:sync" if get(p, "action") == Some("discover") => {
+            let conn = connection(app, r)?;
+            let id = conn["pk"].as_str().unwrap_or("");
+            let accounts_path = format!("/c/{c}/bank-feeds/{id}/accounts/");
+            match crate::plugins::bankfeed_discover(app, c, id)? {
+                Ok(summary) => {
+                    app.messages.push(summary);
+                    Ok(Outcome::Redirect { location: accounts_path })
+                }
+                Err(message) => {
+                    let route = resolve(&accounts_path).ok_or_else(|| AppError::NotFound("bankfeeds:accounts".into()))?;
+                    Ok(Outcome::Invalid { html: accounts_page(app, &route, &accounts_path, None, &Errors::new(), &[message])? })
+                }
+            }
+        }
         "bankfeeds:sync" => {
             let conn = connection(app, r)?;
             let label = conn["label"].as_str().unwrap_or("").to_owned();

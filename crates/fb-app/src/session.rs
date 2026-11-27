@@ -177,6 +177,8 @@ impl Default for Host {
 pub struct App {
     pub ai: crate::ai::Authority,
     pub(crate) identity: crate::identity::Identity,
+    pub(crate) remote_session: bool,
+    pub(crate) scheduled_retry: Option<crate::scheduled_backups::Backoff>,
     pub(crate) legacy_credentials: bool,
     pub(crate) prepared_connection: Option<u64>,
     pub host: Host,
@@ -307,6 +309,8 @@ impl App {
         App {
             ai: Default::default(),
             identity: Default::default(),
+            remote_session: false,
+            scheduled_retry: None,
             legacy_credentials: false,
             prepared_connection: None,
             frame_company: None,

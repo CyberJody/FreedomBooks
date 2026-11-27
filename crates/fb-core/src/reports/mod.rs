@@ -1,11 +1,27 @@
 //! Port of `ledger/reports.py` (the account register and the trial balance), with the financial reports of
 //! `ledger/financial.py` in [`financial`] and the report-control data logic of `ledger/report_views.py` in [`params`].
 
+pub mod asset_depreciation_schedule;
+pub mod cash_flow;
+pub mod comparative_profit_and_loss;
+pub mod customer_statement;
 pub mod financial;
 pub mod params;
+mod receivables;
+pub mod sales_by_customer_item;
+pub mod schedule_c_activity;
+pub mod subledgers;
+
+pub use asset_depreciation_schedule::asset_depreciation_schedule;
+pub use cash_flow::cash_flow;
+pub use comparative_profit_and_loss::comparative_profit_and_loss;
+pub use customer_statement::customer_statement;
+pub use sales_by_customer_item::sales_by_customer_item;
+pub use schedule_c_activity::schedule_c_activity;
 #[cfg(test)]
 mod tests;
 
+use chrono::NaiveDate;
 use crate::error::{FbError, FbResult};
 use crate::model::*;
 use crate::py;
@@ -16,6 +32,25 @@ use fb_db::rusqlite::params;
 use fb_ids::{AccountId, CompanyId, JournalId, UserId};
 use fb_money::Money;
 use std::collections::HashMap;
+
+const MAX_ROWS: usize = 5_000;
+
+fn check_range(start: NaiveDate, end: NaiveDate) -> FbResult<()> {
+    if start > end {
+        return Err(FbError::validation("The \"From\" date must not be after the \"To\" date."));
+    }
+    if start < params::min_date() || end > params::max_date() {
+        return Err(FbError::validation(params::BOUNDS_MESSAGE));
+    }
+    Ok(())
+}
+
+fn check_rows(count: usize) -> FbResult<()> {
+    if count > MAX_ROWS {
+        return Err(FbError::validation("This report exceeds 5,000 rows. Choose a shorter date range or a broader grouping."));
+    }
+    Ok(())
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RegisterRow {

@@ -47,7 +47,7 @@ fn desktop() -> (tempfile::TempDir, String) {
 }
 
 fn state() -> serde_json::Value {
-    hosting::state(&mut app().unwrap(), hosting::DOOR_WAIT).unwrap()
+    hosting::state(&mut app().unwrap(), hosting::DOOR_WAIT, false).unwrap()
 }
 
 fn on() -> Result<(), String> {

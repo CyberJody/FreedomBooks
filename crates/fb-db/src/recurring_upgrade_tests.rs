@@ -25,7 +25,8 @@ fn installed_format_90_history_is_unchanged_and_recurring_is_one_additive_migrat
     assert_eq!(MIGRATIONS[94].0, "0208_ai_unattended");
     assert_eq!(MIGRATIONS[95].0, "0209_deposit_adjustments");
     assert_eq!(MIGRATIONS[96].0, "0210_bankfeeds_matching");
-    assert_eq!(MIGRATIONS.len(), 97);
+    assert_eq!(MIGRATIONS[97].0, "0211_company_and_bankfeed_defaults");
+    assert_eq!(MIGRATIONS.len(), 98);
     let dir = tempfile::tempdir().unwrap();
     let book = Book::create(&dir.path().join("format92.fbbook"), &[92; 32]).unwrap();
     assert!(book.check().unwrap().is_empty());

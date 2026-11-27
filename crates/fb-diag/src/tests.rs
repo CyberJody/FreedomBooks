@@ -241,15 +241,22 @@ fn build_labels_never_invent_a_commit() {
 }
 
 /// The hook under the conditions that used to abort the process: stderr closed, stderr on a full
-/// device, the log folder unwritable, and writes to the log failing as on a full disk. Each runs
+/// device on Linux, the log folder unwritable, and writes to the log failing as on a full disk. Each runs
 /// in a child process (this test binary again); each must survive and catch its panics.
 #[cfg(unix)]
 #[test]
 fn the_hook_survives_closed_or_full_stderr_an_unwritable_folder_and_a_full_disk() {
-    for mode in ["stderr-closed", "stderr-full", "folder-unwritable", "disk-full"] {
+    for mode in [
+        "stderr-closed",
+        #[cfg(target_os = "linux")]
+        "stderr-full",
+        "folder-unwritable",
+        "disk-full",
+    ] {
         let dir = tempfile::tempdir().unwrap();
         let mut command = std::process::Command::new(std::env::current_exe().unwrap());
         command.args(["--exact", "tests::child_process_under_test", "--nocapture", "--test-threads=1"]).env("FB_DIAG_CHILD", mode).env("FB_DIAG_CHILD_DIR", dir.path()).env_remove("FB_DIAG_STDERR");
+        #[cfg(target_os = "linux")]
         if mode == "stderr-full" {
             command.stderr(std::fs::OpenOptions::new().write(true).open("/dev/full").unwrap());
         }

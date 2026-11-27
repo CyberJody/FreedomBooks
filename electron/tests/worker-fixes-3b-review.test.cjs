@@ -1,5 +1,5 @@
 'use strict';
-// Review of the round 7 bank-feed features (M1 and M7): the fee and
+// Review of the round 7 bank-feed features (internal test notes, M1 and M7): the fee and
 // adjustment lines on Receive payment, in a real sandboxed Electron window with the real preload, page scripts
 // (sales/receipts.js, banking/fees.js) and stylesheets. The main process is a stand-in for `books.run` that
 // records each command. Hidden window, headless platform: no display is used. Clicks and keys are real input

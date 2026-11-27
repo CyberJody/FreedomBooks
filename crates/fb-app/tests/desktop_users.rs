@@ -379,15 +379,14 @@ fn interrupted_owner_enrollment_reopens_and_a_genuine_0184_book_upgrades_with_ba
         &fb_core::bankfeeds::SecretSet::none(),
     )
     .unwrap();
-    let before = fb_db::test_support::populated_copy(
+    let prior = fb_db::test_support::populated_copy(
         source.connection(),
         &path,
         &key,
         "0184_release_guard_union",
         true,
     )
-    .unwrap()
-    .before;
+    .unwrap();
     drop(source);
     let mut app = App::new();
     app.backups.configure(dir.path()).unwrap();
@@ -395,8 +394,8 @@ fn interrupted_owner_enrollment_reopens_and_a_genuine_0184_book_upgrades_with_ba
     assert!(app.upgrade_notice.is_some());
     let after =
         fb_db::test_support::snapshot(app.open.as_ref().unwrap().book.connection()).unwrap();
-    for (table, rows) in before {
-        assert_eq!(after[&table], rows, "retained rows changed in {table}");
+    for table in prior.before.keys() {
+        assert_eq!(after[table], prior.expected[table], "retained rows changed in {table}");
     }
     assert_eq!(
         app.bootstrap_owner().unwrap(),

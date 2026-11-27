@@ -187,7 +187,7 @@
       },
       "expect_error": true,
       "expect_kind": "ValidationError",
-      "expect_message": "Transfer from and to two different bank accounts."
+      "expect_message": "Choose two different accounts for the transfer."
     },
     {
       "op": "transfers_record",
@@ -203,7 +203,7 @@
       },
       "expect_error": true,
       "expect_kind": "ValidationError",
-      "expect_message": "500 · Expense is not an active bank account. Transfers move money between two bank accounts."
+      "expect_message": "Choose two eligible bank or credit card accounts from this company."
     },
     {
       "op": "transfers_record",

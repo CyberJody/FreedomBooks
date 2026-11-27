@@ -1,6 +1,7 @@
 use super::{BackupError, Result};
 use std::{
     fs::{self, File, OpenOptions},
+    io::{self, Write},
     path::{Component, Path, PathBuf},
 };
 
@@ -83,41 +84,27 @@ pub fn new_file(path: &Path) -> Result<File> {
     }
     Ok(opts.open(path)?)
 }
+#[cfg(unix)]
+fn directory_handle(path: &Path) -> Result<File> {
+    use rustix::fs::{Mode, OFlags, open, openat};
+    let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+    let mut dir = File::from(open("/", flags, Mode::empty())?);
+    for component in path.components() {
+        if let Component::Normal(part) = component {
+            dir = File::from(openat(&dir, part, flags, Mode::empty())?);
+        }
+    }
+    Ok(dir)
+}
+
 pub fn regular(path: &Path) -> Result<File> {
-    resolve(path)?;
+    let path = resolve(path)?;
     #[cfg(unix)]
     let f = {
-        use rustix::fs::{Mode, OFlags, open, openat};
-        let path = resolve(path)?;
-        let parts: Vec<_> = path
-            .components()
-            .filter_map(|c| {
-                if let Component::Normal(p) = c {
-                    Some(p)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        let mut directory = File::from(open(
-            "/",
-            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
-            Mode::empty(),
-        )?);
-        for (i, part) in parts.iter().enumerate() {
-            let last = i + 1 == parts.len();
-            let flags = OFlags::RDONLY
-                | OFlags::NOFOLLOW
-                | OFlags::CLOEXEC
-                | OFlags::NONBLOCK
-                | if last {
-                    OFlags::empty()
-                } else {
-                    OFlags::DIRECTORY
-                };
-            directory = File::from(openat(&directory, *part, flags, Mode::empty())?);
-        }
-        directory
+        let (Some(parent), Some(name)) = (path.parent(), path.file_name()) else {
+            return Err(BackupError::refused("Expected a regular file."));
+        };
+        open_read_at(&directory_handle(parent)?, name)?
     };
     #[cfg(not(unix))]
     let f = File::open(path)?;
@@ -125,6 +112,214 @@ pub fn regular(path: &Path) -> Result<File> {
         return Err(BackupError::refused("Expected a regular file."));
     }
     Ok(f)
+}
+
+#[cfg(unix)]
+fn open_read_at(dir: &File, name: &std::ffi::OsStr) -> io::Result<File> {
+    use rustix::fs::{Mode, OFlags, openat};
+    Ok(File::from(
+        openat(
+            dir,
+            name,
+            OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC | OFlags::NONBLOCK,
+            Mode::empty(),
+        )
+        .map_err(io::Error::from)?,
+    ))
+}
+
+/// A symlink-free directory whose file operations are relative to its pinned
+/// descriptor on Unix. Elsewhere each operation revalidates the directory path.
+pub struct Directory {
+    #[cfg(unix)]
+    fd: File,
+    #[cfg(not(unix))]
+    path: PathBuf,
+}
+
+impl Directory {
+    pub fn open(path: &Path) -> Result<Self> {
+        let path = resolve(path)?;
+        #[cfg(unix)]
+        return Ok(Self {
+            fd: directory_handle(&path)?,
+        });
+        #[cfg(not(unix))]
+        if fs::symlink_metadata(&path)?.is_dir() {
+            Ok(Self { path })
+        } else {
+            Err(BackupError::refused("Expected a directory."))
+        }
+    }
+
+    fn filename(name: &str) -> Result<&std::ffi::OsStr> {
+        let name = Path::new(name);
+        match (name.components().next(), name.file_name()) {
+            (Some(Component::Normal(part)), Some(file)) if part == name.as_os_str() => Ok(file),
+            _ => Err(BackupError::refused("Expected a filename.")),
+        }
+    }
+
+    pub fn read_file(&self, name: &str) -> Result<Option<File>> {
+        let name = Self::filename(name)?;
+        #[cfg(unix)]
+        let file = open_read_at(&self.fd, name);
+        #[cfg(not(unix))]
+        let file = {
+            let path = resolve(&self.path.join(name))?;
+            match fs::symlink_metadata(&path) {
+                Ok(meta) if !meta.is_file() => {
+                    return Err(BackupError::refused("Expected a regular file."));
+                }
+                Ok(_) => File::open(path),
+                Err(e) => Err(e),
+            }
+        };
+        match file {
+            Ok(f) if f.metadata()?.is_file() => Ok(Some(f)),
+            Ok(_) => Err(BackupError::refused("Expected a regular file.")),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    pub fn replace_private_file(&self, name: &str, bytes: &[u8]) -> Result<()> {
+        let name = Self::filename(name)?;
+        #[cfg(unix)]
+        {
+            use rustix::fs::{AtFlags, FileType, Mode, OFlags, openat, renameat, statat, unlinkat};
+            match statat(&self.fd, name, AtFlags::SYMLINK_NOFOLLOW) {
+                Ok(stat) if FileType::from_raw_mode(stat.st_mode) == FileType::RegularFile => (),
+                Ok(_) => return Err(BackupError::refused("Expected a regular file.")),
+                Err(rustix::io::Errno::NOENT) => (),
+                Err(e) => return Err(e.into()),
+            }
+            let temp = format!(".tmp-{}", fb_ids::new_v7());
+            let mut file = File::from(openat(
+                &self.fd,
+                temp.as_str(),
+                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::CLOEXEC,
+                Mode::from_bits_truncate(0o600),
+            )?);
+            let result = (|| {
+                file.write_all(bytes)?;
+                file.sync_all()?;
+                renameat(&self.fd, temp.as_str(), &self.fd, name)?;
+                self.fd.sync_all()?;
+                Ok(())
+            })();
+            if result.is_err() {
+                let _ = unlinkat(&self.fd, temp.as_str(), AtFlags::empty());
+            }
+            result
+        }
+        #[cfg(not(unix))]
+        {
+            let path = resolve(&self.path.join(name))?;
+            match fs::symlink_metadata(&path) {
+                Ok(meta) if meta.is_file() => (),
+                Ok(_) => return Err(BackupError::refused("Expected a regular file.")),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => (),
+                Err(e) => return Err(e.into()),
+            }
+            let mut temp = tempfile::NamedTempFile::new_in(&self.path)?;
+            temp.write_all(bytes)?;
+            temp.as_file().sync_all()?;
+            temp.persist(path).map_err(|e| e.error)?;
+            Ok(())
+        }
+    }
+
+    pub(super) fn create_private_subdir(&self, prefix: &str) -> Result<(String, Self)> {
+        let name = format!("{prefix}{}", fb_ids::new_v7());
+        let file = Self::filename(&name)?;
+        #[cfg(unix)]
+        {
+            use rustix::fs::{Mode, OFlags, mkdirat, openat};
+            mkdirat(&self.fd, file, Mode::from_bits_truncate(0o700))?;
+            let fd = openat(
+                &self.fd,
+                file,
+                OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+                Mode::empty(),
+            )?;
+            self.sync()?;
+            Ok((name, Self { fd: File::from(fd) }))
+        }
+        #[cfg(not(unix))]
+        {
+            let path = resolve(&self.path.join(file))?;
+            fs::create_dir(&path)?;
+            Ok((name, Self { path }))
+        }
+    }
+
+    pub(super) fn rename_to(&self, from: &str, to_dir: &Self, to: &str) -> io::Result<()> {
+        let from = Self::filename(from).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
+        let to = Self::filename(to).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
+        #[cfg(unix)]
+        {
+            rustix::fs::renameat(&self.fd, from, &to_dir.fd, to).map_err(io::Error::from)
+        }
+        #[cfg(not(unix))]
+        {
+            fs::rename(self.path.join(from), to_dir.path.join(to))
+        }
+    }
+
+    pub(super) fn link_to(&self, from: &str, to_dir: &Self, to: &str) -> io::Result<()> {
+        let from = Self::filename(from).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
+        let to = Self::filename(to).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
+        #[cfg(unix)]
+        {
+            rustix::fs::linkat(&self.fd, from, &to_dir.fd, to, rustix::fs::AtFlags::empty())
+                .map_err(io::Error::from)
+        }
+        #[cfg(not(unix))]
+        {
+            fs::hard_link(self.path.join(from), to_dir.path.join(to))
+        }
+    }
+
+    pub(super) fn unlink_file(&self, name: &str) -> io::Result<()> {
+        let name = Self::filename(name).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
+        #[cfg(unix)]
+        {
+            rustix::fs::unlinkat(&self.fd, name, rustix::fs::AtFlags::empty()).map_err(io::Error::from)
+        }
+        #[cfg(not(unix))]
+        {
+            fs::remove_file(self.path.join(name))
+        }
+    }
+
+    pub(super) fn remove_empty_subdir(&self, name: &str) -> Result<()> {
+        let name = Self::filename(name)?;
+        #[cfg(unix)]
+        {
+            match rustix::fs::unlinkat(&self.fd, name, rustix::fs::AtFlags::REMOVEDIR) {
+                Ok(()) => Ok(()),
+                Err(rustix::io::Errno::NOTEMPTY | rustix::io::Errno::EXIST | rustix::io::Errno::NOENT) => Ok(()),
+                Err(e) => Err(e.into()),
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let path = self.path.join(name);
+            if fs::read_dir(&path)?.next().is_none() {
+                fs::remove_dir(&path)?;
+            }
+            Ok(())
+        }
+    }
+
+    pub(super) fn sync(&self) -> Result<()> {
+        #[cfg(unix)]
+        {
+            self.fd.sync_all()?;
+        }
+        Ok(())
+    }
 }
 pub fn lock_file(path: &Path) -> Result<File> {
     resolve(path)?;
@@ -152,6 +347,17 @@ pub fn lock_file(path: &Path) -> Result<File> {
     }
     Ok(f)
 }
+pub(super) fn temp_directory(root: &Path, prefix: &str) -> Result<tempfile::TempDir> {
+    let mut builder = tempfile::Builder::new();
+    builder.prefix(prefix);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(fs::Permissions::from_mode(0o700));
+    }
+    Ok(builder.tempdir_in(root)?)
+}
+
 pub fn sync_dir(path: &Path) -> Result<()> {
     #[cfg(unix)]
     {
@@ -174,7 +380,7 @@ pub fn require_space(path: &Path, bytes: u64) -> Result<()> {
         parent.pop();
     }
     if fs2::available_space(&parent)? < bytes {
-        return Err(BackupError::refused(
+        return Err(BackupError::retryable(
             "Not enough free space to safely complete this operation.",
         ));
     }

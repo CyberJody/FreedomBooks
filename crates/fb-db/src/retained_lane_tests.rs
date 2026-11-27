@@ -43,6 +43,8 @@ fn original_purchasing_and_tax_books_are_backed_up_upgraded_and_reopened() {
         drop(copy);
         let book = old.upgrade().unwrap();
         let after = test_support::snapshot(&book.conn).unwrap();
+        let mut before = before;
+        test_support::company_period_defaults(&mut before, &book.conn);
         for (table, rows) in before { assert_eq!(after[&table], rows, "{lane}: changed {table}"); }
         let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
         assert_eq!(schema_hashes(&book.conn).unwrap(), schema_hashes(&fresh.conn).unwrap());

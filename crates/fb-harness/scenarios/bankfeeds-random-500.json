@@ -751,7 +751,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_map",
@@ -2036,7 +2036,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Transfer from and to two different bank accounts."
+   "expect_message": "Choose two different accounts for the transfer."
   },
   {
    "op": "bankfeeds_accept",
@@ -2181,7 +2181,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_save_rule",
@@ -3339,7 +3339,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Transfer from and to two different bank accounts."
+   "expect_message": "Choose two different accounts for the transfer."
   },
   {
    "op": "bankfeeds_return",
@@ -3494,7 +3494,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_map",
@@ -3700,7 +3700,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_accept",
@@ -5397,7 +5397,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_map",
@@ -5493,7 +5493,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_sync",
@@ -7438,7 +7438,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_save_rule",
@@ -7657,7 +7657,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "210 · Card is not an active bank account. Transfers move money between two bank accounts."
+   "expect_message": "Choose two eligible bank or credit card accounts from this company."
   },
   {
    "op": "bankfeeds_accept",

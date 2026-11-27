@@ -248,6 +248,14 @@ fn read_choice(root: &Path) -> AppResult<Choice> {
     })
 }
 
+pub(crate) fn is_main_book(root: &Path, book: &Path) -> AppResult<bool> {
+    Ok(match read_choice(root)? {
+        Choice::Absent => book == root.join("books/default.fbbook"),
+        Choice::Names(path) => path == book,
+        Choice::Unreadable => false,
+    })
+}
+
 /// Point the saved choice at `main`. A damaged choice file is kept under a new name first.
 fn write_choice(root: &Path, main: &Path) -> AppResult<()> {
     let file = choice_file(root);
@@ -778,6 +786,7 @@ impl App {
         });
         step("change-audited").ok();
         if audited.is_ok() && settled {
+            let _ = crate::scheduled_backups::reset_for_main(&root, &main, (self.now)());
             let _ = remove_journal(&journal);
         }
         self.backups.set_viewing(None);
@@ -828,6 +837,7 @@ impl App {
         detail["recorded_later"] = json!(true);
         let book = &mut self.open.as_mut().ok_or(AppError::Locked)?.book;
         audit_made_main(book, actor, &change.id, &detail)?;
+        let _ = crate::scheduled_backups::reset_for_main(&root, &change.main, (self.now)());
         remove_journal(&journal)?;
         Ok(true)
     }

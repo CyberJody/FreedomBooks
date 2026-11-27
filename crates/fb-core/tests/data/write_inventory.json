@@ -52,6 +52,9 @@
     "register:prepare": 1,
     "sources:prepare": 1
   },
+  "crates/fb-app/src/screens/backups.rs": {
+    "write_copy:write": 1
+  },
   "crates/fb-app/src/screens/d2.rs": {
     "journal_form:prepare": 1,
     "journal_list:prepare": 1,
@@ -109,7 +112,8 @@
   },
   "crates/fb-app/src/screens/d9.rs": {
     "feeds:prepare": 1,
-    "overview:prepare": 1
+    "overview:prepare": 1,
+    "rule_feed_choices:prepare": 1
   },
   "crates/fb-app/src/screens/d9/review.rs": {
     "filtered_ids:prepare": 1,
@@ -195,7 +199,9 @@
     "rows:prepare": 1
   },
   "crates/fb-core/src/backups/audit.rs": {
-    "record:write": 1
+    "evidence_rows:prepare": 1,
+    "record:write": 1,
+    "record_scheduled:write": 1
   },
   "crates/fb-core/src/backups/manifest.rs": {
     "contents:prepare": 5
@@ -211,6 +217,9 @@
   "crates/fb-core/src/backups/portable.rs": {
     "audit_event:write": 1
   },
+  "crates/fb-core/src/backups/scheduled.rs": {
+    "run:prepare": 1
+  },
   "crates/fb-core/src/bankfeeds/accept.rs": {
     "back_to_review:execute": 4,
     "decide:execute": 1,
@@ -225,6 +234,9 @@
   },
   "crates/fb-core/src/bankfeeds/credentials.rs": {
     "flag:execute": 1
+  },
+  "crates/fb-core/src/bankfeeds/mapping.rs": {
+    "save_mappings_and_import_settings:execute": 1
   },
   "crates/fb-core/src/bankfeeds/mod.rs": {
     "already_recorded_count:prepare": 1,
@@ -259,16 +271,18 @@
   "crates/fb-core/src/bankfeeds/staging.rs": {
     "bank_change:execute": 3,
     "bank_changes:prepare": 1,
+    "begin_sync:prepare": 1,
     "candidate_last_good:prepare": 1,
     "clock_warning:prepare": 1,
+    "feed_history:prepare": 1,
+    "feed_window:prepare": 1,
     "identity_of:prepare": 1,
     "identity_secret:execute": 1,
     "keep_recorded:execute": 1,
     "last_complete_sync:prepare": 1,
     "record_sync_failure:execute": 1,
-    "replaced:prepare": 1,
     "stage_bank_transactions:prepare": 1,
-    "store_pull_mode:execute": 4,
+    "store_pull_mode:execute": 5,
     "store_pull_mode:prepare": 1,
     "sync_gaps:prepare": 1,
     "upsert:execute": 3
@@ -517,6 +531,9 @@
     "generate_one:execute": 2,
     "save:execute": 2
   },
+  "crates/fb-core/src/periods.rs": {
+    "set_policy:write": 1
+  },
   "crates/fb-core/src/prepayments/guard_tests.rs": {
     "raw_deposit:execute": 1,
     "review_raw_deposit:execute": 1,
@@ -535,7 +552,20 @@
   "crates/fb-core/src/reminders.rs": {
     "current:prepare": 1
   },
+  "crates/fb-core/src/reports/asset_depreciation_schedule.rs": {
+    "linked_cost:prepare": 1,
+    "opening:prepare": 1,
+    "period:prepare": 1
+  },
+  "crates/fb-core/src/reports/cash_flow.rs": {
+    "cash_flow:prepare": 1
+  },
+  "crates/fb-core/src/reports/customer_statement.rs": {
+    "customers:prepare": 1,
+    "deposit_balances:prepare": 1
+  },
   "crates/fb-core/src/reports/financial.rs": {
+    "cash_source_lines:prepare": 1,
     "documents:prepare": 1,
     "events:prepare": 2,
     "posted_lines:prepare": 1
@@ -543,6 +573,16 @@
   "crates/fb-core/src/reports/mod.rs": {
     "register:prepare": 1,
     "trial_balance:prepare": 1
+  },
+  "crates/fb-core/src/reports/receivables.rs": {
+    "load:prepare": 1
+  },
+  "crates/fb-core/src/reports/sales_by_customer_item.rs": {
+    "sales_by_customer_item:prepare": 2
+  },
+  "crates/fb-core/src/reports/subledgers.rs": {
+    "aging:prepare": 1,
+    "vendor_1099:prepare": 1
   },
   "crates/fb-core/src/sales/attacks.rs": {
     "clear:execute_batch": 1,
@@ -624,8 +664,10 @@
     "record_payment_tx:atomic": 1,
     "review_payment_tx:atomic": 1,
     "seal:execute": 1,
-    "tax_accounts:prepare": 1,
-    "weights:prepare": 1
+    "tax_accounts:prepare": 1
+  },
+  "crates/fb-core/src/salestax_payments/breakdown.rs": {
+    "load:prepare": 1
   },
   "crates/fb-core/src/salestax_payments_tests.rs": {
     "forged:write": 1,
@@ -659,6 +701,7 @@
   },
   "crates/fb-core/src/transfers/mod.rs": {
     "balance:prepare": 1,
+    "eligible_account_ids:prepare": 1,
     "record_transfer_tx:atomic": 1,
     "review_transfer_tx:atomic": 1,
     "seal_journal:execute": 1

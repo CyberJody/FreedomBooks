@@ -1,0 +1,29 @@
+<header class="report-head"><p class="report-company">{{ company.name }}</p>
+<h2 class="report-title">{{ title }}</h2>
+{% if subtitle %}<p>{{ subtitle }}</p>{% endif %}
+<p class="report-dates">{{ date_span(start, end) }}</p><p class="report-basis">{{ basis_label }} · {{ company.currency }}</p></header>
+{% for table in tables %}
+{% if table.title %}<h3 class="statement-section">{{ table.title }}</h3>{% endif %}
+<div class="gl-scroll{% if landscape %} report-comparison{% endif %}">
+<table class="fin-report statement-table">
+<thead><tr>{% for heading in table.headings %}<th scope="col">{{ heading }}</th>{% endfor %}</tr></thead>
+<tbody>
+{% for row in table.rows %}
+<tr class="fin-{{ row.kind }}">
+{% if row.kind == 'heading' %}
+<th scope="row" colspan="{{ table.headings|length }}">{{ row.cells[0].text }}</th>
+{% else %}
+{% for cell in row.cells %}
+{% if loop.first %}<th scope="row">{% if cell.url %}<a href="{{ cell.url }}">{{ cell.text }}</a>{% else %}{{ cell.text }}{% endif %}</th>
+{% else %}<td{% if cell.number %} class="amount"{% endif %}>{% if cell.url %}<a href="{{ cell.url }}">{{ cell.text }}</a>{% elif cell.money %}{{ cell.text|money }}{% else %}{{ cell.text }}{% endif %}</td>
+{% endif %}
+{% endfor %}
+{% endif %}
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% for label, amount in table.metadata %}<p class="report-foot">{{ label }} · {{ amount|money }}</p>{% endfor %}
+{% for note in table.notes %}<p class="report-foot">{{ note }}</p>{% endfor %}
+{% endfor %}

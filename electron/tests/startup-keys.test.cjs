@@ -33,7 +33,7 @@ function keyring(secret = crypto.randomBytes(32), usable = true) {
 
 function fakeNative(root, options = {}) {
   const calls = [];
-  const state = {open: false, path: null, signedIn: false, generation: 1, builtin: !!options.builtin};
+  const state = {open: false, path: null, signedIn: false, generation: 1, builtin: !!options.builtin, hosted: false, copy: false};
   const record = () => ({known: true, builtin: !!options.builtin, ask_password: options.ask === true});
   const wrong = () => Object.assign(new Error("That password or key doesn't open these books."), {code: 'FB_BOOK_WRONG_KEY'});
   const native = {
@@ -41,8 +41,8 @@ function fakeNative(root, options = {}) {
     aiGeneration: () => state.generation, hasCredentials: () => !!options.savedCredentials, invoiceDeliveryEnabled: () => options.invoicing === true,
     recurringBillsAsync: async () => '',
     configureBackups() {},
-    appState: () => JSON.stringify({open: state.open, path: state.path, signed_in: state.signedIn, session_generation: state.generation, can_lock: true, builtin: state.builtin, viewing_restored: false}),
-    hostingWanted: () => false, hostingResumeAsync: () => Promise.resolve('{"ok":true,"running":false}'), hostingState: () => '{"available":false}', hostingActive: () => false, hostingStatus: () => '{"running":false,"bind":"","connected":0}',
+    appState: () => JSON.stringify({open: state.open, path: state.path, signed_in: state.signedIn, session_generation: state.generation, can_lock: true, builtin: state.builtin, viewing_restored: state.copy, hosting: state.hosted}),
+    hostingWanted: () => false, hostingResumeAsync: () => Promise.resolve('{"ok":true,"running":false}'), hostingState: () => '{"available":false}', hostingActive: () => state.hosted, hostingStatus: () => '{"running":false,"bind":"","connected":0}',
     recoverKeyChange(book) {
       calls.push(['recoverKeyChange', book]);
       if (options.recoverFails) throw Object.assign(new Error('The interrupted password change needs its verified backup. Restore that backup as a new book.'), {code: 'GenericFailure'});
@@ -86,6 +86,9 @@ function launch(root, storage, native) {
   const handlers = {};
   const windows = [];
   const timers = [];
+  const power = new (require('node:events').EventEmitter)();
+  power.idle = 0;
+  power.getSystemIdleTime = () => power.idle;
   const setTimer = fn => { const timer = {fn, cleared: false, unref() {}}; timers.push(timer); return timer; };
   class BrowserWindow {
     constructor() {
@@ -100,7 +103,7 @@ function launch(root, storage, native) {
     protocol: {registerSchemesAsPrivileged() {}}, ipcMain: {handle: (name, fn) => { handlers[name] = fn; }},
     session: {defaultSession: {protocol: {handle() {}}}}, BrowserWindow, dialog: {}, shell: {}, clipboard: {}, safeStorage: storage,
     Menu: {setApplicationMenu() {}, buildFromTemplate: t => t, getApplicationMenu: () => null},
-    powerMonitor: {on() {}, getSystemIdleTime: () => 0},
+    powerMonitor: power,
   };
   const keysSandbox = {module: {exports: {}}, process, Buffer, require: n => n === 'electron' ? {safeStorage: storage} : require(n)};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../main/keys.cjs'), 'utf8'), keysSandbox);
@@ -113,10 +116,10 @@ function launch(root, storage, native) {
     './edit-menu.cjs': {attach() {}}, './guards.cjs': guards, './diagnostics.cjs': diagnosticsStub,
     './navigation.cjs': require('../main/navigation.cjs'),
     './power-lock.cjs': {watch: options => require('../main/power-lock.cjs').watch({...options, setTimer})}};
-  const sandbox = {URL, Response, Buffer, setInterval: setTimer, clearInterval: timer => { timer.cleared = true; }, __dirname: path.join(__dirname, '../main'), module: {exports: {}},
+  const sandbox = {URL, Response, Buffer, setImmediate, setInterval: setTimer, clearInterval: timer => { timer.cleared = true; }, __dirname: path.join(__dirname, '../main'), module: {exports: {}},
     require: n => Object.hasOwn(stubs, n) ? stubs[n] : require(n)};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../main/main.cjs'), 'utf8') + '\nmodule.exports={calls,handle,remote,lock:lockNow,status:()=>({gateReason,pending,startupHome})};', sandbox);
-  return {...sandbox.module.exports, windows, handlers, timers, dialog: electron.dialog};
+  return {...sandbox.module.exports, windows, handlers, timers, power, dialog: electron.dialog};
 }
 
 function fixture(fn) {
@@ -750,4 +753,108 @@ test('only the local Hosting screen receives a poll of the paired computers', ()
   const local = await poll(null);
   assert.ok(local.ok && local.value.includes('Synthetic laptop'));
   assert.equal(reads, 1);
+}));
+
+test('automatic backup timer and wakeups yield to session, copy, remote, host and idle guards', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  const f = fakeNative(root);
+  let runs = 0;
+  f.native.scheduledBackupAsync = async () => { runs++; return ''; };
+  const main = launch(root, storage, f.native);
+  await tick();
+  const timer = main.timers.find(t => t.fn.name === 'wakeScheduledBackup');
+  assert.ok(timer);
+  assert.ok(Object.keys(main.handlers).every(name => !/scheduled.*backup/i.test(name)));
+  const baseline = f.calls.length;
+  assert.equal(f.state.open, true);
+  timer.fn();
+  main.power.emit('resume');
+  await tick();
+  assert.equal(runs, 0, 'an open book can still be signed out');
+
+  f.state.signedIn = true;
+  for (const key of ['hosted', 'copy']) {
+    f.state[key] = true;
+    main.power.emit('unlock-screen');
+    await tick();
+    assert.equal(runs, 0, key);
+    f.state[key] = false;
+  }
+  main.power.idle = 15 * 60;
+  timer.fn();
+  await tick();
+  assert.equal(runs, 0, 'yield to the idle lock');
+  main.power.idle = 0;
+
+  const active = main.remote.active;
+  main.remote.active = () => true;
+  main.power.emit('resume');
+  await tick();
+  assert.equal(runs, 0, 'a connected client cannot start local backups');
+  main.remote.active = active;
+
+  timer.fn();
+  f.state.generation++;
+  await tick();
+  assert.equal(runs, 0, 'generation changed before native admission');
+  main.power.emit('unlock-screen');
+  await tick();
+  assert.equal(runs, 1);
+  main.power.emit('resume');
+  await tick();
+  assert.equal(runs, 2);
+  assert.deepEqual(f.calls.slice(baseline), [], 'wakeups neither open books nor request a key');
+}));
+
+test('automatic backup is single flight and applies idle lock when finished', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  const f = fakeNative(root);
+  const pending = [];
+  f.native.scheduledBackupAsync = () => new Promise(resolve => pending.push(resolve));
+  const main = launch(root, storage, f.native);
+  await tick();
+  f.state.signedIn = true;
+  const timer = main.timers.find(t => t.fn.name === 'wakeScheduledBackup');
+  timer.fn();
+  main.power.emit('resume');
+  main.power.emit('unlock-screen');
+  await tick();
+  assert.equal(pending.length, 1);
+  await assert.rejects(main.calls['books.run']({}), /busy/);
+  main.power.idle = 15 * 60;
+  assert.equal(f.state.open, true, 'the scheduled worker still has the books');
+  pending[0]('');
+  await tick();
+  assert.equal(f.state.open, false);
+  timer.fn();
+  await tick();
+  assert.equal(pending.length, 1);
+}));
+
+test('an automatic backup wake during recurring bills runs once after the lease is released', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  const f = fakeNative(root);
+  let finishRecurring;
+  f.native.recurringBillsAsync = () => new Promise(resolve => { finishRecurring = resolve; });
+  let runs = 0;
+  f.native.scheduledBackupAsync = async () => { runs++; };
+  const main = launch(root, storage, f.native);
+  await tick();
+  f.state.signedIn = true;
+  const recurring = main.timers.find(t => t.fn.toString().includes('recurringBillsAsync'));
+  const backup = main.timers.find(t => t.fn.name === 'wakeScheduledBackup');
+  const recurringWork = recurring.fn();
+  backup.fn();
+  backup.fn();
+  await tick();
+  assert.equal(typeof finishRecurring, 'function');
+  assert.equal(runs, 0);
+  finishRecurring();
+  await recurringWork;
+  await tick();
+  await tick();
+  assert.equal(runs, 1);
 }));

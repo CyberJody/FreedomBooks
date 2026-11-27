@@ -418,7 +418,7 @@ fn a_populated_format_96_book_upgrades_and_supports_late_checks_and_multi_match(
     let old_path = dir.join("format-96.fbbook");
     let copy = test_support::populated_copy(app.open_mut().unwrap().book.connection(), &old_path, &key_bytes, "0209_deposit_adjustments", true).unwrap();
     let Opened::Behind(old) = Book::open_staged(&old_path, &key_bytes).unwrap() else { panic!("expected a format-96 book") };
-    assert_eq!((old.from(), old.to()), (96, 97));
+    assert_eq!((old.from(), old.to()), (96, 98));
     let backup = dir.join("verified-format-96.fbbook");
     old.snapshot(&backup, &key_bytes).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key_bytes).unwrap(), copy.before);
@@ -578,4 +578,152 @@ fn journal_list_setup_notice_names_remaining_checklist_items() {
     let html = page(&mut app, &url("company", &[&c]));
     assert!(html.contains("Setup checklist still open"), "{html}");
     assert!(html.contains("Finish setting up"), "{html}");
+}
+
+#[test]
+fn visa_payments_in_bank_review_match_both_sides_of_three_exact_transfers() {
+    let (mut app, company) = fixture(StarterChart::Standard);
+    app.simplefin = true;
+    let co = company.parse().unwrap();
+    let bank = new_account(&mut app, &company, "1010", "FY2025 Business Checking", "BANK");
+    let visa = new_account(&mut app, &company, "2210", "FY2025 Business Visa", "CREDIT_CARD");
+    let second_card = new_account(&mut app, &company, "2220", "FY2025 Mastercard", "CREDIT_CARD");
+    let equity = new_account(&mut app, &company, "3999", "FY2025 balance offset", "EQUITY");
+    let payments = [("2025-10-15", 53_234), ("2025-11-15", 110_058), ("2025-12-15", 46_220)];
+    let mut bank_rows = Vec::new();
+    let mut card_rows = Vec::new();
+    for (i, (date, amount)) in payments.into_iter().enumerate() {
+        bank_rows.push(staged(&format!("bank-{i}"), date, -amount, "SUMMIT CARD ONLINE PMT"));
+        card_rows.push(staged(&format!("card-{i}"), date, amount, "PAYMENT THANK YOU"));
+    }
+
+    {
+        let o = app.open_mut().unwrap();
+        // September statement balances and the net of all Q4 activity outside the three payments.
+        for (date, bank_change, card_change, offset) in [
+            ("2025-09-30", "4250.36", "554.81", "3695.55"),
+            ("2025-12-31", "2388.47", "2116.56", "271.91"),
+        ] {
+            let draft = fb_core::services::save_draft(&mut o.book, o.owner, co,
+                fb_core::services::DraftInput::new(date, "FY2025 statement activity", vec![
+                    json!({"account":bank,"debit":bank_change}),
+                    json!({"account":visa,"credit":card_change}),
+                    json!({"account":equity,"credit":offset}),
+                ])).unwrap();
+            fb_core::services::post_journal(&mut o.book, o.owner, co, draft.id, None).unwrap();
+        }
+        let conn = bf::connect(&mut o.book, o.owner, co, &json!("FY2025 SimpleFIN"), "bank.example", &bf::SecretSet::none()).unwrap();
+        bf::store_pull(&mut o.book, o.owner, co, conn["id"].as_str().unwrap(), &bf::StagedPull {
+            accounts: vec![feed_account("Bank Checking", bank_rows), feed_account("Visa Feed", card_rows)],
+            ..Default::default()
+        }, "2025-12-31T19:00:00Z", false, None, &bf::SecretSet::none()).unwrap();
+        for (label, account) in [("Bank Checking", &bank), ("Visa Feed", &visa)] {
+            let id: String = o.book.read(|q| q.query_row("SELECT id FROM bankfeeds_account WHERE name=?1", [label], |r| r.get(0))).unwrap();
+            bf::map_account(&mut o.book, o.owner, co, &id, &json!(account), &bf::SecretSet::none()).unwrap();
+        }
+    }
+
+    let review = url("bankfeeds:review", &[&company]);
+    let transfer = url("transfers:new", &[&company]);
+    let review_html = fb_app::screens::render(&mut app, &review).unwrap().html;
+    assert!(review_html.contains("Card payment"));
+    assert!(review_html.contains("Balance transfer"));
+    assert!(fb_app::screens::render(&mut app, &transfer).unwrap().html.contains("FY2025 Business Visa"));
+    assert!(fb_app::screens::render(&mut app, &transfer).unwrap().html.contains(&second_card));
+    let item = |app: &mut App, remote: &str| {
+        let o = app.open_mut().unwrap();
+        o.book.read(|q| {
+            let id: String = q.query_row("SELECT id FROM bankfeeds_transaction WHERE remote_id=?1", [remote], |r| r.get(0))?;
+            bf::item(q, co, &id)
+        }).unwrap()
+    };
+    for (i, (_, amount)) in payments.into_iter().enumerate() {
+        let bank_remote = format!("bank-{i}");
+        let card_remote = format!("card-{i}");
+        let bank_row = item(&mut app, &bank_remote);
+        let card_row = item(&mut app, &card_remote);
+        let (first, last, other, last_other) = if i == 1 {
+            (bank_row, card_row, &visa, &bank)
+        } else {
+            (card_row, bank_row, &bank, &visa)
+        };
+        let p = first.ordinal;
+        let n = last.ordinal;
+        let accepted = post_review(&mut app, &review, &review_html, &[
+            ("action".into(), "accept".into()),
+            ("sel".into(), p.to_string()), ("sel".into(), n.to_string()),
+            (format!("kind_{p}"), "TRANSFER".into()), (format!("to_{p}"), other.clone()),
+            (format!("kind_{n}"), "TRANSFER".into()), (format!("to_{n}"), last_other.clone()),
+        ]);
+        assert!(fragment(&accepted, &format!("review-row-{n}")).contains("Choose Match or Record again"), "{accepted}");
+        let first = item(&mut app, &first.remote_id);
+        assert_eq!(first.accepted_as, "TRANSFER");
+        let entry = item(&mut app, &last.remote_id);
+        assert_eq!(entry.status, "NEW");
+        let journal = first.journal_id.as_deref().unwrap();
+        let (line, rows) = app.open_mut().unwrap().book.read(|q| {
+            let line: String = q.query_row("SELECT id FROM ledger_journalline WHERE journal_id=?1 AND account_id=?2", [journal, other], |r| r.get(0))?;
+            let mut s = q.prepare("SELECT account_id,debit,credit FROM ledger_journalline WHERE journal_id=?1 ORDER BY position")?;
+            let rows = s.query_map([journal], |r| Ok((r.get::<_,String>(0)?, r.get::<_,i64>(1)?, r.get::<_,i64>(2)?)))?.collect::<Result<Vec<_>,_>>()?;
+            Ok::<_, fb_core::FbError>((line, rows))
+        }).unwrap();
+        assert_eq!(rows, [(bank.clone(), 0, amount), (visa.clone(), amount, 0)]);
+        post_review(&mut app, &review, &review_html, &[("accept_one".into(), n.to_string()),
+            (format!("kind_{n}"), "MATCH".into()), (format!("line_{n}"), line.clone())]);
+        let matched = item(&mut app, &last.remote_id);
+        assert_eq!(matched.status, "MATCHED");
+        assert_eq!(matched.journal_id, first.journal_id);
+        assert_eq!(matched.journal_line_id.as_deref(), Some(line.as_str()));
+        assert_ne!(matched.journal_line_id, first.journal_line_id);
+    }
+    let o = app.open_mut().unwrap();
+    let balance = |o: &mut fb_app::session::Open, id: &str| {
+        fb_core::transfers::posted_balance(&mut o.book, o.owner, co, id.parse().unwrap()).unwrap()
+    };
+    assert_eq!(balance(o, &bank), "4543.71");
+    assert_eq!(balance(o, &visa), "-576.25");
+    assert!(o.book.check().unwrap().is_empty());
+}
+
+#[test]
+#[ignore = "requires the existing FY2025 generated synthetic feed fixtures"]
+fn replay_actual_fy2025_q3_to_q4_cumulative_download_adds_157_ids() {
+    let root = std::path::PathBuf::from(std::env::var_os("FB_FY2025_DATASETS").expect("synthetic Q3 and Q4 dataset directory"));
+    let (mut app, company) = fixture(StarterChart::Standard);
+    let co = company.parse().unwrap();
+    let o = app.open_mut().unwrap();
+    let conn = bf::connect(&mut o.book, o.owner, co, &json!("Synthetic replay"), "bank.example", &bf::SecretSet::none()).unwrap();
+    let id = conn["id"].as_str().unwrap();
+    let read = |quarter| {
+        let data: Value = serde_json::from_slice(&std::fs::read(root.join(format!("fy2025-{quarter}/feed.json"))).unwrap()).unwrap();
+        let mut accounts = vec![];
+        for a in data["accounts"].as_array().unwrap() {
+            let as_str = |k: &str| a[k].as_str().unwrap();
+            let transactions = a["transactions"].as_array().unwrap().iter().map(|t| {
+                // The fixture's timestamps are at local midday, so their UTC day is also the Review day.
+                let date = chrono::DateTime::from_timestamp(t["posted"].as_i64().unwrap(), 0).unwrap().date_naive().to_string();
+                let text = t["amount"].as_str().unwrap();
+                let amount = fb_core::services::money_json(&json!(text.trim_start_matches('-'))).unwrap().to_db().unwrap();
+                let amount = if text.starts_with('-') { -amount } else { amount };
+                staged(t["id"].as_str().unwrap(), &date, amount, t["description"].as_str().unwrap())
+            }).collect();
+            let mut entry = feed_account(as_str("id"), transactions);
+            entry.name = as_str("name").into();
+            entry.conn_key = as_str("conn_id").into();
+            accounts.push(entry);
+        }
+        bf::StagedPull { accounts, ..Default::default() }
+    };
+    let q3 = bf::store_pull(&mut o.book, o.owner, co, id, &read("q3"),
+        "2025-09-30T19:00:00Z", false, None, &bf::SecretSet::none()).unwrap();
+    let q4 = bf::store_pull(&mut o.book, o.owner, co, id, &read("q4"),
+        "2025-12-31T19:00:00Z", false, None, &bf::SecretSet::none()).unwrap();
+    assert_eq!(q3["new"], 462);
+    assert_eq!(q4["unchanged"], 462);
+    assert_eq!(q4["new"], 157);
+    let boundaries: (String, String, i64) = o.book.read(|q| q.query_row(
+        "SELECT min(posted_on),max(posted_on),count(*) FROM bankfeeds_transaction WHERE ordinal>462", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
+    )).unwrap();
+    assert_eq!(boundaries, ("2025-10-01".into(), "2025-12-31".into(), 157));
+    assert!(o.book.check().unwrap().is_empty());
 }

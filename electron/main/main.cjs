@@ -70,6 +70,9 @@ const BACKUPS_PAGE = /^\/c\/[0-9a-f-]{36}\/backups\/$/;
 let connectionKeysConfigured = false;
 let busy = null;
 let lockWhenIdle = false;
+let scheduledBackupTimer;
+let scheduledBackupDeferred = false;
+let scheduledBackupRunning = false;
 const localAI = require('./ai-desktop.cjs').create({app,native,dialog,clipboard,safeStorage,root:userData,window:()=>win,exclusive,busy:()=>!!busy,client:()=>remote.active()});
 // Remote access, client mode (remote-mode.cjs): off until the person connects to a host. While
 // connected, pages and form posts go to the host; the local books stay closed.
@@ -157,8 +160,7 @@ async function remotePage(target, url, marker) {
   }
   if (r.redirect) return Response.redirect(new URL(r.redirect, ORIGIN).href, 303);
   if (r.binary) return new Response(r.binary, {headers: {'content-type': r.mime, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': guards.CSP}});
-  if (REMOTE.csvPage(r.route, url, r.status)) return new Response(r.html, {status: 200, headers: {'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="export.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff'}});
-  return page(r.html, r.status);
+  return guards.csvExportResponse(r.route, url, r.status, r.html, 'export.csv') ?? page(r.html, r.status);
 }
 function exclusive(work, {bindSession=true} = {}) {
   if (busy) throw new Error(BUSY_TEXT);
@@ -168,6 +170,10 @@ function exclusive(work, {bindSession=true} = {}) {
     if (lockWhenIdle) {
       lockWhenIdle = false;
       lockNow('locked');
+    }
+    if (scheduledBackupDeferred) {
+      scheduledBackupDeferred = false;
+      setImmediate(() => wakeScheduledBackup({ allowDefer: false }));
     }
   }).then(result => {
     // Native completion may itself sign in/out. Bind its resulting session BEFORE the
@@ -183,6 +189,47 @@ function requireGeneration(generation) {
     throw Object.assign(new Error('The active user changed. Open the screen again.'), {code:'SESSION_CHANGED'});
   }
 }
+async function scheduledBackupTick({ allowDefer = true } = {}) {
+  if (scheduledBackupRunning || lockWhenIdle || !win || win.isDestroyed() || remote.active()) return;
+  if (busy) {
+    if (allowDefer) scheduledBackupDeferred = true;
+    return;
+  }
+  try {
+    // An idle screen can be due for its existing lock callback at the same
+    // instant as the backup timer. Give that callback first use of the books.
+    if (powerMonitor.getSystemIdleTime() >= IDLE_LOCK_SECONDS || native.hostingActive()) return;
+    const state = JSON.parse(native.appState());
+    if (!state.open || !state.signed_in || state.viewing_restored || state.hosting) return;
+    scheduledBackupRunning = true;
+    await exclusive(async () => {
+      requireGeneration(state.session_generation);
+      if (remote.active() || lockWhenIdle || native.hostingActive()) return;
+      try {
+        await native.scheduledBackupAsync();
+      } finally {
+        // An automatic backup can finish after the existing idle timer became
+        // due. Apply that lock in exclusive's finalizer before admitting work.
+        if (powerMonitor.getSystemIdleTime() >= IDLE_LOCK_SECONDS) lockNow('idle');
+      }
+    });
+  } catch (e) {
+    if (diagnostics.panic(e)) {
+      clearInterval(scheduledBackupTimer);
+      scheduledBackupTimer = undefined;
+      const url = win && !win.isDestroyed() ? win.webContents.getURL() : ORIGIN;
+      showPanic(e, new URL(url || ORIGIN).pathname);
+    } else if (e.code !== 'SESSION_CHANGED' && !['BUSY', BUSY_TEXT].includes(e.message)) {
+      diagnostics.note('scheduled-backup', e);
+    }
+  } finally {
+    scheduledBackupRunning = false;
+  }
+}
+function wakeScheduledBackup(opts) {
+  if (scheduledBackupTimer) void scheduledBackupTick(opts);
+}
+
 function sessionLocation() {
   return JSON.parse(native.appState()).open ? '/desktop/sign-in/' : '/';
 }
@@ -374,18 +421,10 @@ async function handle(request) {
       if (aiGeneration !== native.aiGeneration()) throw Object.assign(new Error('The active company changed. Open the screen again.'), {code:'SESSION_CHANGED'});
     }
     if (remoteGeneration !== generationBeforeRender) return Response.redirect(ORIGIN + remote.currentPage(), 303);
-    if (r.route === 'history' && url.searchParams.get('format') === 'csv' && r.html.startsWith('\uFEFF')) {
-      return new Response(r.html, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="audit-history.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store' } });
-    }
-    // D8: direct report CSV requests must never parse user-controlled cells as HTML. QueryDict uses
-    // the last value of a repeated key; retain that rule here as well as in fb-app's validators.
-    if (r.status === 200 && ['profit_loss', 'balance_sheet', 'general_ledger'].includes(r.route) && url.searchParams.getAll('output').at(-1) === 'csv') {
-      return new Response(r.html, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="report.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
-    }
-    if (r.status === 200 && ['register', 'reconcile:report'].includes(r.route) && url.searchParams.getAll('output').at(-1) === 'csv') {
-      return new Response(r.html, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="banking.csv"', 'content-security-policy': guards.CSP, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
-    }
-    return page(r.html, r.status);
+    // Direct CSV requests must never parse user-controlled cells as HTML. QueryDict uses
+    // the last value of a repeated key; guards.csvExportFilename enforces that rule for
+    // both local and connected-host pages.
+    return guards.csvExportResponse(r.route, url, r.status, r.html) ?? page(r.html, r.status);
   } catch (e) {
     if (remote.active()) return Response.redirect(ORIGIN + remote.currentPage(), 303);
     if (e.code === 'SESSION_CHANGED') {
@@ -472,7 +511,12 @@ const calls = {
     if (busy) throw new Error(BUSY_TEXT);
     const command = guards.command(payload, { plugins: PLUGINS, bankFeeds: BANK_FEEDS });
     if (marker !== null) return remote.run(command, marker);
-    const long = command.type === 'SubmitForm' && (LONG_COMMAND.test(command.path) || (INVOICE_DELIVERY && command.fields.some(([k,v])=>k==='action' && (v.startsWith('gmail_') || v.startsWith('stripe_')))));
+    const managedDownload = command.type === 'ExportBackup' && typeof command.name === 'string' && command.name.startsWith('scheduled.');
+    const long = managedDownload || (command.type === 'SubmitForm' && (
+      LONG_COMMAND.test(command.path) ||
+      (BACKUPS_PAGE.test(command.path) && command.fields.some(([key,value]) => key === 'scheduled_archive' && value)) ||
+      (INVOICE_DELIVERY && command.fields.some(([k,v]) => k === 'action' && (v.startsWith('gmail_') || v.startsWith('stripe_'))))
+    ));
     if (!connectionKeysConfigured && command.type === 'SubmitForm') {
       const state = JSON.parse(native.appState());
       if (state.signed_in && needsConnectionKey(command, state.builtin)) configureConnectionKeys();
@@ -530,6 +574,8 @@ const calls = {
       pending = { path: command.path, html: outcome.html, status: outcome.status || 400, generation };
       return { outcome: 'invalid', reload: command.path };
     }
+    if (scheduledBackupTimer && command.type === 'SubmitForm' && outcome.outcome === 'redirect' &&
+        ['/desktop/sign-in/', '/desktop/mfa/'].includes(command.path)) setImmediate(wakeScheduledBackup);
     return outcome;
   },
   // Only this computer's own connect and disconnect screens may pair, connect, forget or
@@ -640,6 +686,7 @@ const calls = {
     // The books are open: saving the key for next time must never turn into an unlock failure.
     try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* asked again next time; nothing removed */ }
     void hosting.resume();
+    if (scheduledBackupTimer) setImmediate(wakeScheduledBackup);
     return { outcome: 'redirect', location: opened.home || '/' };
   },
 };
@@ -795,6 +842,12 @@ app.whenReady().then(() => {
   void localAI.start().catch(error=>diagnostics.note('ai-start',error));
   createWindow();
   require('./power-lock.cjs').watch({powerMonitor, window: win, remote, native, busy: () => !!busy, lockNow, idleSeconds: IDLE_LOCK_SECONDS});
+  if (typeof native.scheduledBackupAsync === 'function') {
+    scheduledBackupTimer = setInterval(wakeScheduledBackup, 30_000);
+    scheduledBackupTimer.unref();
+    powerMonitor.on('resume', wakeScheduledBackup);
+    powerMonitor.on('unlock-screen', wakeScheduledBackup);
+  }
   try { syncBookKeys(); } catch (e) { diagnostics.note('sync-keys', e); /* the window still opens; the key is saved after the next unlock */ }
   // Hosting left on by an Administrator starts again once the books are open (it says why if not),
   // and stops if its address leaves this computer.

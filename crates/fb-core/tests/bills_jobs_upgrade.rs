@@ -88,14 +88,32 @@ fn authentic_format_90_rows_upgrade_to_current_and_roundtrip_both_features() {
         Opened::Behind(older) => older,
         Opened::Current(_) => panic!("expected authentic installed-build format 90"),
     };
-    assert_eq!((older.from(), older.to()), (90, 97)); // 0204 through 0210
+    assert_eq!((older.from(), older.to()), (90, 98)); // 0204 through 0211
     let snapshot = root.path().join("verified-format90.fbbook");
     older.snapshot(&snapshot, &KEY).unwrap();
     assert_eq!(test_support::snapshot_file(&snapshot, &KEY).unwrap(), before);
     let book = older.upgrade().unwrap();
     let after = test_support::snapshot(book.connection()).unwrap();
     for (table, rows) in &before {
-        assert_eq!(&after[table], rows, "upgrade changed retained rows in {table}");
+        let mut expected = rows.clone();
+        use fb_db::rusqlite::types::Value as Cell;
+        let defaults = match table.as_str() {
+            "directory_customer" => vec![("default_terms", Cell::Null)],
+            "ledger_company" => vec![("fiscal_year_start_month", Cell::Integer(1)),
+                ("closing_date", Cell::Null), ("period_policy_revision", Cell::Integer(0))],
+            "bankfeeds_account" => vec![("import_from_date", Cell::Null), ("import_state", Cell::Text("ACTIVE".into()))],
+            "bankfeeds_rule" => vec![("feed_account_id", Cell::Null)],
+            _ => vec![],
+        };
+        for (column, value) in defaults {
+            let st = book.connection().prepare(&format!("SELECT * FROM {table}")).unwrap();
+            let index = st.column_names().position(|name| name == column).unwrap();
+            for row in &mut expected {
+                assert_eq!(index, row.len(), "{table}.{column}");
+                row.push(value.clone());
+            }
+        }
+        assert_eq!(&after[table], &expected, "upgrade changed retained rows in {table}");
     }
     let metadata: Value = serde_json::from_slice(&std::fs::read(fixture("fixture.json")).unwrap()).unwrap();
     exercise_upgraded_book(book, &metadata, root.path());

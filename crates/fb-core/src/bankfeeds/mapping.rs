@@ -14,6 +14,14 @@ pub enum MappingTarget {
     New { name: String, kind: NewAccountKind },
 }
 
+#[derive(Clone, Debug)]
+pub struct ImportSettings {
+    pub feed_account_id: String,
+    pub expected_state: String,
+    pub expected_date: Option<String>,
+    pub import_from_date: Option<String>,
+}
+
 /// Save the mapping form in one Writer transaction, including any newly created accounts.
 /// A rejected row rolls back every account, mapping and audit event from this submission.
 pub fn save_mappings(
@@ -24,9 +32,52 @@ pub fn save_mappings(
     mappings: &[(String, MappingTarget)],
     secrets: &SecretSet,
 ) -> FbResult<()> {
+    save_mappings_and_import_settings(book, actor, co, connection_id, mappings, &[], secrets)
+}
+
+/// Apply mappings and explicitly submitted import settings in the same Writer.
+pub fn save_mappings_and_import_settings(
+    book: &mut Book,
+    actor: UserId,
+    co: CompanyId,
+    connection_id: &str,
+    mappings: &[(String, MappingTarget)],
+    settings: &[ImportSettings],
+    secrets: &SecretSet,
+) -> FbResult<()> {
     command(book, secrets, |w| {
-        services::access(w.tx, actor, co)?;
-        connection_row(w.tx, co, connection_id)?;
+        let user = services::access(w.tx, actor, co)?;
+        let connection = connection_row(w.tx, co, connection_id)?;
+        let mut configured = HashSet::new();
+        for change in settings {
+            if connection["active"] != true || connection["needs_reconnect"] == true {
+                return Err(err("Choose an active bank connection."));
+            }
+            let f = feed(w.tx, &change.feed_account_id)?
+                .filter(|f| f.connection_id == connection_id && f.active)
+                .ok_or_else(|| err("Choose an active downloaded account of this connection."))?;
+            if !configured.insert(&change.feed_account_id) {
+                return Err(err("Choose each downloaded account only once."));
+            }
+            if f.import_state != change.expected_state || f.import_from_date != change.expected_date {
+                return Err(err("The import settings changed. Reload Bank feed accounts and try again."));
+            }
+            let date = staging::opt_date(&change.import_from_date)?;
+            if f.import_state == "ACTIVE" {
+                if f.import_from_date != date {
+                    return Err(err("The import start is fixed after the first completed transaction import."));
+                }
+                continue;
+            }
+            if f.import_state == "READY" && f.import_from_date == date {
+                continue;
+            }
+            w.execute("UPDATE bankfeeds_account SET import_state='READY',import_from_date=?2 WHERE id=?1",
+                params![f.id, date])?;
+            w.audit(&user, co, "bankfeed.import_start_changed", format!("bankfeedaccount:{}", f.id),
+                json!({"before":{"state":f.import_state,"date":f.import_from_date},
+                    "after":{"state":"READY","date":date}}))?;
+        }
         let mut targets = HashSet::new();
         for (_, target) in mappings {
             if let MappingTarget::Existing(Some(id)) = target && !targets.insert(*id) {

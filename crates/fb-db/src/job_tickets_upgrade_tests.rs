@@ -74,12 +74,14 @@ fn a_format_91_book_is_backed_up_upgraded_and_reopens_with_only_the_job_ticket_o
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected the format-91 schema"),
     };
-    assert_eq!((old.from(), old.to()), (91, 97)); // 0205 through 0210
+    assert_eq!((old.from(), old.to()), (91, 98)); // 0205 through 0211
     let backup = dir.path().join("verified-format-91.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
     let book = old.upgrade().unwrap();
     let after = test_support::snapshot(&book.conn).unwrap();
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
@@ -90,6 +92,10 @@ fn a_format_91_book_is_backed_up_upgraded_and_reopens_with_only_the_job_ticket_o
     }
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
+        if crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) {
+            assert_ne!(&upgraded[object], hash, "0211 extends {object}");
+            continue;
+        }
         if !["view:fb_value_invalid", "table:bankfeeds_account", "table:bankfeeds_transaction"].contains(&object.as_str())
             && !crate::deposit_adjustments_upgrade_tests::CHANGED.contains(&object.as_str())
             && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str())
@@ -102,7 +108,7 @@ fn a_format_91_book_is_backed_up_upgraded_and_reopens_with_only_the_job_ticket_o
             && !crate::ai_unattended_upgrade_tests::AI_UNATTENDED_OBJECTS.contains(k)
             && !crate::deposit_adjustments_upgrade_tests::OBJECTS.contains(k)
             && !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k)).collect();
-    assert_eq!(added, JOB_TICKET_OBJECTS.iter().copied().collect::<BTreeSet<_>>());
+    assert_eq!(added, JOB_TICKET_OBJECTS.iter().chain(crate::company_periods_upgrade_tests::OBJECTS).copied().collect::<BTreeSet<_>>());
     // The shared value view keeps its prior text and gains the four job arms before the AI arm.
     let next: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
     let (kept, tail) = next.split_once("\nUNION ALL\nSELECT 'invalid stored value in jobs_billing'").unwrap();

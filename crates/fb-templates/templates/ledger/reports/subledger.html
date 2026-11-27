@@ -1,0 +1,7 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/reports.css') }}">{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% include 'ledger/reports/_controls.html' %}
+{% if not invalid %}<section class="report-sheet" aria-label="{{ title }}">{% include 'ledger/reports/subledger_body.html' %}</section>{% endif %}
+{% endblock %}

@@ -47,7 +47,8 @@ async function run({s,launch,close,shot,text,signIn,unlock,pass,data,book,keyrin
   await s.page.locator('li').filter({hasText:'Restored copy'}).getByRole('button',{name:'Open these'}).click();
   await s.page.waitForFunction(()=>(document.querySelector('.gate-file')?.innerText||'').includes('restored-bakery-restored'));
   assert.equal(JSON.parse(await s.native('appState')).open,false,'the lock screen did not open the copy through its saved key');
-  assert.match(await text(s),/You locked FreedomBooks/);
+  // The chosen copy inherits the backup's ask-every-time setting and shows its own unlock reason.
+  assert.match(await text(s),/ask for the book password each time it opens/);
   assert.ok(await s.page.locator('#id_password').isVisible());
   await shot(s,'11b-lock-screen-chooser-asks-for-the-copy-password');
   await unlock(s,BOOK_PASSWORD);await signIn(s);

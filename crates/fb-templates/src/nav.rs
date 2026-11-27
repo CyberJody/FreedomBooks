@@ -127,16 +127,29 @@ const CHECK_TABS: &[Dest] = &[
 
 const REPORTS: &[(&str, &[Dest])] = &[
     ("Financial statements", &[
+        Dest { description: "Compare income and expenses by month, fiscal quarter, or fiscal year.", ..dest("comparative_profit_and_loss", "Comparative Profit and Loss", "profit-loss", Link::Route("reports:comparative_profit_and_loss"), &[Rule::Route(&["reports:comparative_profit_and_loss"])]) },
+        Dest { description: "Cash receipts and payments by operating, investing, and financing activity.", ..dest("cash_flow", "Direct-Method Cash Flow", "profit-loss", Link::Route("reports:cash_flow"), &[Rule::Route(&["reports:cash_flow"])]) },
         Dest { description: "Income and expenses for a period, and the net result.", ..dest("profit_loss", "Profit and loss", "profit-loss", Link::Route("profit_loss"), &[Rule::Route(&["profit_loss"])]) },
         Dest { description: "What the company owns and owes, and its equity, on a date.", ..dest("balance_sheet", "Balance sheet", "balance-sheet", Link::Route("balance_sheet"), &[Rule::Route(&["balance_sheet"])]) },
     ]),
     ("Accounting detail", &[
+        Dest { description: "Posted fixed-asset balances and an optional straight-line worksheet.", ..dest("asset_depreciation_schedule", "Fixed-Asset Depreciation Schedule", "general-ledger", Link::Route("reports:asset_depreciation_schedule"), &[Rule::Route(&["reports:asset_depreciation_schedule"])]) },
         Dest { description: "Every posted line, account by account, with running balances.", ..dest("general_ledger", "General ledger", "general-ledger", Link::Route("general_ledger"), &[Rule::Route(&["general_ledger"])]) },
         Dest { description: "Debit and credit balances of every account on a date.", ..dest("trial_balance", "Trial balance", "trial-balance", Link::Route("trial_balance"), &[Rule::Route(&["trial_balance"])]) },
         Dest { new_label: "New journal entry", record: "Journal entry", description: "Every journal entry, posted and draft. Make a journal entry from here.", ..dest("journals", "Journal entries", "journal", Link::Route("company"), &[Rule::Route(&["company", "journal_new", "journal", "journal_edit", "journal_post", "journal_reverse"])]) },
     ]),
+    ("Customers and vendors", &[
+        Dest { description: "Posted sales and credits grouped by customer, item, or both.", ..dest("sales_by_customer_item", "Sales by Customer and Item", "profit-loss", Link::Route("reports:sales_by_customer_item"), &[Rule::Route(&["reports:sales_by_customer_item"])]) },
+        Dest { description: "Opening balances, dated activity, and closing balances for one customer.", ..dest("customer_statements", "Customer Statements", "payment", Link::Route("reports:customer_statements"), &[Rule::Route(&["reports:customer_statements"])]) },
+        Dest { description: "Open invoices and customer credits by days past due.", ..dest("ar_aging", "A/R Aging Summary", "payment", Link::Route("ar_aging"), &[Rule::Route(&["ar_aging"])]) },
+        Dest { description: "Open bills by vendor and days past due.", ..dest("ap_aging", "A/P Aging Summary", "bill", Link::Route("ap_aging"), &[Rule::Route(&["ap_aging"])]) },
+        Dest { description: "Payments by vendor for a tax year or date range.", ..dest("vendor_1099", "Vendor 1099 Summary", "check", Link::Route("vendor_1099"), &[Rule::Route(&["vendor_1099"])]) },
+    ]),
+    ("Tax preparation", &[
+        Dest { description: "Assign book income and expenses to business activities and categories.", ..dest("schedule_c_activity", "Schedule C Activity Worksheet", "profit-loss", Link::Route("reports:schedule_c_activity"), &[Rule::Route(&["reports:schedule_c_activity"])]) },
+    ]),
     ("Sales tax", &[
-        Dest { description: "Sales tax owed by agency for a filing period.", ..dest("tax_owed", "What you owe", "sales-tax", Link::Route("salestax:what_you_owe"), &[]) },
+        Dest { description: "What you owe by agency, with sales by rate for a filing period.", ..dest("tax_owed", "Sales tax owed", "sales-tax", Link::Route("salestax:what_you_owe"), &[]) },
     ]),
     ("Activity", &[
         Dest { description: "Who changed what, and when.", ..dest("history", "Audit history", "history", Link::Route("history"), &[Rule::Route(&["history"])]) },
@@ -150,6 +163,7 @@ const SETTINGS: &[(&str, &[Dest])] = &[
         Dest { access: Access::Admin, description: "Name, address, contact details, tax ID and logo.", ..dest("company_profile", "Company profile", "company-settings", Link::Route("company_edit"), &[Rule::Route(&["company_edit"])]) },
         Dest { access: Access::Admin, description: "The next number for invoices, bills, checks and other documents.", ..dest("numbering", "Document numbering", "company-settings", Link::Anchor("company_edit", "numbering-title"), &[]) },
         Dest { description: "Which accounts hold receivables, payables, undeposited funds and sales tax, and which are bank accounts.", ..dest("accounting_setup", "Accounting setup", "setup", Link::Route("documents:setup"), &[Rule::Ns("documents", &[]), Rule::Route(&["setup_start", "setup_fill", "setup_done"])]) },
+        Dest { description: "Fiscal-year start and the date through which the books are closed.", ..dest("accounting_periods", "Accounting periods", "setup", Link::Route("company:periods"), &[Rule::Route(&["company:periods"])]) },
         Dest { description: "Whether you charge sales tax, your tax rates and tax groups.", ..dest("sales_tax", "Sales tax and rates", "sales-tax", Link::Route("salestax:settings"), &[Rule::Ns("salestax", &[])]) },
     ]),
     ("Money in and out", &[
@@ -633,7 +647,7 @@ mod tests {
     #[test]
     fn entries_the_viewer_cannot_open_are_hidden() {
         let bookkeeper = Viewer { to_review: 3, bankfeeds: true, ..Viewer::default() };
-        assert_eq!(settings_keys(&bookkeeper), ["accounting_setup", "sales_tax", "bank_feeds", "my_signin"]);
+        assert_eq!(settings_keys(&bookkeeper), ["accounting_setup", "accounting_periods", "sales_tax", "bank_feeds", "my_signin"]);
         let nav = build(Some("c1"), &Current { route: "company_home", kind: None }, &bookkeeper).unwrap();
         let banking = nav.groups.iter().find(|g| g.label == "Banking").unwrap();
         let review = banking.items.iter().find(|i| i.key == "bank_review").unwrap();

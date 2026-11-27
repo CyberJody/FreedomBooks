@@ -26,3 +26,5 @@ pub mod invoice_stripe;
 pub mod test_panic;
 
 pub mod recurring_bills;
+
+pub mod scheduled_backups;

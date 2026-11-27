@@ -261,8 +261,10 @@ fn populated_copy_migration(prior_version: usize) {
     drop(conn);
     let book = Book::open(&path, &key).unwrap();
     assert!(book.check().unwrap().is_empty());
-    for (t, expected) in tables.iter().zip(before) {
-        assert_eq!(dump(&book.conn, t), expected, "{t}");
+    let mut before = tables.iter().map(|t| (*t).to_owned()).zip(before).collect();
+    test_support::company_period_defaults(&mut before, &book.conn);
+    for (table, expected) in before {
+        assert_eq!(dump(&book.conn, &table), expected, "{table}");
     }
     assert_eq!(book.conn.query_row("SELECT count(*) FROM ledger_journal WHERE source_id IS NOT NULL", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
     assert_eq!(

@@ -83,10 +83,12 @@ impl Book {
             authorize(ctx, mode.load(Ordering::Relaxed))
         }))?;
         let owner_empty_command = register_owner_command(&conn)?;
+        let company_period_command = company_periods::register(&conn)?;
         let mut book = Book {
             conn,
             callback_mode,
             owner_empty_command,
+            company_period_command,
             pending_credential_masks: Default::default(),
             retained_text_guards: Default::default(),
             commits: 0,

@@ -43,7 +43,7 @@ fn picker_hints_and_audit_snapshot_shapes_match_python() {
     )
     .unwrap();
     let hints = directory::customer_tax_hints(f.book.connection(), c).unwrap();
-    assert_eq!(hints[cust["id"].as_str().unwrap()], json!({"exempt":true,"certificate":"RESALE"}));
+    assert_eq!(hints[cust["id"].as_str().unwrap()], json!({"exempt":true,"certificate":"RESALE","terms":null}));
     let v = directory::save_record(
         &mut f.book,
         f.user,

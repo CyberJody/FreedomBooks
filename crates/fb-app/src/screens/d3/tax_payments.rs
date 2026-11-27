@@ -2,7 +2,7 @@
 //! Every write is a typed command; the review is kept in the session and spent by the record.
 use super::*;
 use crate::commands::SalesTaxPaymentValues;
-use chrono::{Datelike, NaiveDate};
+use fb_core::salestax::{OWED_PERIOD_PRESETS, current_period, owed_period_preset};
 use fb_core::salestax_payments as stp;
 use crate::screens::d2::clean_date;
 
@@ -35,29 +35,38 @@ fn payment(app: &mut App, c: CompanyId, id: &str) -> AppResult<Value> {
     })
 }
 
-/// The filing period containing `today`.
-pub(super) fn current_period(today: NaiveDate, frequency: &str) -> (NaiveDate, NaiveDate) {
-    let first = |y: i32, m: u32| NaiveDate::from_ymd_opt(y, m, 1).unwrap();
-    let months = match frequency {
-        "MONTHLY" => 1,
-        "ANNUALLY" => 12,
-        _ => 3,
-    };
-    let index = (today.year() * 12 + today.month0() as i32) / months * months;
-    let start = first(index.div_euclid(12), index.rem_euclid(12) as u32 + 1);
-    let next = index + months;
-    let end = first(next.div_euclid(12), next.rem_euclid(12) as u32 + 1).pred_opt().unwrap();
-    (start, end)
-}
-
 fn owed_page(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<(String, u16)> {
     let c = arg_company(route)?;
     let mut vm = page_vm(app, route)?;
     let settings = read(app, c, |q| salestax::settings_for(q, c))?;
-    let (default_start, default_end) = current_period((app.today)(), s(&settings, "filing_frequency"));
+    let today = (app.today)();
+    let frequency = s(&settings, "filing_frequency");
+    let legacy_dates = get(p, "start").is_some() || get(p, "end").is_some();
+    let explicit = get(p, "preset").filter(|key| !key.is_empty());
+    let preset = explicit.unwrap_or(if legacy_dates { "custom" } else { "filing_period" });
     let mut errors = Errors::new();
-    let start = if get(p, "start").is_some() { clean_date(p, "start", true, &mut errors) } else { Some(default_start.to_string()) };
-    let end = if get(p, "end").is_some() { clean_date(p, "end", true, &mut errors) } else { Some(default_end.to_string()) };
+    let (start, end) = if let Some((start, end)) = owed_period_preset(preset, today, frequency) {
+        (Some(start.to_string()), Some(end.to_string()))
+    } else if preset == "custom" {
+        let (default_start, default_end) = current_period(today, frequency);
+        let clean = |key, default: chrono::NaiveDate, errors: &mut Errors| {
+            if explicit.is_none() && get(p, key).is_none() {
+                Some(default.to_string())
+            } else {
+                clean_date(p, key, true, errors)
+            }
+        };
+        (clean("start", default_start, &mut errors), clean("end", default_end, &mut errors))
+    } else {
+        error(&mut errors, "__all__", "Choose a valid filing period.");
+        (None, None)
+    };
+    put(&mut vm, "period_preset", preset);
+    put(&mut vm, "period_presets", OWED_PERIOD_PRESETS.map(|(key, label)| {
+        let (start, end) = owed_period_preset(key, today, frequency)
+            .map(|(a, b)| (a.to_string(), b.to_string())).unwrap_or_default();
+        json!([key, label, start, end])
+    }));
     if let (Some(a), Some(b)) = (&start, &end)
         && a > b
     {
@@ -93,7 +102,7 @@ fn owed_page(app: &mut App, route: &Route, p: Posted<'_>) -> AppResult<(String, 
     }
     payments.truncate(200);
     put(&mut vm, "payments", payments);
-    put(&mut vm, "frequency", match s(&settings, "filing_frequency") { "MONTHLY" => "monthly", "ANNUALLY" => "yearly", _ => "quarterly" });
+    put(&mut vm, "frequency", match frequency { "MONTHLY" => "monthly", "ANNUALLY" => "yearly", _ => "quarterly" });
     put(&mut vm, "has_agencies", !read(app, c, |q| stp::agencies(q, c))?.is_empty());
     Ok((draw(app, "salestax/owed.html", &vm)?, status))
 }
@@ -227,7 +236,8 @@ fn core_errors(result: AppResult<Outcome>, errors: &mut Errors) -> AppResult<Opt
         Ok(Outcome::Done { data }) => Ok(Some(data)),
         Err(AppError::Core(FbError::Validation(messages))) => {
             for m in messages {
-                error(errors, "__all__", m);
+                let field = if fb_core::periods::is_closed_message(&m) { "date" } else { "__all__" };
+                error(errors, field, m);
             }
             Ok(None)
         }
@@ -361,6 +371,7 @@ pub(crate) fn run_payment_command(app: &mut App, cmd: Command) -> AppResult<Outc
 mod tests {
     use super::current_period;
     use chrono::NaiveDate;
+
     fn d(s: &str) -> NaiveDate {
         NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
     }

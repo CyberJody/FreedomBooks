@@ -42,6 +42,8 @@ fn genuine_main_schema_upgrades_without_row_loss_and_hashes_equal_a_fresh_book()
     let upgraded=Book::open(&path,&key).unwrap();
     let fresh=Book::create(&dir.path().join("fresh.fbbook"),&key).unwrap();
     let after=test_support::snapshot(&upgraded.conn).unwrap();
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &upgraded.conn);
     for (table,rows) in before {assert_eq!(after[&table],rows,"main table {table} changed");}
     let head_schema=schema_hashes(&upgraded.conn).unwrap();
     // 0140 changes exactly the formerly NULL-only estimate column into an FK.
@@ -50,6 +52,7 @@ fn genuine_main_schema_upgrades_without_row_loss_and_hashes_equal_a_fresh_book()
     assert!(prior_deposit_sql.contains("estimate_id TEXT CHECK(estimate_id IS NULL)"));
     assert_eq!(deposit_sql,prior_deposit_sql.replace("estimate_id TEXT CHECK(estimate_id IS NULL)","estimate_id TEXT REFERENCES sales_estimate(id)"));
     for (object,hash) in prior_schema {
+        if crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) { continue; }
         if !["view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_json_invalid","view:fb_value_invalid","table:prepayments_customerdeposit","trigger:fb_owner_user_insert","trigger:fb_owner_user_update"].contains(&object.as_str()) {
             assert_eq!(head_schema[&object],hash,"main object {object} changed");
         }
@@ -91,11 +94,13 @@ fn original_onboarding_base_upgrades_with_exact_rows_and_schema_inventory() {
     let prior_tables: BTreeSet<_> = before_rows.keys().cloned().collect();
     let head_tables: BTreeSet<_> = after_rows.keys().cloned().collect();
     assert!(prior_tables.is_subset(&head_tables));
+    let mut before_rows = before_rows;
+    test_support::company_period_defaults(&mut before_rows, &book.conn);
     for (table, rows) in before_rows { assert_eq!(after_rows[&table], rows, "all original rows in {table} survive"); }
     assert!(after_rows["company_document_details"].is_empty(), "existing books get no unsolicited document details");
     assert!(after_rows["fb_numbering"].is_empty(), "upgrading never opts existing books into a sequence");
     for (object, hash) in &before_schema {
-        if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) { assert_eq!(&after_schema[object], hash, "prior object {object} survives unchanged"); }
+        if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str()) && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) && !crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) { assert_eq!(&after_schema[object], hash, "prior object {object} survives unchanged"); }
     }
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(after_schema, schema_hashes(&fresh.conn).unwrap());

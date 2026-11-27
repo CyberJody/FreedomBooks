@@ -9,6 +9,7 @@
 # and their workspace dependents (scripts/gate_quick_plan.py), the Electron unit tests and the core
 # isolation check. Seeded fuzz loops run their small default case counts. No JSON feature run; the key-change tests run when fb-app is in the plan. The full gate (no flag) runs at the release
 # boundary.
+# --isolation-only: check the core, book-process and remote dependency graphs without building.
 #
 # Both tiers run with TMPDIR set to a private folder (under /dev/shm when it is writable, else the
 # system temp folder; FB_GATE_TMP_PARENT overrides) that is removed when the gate exits.
@@ -19,19 +20,11 @@ cd "$(dirname "$0")/.."
 # the process spent 262 of its CPU minutes in the kernel contending (21 at 8).
 export RUST_TEST_THREADS="${RUST_TEST_THREADS:-8}"
 
-QUICK=0
-[ "$#" -le 1 ] || { echo "usage: scripts/gate.sh [--quick]" >&2; exit 2; }
-case "${1:-}" in
-  "") ;;
-  --quick) QUICK=1 ;;
-  *) echo "usage: scripts/gate.sh [--quick]" >&2; exit 2 ;;
-esac
-
 key_tests() {
   cargo test -p fb-app --features key-test-hooks --test key_crashes --test protection_audit --test protection_publication --no-fail-fast
 }
 
-# The shell's unit tests use only Node built-ins: no npm install and no native module needed.
+# The shell tests include headless Electron launches using the locked npm install.
 electron_tests() {
   npm --prefix electron test
 }
@@ -39,7 +32,7 @@ electron_tests() {
 core_isolation() {
   local tree
   # fb-core must not depend on Node, napi, Electron or a network client (4.1).
-  tree="$(cargo tree -p fb-core -e normal --prefix none)"
+  tree="$(cargo tree --locked -p fb-core -e normal --prefix none)"
   if grep -Eiq '^(napi|neon|electron|reqwest|ureq|hyper|tokio) ' <<<"$tree"; then
     echo "gate: fb-core depends on a window/Node/network crate" >&2; exit 1
   fi
@@ -47,17 +40,27 @@ core_isolation() {
   # plugins run in the separate fb-net process (crates/fb-net), which never opens the book.
   # Remote access: fb-remote-proto (the book side of the host boundary) is held to the same rule.
   for crate in fb-app fb-node fb-remote-proto fb-host; do
-    tree="$(cargo tree -p "$crate" -e normal,build --prefix none)"
+    tree="$(cargo tree --locked -p "$crate" -e normal,build --prefix none)"
     if grep -Eiq '^(reqwest|ureq|hyper|hyper-util|h2|tokio|rustls|native-tls|fb-plugin-simplefin|fb-plugin-openai) ' <<<"$tree"; then
       echo "gate: $crate links a network client or a network plugin" >&2; exit 1
     fi
   done
   # The TLS side of remote access (fb-remote) never links the book.
-  tree="$(cargo tree -p fb-remote -e normal,build --prefix none)"
+  tree="$(cargo tree --locked -p fb-remote -e normal,build --prefix none)"
   if grep -Eq '^(fb-app|fb-db|fb-core|fb-node|rusqlite|libsqlite3-sys) ' <<<"$tree"; then
     echo "gate: fb-remote links the book or its storage" >&2; exit 1
   fi
 }
+
+QUICK=0
+usage() { echo "usage: scripts/gate.sh [--quick | --isolation-only]" >&2; exit 2; }
+[ "$#" -le 1 ] || usage
+case "${1:-}" in
+  "") ;;
+  --quick) QUICK=1 ;;
+  --isolation-only) core_isolation; exit 0 ;;
+  *) usage ;;
+esac
 
 # Every test book and temp file of this run goes in one private folder, removed when the gate ends,
 # so concurrent runs cannot fill or share a temp folder and no fixture leaves files behind. A RAM-backed

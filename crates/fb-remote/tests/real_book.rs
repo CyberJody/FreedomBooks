@@ -305,7 +305,21 @@ fn a_connected_bookkeeper_can_acknowledge_missing_dates_but_cannot_sync_the_bank
             app.net = Some(Box::new(SyntheticBank(calls.clone())));
             let conn = fb_app::plugins::bankfeed_connect(app, o.first, "synthetic-token", "Synthetic bank").unwrap().unwrap();
             let open = app.open_mut().unwrap();
-            let pull = bf::StagedPull::default();
+            let pull = bf::StagedPull {
+                accounts: vec![bf::StagedAccount {
+                    conn_key: "synthetic".into(),
+                    remote_id: "acct-1".into(),
+                    name: "Checking".into(),
+                    org_name: "Synthetic Bank".into(),
+                    currency: "USD".into(),
+                    balance: Some(10_000),
+                    available: None,
+                    balance_epoch: None,
+                    skipped: vec![],
+                    transactions: vec![],
+                }],
+                ..Default::default()
+            };
             let secrets = bf::SecretSet::none();
             bf::store_pull(&mut open.book, open.owner, o.first, &conn, &pull, "2024-01-01T12:00:00Z", false, None, &secrets).unwrap();
             let start = bf::begin_sync(&mut open.book, open.owner, o.first, &conn, "2024-06-01T12:00:00Z", 0, true).unwrap();

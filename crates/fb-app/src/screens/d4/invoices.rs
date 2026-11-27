@@ -311,14 +311,22 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         let mut e = Errors::new();
         let revision = clean_revision(p, 1, &mut e);
         let date = clean_date(p, "date", true, &mut e).unwrap_or_default();
-        let due_date = clean_date(p, "due_date", true, &mut e).unwrap_or_default();
-        if !doc_forms::terms_valid(p) {
-            error(
-                &mut e,
-                "terms",
-                format!("Select a valid choice. {} is not one of the available choices.",get(p,"terms").unwrap_or("")),
-            );
-        }
+        let c = arg_company(r)?;
+        let existing_due: Option<String> = app
+            .open_mut()?
+            .book
+            .read(|tx| {
+                tx.query_row(
+                    "SELECT r.due_date FROM sales_estimateconversion v
+                     JOIN sales_invoice i ON i.id=v.invoice_id AND i.company_id=?1
+                     JOIN sales_invoicerevision r ON r.invoice_id=i.id AND r.number=1
+                     WHERE v.estimate_id=?2",
+                    fb_db::rusqlite::params![c.to_db(), &r.args["estimate_id"]],
+                    |row| row.get(0),
+                )
+                .optional()
+            })?;
+        let due_date = doc_forms::clean_due(p, &date, existing_due.as_deref(), &mut e).unwrap_or_default();
         if e.is_empty() && clean_integer(&r.args["number"]) != Some(revision) {
             error(
                 &mut e,
@@ -411,7 +419,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
                 });
             }
             Err(AppError::Core(FbError::Validation(messages))) => {
-                error(&mut e, "", messages.join("; "))
+                super::super::d2::posting_errors(&mut e, "", messages);
             }
             Err(err) => return Err(err),
         }
@@ -457,6 +465,12 @@ fn conversion(
         .ok_or_else(|| AppError::NotFound(path.into()))?
         .clone();
     put(&mut vm, "estimate", root);
+    let c = arg_company(r)?;
+    let customer = selected["customer_id"].as_str().expect("estimate customer");
+    let terms = app.open_mut()?.book.read(|query| {
+        let customer = fb_core::directory::get(query, c, fb_core::directory::Model::Customer, customer)?;
+        Ok::<_, FbError>(customer["default_terms"].as_str().unwrap_or("30").to_owned())
+    })?;
     put(&mut vm, "selected", selected);
     let today = (app.today)();
     let v = |k: &str, initial: String| super::super::d2::data_value(p, k, Some(initial));
@@ -472,9 +486,9 @@ fn conversion(
                 .required()
                 .value_opt(v(
                     "due_date",
-                    (today + chrono::Duration::days(30)).to_string(),
+                    doc_forms::standard_due(today, &terms).unwrap_or_default(),
                 )),
-            doc_forms::terms_with(p, Some("30")),
+            doc_forms::terms_with(p, Some(&terms)),
         ],
         e,
     );

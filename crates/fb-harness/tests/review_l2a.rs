@@ -52,8 +52,8 @@ fn legitimate_python_ties_require_the_rust_contract_in_every_collection() {
             }
             "directory" => {
                 rust["l2a"]["directory"] = json!([
-                    {"id":"x","company_id":"c1","model":"customer","display_name":"a-b","notes":"","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":""},
-                    {"id":"y","company_id":"c1","model":"customer","display_name":"ab","notes":"","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":""}
+                    {"id":"x","company_id":"c1","model":"customer","display_name":"a-b","notes":"","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":"","default_terms":null},
+                    {"id":"y","company_id":"c1","model":"customer","display_name":"ab","notes":"","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":"","default_terms":null}
                 ]);
                 "/l2a/directory"
             }

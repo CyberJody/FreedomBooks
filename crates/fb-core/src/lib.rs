@@ -39,6 +39,7 @@ pub mod model;
 pub mod py;
 pub mod reports;
 pub mod services;
+pub mod periods;
 pub mod company_documents;
 pub mod invoice_preferences;
 pub mod invoice_email;

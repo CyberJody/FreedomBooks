@@ -154,6 +154,9 @@ fn arg_company(route: &Route) -> AppResult<CompanyId> {
 pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
     let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let params = parse_query(query);
+    if path != protection::RESTORE {
+        app.backups.abandon_restore();
+    }
     if identity::handles(path) { return identity::render(app, path, &[], None); }
     if app.is_open() && app.identity_location().is_some() { return Ok(Rendered { html: crate::identity::SIGN_IN.into(), status: 303, route: "sign-in".into() }); }
     app.authorize_path(target, crate::identity::Permission::Read)?;
@@ -175,7 +178,7 @@ pub fn render(app: &mut App, target: &str) -> AppResult<Rendered> {
     let (html, status) = match name.as_str() {
         "home" | "company" | "company_new" | "company_edit" | "account_new" | "account_edit"
         | "journal" | "journal_new" | "journal_edit" | "history" | "trial_balance"
-        | "report_problem" | "setup_start" | "documents:setup" => {
+        | "report_problem" | "setup_start" | "documents:setup" | "company:periods" => {
             d2::render(app, &route, &params, path)?
         }
         _ if printing::is_document(&name) => printing::document(app, &route, target)?,
@@ -781,8 +784,22 @@ struct InvoiceChoices {
     accounts: Vec<(String, String)>,
     tax: Vec<(String, String)>,
     tax_initial: String,
+    company_tax_default: String,
     catalog: Value,
     customer_tax: Value,
+}
+
+impl InvoiceChoices {
+    fn customer_defaults(&self, customer: Option<&str>) -> (&str, &str) {
+        let hint = customer.map(|id| &self.customer_tax[id]);
+        let terms = hint.and_then(|h| h["terms"].as_str()).unwrap_or("30");
+        let tax = if hint.is_some_and(|h| h["exempt"] == true) {
+            "NONE"
+        } else {
+            self.company_tax_default.as_str()
+        };
+        (terms, tax)
+    }
 }
 
 fn invoice_choices(book: &mut Book, c: CompanyId) -> AppResult<InvoiceChoices> {
@@ -823,11 +840,20 @@ fn invoice_choices(book: &mut Book, c: CompanyId) -> AppResult<InvoiceChoices> {
         } else {
             vec![("NONE".to_owned(), "No tax (sales tax is turned off)".to_owned())]
         };
+        let company_tax_default = if settings["charge_tax"] == true {
+            settings["default_item_id"].as_str()
+                .map(|id| format!("T{id}"))
+                .filter(|id| tax.iter().any(|(value, _)| value == id))
+                .unwrap_or_default()
+        } else {
+            "NONE".into()
+        };
         Ok(InvoiceChoices {
             customers,
             items: item_choices,
             accounts: account_choices,
-            tax_initial: if settings["charge_tax"]==true {settings["default_item_id"].as_str().filter(|id|tax.iter().any(|(v,_)|v==&format!("T{id}"))).map(|id|format!("T{id}")).unwrap_or_default()}else{"NONE".into()},
+            tax_initial: company_tax_default.clone(),
+            company_tax_default,
             tax,
             catalog: Value::Object(catalog),
             customer_tax: fb_core::directory::customer_tax_hints(tx, c)?,

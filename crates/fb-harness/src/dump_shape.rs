@@ -242,7 +242,11 @@ impl Shape {
             Directory => {
                 let mut fields: Vec<(&str, &Shape)> =
                     PARTY.iter().map(|(key, shape)| (*key, shape)).collect();
-                let customer = [("tax_status", String), ("exemption_number", String)];
+                let customer = [
+                    ("tax_status", String),
+                    ("exemption_number", String),
+                    ("default_terms", Nullable(&String)),
+                ];
                 let vendor = [
                     ("default_expense_account", Nullable(&String)),
                     ("default_terms", Nullable(&String)),

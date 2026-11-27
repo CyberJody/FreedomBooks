@@ -1,5 +1,5 @@
 //! `fb-harness run <scenario.json> <out.json> [book dir]` applies a scenario to a fresh SQLCipher book.
-//! `fb-harness compare <python.json> <rust.json> [scenario.json]` prints failures and warnings; exit 1 on any
+//! `fb-harness compare <expected.json> <actual.json> [scenario.json]` prints failures and warnings; exit 1 on any
 //! failure. Pass the scenario to validate every intended outcome independently of the dump flags;
 //! financial reports are checked against the scenario's request manifest, so they need the scenario.
 use std::path::PathBuf;
@@ -53,7 +53,7 @@ fn main() {
             std::process::exit(if report.ok() { 0 } else { 1 });
         }
         _ => {
-            eprintln!("usage: fb-harness run <scenario.json> <out.json> [book-dir] | compare <python.json> <rust.json> [scenario.json]");
+            eprintln!("usage: fb-harness run <scenario.json> <out.json> [book-dir] | compare <expected.json> <actual.json> [scenario.json]");
             std::process::exit(2);
         }
     }

@@ -6,7 +6,7 @@
 use super::financial::{self, BalanceSheet, Basis, LedgerSection, ProfitAndLoss};
 use crate::error::{FbError, FbResult};
 use crate::py;
-use chrono::{Datelike, Duration, NaiveDate};
+use chrono::{Datelike, Duration, Months, NaiveDate};
 use fb_ids::AccountId;
 use fb_money::Money;
 
@@ -17,6 +17,11 @@ pub const PRESETS: [(&str, &str); 6] = [
     ("this_quarter", "This quarter"),
     ("this_year", "This year"),
     ("year_to_date", "Year to date"),
+    ("custom", "Custom"),
+];
+pub const TAX_YEAR_PRESETS: [(&str, &str); 3] = [
+    ("this_year", "This Year"),
+    ("last_year", "Last Year"),
     ("custom", "Custom"),
 ];
 pub const DEFAULT_PRESET: &str = "this_month";
@@ -40,7 +45,7 @@ fn first_of_month(day: NaiveDate) -> NaiveDate {
 }
 
 /// `preset_range(key, today)`; an unknown key is Python's ValueError.
-pub fn preset_range(key: &str, today: NaiveDate) -> FbResult<(NaiveDate, NaiveDate)> {
+pub fn preset_range(key: &str, today: NaiveDate, start_month: u32) -> FbResult<(NaiveDate, NaiveDate)> {
     let ymd = |y: i32, m: u32, d: u32| NaiveDate::from_ymd_opt(y, m, d).ok_or_else(out_of_range);
     let back = |d: NaiveDate| d.checked_sub_signed(Duration::days(1)).ok_or_else(out_of_range);
     match key {
@@ -56,23 +61,23 @@ pub fn preset_range(key: &str, today: NaiveDate) -> FbResult<(NaiveDate, NaiveDa
             let end = back(first_of_month(today))?;
             Ok((first_of_month(end), end))
         }
-        "this_quarter" => {
-            let month = 3 * ((today.month() - 1) / 3) + 1;
-            let start = ymd(today.year(), month, 1)?;
-            let end = if month == 10 { ymd(today.year() + 1, 1, 1) } else { ymd(today.year(), month + 3, 1) };
-            if today.year() >= 9999 && month == 10 {
-                return Err(out_of_range());
-            }
-            Ok((start, back(end?)?))
+        "this_quarter" | "this_year" => {
+            let fiscal_start = financial::fiscal_year_start(today, start_month)?;
+            let (offset, duration) = if key == "this_quarter" {
+                (3 * (((today.month() + 12 - start_month) % 12) / 3), 3)
+            } else {
+                (0, 12)
+            };
+            let start = fiscal_start.checked_add_months(Months::new(offset)).ok_or_else(out_of_range)?;
+            let next = start.checked_add_months(Months::new(duration))
+                .filter(|date| date.year() <= 9999).ok_or_else(out_of_range)?;
+            Ok((start, back(next)?))
         }
-        "this_year" => {
-            let start = financial::fiscal_year_start(today);
-            if start.year() >= 9999 {
-                return Err(out_of_range());
-            }
-            Ok((start, back(ymd(start.year() + 1, start.month(), start.day())?)?))
-        }
-        "year_to_date" => Ok((financial::fiscal_year_start(today), today)),
+        "last_year" => Ok((
+            ymd(today.year() - 1, 1, 1)?,
+            ymd(today.year() - 1, 12, 31)?,
+        )),
+        "year_to_date" => Ok((financial::fiscal_year_start(today, start_month)?, today)),
         other => Err(FbError::validation(other.to_string())),
     }
 }
@@ -146,12 +151,12 @@ fn range_fields(input: &RangeInput<'_>, errors: &mut Vec<String>) -> Option<Rang
 
 /// `RangeForm.clean`, run only when every field (of this form or a subclass) is valid. A non-custom preset
 /// replaces any typed dates; with no preset, typed dates mean "custom" and otherwise this month.
-fn range_clean(input: &RangeInput<'_>, fields: RangeFields, today: NaiveDate) -> FbResult<Range> {
+fn range_clean(input: &RangeInput<'_>, fields: RangeFields, today: NaiveDate, start_month: u32) -> FbResult<Range> {
     let RangeFields { basis, preset, mut start, mut end } = fields;
     let typed = input.start.is_some_and(|s| !s.is_empty()) || input.end.is_some_and(|s| !s.is_empty());
     let preset = preset.unwrap_or_else(|| if typed { "custom".into() } else { DEFAULT_PRESET.into() });
     if preset != "custom" {
-        let (s, e) = preset_range(&preset, today)?;
+        let (s, e) = preset_range(&preset, today, start_month)?;
         start = Some(s);
         end = Some(e);
     } else if end.is_none() {
@@ -166,10 +171,10 @@ fn range_clean(input: &RangeInput<'_>, fields: RangeFields, today: NaiveDate) ->
 }
 
 /// `RangeForm`: field errors in field order; the cross-field rule only once every field is valid.
-pub fn range(input: &RangeInput<'_>, today: NaiveDate) -> FbResult<Range> {
+pub fn range(input: &RangeInput<'_>, today: NaiveDate, start_month: u32) -> FbResult<Range> {
     let mut errors = Vec::new();
     match range_fields(input, &mut errors) {
-        Some(fields) => range_clean(input, fields, today),
+        Some(fields) => range_clean(input, fields, today, start_month),
         None => Err(FbError::Validation(errors)),
     }
 }
@@ -183,7 +188,7 @@ pub struct LedgerRange {
 
 /// `LedgerForm`: the range plus an account and an account group. Rust account ids are UUIDs, so the account
 /// control accepts an id instead of Python's decimal pk; anything else is "Choose an account from the list.".
-pub fn ledger_range(input: &RangeInput<'_>, account: Option<&str>, group: Option<&str>, today: NaiveDate) -> FbResult<LedgerRange> {
+pub fn ledger_range(input: &RangeInput<'_>, account: Option<&str>, group: Option<&str>, today: NaiveDate, start_month: u32) -> FbResult<LedgerRange> {
     // Django: every field (range controls, then account, then group) before `RangeForm.clean`.
     let mut errors = Vec::new();
     let fields = range_fields(input, &mut errors);
@@ -204,7 +209,7 @@ pub fn ledger_range(input: &RangeInput<'_>, account: Option<&str>, group: Option
     let (Some(fields), Some(account), true) = (fields, account, errors.is_empty()) else {
         return Err(FbError::Validation(errors));
     };
-    Ok(LedgerRange { range: range_clean(input, fields, today)?, account, group: group_text.to_string() })
+    Ok(LedgerRange { range: range_clean(input, fields, today, start_month)?, account, group: group_text.to_string() })
 }
 
 /// `AsOfForm`: blank means today.
@@ -216,6 +221,30 @@ pub fn as_of(basis: Option<&str>, as_of: Option<&str>, today: NaiveDate) -> FbRe
         (Some(b), Some(d)) => Ok((b, d.unwrap_or(today))),
         _ => Err(FbError::Validation(errors)),
     }
+}
+
+/// A calendar tax year or a custom payment range with both endpoints.
+pub fn tax_year_range(input: &RangeInput<'_>, today: NaiveDate) -> FbResult<(&'static str, NaiveDate, NaiveDate)> {
+    let supplied_dates = [input.start, input.end].into_iter().flatten().any(|value| !value.is_empty());
+    let preset = match input.preset.unwrap_or("") {
+        "" if supplied_dates => "custom",
+        "" => "this_year",
+        value => TAX_YEAR_PRESETS.iter().find(|(key, _)| *key == value)
+            .map(|(key, _)| *key).ok_or_else(|| FbError::validation(choice_error(value)))?,
+    };
+    let (start, end) = if preset == "custom" {
+        let required = |value, field| {
+            bounded_date(value).map_err(FbError::validation)?
+                .ok_or_else(|| FbError::validation(format!("Enter a \"{field}\" date for a custom range.")))
+        };
+        (required(input.start, "From")?, required(input.end, "To")?)
+    } else {
+        preset_range(preset, today, 1)?
+    };
+    if start > end {
+        return Err(FbError::validation("The \"From\" date must not be after the \"To\" date."));
+    }
+    Ok((preset, start, end))
 }
 
 /// Where a report total or row drills to.
@@ -441,9 +470,18 @@ pub fn csv_amount(amount: Money) -> String {
     amount.to_string()
 }
 
-/// `_cell` for text: a value a spreadsheet would run as a formula (= + - @ tab CR) gets a leading quote.
+/// Spreadsheet formula markers can be full-width or preceded by whitespace.
+/// Keep the original text intact behind the leading apostrophe.
 pub fn csv_text(text: &str) -> String {
-    if text.starts_with(['=', '+', '-', '@', '\t', '\r']) { format!("'{text}") } else { text.to_string() }
+    if text.starts_with(['\t', '\r', '\n'])
+        || text
+            .trim_start()
+            .starts_with(['=', '+', '-', '@', '＝', '＋', '－', '＠'])
+    {
+        format!("'{text}")
+    } else {
+        text.to_owned()
+    }
 }
 
 /// Quote one already formula-guarded CSV cell. TAB/CR starts stay explicitly quoted.

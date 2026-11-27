@@ -400,6 +400,14 @@ pub(crate) fn bankfeed_connect(app: &mut App, co: CompanyId, setup_token: &str, 
 }
 
 pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -> AppResult<Result<String, Refusal>> {
+    bankfeed_fetch(app, co, connection_id, false)
+}
+
+pub(crate) fn bankfeed_discover(app: &mut App, co: CompanyId, connection_id: &str) -> AppResult<Result<String, Refusal>> {
+    bankfeed_fetch(app, co, connection_id, true)
+}
+
+fn bankfeed_fetch(app: &mut App, co: CompanyId, connection_id: &str, discovery: bool) -> AppResult<Result<String, Refusal>> {
     app.open_mut()?;
     if !app.os_store_usable {
         return Ok(Err(BANK_KEYRING_REQUIRED.into()));
@@ -408,9 +416,12 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
     let owner = {
         let open = app.open_mut()?;
         let owner = open.owner;
-        // `_sync_locked` preflight: this company's connection, not forgotten, not "reconnect needed",
-        // outside the manual minimum interval; returns the window start.
-        match bankfeeds::begin_sync(&mut open.book, owner, co, connection_id, &now, bankfeeds::MANUAL_MIN_INTERVAL_SECS, false) {
+        let start = if discovery {
+            bankfeeds::begin_discovery(&mut open.book, owner, co, connection_id, &now).map(|()| None)
+        } else {
+            bankfeeds::begin_sync(&mut open.book, owner, co, connection_id, &now, bankfeeds::MANUAL_MIN_INTERVAL_SECS, false).map(Some)
+        };
+        match start {
             Ok(start) => (owner, start),
             Err(e) => return Ok(Err(refusal(e)?)),
         }
@@ -432,7 +443,12 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
     };
     drop(url);
     let record_text = std::str::from_utf8(record.expose()).map_err(|_| AppError::Invalid(UNREADABLE.into()))?;
-    let mut request = json!({"op": "simplefin_fetch", "record": record_text, "start_epoch": start, "zone": display_zone()});
+    let mut request = json!({"op": "simplefin_fetch", "record": record_text, "zone": display_zone()});
+    if let Some(start) = start {
+        request["start_epoch"] = json!(start);
+    } else {
+        request["discovery"] = json!(true);
+    }
     let reply = net_call(app, &request);
     request.zeroize_strings();
     drop(record);
@@ -444,7 +460,13 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
                     .ok().filter(|accounts| accounts.len() == pull.accounts.len() && accounts.iter().zip(&pull.accounts)
                         .all(|(proof, account)| proof.transactions_exact.len() == account.transactions.len()))
                     .unwrap_or_default();
-                return match bankfeeds::store_pull_for_desktop(&mut open.book, owner, co, connection_id, &pull, &now, false, Some(start), &secrets, &evidence) {
+                if discovery {
+                    match bankfeeds::store_discovery(&mut open.book, owner, co, connection_id, &pull, &now, &secrets, &evidence) {
+                        Ok(result) => return Ok(Ok(result["summary"].as_str().unwrap_or("").to_owned())),
+                        Err(e) => refusal(e)?,
+                    }
+                } else {
+                return match bankfeeds::store_pull_for_desktop(&mut open.book, owner, co, connection_id, &pull, &now, false, start, &secrets, &evidence) {
                     Ok(result) => {
                         let mut posted=0; let mut failed=0;
                         let ids=match bankfeeds::pending_automatic(&mut open.book,owner,co,connection_id) {Ok(ids)=>ids,Err(e)=>return Ok(Err(refusal(e)?))};
@@ -457,6 +479,7 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
                     },
                     Err(e) => Ok(Err(refusal(e)?)),
                 };
+                }
             }
             Err(_) => "SimpleFIN returned something that is not an account list.".to_owned(),
         },
@@ -464,6 +487,9 @@ pub(crate) fn bankfeed_sync(app: &mut App, co: CompanyId, connection_id: &str) -
         Err(message) => message,
     };
     // `_record_sync(ok=False)` with the user-safe message, then the same message to the screen.
+    if discovery {
+        return Ok(Err(bankfeeds::record_discovery_failure(&mut open.book, owner, co, connection_id, &now, &failure, &secrets)?));
+    }
     bankfeeds::record_sync_failure(&mut open.book, owner, co, connection_id, &now, &failure, false, &secrets)?;
     Ok(Err(failure))
 }

@@ -378,6 +378,7 @@ pub fn backup_dialog(ticket: String, chosen: String) -> Result<String> {
 enum Action {
     InvoiceEmail(String, Zeroizing<Vec<u8>>),
     RecurringBills,
+    ScheduledBackup,
     StripeRefresh(String),
     Render(String),
     Run(Zeroizing<String>),
@@ -413,6 +414,7 @@ impl Work {
         match self.action {
             Action::InvoiceEmail(..) => ("invoice_email_finish", Class::Write),
             Action::RecurringBills => ("recurring_bills", Class::Write),
+            Action::ScheduledBackup => ("scheduled_backup", Class::Write),
             Action::StripeRefresh(_) => ("stripe_refresh", Class::Write),
             Action::Render(_) => ("render_async", Class::Read),
             Action::Run(_) => ("run_async", Class::Write),
@@ -431,13 +433,23 @@ impl Task for Work {
     fn compute(&mut self) -> Result<Self::Output> {
         // A pool thread: a panic here would abort the process from libuv's worker, so it gets the
         // same boundary as the main thread's calls.
-        let mut app=app_blocking()?;
+        // A background backup yields when another task already holds the books.
+        let mut app = if matches!(self.action, Action::ScheduledBackup) { app()? } else { app_blocking()? };
         let (op, class) = self.op();
         let generation = self.generation;
         let action = &mut self.action;
         if let Action::Hosting(h) = action {
             // The door itself: these move the books into or out of the host.
             return within(op, class, &mut app, |door| hosting_in(door, h)).map(|out| (out, 0));
+        }
+        if matches!(action, Action::ScheduledBackup) {
+            if hosting::active() || generation != app.session_generation() {
+                return Ok((String::new(), generation));
+            }
+            return within(op, class, &mut app, |app| {
+                fb_app::scheduled_backups::desktop_tick(app, generation).map_err(app_error)?;
+                Ok((String::new(), app.session_generation()))
+            });
         }
         hosting::with_desk(&mut app, hosting::TASK_WAIT, |app| within(op, class, app, |app| {
         if generation!=app.session_generation() { return Err(fail("The active user changed. Open the screen again.")); }
@@ -457,13 +469,13 @@ impl Task for Work {
                 screens::backups::restore_from_gate(app,Path::new(file),name,secret).map_err(app_error)?;
                 opened_location(app)
             }
-            Action::Hosting(_) => Err(fail("unreachable")),
+            Action::Hosting(_) | Action::ScheduledBackup => Err(fail("unreachable")),
         }?;
         Ok((output,app.session_generation()))
         }))
     }
     fn resolve(&mut self, _env: Env, (output,generation): Self::Output) -> Result<String> {
-        if matches!(self.action, Action::Hosting(_)) {
+        if matches!(self.action, Action::Hosting(_) | Action::ScheduledBackup) {
             return Ok(output);
         }
         guarded("resolve", Class::Read, |app| {
@@ -535,7 +547,8 @@ pub fn hosting_state(skip_if_busy: Option<bool>) -> Result<String> {
     boundary::init();
     let mut door = app()?;
     let wait = if skip_if_busy == Some(true) { std::time::Duration::ZERO } else { hosting::DOOR_WAIT };
-    within("hosting_state", Class::Read, &mut door, |door| hosting::state(door, wait).map(json))
+    let clear_restore = skip_if_busy != Some(true);
+    within("hosting_state", Class::Read, &mut door, |door| hosting::state(door, wait, clear_restore).map(json))
 }
 
 fn hosting_task(action: HostingAction) -> Result<AsyncTask<Work>> {
@@ -1004,3 +1017,13 @@ pub fn diagnostic_summary() -> Result<String> {
 /// Trusted host timer only; no renderer channel exposes this method.
 #[napi]
 pub fn recurring_bills_async()->Result<AsyncTask<Work>> {Work::new(Action::RecurringBills)}
+
+/// Trusted main-process automation only. There is no renderer IPC for a tick.
+#[napi]
+pub fn scheduled_backup_async() -> Result<AsyncTask<Work>> {
+    // Capture the generation directly at the APP door. Hosted sessions never
+    // admit this action, including while the hosted window is signed out.
+    let app = app()?;
+    if hosting::active() { return Err(fail("BUSY")); }
+    Ok(AsyncTask::new(Work { generation: app.session_generation(), action: Action::ScheduledBackup }))
+}

@@ -242,8 +242,21 @@ pub fn share<K: Ord + Clone>(nets: &[(K, Money)], total: Money, settled: Money) 
     if settled == total {
         return Ok(nets.iter().map(|(k, v)| (k.clone(), *v)).collect());
     }
-    let sum: i128 = nets.iter().try_fold(0i128, |acc, (_, n)| acc.checked_add(n.cents())).ok_or_else(overflow)?;
-    let sigma: i128 = if sum >= 0 { 1 } else { -1 };
+    let sum: i128 = nets
+        .iter()
+        .try_fold(0i128, |acc, (_, n)| acc.checked_add(n.cents()))
+        .ok_or_else(overflow)?;
+    let sigma = if sum >= 0 { 1 } else { -1 };
+    round_shares(nets, total, settled, sigma, settled.cents())
+}
+
+fn round_shares<K: Ord + Clone>(
+    nets: &[(K, Money)],
+    total: Money,
+    settled: Money,
+    sigma: i128,
+    target: i128,
+) -> FbResult<BTreeMap<K, Money>> {
     // Fraction(settled, total) in cents; Python normalizes the sign into the numerator.
     let (mut num, mut den) = (settled.cents(), total.cents());
     if den < 0 {
@@ -260,7 +273,7 @@ pub fn share<K: Ord + Clone>(nets: &[(K, Money)], total: Money, settled: Money) 
         floors = floors.checked_add(floor).ok_or_else(overflow)?;
         parts.push((account.clone(), floor, rem));
     }
-    let leftover = settled.cents().checked_sub(floors).ok_or_else(overflow)?;
+    let leftover = target.checked_sub(floors).ok_or_else(overflow)?;
     let mut order: Vec<usize> = (0..parts.len()).collect();
     // sorted(parts, key=(-remainder, account)); a stable sort keeps Python's tie behaviour.
     order.sort_by(|&a, &b| parts[b].2.cmp(&parts[a].2).then_with(|| parts[a].0.cmp(&parts[b].0)));
@@ -305,6 +318,8 @@ pub struct Event {
     pub note: &'static str,
 }
 
+type LinesByAccount = BTreeMap<AccountId, Vec<(String, Money)>>;
+
 /// A settled document's recognisable lines (Python `Document`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Document {
@@ -314,9 +329,37 @@ pub struct Document {
     pub nets: Vec<(AccountId, Money)>,
     /// Control amount T.
     pub total: Money,
+    // Original posted line IDs and debit-credit amounts, grouped by account.
+    posted_lines: LinesByAccount,
+    direction: i128,
 }
 
-fn date_of(text: &str) -> FbResult<NaiveDate> {
+impl Document {
+    fn line_shares(
+        &self,
+        lines: &[(String, Money)],
+        settled: Money,
+        account_share: Money,
+    ) -> FbResult<BTreeMap<String, Money>> {
+        if self.total.is_zero() || settled.is_zero() {
+            return Ok(BTreeMap::new());
+        }
+        if settled == self.total {
+            return Ok(lines.iter().cloned().collect());
+        }
+        // Use the document's settlement fraction for signed lines. Round to the
+        // exact account share that the P&L already calculated for this event edge.
+        round_shares(
+            lines,
+            self.total,
+            settled,
+            self.direction,
+            self.direction * account_share.cents(),
+        )
+    }
+}
+
+pub(super) fn date_of(text: &str) -> FbResult<NaiveDate> {
     NaiveDate::parse_from_str(text, "%Y-%m-%d").map_err(|_| FbError::validation("Stored date is invalid."))
 }
 
@@ -326,7 +369,7 @@ fn account_of(text: &str) -> FbResult<AccountId> {
 
 /// `_events`: every settlement event up to `end` (inclusive), sorted by (date, family, row id). Five bounded
 /// queries (one per settlement family).
-fn events(tx: &(impl Query + ?Sized), company: CompanyId, end: NaiveDate) -> FbResult<Vec<Event>> {
+pub(super) fn events(tx: &(impl Query + ?Sized), company: CompanyId, end: NaiveDate) -> FbResult<Vec<Event>> {
     let company = company.to_db();
     let end_text = end.to_string();
     let mut events = Vec::new();
@@ -496,34 +539,124 @@ fn documents(tx: &(impl Query + ?Sized), company: CompanyId, events: &[Event]) -
         return Ok(HashMap::new());
     }
     let mut stmt = tx.prepare(
-        "SELECT j.source_id, s.number, l.account_id, l.debit, l.credit
+        "SELECT j.source_id, s.number, l.account_id, l.debit, l.credit, l.id
          FROM ledger_journalline l JOIN ledger_journal j ON j.id = l.journal_id JOIN ledger_account a ON a.id = l.account_id
          JOIN documents_documentidentity s ON s.id = j.source_id
          WHERE j.company_id = ?1 AND a.company_id = ?1 AND j.status = 'POSTED' AND j.reversal_of_id IS NULL
            AND s.kind IN ('INV', 'BILL', 'CM')",
     )?;
-    let rows = stmt
-        .query_map([company.to_db()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?, r.get::<_, i64>(3)?, r.get::<_, i64>(4)?)))?
-        .collect::<Result<Vec<_>, _>>()?;
-    let mut nets: HashMap<String, BTreeMap<AccountId, Money>> = HashMap::new();
-    let mut numbers: HashMap<String, String> = HashMap::new();
-    for (doc, number, account, debit, credit) in rows {
-        let Some(control) = controls.get(doc.as_str()) else { continue };
-        let account = account_of(&account)?;
-        numbers.insert(doc.clone(), number);
+    let mut rows = stmt.query([company.to_db()])?;
+    let mut posted_lines = HashMap::<String, LinesByAccount>::new();
+    let mut numbers = HashMap::new();
+    while let Some(row) = rows.next()? {
+        let doc: String = row.get(0)?;
+        let Some(control) = controls.get(doc.as_str()) else {
+            continue;
+        };
+        let account = account_of(&row.get::<_, String>(2)?)?;
+        numbers.insert(doc.clone(), row.get::<_, String>(1)?);
         if account != *control {
-            *nets.entry(doc).or_default().entry(account).or_default() += Money::from_db(debit) - Money::from_db(credit);
+            let amount = Money::from_db(row.get(3)?) - Money::from_db(row.get(4)?);
+            posted_lines
+                .entry(doc)
+                .or_default()
+                .entry(account)
+                .or_default()
+                .push((row.get(5)?, amount));
         }
     }
     let mut found = HashMap::new();
-    for (doc, by_account) in nets {
-        let lines: Vec<(AccountId, Money)> = by_account.into_iter().filter(|(_, net)| !net.is_zero()).collect();
-        let sum: Money = lines.iter().map(|(_, n)| *n).sum();
-        let total = Money::from_cents(sum.cents().abs());
+    for (doc, posted_lines) in posted_lines {
+        let nets: Vec<_> = posted_lines
+            .iter()
+            .map(|(&account, lines)| (account, lines.iter().map(|(_, net)| *net).sum::<Money>()))
+            .filter(|(_, net)| !net.is_zero())
+            .collect();
+        let net = nets.iter().map(|(_, net)| *net).sum::<Money>().cents();
+        let total = Money::from_cents(net.abs());
+        let direction = if net < 0 { -1 } else { 1 };
         let number = numbers.remove(&doc).unwrap_or_default();
-        found.insert(doc.clone(), Document { identity: doc, number, nets: lines, total });
+        found.insert(
+            doc.clone(),
+            Document {
+                identity: doc,
+                number,
+                nets,
+                total,
+                posted_lines,
+                direction,
+            },
+        );
     }
     Ok(found)
+}
+
+/// Document posting can consolidate multiple items into one journal line. Use the
+/// immutable posted revision and keep its item IDs, with the journal as the authority
+/// for each account subtotal. Retained postings without matching detail use journal lines.
+fn cash_source_lines(
+    tx: &(impl Query + ?Sized),
+    company: CompanyId,
+    documents: &HashMap<String, Document>,
+) -> FbResult<HashMap<String, LinesByAccount>> {
+    if documents.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let mut stmt = tx.prepare(
+        "WITH posted AS (
+           SELECT j.id, j.source_id FROM ledger_journal j
+           WHERE j.company_id=?1 AND j.status='POSTED' AND j.reversal_of_id IS NULL
+         ), source_lines(doc, id, account, net) AS (
+           SELECT i.identity_id, l.id, l.income_account_id,
+                  CASE json_extract(l.data,'$.line_kind') WHEN 'DISCOUNT' THEN l.amount ELSE -l.amount END
+           FROM sales_invoice i JOIN sales_invoicerevision r ON r.invoice_id=i.id AND r.state='OPEN'
+           JOIN posted j ON j.id=r.journal_id AND j.source_id=i.identity_id
+           JOIN sales_invoiceline l ON l.revision_id=r.id
+           WHERE i.company_id=?1 AND json_extract(l.data,'$.line_kind') IS NOT 'NOTE'
+           UNION ALL
+           SELECT b.identity_id, l.id, l.expense_account_id, l.amount
+           FROM payables_bill b JOIN payables_billrevision r ON r.bill_id=b.id AND r.state='OPEN'
+           JOIN posted j ON j.id=r.journal_id AND j.source_id=b.identity_id
+           JOIN payables_billline l ON l.revision_id=r.id
+           WHERE b.company_id=?1
+           UNION ALL
+           SELECT m.identity_id, l.id, l.income_account_id, l.amount
+           FROM credits_creditmemo m JOIN posted j ON j.id=m.journal_id AND j.source_id=m.identity_id
+           JOIN credits_creditmemoline l ON l.credit_memo_id=m.id
+           WHERE m.company_id=?1
+         )
+         SELECT l.doc, l.id, a.id, l.net FROM source_lines l
+         JOIN ledger_account a ON a.id=l.account AND a.company_id=?1
+         WHERE l.net<>0",
+    )?;
+    let mut rows = stmt.query([company.to_db()])?;
+    let mut sources = HashMap::<String, LinesByAccount>::new();
+    while let Some(row) = rows.next()? {
+        let doc: String = row.get(0)?;
+        if documents.contains_key(&doc) {
+            let account = account_of(&row.get::<_, String>(2)?)?;
+            sources
+                .entry(doc)
+                .or_default()
+                .entry(account)
+                .or_default()
+                .push((row.get(1)?, Money::from_db(row.get(3)?)));
+        }
+    }
+    for (id, by_account) in &mut sources {
+        let doc = &documents[id];
+        by_account.retain(|account, lines| {
+            let posted = doc
+                .posted_lines
+                .get(account)
+                .into_iter()
+                .flatten()
+                .map(|(_, net)| *net)
+                .sum::<Money>();
+            lines.iter().map(|(_, net)| *net).sum::<Money>() == posted
+        });
+    }
+    Ok(sources)
 }
 
 /// One posted line as the reports read it.
@@ -637,7 +770,7 @@ impl Books {
 
     /// `_unconverted`: posted lines through `end` on receivables / payables control accounts (the account's
     /// highest-priority control role) from journals that are not deferred documents or settlements.
-    fn count_unconverted(tx: &(impl Query + ?Sized), company: CompanyId, end: NaiveDate) -> FbResult<i64> {
+    pub(super) fn count_unconverted(tx: &(impl Query + ?Sized), company: CompanyId, end: NaiveDate) -> FbResult<i64> {
         Ok(tx.query_row(
             "WITH roles AS (SELECT account_id, min(priority) priority FROM fb_control_accounts WHERE company_id = ?1 GROUP BY account_id)
              SELECT count(*) FROM ledger_journalline l JOIN ledger_journal j ON j.id = l.journal_id JOIN ledger_account a ON a.id = l.account_id
@@ -655,6 +788,14 @@ impl Books {
         self.lines
             .iter()
             .filter(move |l| start.is_none_or(|s| l.date >= s) && end.is_none_or(|e| l.date <= e) && !(cash && l.cash_excluded))
+    }
+
+    /// Directly posted activity, excluding deferred lines on the cash basis.
+    pub(super) fn posted_activity(
+        &self, start: NaiveDate, end: NaiveDate,
+    ) -> impl Iterator<Item = (&str, &str, AccountId, Money)> {
+        self.within(Some(start), Some(end))
+            .map(|line| (line.id.as_str(), line.journal_id.as_str(), line.account, line.debit - line.credit))
     }
 
     /// `nets`: {account: (net debit-credit, activity count)} for journal dates start..end inclusive.
@@ -701,27 +842,117 @@ impl Books {
     }
 
     /// `recognition_rows`: event-level cash-basis rows dated start..end (differences of consecutive shares).
-    pub fn recognition_rows(&self, start: Option<NaiveDate>, end: Option<NaiveDate>, accounts: Option<&BTreeSet<AccountId>>) -> FbResult<Vec<Recognition<'_>>> {
+    pub fn recognition_rows(
+        &self,
+        start: Option<NaiveDate>,
+        end: Option<NaiveDate>,
+        accounts: Option<&BTreeSet<AccountId>>,
+    ) -> FbResult<Vec<Recognition<'_>>> {
         let mut rows = Vec::new();
-        let mut settled: HashMap<&str, Money> = HashMap::new();
-        for event in &self.events {
-            let doc = self.documents.get(&event.doc);
-            let entry = settled.entry(event.doc.as_str()).or_default();
-            let before = *entry;
-            *entry += event.amount;
-            let after = *entry;
-            let Some(doc) = doc else { continue };
-            if end.is_some_and(|e| event.date > e) || start.is_some_and(|s| event.date < s) {
-                continue;
-            }
-            for (account, amount) in diff(&share(&doc.nets, doc.total, after)?, &share(&doc.nets, doc.total, before)?) {
+        self.for_each_recognition(start, end, |event, doc, before, after| {
+            for (account, amount) in diff(
+                &share(&doc.nets, doc.total, after)?,
+                &share(&doc.nets, doc.total, before)?,
+            ) {
                 if accounts.is_some_and(|set| !set.contains(&account)) {
                     continue;
                 }
-                rows.push(Recognition { date: event.date, account, debit: amount.max(Money::ZERO), credit: (-amount).max(Money::ZERO), event, document: doc });
+                rows.push(Recognition {
+                    date: event.date,
+                    account,
+                    debit: amount.max(Money::ZERO),
+                    credit: (-amount).max(Money::ZERO),
+                    event,
+                    document: doc,
+                });
+            }
+            Ok(())
+        })?;
+        Ok(rows)
+    }
+
+    /// Cash-basis override evidence, with source line, optional journal-line alias,
+    /// and optional settlement journal.
+    pub(super) fn recognized_activity(
+        &self,
+        tx: &(impl Query + ?Sized),
+        company: CompanyId,
+        start: NaiveDate,
+        end: NaiveDate,
+        accounts: &BTreeSet<AccountId>,
+        mut apply: impl FnMut(&str, Option<&str>, Option<&str>, AccountId, Money),
+    ) -> FbResult<()> {
+        let sources = cash_source_lines(tx, company, &self.documents)?;
+        self.for_each_recognition(Some(start), Some(end), |event, doc, before, after| {
+            let accounts_before = share(&doc.nets, doc.total, before)?;
+            let accounts_after = share(&doc.nets, doc.total, after)?;
+            let settlement = event.journal.as_ref().map(|(id, _)| id.as_str());
+            let sources = sources.get(&event.doc);
+            let keys: BTreeSet<_> = doc
+                .posted_lines
+                .keys()
+                .chain(sources.into_iter().flat_map(|lines| lines.keys()))
+                .copied()
+                .collect();
+            for account in keys {
+                if account == event.control || !accounts.contains(&account) {
+                    continue;
+                }
+                let ledger_lines = doc
+                    .posted_lines
+                    .get(&account)
+                    .map(Vec::as_slice)
+                    .unwrap_or_default();
+                let detail = sources.and_then(|lines| lines.get(&account));
+                let posted_line = match ledger_lines {
+                    [(id, _)] if detail.is_some() => Some(id.as_str()),
+                    _ => None,
+                };
+                let lines = detail.map_or(ledger_lines, Vec::as_slice);
+                let previous = accounts_before.get(&account).copied().unwrap_or_default();
+                let current = accounts_after.get(&account).copied().unwrap_or_default();
+                if let [(line, _)] = lines {
+                    if current != previous {
+                        apply(line, posted_line, settlement, account, current - previous);
+                    }
+                    continue;
+                }
+                let line_changes = diff(
+                    &doc.line_shares(lines, after, current)?,
+                    &doc.line_shares(lines, before, previous)?,
+                );
+                if line_changes.values().copied().sum::<Money>() != current - previous {
+                    return Err(overflow());
+                }
+                for (line, amount) in line_changes {
+                    apply(&line, posted_line, settlement, account, amount);
+                }
+            }
+            Ok(())
+        })
+    }
+
+    fn for_each_recognition<'a>(
+        &'a self,
+        start: Option<NaiveDate>,
+        end: Option<NaiveDate>,
+        mut visit: impl FnMut(&'a Event, &'a Document, Money, Money) -> FbResult<()>,
+    ) -> FbResult<()> {
+        let mut settled: HashMap<&str, Money> = HashMap::new();
+        for event in &self.events {
+            if end.is_some_and(|end| event.date > end) {
+                break;
+            }
+            let entry = settled.entry(event.doc.as_str()).or_default();
+            let before = *entry;
+            *entry += event.amount;
+            if let Some(doc) = self.documents.get(&event.doc)
+                && start.is_none_or(|start| event.date >= start)
+            {
+                visit(event, doc, before, *entry)?;
             }
         }
-        Ok(rows)
+        Ok(())
     }
 }
 
@@ -739,7 +970,7 @@ pub struct Recognition<'a> {
 // Reports ------------------------------------------------------------------------------------------------
 
 /// Accounts in Python's `sorted(key=(code, pk))`: code by code point, then creation order.
-fn sorted_accounts(tx: &(impl Query + ?Sized), company: CompanyId) -> FbResult<Vec<Account>> {
+pub(super) fn sorted_accounts(tx: &(impl Query + ?Sized), company: CompanyId) -> FbResult<Vec<Account>> {
     let mut accounts = store::accounts(tx, company)?;
     accounts.sort_by(|a, b| a.code.cmp(&b.code).then(a.id.cmp(&b.id)));
     Ok(accounts)
@@ -782,7 +1013,7 @@ impl ProfitAndLoss {
     }
 }
 
-fn pl_from(books: &Books, accounts: &[Account], start: Option<NaiveDate>, end: NaiveDate) -> FbResult<ProfitAndLoss> {
+pub(super) fn pl_from(books: &Books, accounts: &[Account], start: Option<NaiveDate>, end: NaiveDate) -> FbResult<ProfitAndLoss> {
     let nets = books.nets(start, Some(end))?;
     let mut sections: Vec<PlSection> =
         PL_SECTIONS.iter().map(|&(key, heading, total_label, _)| PlSection { key, heading, total_label, rows: Vec::new(), total: Money::ZERO }).collect();
@@ -879,9 +1110,12 @@ pub struct BalanceSheet {
     pub unconverted: i64,
 }
 
-/// `fiscal_year_start`: decision N19-D3, the company has no fiscal-year setting, so it is the calendar year.
-pub fn fiscal_year_start(on: NaiveDate) -> NaiveDate {
-    NaiveDate::from_ymd_opt(on.year(), 1, 1).unwrap_or(on)
+/// First day of the fiscal year containing this date.
+pub fn fiscal_year_start(on: NaiveDate, start_month: u32) -> FbResult<NaiveDate> {
+    let year = on.year() - i32::from(on.month() < start_month);
+    NaiveDate::from_ymd_opt(year, start_month, 1)
+        .filter(|date| (1..=9999).contains(&date.year()))
+        .ok_or_else(|| FbError::validation("date value out of range"))
 }
 
 /// `balance_sheet`.
@@ -890,7 +1124,8 @@ pub fn balance_sheet(book: &mut Book, actor: UserId, company: CompanyId, basis: 
         access(tx, actor, company)?;
         let books = Books::load(tx, company, basis, as_of)?;
         let accounts = sorted_accounts(tx, company)?;
-        let fy_start = fiscal_year_start(as_of);
+        let start_month = crate::periods::policy(tx, company)?.values.fiscal_year_start_month;
+        let fy_start = fiscal_year_start(as_of, start_month)?;
         let everything = books.nets(None, Some(as_of))?;
         let mut sections: Vec<BsSection> =
             [Kind::Asset, Kind::Liability, Kind::Equity].into_iter().map(|kind| BsSection { kind, rows: Vec::new(), total: Money::ZERO, groups: Vec::new() }).collect();

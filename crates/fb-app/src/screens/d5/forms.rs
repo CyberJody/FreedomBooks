@@ -1093,7 +1093,13 @@ fn credit_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>, prior: Opt
                 return Ok(Outcome::Redirect { location: url("credits:detail", &[&c.to_db(), s(&data, "id")]) });
             }
             Err(AppError::Core(FbError::Validation(messages))) => {
-                problems.extend(messages.iter().map(|m| doc_forms::plain_sale(m)));
+                for message in messages {
+                    if fb_core::periods::is_closed_message(&message) {
+                        error(&mut e, "date", message);
+                    } else {
+                        problems.push(doc_forms::plain_sale(&message));
+                    }
+                }
             }
             Err(err) => return Err(err),
             _ => unreachable!(),

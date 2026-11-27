@@ -351,13 +351,14 @@ fn genuine_populated_preimport_book_backup_upgrade_and_reopen_preserve_every_old
     old.snapshot(&backup, &[13; 32]).unwrap();
     let old_snapshot = fb_db::test_support::snapshot_file(&backup, &[13; 32]).unwrap();
     let mut upgraded = old.upgrade().unwrap();
-    assert_eq!(snapshot(upgraded.connection()).unwrap(), prior.expected);
+    let upgraded_snapshot = snapshot(upgraded.connection()).unwrap();
+    assert_eq!(upgraded_snapshot, prior.expected);
     for (table, rows) in old_snapshot {
-        assert_eq!(
-            snapshot(upgraded.connection()).unwrap()[&table],
-            rows,
-            "{table}"
-        );
+        let actual = &upgraded_snapshot[&table];
+        assert_eq!(actual.len(), rows.len(), "{table}");
+        for (after_row, before_row) in actual.iter().zip(rows.iter()) {
+            assert_eq!(&after_row[..before_row.len()], before_row.as_slice(), "{table}");
+        }
     }
     let row = source(&f, "paid", "25");
     let preview = historical::run(

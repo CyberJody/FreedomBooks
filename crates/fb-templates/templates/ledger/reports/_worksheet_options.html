@@ -1,0 +1,40 @@
+<details class="worksheet-options"{% if worksheet_raw or errors %} open{% endif %}>
+{% if worksheet == 'mappings' %}
+<summary>Activity mapping editor</summary>
+<p>Entries apply to this run. Accounts without mappings stay in Unassigned.</p>
+<div class="worksheet-builder" data-worksheet-add hidden>
+<label>Target <select data-worksheet-scope data-worksheet-field><option value="account">Account</option><option value="journal">Posted journal</option><option value="line">Posted or source line</option></select></label>
+<label data-worksheet-account>Account <select data-worksheet-account-id data-worksheet-field><option value="">Select a P&amp;L account</option>{% for id, label in worksheet_accounts %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+<label data-worksheet-posted hidden>Posted ID <input data-worksheet-posted-id data-worksheet-field maxlength="36" disabled></label>
+<label>Activity <input data-worksheet-field maxlength="80" list="activity-options"></label>
+<datalist id="activity-options"><option value="Excluded / Personal"><option value="Unassigned"></datalist>
+<label>Category <select data-worksheet-field><option value="">None</option>{% for key, label in category_choices %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+<label>Share <input data-worksheet-field value="1w" maxlength="21"></label>
+<button type="button" data-worksheet-append>Add mapping</button>
+</div>
+<label for="report-worksheet">Mappings</label>
+<p id="worksheet-help">One allocation per row. Use <code>account|ID|activity|category key|share</code>. Use <code>journal</code> or <code>line</code> to override directly posted activity. Line mappings take priority, followed by journal and account mappings. Cent shares apply to the amount left after higher-priority mappings. On a cash basis, use the line ID from the posted invoice, bill, or credit memo to distinguish lines that share an account. Document line mappings take priority over posted line, settlement journal, and account mappings.</p>
+<p>List a target on multiple rows to split it. Use whole-number weights such as <code>1w</code> or signed exact cents such as <code>125c</code>. Equal remainders go to earlier rows. Journal weights apply to each account in the journal. Cent shares on a journal require one eligible account.</p>
+{% else %}
+<summary>Asset worksheet builder</summary>
+<p>Add assets carried at the To date and assets disposed of during the period. Enter opening accumulated depreciation for the From date. A disposal date includes depreciation through that day and sets closing balances to zero when it falls on or before the To date.</p>
+<div class="worksheet-builder" data-worksheet-add hidden>
+<label>Asset label <input data-worksheet-field maxlength="80"></label>
+<label>Cost account <select data-worksheet-field><option value="">Optional</option>{% for id, label in worksheet_accounts %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+<label>Journal ID <input data-worksheet-field maxlength="36"></label>
+<label>Posted line ID <input data-worksheet-field maxlength="36"></label>
+<label>In service <input data-worksheet-field type="date"></label>
+<label>Cost, cents <input data-worksheet-field inputmode="numeric" maxlength="19"></label>
+<label>Salvage, cents <input data-worksheet-field inputmode="numeric" maxlength="19"></label>
+<label>Method <select data-worksheet-field><option value="">Choose method</option><option value="straight_line">Straight-line</option></select></label>
+<label>Life, months <input data-worksheet-field inputmode="numeric" maxlength="4"></label>
+<label>Prior depreciation, cents <input data-worksheet-field inputmode="numeric" maxlength="19"></label>
+<label>Disposal date <input data-worksheet-field type="date"></label>
+<button type="button" data-worksheet-append>Add asset</button>
+</div>
+<label for="report-worksheet">Asset entries</label>
+<p id="worksheet-help">Use <code>label|account ID|journal ID|line ID|in-service date|cost cents|salvage cents|method|life months|prior cents|disposal date</code>. The final date is optional. Leave cost blank to use a single posted cost debit from a linked journal or line. If the journal has multiple eligible cost debits, specify the posted line ID to derive cost. Use <code>straight_line</code> for the method and enter zero explicitly where it applies.</p>
+{% endif %}
+<textarea id="report-worksheet" name="{{ worksheet }}" rows="5" maxlength="{{ worksheet_limit }}" aria-describedby="worksheet-help" spellcheck="false">{{ worksheet_raw }}</textarea>
+<p class="report-foot">Edit or remove entries above, then select Run report to apply them.</p>
+</details>

@@ -111,19 +111,19 @@ fn presets_on_ordinary_and_boundary_days() {
     ];
     for (today, expected) in cases {
         for (key, start, end) in *expected {
-            assert_eq!(params::preset_range(key, day(today)).unwrap(), (day(start), day(end)), "{today} {key}");
+            assert_eq!(params::preset_range(key, day(today), 1).unwrap(), (day(start), day(end)), "{today} {key}");
         }
     }
-    assert!(params::preset_range("custom", day("2026-10-29")).is_err());
+    assert!(params::preset_range("custom", day("2026-10-29"), 1).is_err());
     // Python raises OverflowError past 9999-12-31 instead of inventing a date.
-    assert!(params::preset_range("this_month", day("9999-12-15")).is_err());
-    assert!(params::preset_range("this_year", day("9999-06-01")).is_err());
-    assert_eq!(params::preset_range("year_to_date", day("9999-06-01")).unwrap(), (day("9999-01-01"), day("9999-06-01")));
+    assert!(params::preset_range("this_month", day("9999-12-15"), 1).is_err());
+    assert!(params::preset_range("this_year", day("9999-06-01"), 1).is_err());
+    assert_eq!(params::preset_range("year_to_date", day("9999-06-01"), 1).unwrap(), (day("9999-01-01"), day("9999-06-01")));
 }
 
 #[test]
 fn fiscal_year_defaults_to_the_calendar_year() {
-    assert_eq!(financial::fiscal_year_start(day("2026-10-29")), day("2026-01-01"));
+    assert_eq!(financial::fiscal_year_start(day("2026-10-29"), 1).unwrap(), day("2026-01-01"));
 }
 
 #[test]
@@ -137,15 +137,34 @@ fn zero_is_never_negative_and_text_formulas_are_neutralised() {
 }
 
 #[test]
+fn report_csv_protects_full_width_and_whitespace_prefixed_formula_markers() {
+    for name in [
+        "＝Customer",
+        "＋Item",
+        "－Account",
+        "＠Customer",
+        " \t\r\n＠Account",
+        "\t\r\n +Item",
+        "\u{3000}＝Customer",
+        " \n-Account",
+    ] {
+        assert_eq!(params::csv_text(name), format!("'{name}"));
+    }
+    assert_eq!(params::csv_text(" Plain ＝ Customer"), " Plain ＝ Customer");
+    assert_eq!(params::csv_cell(" \r\n＋Item"), "\"' \r\n＋Item\"");
+    assert_eq!(params::csv_amount(d("-25.00")), "-25.00");
+}
+
+#[test]
 fn range_form_defaults_presets_and_custom_rules() {
     let today = day("2026-10-29");
-    let r = params::range(&RangeInput::default(), today).unwrap();
+    let r = params::range(&RangeInput::default(), today, 1).unwrap();
     assert_eq!((r.basis, r.preset.as_str(), r.start, r.end), (Basis::Accrual, "this_month", Some(day("2026-10-01")), day("2026-10-31")));
-    let typed = params::range(&RangeInput { end: Some("2026-10-31"), ..Default::default() }, today).unwrap();
+    let typed = params::range(&RangeInput { end: Some("2026-10-31"), ..Default::default() }, today, 1).unwrap();
     assert_eq!((typed.preset.as_str(), typed.start), ("custom", None));
-    let overridden = params::range(&RangeInput { preset: Some("this_month"), start: Some("2020-01-01"), end: Some("2020-01-31"), ..Default::default() }, today).unwrap();
+    let overridden = params::range(&RangeInput { preset: Some("this_month"), start: Some("2020-01-01"), end: Some("2020-01-31"), ..Default::default() }, today, 1).unwrap();
     assert_eq!(overridden.start, Some(day("2026-10-01")));
-    let refuse = |input: RangeInput<'_>| params::range(&input, today).unwrap_err().messages();
+    let refuse = |input: RangeInput<'_>| params::range(&input, today, 1).unwrap_err().messages();
     assert_eq!(refuse(RangeInput { preset: Some("custom"), ..Default::default() }), vec!["Enter a \"To\" date for a custom range."]);
     assert_eq!(refuse(RangeInput { start: Some("2026-12-01"), end: Some("2026-01-01"), ..Default::default() }), vec!["The \"From\" date must not be after the \"To\" date."]);
     assert_eq!(refuse(RangeInput { end: Some("0001-01-01"), ..Default::default() }), vec![params::BOUNDS_MESSAGE]);
@@ -159,16 +178,16 @@ fn range_form_defaults_presets_and_custom_rules() {
             "Enter a valid date."
         ]
     );
-    assert!(params::range(&RangeInput { start: Some("1900-01-02"), end: Some("9999-12-30"), ..Default::default() }, today).is_ok());
+    assert!(params::range(&RangeInput { start: Some("1900-01-02"), end: Some("9999-12-30"), ..Default::default() }, today, 1).is_ok());
 }
 
 #[test]
 fn ledger_and_as_of_forms() {
     let today = day("2026-10-29");
-    let refuse = |account: Option<&str>, group: Option<&str>| params::ledger_range(&RangeInput::default(), account, group, today).unwrap_err().messages();
+    let refuse = |account: Option<&str>, group: Option<&str>| params::ledger_range(&RangeInput::default(), account, group, today, 1).unwrap_err().messages();
     assert_eq!(refuse(Some("abc"), None), vec!["Choose an account from the list."]);
     assert_eq!(refuse(None, Some("nope")), vec!["Select a valid choice. nope is not one of the available choices."]);
-    let ok = params::ledger_range(&RangeInput::default(), Some(" "), Some("receivable"), today).unwrap();
+    let ok = params::ledger_range(&RangeInput::default(), Some(" "), Some("receivable"), today, 1).unwrap();
     assert_eq!((ok.account, ok.group.as_str()), (None, "receivable"));
     assert_eq!(params::as_of(None, None, today).unwrap(), (Basis::Accrual, today));
     assert_eq!(params::as_of(Some("CASH"), Some("2026-10-31"), today).unwrap(), (Basis::Cash, day("2026-10-31")));
@@ -236,4 +255,44 @@ fn ledger_paging_carries_the_balance_forward() {
     assert_eq!(params::ledger_page(&sections, Some("-4"), 3).0, 2);
     assert_eq!(params::ledger_page(&sections, Some("99"), 3).0, 2);
     assert_eq!(params::ledger_page(&[], None, 3).0, 1);
+}
+
+#[test]
+fn vendor_tax_year_presets_and_custom_bounds() {
+    let today = day("2028-02-29");
+    let range = |preset, start, end| params::tax_year_range(&RangeInput {
+        preset, start, end, ..Default::default()
+    }, today);
+    assert_eq!(range(None, None, None).unwrap(), ("this_year", day("2028-01-01"), day("2028-12-31")));
+    assert_eq!(range(Some("last_year"), Some("2028-02-29"), Some("2028-03-01")).unwrap(),
+        ("last_year", day("2027-01-01"), day("2027-12-31")));
+    assert_eq!(range(None, Some("2028-02-29"), Some("2028-02-29")).unwrap(), ("custom", today, today));
+    for (start, end) in [(None, Some("2028-01-01")), (Some("2028-01-01"), None),
+        (Some("2028-03-01"), Some("2028-02-29")), (Some("1900-01-01"), Some("2028-02-29"))] {
+        assert!(range(Some("custom"), start, end).is_err());
+    }
+    assert!(range(Some("bogus"), None, None).is_err());
+}
+
+#[test]
+fn fiscal_presets_cross_calendar_years_and_leave_tax_years_and_custom_ranges_unchanged() {
+    let today = day("2028-02-29");
+    for (preset, start, end) in [
+        ("this_year", "2027-11-01", "2028-10-31"),
+        ("year_to_date", "2027-11-01", "2028-02-29"),
+        ("this_quarter", "2028-02-01", "2028-04-30"),
+        ("this_month", "2028-02-01", "2028-02-29"),
+        ("last_month", "2028-01-01", "2028-01-31"),
+    ] {
+        assert_eq!(params::preset_range(preset, today, 11).unwrap(), (day(start), day(end)));
+    }
+    assert_eq!(params::preset_range("this_quarter", day("2027-12-31"), 11).unwrap(),
+        (day("2027-11-01"), day("2028-01-31")));
+    assert!(params::preset_range("this_year", today, 13).is_err());
+    assert!(params::preset_range("this_year", day("9999-09-01"), 9).is_err());
+    let custom = RangeInput { start: Some("2028-01-18"), end: Some("2028-02-29"), basis: Some("CASH"), ..Default::default() };
+    let range = params::range(&custom, today, 11).unwrap();
+    assert_eq!((range.start, range.end, range.basis), (Some(day("2028-01-18")), today, financial::Basis::Cash));
+    assert_eq!(params::tax_year_range(&RangeInput::default(), today).unwrap(),
+        ("this_year", day("2028-01-01"), day("2028-12-31")));
 }

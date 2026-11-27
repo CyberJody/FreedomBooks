@@ -134,11 +134,16 @@ fn header(
     ]);
     if sale {
         let ch = sale_choices(app, c, prior.as_ref())?;
+        let selected = selected.filter(|id| ch.customers.iter().any(|(choice, _)| choice == id));
+        let (_, tax) = ch.customer_defaults(selected);
+        let initial = tax.to_owned();
         fs.push(
             Field::new("tax_mode", "Sales tax", Widget::Select { choices: ch.tax })
                 .required()
-                .value_opt(v("tax_mode", Some(ch.tax_initial))),
+                .value_opt(v("tax_mode", Some(initial))),
         );
+        fs.push(Field::new("tax_header_auto", "", Widget::Hidden)
+            .value_opt(v("tax_header_auto", Some("1".into()))));
     }
     if sale {
         for f in &mut fs {
@@ -275,6 +280,7 @@ fn entry(
     put(&mut vm, "posting_accounts", super::doc_forms::posting_accounts(app, c, "SR", &ch)?);
     put(&mut vm, "item_count", ch.catalog.as_object().map_or(0, |m| m.len()));
     put(&mut vm, "catalog", ch.catalog);
+    put(&mut vm, "company_tax_default", &ch.company_tax_default);
     put(&mut vm, "customer_tax", ch.customer_tax);
     put(&mut vm, "problems", problems);
     put(&mut vm, "setup_hint", problems.iter().any(|m| m.contains("Accounting setup")));
@@ -717,7 +723,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
                     });
                 }
                 Err(AppError::Core(FbError::Validation(messages))) => {
-                    error(&mut e, "", messages.join("; "))
+                    super::super::d2::posting_errors(&mut e, "", messages);
                 }
                 Err(e) => return Err(e),
             }
@@ -785,7 +791,13 @@ fn sale_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
                 });
             }
             Err(AppError::Core(FbError::Validation(messages))) => {
-                problems.extend(messages.iter().map(|m| super::doc_forms::plain_sale(m)));
+                for message in messages {
+                    if fb_core::periods::is_closed_message(&message) {
+                        error(&mut e, "date", message);
+                    } else {
+                        problems.push(super::doc_forms::plain_sale(&message));
+                    }
+                }
             }
             Err(err) => return Err(err),
             _ => unreachable!(),
@@ -987,7 +999,13 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
                 });
             }
             Err(AppError::Core(FbError::Validation(messages))) => {
-                non.extend(messages.iter().map(|m| plain(m)));
+                for message in messages {
+                    if fb_core::periods::is_closed_message(&message) {
+                        error(&mut e, "date", message);
+                    } else {
+                        non.push(plain(&message));
+                    }
+                }
             }
             Err(err) => return Err(err),
             _ => unreachable!(),
@@ -1003,6 +1021,7 @@ fn header_values(app: &mut App, c: CompanyId, sale: bool, p: Posted<'_>, e: &mut
     let mut values = json!({});
     for f in &header {
         let name = &f.name;
+        if name == "tax_header_auto" { continue; }
         let s = get(p, name).unwrap_or("");
         let v = if let Widget::Select { choices } = &f.widget {
             if s.is_empty() && f.required {

@@ -36,7 +36,8 @@ fn format_93_upgrades_with_no_approvals_and_preserves_the_old_book() {
     assert_eq!(MIGRATIONS[boundary + 1].0, "0208_ai_unattended");
     assert_eq!(MIGRATIONS[boundary + 2].0, "0209_deposit_adjustments");
     assert_eq!(MIGRATIONS[boundary + 3].0, "0210_bankfeeds_matching");
-    assert_eq!(MIGRATIONS.len(), boundary + 4);
+    assert_eq!(MIGRATIONS[boundary + 4].0, "0211_company_and_bankfeed_defaults");
+    assert_eq!(MIGRATIONS.len(), boundary + 5);
     let conn = Connection::open(&path).unwrap();
     conn.execute_batch(&format!("PRAGMA key=\"x'{}'\"", hex(&key)))
         .unwrap();
@@ -78,19 +79,25 @@ fn format_93_upgrades_with_no_approvals_and_preserves_the_old_book() {
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected a format-93 book"),
     };
-    assert_eq!((old.from(), old.to()), (93, 97));
+    assert_eq!((old.from(), old.to()), (93, 98));
     let backup = dir.path().join("verified-format-93.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
     let book = old.upgrade().unwrap();
     let after = test_support::snapshot(&book.conn).unwrap();
     assert_eq!(after.len(), before.len() + AI_UNATTENDED_TABLES + crate::bankfeeds_matching_upgrade_tests::TABLES);
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "changed {table}");
     }
     assert!(after["desktop_ai_unattended"].is_empty());
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
+        if crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) {
+            assert_ne!(&upgraded[object], hash, "0211 extends {object}");
+            continue;
+        }
         if ["table:bankfeeds_account", "table:bankfeeds_transaction"].contains(&object.as_str()) {
             assert_ne!(&upgraded[object], hash, "0207 must extend {object}");
         } else if object != "view:fb_value_invalid"
@@ -106,7 +113,7 @@ fn format_93_upgrades_with_no_approvals_and_preserves_the_old_book() {
         .map(String::as_str)
         .filter(|k| !crate::deposit_adjustments_upgrade_tests::OBJECTS.contains(k) && !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k))
         .collect();
-    assert_eq!(added, AI_UNATTENDED_OBJECTS.iter().copied().collect());
+    assert_eq!(added, AI_UNATTENDED_OBJECTS.iter().chain(crate::company_periods_upgrade_tests::OBJECTS).copied().collect());
     let next_view = view(&book.conn);
     let (kept, _) = next_view
         .split_once("\nUNION ALL\nSELECT 'invalid stored value in desktop_ai_unattended'")

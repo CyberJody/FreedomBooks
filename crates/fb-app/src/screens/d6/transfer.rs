@@ -17,11 +17,19 @@ fn record(app: &mut App, c: CompanyId, id: &str) -> AppResult<Value> {
     v["void"] = json!(void);
     Ok(v)
 }
+fn transfer_accounts(app: &mut App, c: CompanyId, retained: &[&str]) -> AppResult<Vec<Account>> {
+    Ok(app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+        let eligible = transfers::eligible_account_ids(tx, c)?;
+        Ok(fb_core::store::accounts(tx, c)?.into_iter()
+            .filter(|a| eligible.contains(&a.id.to_db()) || retained.contains(&a.id.to_db().as_str()))
+            .collect())
+    })?)
+}
 fn fields(app: &mut App, c: CompanyId, prior: Option<&Value>) -> AppResult<Vec<Field>> {
     let extra = prior
         .map(|p| vec![s(p, "from_account_id"), s(p, "to_account_id")])
         .unwrap_or_default();
-    let opts = banks(app, c, &extra)?
+    let opts = transfer_accounts(app, c, &extra)?
         .iter()
         .map(|a| {
             (
@@ -79,14 +87,14 @@ fn form(
     let mut vm = ctx(app, r)?;
     let prior = prior(app, c, p)?;
     let fs = fields(app, c, prior.as_ref())?;
-    let banks = banks(app, c, &[])?;
+    let accounts = transfer_accounts(app, c, &[])?;
     let mut initial = json!({"request_key":uuid::Uuid::new_v4().to_string(),"date":(app.today)().to_string()});
-    if banks.len() >= 2 {
+    if accounts.len() >= 2 {
         // Worker items 28 and 32: start from and to the accounts the last transfer used (the
         // deposit's rule); before the first transfer neither is chosen, rather than the first
         // accounts in the chart.
-        let from = default_bank(app, c, &banks, "SELECT from_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
-        let to = default_bank(app, c, &banks, "SELECT to_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?
+        let from = default_bank(app, c, &accounts, "SELECT from_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?;
+        let to = default_bank(app, c, &accounts, "SELECT to_account_id AS bank_id FROM transfers_transfer WHERE company_id=? ORDER BY id DESC LIMIT 1")?
             .filter(|to| from.as_ref() != Some(to));
         initial["from_account"] = json!(from.unwrap_or_default());
         initial["to_account"] = json!(to.unwrap_or_default());
@@ -94,12 +102,11 @@ fn form(
     put(&mut vm, "form", bind_fields(fs, p, &initial, e, true));
     put(&mut vm, "csrf_token", token(app, path));
     put(&mut vm, "review", review);
-    put(&mut vm, "too_few_banks", banks.len() < 2);
+    put(&mut vm, "too_few_accounts", accounts.len() < 2);
     draw(app, "transfers/form.html", &vm)
 }
 fn filter_fields(app: &mut App, c: CompanyId) -> AppResult<Vec<Field>> {
-    // Offer the bank accounts, as the entry form does, plus any account a recorded transfer used
-    // (one that is no longer a bank account), so every existing transfer stays findable.
+    // Keep accounts used on past transfers in the filter after they become ineligible.
     let used = scoped_rows(
         app,
         c,
@@ -107,13 +114,13 @@ fn filter_fields(app: &mut App, c: CompanyId) -> AppResult<Vec<Field>> {
         &[&c.to_db(), &c.to_db()],
     )?;
     let used = used.iter().map(|v| s(v, "id")).collect::<Vec<_>>();
-    let a = banks(app, c, &used)?;
+    let a = transfer_accounts(app, c, &used)?;
     Ok(vec![
         Field::new("q", "Number or memo", Widget::Text).attr("maxlength", "120"),
         select(
             "account",
-            "Bank account (from or to)",
-            "All bank accounts",
+            "Bank or credit card account (from or to)",
+            "All transfer accounts",
             a.iter().map(|a| (a.id.to_db(), a.label())).collect(),
             false,
         ),
@@ -315,7 +322,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
         error(
             &mut e,
             "to_account",
-            "Choose a different bank account than the one you transfer from.",
+            "Choose a different account than the one you transfer from.",
         );
     }
     let mut review = None;

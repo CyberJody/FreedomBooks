@@ -83,7 +83,18 @@ fn attachments_survive_backup_verify_and_restore_and_tampering_is_refused() {
     }
 
     // A changed ciphertext byte in the live folder: the verifier refuses the backup; nothing is written.
-    let tampered = fs::read_dir(store.folder()).unwrap().next().unwrap().unwrap().path();
+    let mut stored_paths: Vec<_> = fs::read_dir(store.folder())
+        .unwrap()
+        .filter_map(|entry| {
+            let entry = entry.unwrap();
+            entry.file_type().unwrap().is_file().then(|| entry.path())
+        })
+        .collect();
+    stored_paths.sort();
+    assert_eq!(stored_paths.len(), 2);
+    let stored_name = removed["stored_name"].as_str().unwrap();
+    let tampered = store.folder().join(stored_name);
+    assert!(stored_paths.binary_search(&tampered).is_ok());
     let mut bytes = fs::read(&tampered).unwrap();
     bytes[0] ^= 1;
     fs::write(&tampered, bytes).unwrap();
@@ -92,5 +103,7 @@ fn attachments_survive_backup_verify_and_restore_and_tampering_is_refused() {
     assert!(error.to_string().contains("(damaged)") && error.to_string().contains("attachment folder"), "{error}");
     assert_eq!(error.absent().len(), 1, "the damaged file is named, its rows listed");
     assert_eq!(error.absent()[0].problem, backups::DAMAGED);
+    assert_eq!(error.absent()[0].owner.stored_name, stored_name);
+    assert_eq!(error.absent()[0].owner.id, removed["id"].as_str().unwrap());
     assert!(!again.exists());
 }

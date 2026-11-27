@@ -78,7 +78,11 @@ pub(crate) fn run_d3_command(app: &mut App, cmd: Command) -> AppResult<Outcome> 
                     map.remove("taxable");
                 }
             }
-            if m == Model::Customer {
+            if let DirectoryValues::Customer { terms_shown, .. } = &values {
+                map.remove("terms_shown");
+                if !terms_shown && map.get("default_terms") == Some(&Value::Null) {
+                    map.remove("default_terms");
+                }
                 for k in ["tax_status", "exemption_number"] {
                     if map.get(k) == Some(&Value::Null) {
                         map.remove(k);
@@ -618,12 +622,20 @@ fn fields_for(app: &mut App, c: CompanyId, m: Model) -> AppResult<Vec<Field>> {
             };
             f.push(Field::new(name, label, widget).help(help));
         }
-        if m == Model::Vendor {
-            f.push(Field::new("default_terms","Default payment terms",Widget::Select{choices:choices(&[("","No default"),("0","Due on receipt"),("15","Net 15"),("30","Net 30"),("60","Net 60")])}).help("Fills the due date on a new bill (bill date plus these terms). You can change it."));
-        } else {
+        if m == Model::Item {
             f.push(Field::new("taxable","Taxable",Widget::Checkbox{checked:false}).help("New sales lines with this item start as taxable."));
             f.push(Field::new("taxable_shown", "Taxable shown", Widget::Hidden).value("1"));
         }
+    }
+    if matches!(m, Model::Customer | Model::Vendor) {
+        let help = if m == Model::Customer {
+            "Fills the due date on new invoices. If left blank, new invoices use Net 30."
+        } else {
+            "Fills the due date on a new bill (bill date plus these terms). You can change it."
+        };
+        f.push(Field::new("default_terms", "Default payment terms", Widget::Select {
+            choices: choices(&[("", "No default"), ("0", "Due on receipt"), ("15", "Net 15"), ("30", "Net 30"), ("60", "Net 60")]),
+        }).help(help));
     }
     Ok(f)
 }
@@ -860,6 +872,8 @@ fn submit_record(app: &mut App, route: &Route, path: &str, p: Posted<'_>) -> App
             notes: s("notes"),
             tax_status: get(p, "tax_status").map(|_| s("tax_status")),
             exemption_number: get(p, "exemption_number").map(|_| s("exemption_number")),
+            default_terms: optional("default_terms"),
+            terms_shown: get(p, "default_terms").is_some(),
         },
         Model::Vendor => DirectoryValues::Vendor {
             display_name: s("display_name"),

@@ -1,7 +1,9 @@
 {% extends 'salestax/base.html' %}
 {% block salestax_content %}
 <div class="heading"><h1>What you owe</h1>{% if has_agencies %}<div class="heading-actions"><a class="button" href="{{ url('salestax:record_payment', company.pk) }}">Record payment</a></div>{% endif %}</div>
-<form class="list-filter tax-period" method="get" novalidate aria-label="Period">{{ period_form.non_field_errors|safe }}<div>{{ period_form.f.start.label_tag|safe }}{{ period_form.f.start.widget|safe }}{{ period_form.f.start.errors|safe }}</div><div>{{ period_form.f.end.label_tag|safe }}{{ period_form.f.end.widget|safe }}{{ period_form.f.end.errors|safe }}</div><button type="submit">Show</button></form>
+<form class="list-filter tax-period" method="get" novalidate aria-label="Period">{{ period_form.non_field_errors|safe }}
+<div><label>Filing period <select name="preset" id="report-preset">{% for key, label, first, last in period_presets %}<option value="{{ key }}"{% if last %} data-start="{{ first }}" data-end="{{ last }}"{% endif %}{% if key == period_preset %} selected{% endif %}>{{ label }}{% if key in ['ny_dec_feb', 'ny_mar_may', 'ny_jun_aug', 'ny_sep_nov'] %} ({{ first }} to {{ last }}){% endif %}</option>{% endfor %}</select></label></div>
+<div>{{ period_form.f.start.label_tag|safe }}{{ period_form.f.start.widget|safe }}{{ period_form.f.start.errors|safe }}</div><div>{{ period_form.f.end.label_tag|safe }}{{ period_form.f.end.widget|safe }}{{ period_form.f.end.errors|safe }}</div><button type="submit">Show</button></form>
 {% if report %}
 <section aria-labelledby="owed-title"><h2 id="owed-title">{{ start|date('Y-m-d') }} to {{ end|date('Y-m-d') }}</h2>
 <p class="helptext">You file {{ frequency }}. {{ report.basis_label }} (<a href="{{ url('salestax:settings', company.pk) }}">change in Settings</a>).</p>
@@ -12,6 +14,13 @@
 </tbody><tfoot><tr><th scope="row">Total</th><td class="amount">{{ report.total.opening|money }}</td><td class="amount">{{ report.total.collected|money }}</td><td class="amount">{{ report.total.paid|money }}</td><td class="amount" id="owed-total">{{ report.total.balance|money }}</td><td></td></tr></tfoot></table></div>
 {% if report.unlinked %}<p class="helptext">“{{ report.unlinked.name }}” is tax on sales that used a manual rate, or older and imported sales that do not name an agency. It is included in the total.</p>{% endif %}
 <p class="helptext">A negative amount owed means more was paid than collected.</p>
+</section>
+<section aria-labelledby="tax-breakdown-title"><h2 id="tax-breakdown-title">Sales by tax rate and jurisdiction</h2>
+<div class="table-wrap"><table class="tax-owed"><thead><tr><th scope="col">Tax rate</th><th scope="col">Jurisdiction / agency</th><th scope="col" class="amount">Taxable sales</th><th scope="col" class="amount">Non-taxable / exempt sales</th><th scope="col" class="amount">Tax collected</th></tr></thead>
+<tbody>{% for row in report.breakdown %}<tr{% if row.is_component %} class="tax-component"{% endif %}><th scope="row">{% if row.is_component %}↳ {% endif %}{{ row.name }}{% if row.rate is not none %} ({{ row.rate }}%){% endif %}</th><td>{{ row.jurisdiction|default('—') }}</td><td class="amount">{% if row.taxable is not none %}{{ row.taxable|money }}{% else %}—{% endif %}</td><td class="amount">{% if row.exempt is not none %}{{ row.exempt|money }}{% else %}—{% endif %}</td><td class="amount">{{ row.collected|money }}</td></tr>
+{% else %}<tr><td colspan="5">No sales activity in this filing period.</td></tr>{% endfor %}</tbody>
+{% if report.breakdown %}<tfoot><tr><th scope="row" colspan="2">Total</th><td class="amount">{{ report.breakdown_total.taxable|money }}</td><td class="amount">{{ report.breakdown_total.exempt|money }}</td><td class="amount">{{ report.breakdown_total.collected|money }}</td></tr></tfoot>{% endif %}</table></div>
+<p class="helptext">For tax groups, taxable and exempt sales appear once on the group row; component rows show how collected tax splits across each rate and jurisdiction.</p>
 </section>
 {% endif %}
 <section aria-labelledby="payments-title"><h2 id="payments-title">Payments made{% if payments_dated %} from {{ start|date('Y-m-d') }} to {{ end|date('Y-m-d') }}{% endif %}</h2>

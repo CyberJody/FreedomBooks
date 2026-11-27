@@ -380,8 +380,17 @@ fn populated_l2a_v6_v7_v8_upgrade_preserves_every_row_and_reopens() {
                 assert!(rows.is_empty(), "cannot discard populated later table {table}");
                 continue;
             }
+            let col_count = historical
+                .prepare(&format!("SELECT * FROM {table} LIMIT 0"))
+                .unwrap()
+                .column_count();
             for row in rows {
-                historical.execute(&format!("INSERT INTO {table} VALUES({})", vec!["?"; row.len()].join(",")), fb_db::rusqlite::params_from_iter(row)).unwrap();
+                historical
+                    .execute(
+                        &format!("INSERT INTO {table} VALUES({})", vec!["?"; col_count].join(",")),
+                        fb_db::rusqlite::params_from_iter(&row[..col_count]),
+                    )
+                    .unwrap();
             }
         }
         for (_, sql) in definitions { historical.execute_batch(&sql).unwrap(); }

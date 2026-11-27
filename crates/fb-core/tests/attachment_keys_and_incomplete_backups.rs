@@ -530,7 +530,7 @@ fn a_book_from_before_0196_upgrades_through_bank_feed_safety_and_key_wraps_to_th
         // 0200 rebuilds the numbering tables, later migrations extend the shared views,
         // 0207 adds exact-ID evidence to the two bank-feed tables, 0209 replaces the two deposit views,
         // and 0210 replaces the two bank-feed decision triggers and two bank-feed integrity views.
-        assert_eq!(changed, ["bankfeeds_account", "bankfeeds_transaction", "documents_documentidentity", "documents_documentsequence", "fb_bankfeeds_transaction_eligible", "fb_bankfeeds_transaction_update", "bankfeeds_invalid", "bankfeeds_text_invalid", "banking_deposit_expected", "banking_deposit_invalid", "fb_json_invalid", "fb_value_invalid"]);
+        assert_eq!(changed, ["bankfeeds_account", "bankfeeds_rule", "bankfeeds_transaction", "directory_customer", "documents_documentidentity", "documents_documentsequence", "ledger_company", "fb_bankfeeds_transaction_eligible", "fb_bankfeeds_transaction_update", "fb_transfer_insert", "bankfeeds_invalid", "bankfeeds_text_invalid", "banking_deposit_expected", "banking_deposit_invalid", "fb_json_invalid", "fb_value_invalid"]);
         assert!(upgraded.check().unwrap().is_empty(), "{:?}", upgraded.check());
         drop(upgraded);
         let mut book = Book::open(&path, &KEY).unwrap();

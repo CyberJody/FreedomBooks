@@ -25,6 +25,15 @@ use Resubmit::{BookOnly, Outside};
 
 /// Every route in the route table (`fb-templates/urls.json`) with what its forms may do.
 pub const ROUTES: &[(&str, Resubmit)] = &[
+    ("ap_aging", BookOnly),
+    ("ar_aging", BookOnly),
+    ("reports:customer_statements", BookOnly),
+    ("reports:cash_flow", BookOnly),
+    ("reports:comparative_profit_and_loss", BookOnly),
+    ("reports:sales_by_customer_item", BookOnly),
+    ("reports:schedule_c_activity", BookOnly),
+    ("reports:asset_depreciation_schedule", BookOnly),
+    ("vendor_1099", BookOnly),
     ("recurring:list", BookOnly),
     ("recurring:new", BookOnly),
     ("recurring:detail", BookOnly),
@@ -80,6 +89,7 @@ pub const ROUTES: &[(&str, Resubmit)] = &[
     ("checks:void", BookOnly),
     ("company", BookOnly),
     ("company_edit", BookOnly),
+    ("company:periods", BookOnly),
     ("company_home", BookOnly),
     ("company_new", BookOnly),
     ("credits:apply", BookOnly),

@@ -14,6 +14,7 @@ mod backup;
 pub mod assistant;
 pub mod collation;
 pub mod dates;
+pub mod company_periods;
 mod sales;
 mod legacy;
 #[cfg(test)]
@@ -251,12 +252,17 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
     ("0208_ai_unattended", include_str!("../sql/0208_ai_unattended.sql")),
     ("0209_deposit_adjustments", include_str!("../sql/0209_deposit_adjustments.sql")),
     ("0210_bankfeeds_matching", include_str!("../sql/0210_bankfeeds_matching.sql")),
+    ("0211_company_and_bankfeed_defaults", include_str!("../sql/0211_company_and_bankfeed_defaults.sql")),
 ];
 
 /// Violation queries run on every open: each returns rows only when the books break a ledger rule
 /// that a connection without the core's pragmas (or with triggers dropped) could have slipped in.
 pub const VIOLATION_QUERIES: &[(&str, &str)] = &[
+    ("invalid accounting periods", "SELECT id FROM ledger_company WHERE typeof(fiscal_year_start_month)<>'integer' OR fiscal_year_start_month NOT BETWEEN 1 AND 12 OR fb_valid_date(closing_date) IS NOT 1 OR typeof(period_policy_revision)<>'integer' OR period_policy_revision NOT BETWEEN 0 AND 9223372036854775806 OR (period_policy_revision=0 AND (fiscal_year_start_month<>1 OR closing_date IS NOT NULL))"),
+    ("invalid customer terms", "SELECT id FROM directory_customer WHERE default_terms IS NOT NULL AND default_terms NOT IN ('0','15','30','60')"),
     ("invalid recurring bills", "SELECT id FROM payables_recurring_invalid"),
+    ("invalid bank-feed import policy", "SELECT f.id FROM bankfeeds_account f WHERE f.import_state NOT IN ('PENDING','READY','ACTIVE') OR fb_valid_date(f.import_from_date) IS NOT 1 OR (f.import_state='PENDING' AND (f.import_from_date IS NOT NULL OR EXISTS(SELECT 1 FROM bankfeeds_transaction t WHERE t.feed_account_id=f.id)))"),
+    ("invalid manual bank rule scope", "SELECT r.id FROM bankfeeds_rule r WHERE r.feed_account_id IS NOT NULL AND (NOT EXISTS(SELECT 1 FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE f.id=r.feed_account_id AND c.company_id=r.company_id) OR EXISTS(SELECT 1 FROM bankfeeds_rule_policy p WHERE p.rule_id=r.id))"),
     ("invalid bank rule policy", "SELECT id FROM bankfeeds_policy_invalid"),
     ("invalid bank-feed links or bank changes", "SELECT id FROM bankfeeds_safety_invalid"),
     ("invalid Stripe invoice evidence", "SELECT id FROM invoice_stripe_invalid"),
@@ -500,6 +506,7 @@ pub struct Book {
     conn: Connection,
     callback_mode: Arc<AtomicU8>,
     owner_empty_command: Arc<AtomicU8>,
+    company_period_command: Arc<AtomicU8>,
     pending_credential_masks: std::collections::BTreeSet<String>,
     retained_text_guards: BTreeMap<String, TextGuard>,
     /// Write transactions this connection has committed. The bridge compares it around a failed
@@ -825,7 +832,8 @@ impl Book {
         let mode = callback_mode.clone();
         conn.authorizer(Some(move |ctx: AuthContext<'_>| authorize(ctx, mode.load(Ordering::Relaxed))))?;
         let owner_empty_command = register_owner_command(&conn)?;
-        Ok(Book { conn, callback_mode, owner_empty_command, pending_credential_masks: Default::default(), retained_text_guards: BTreeMap::new(), commits: 0, connection: next_connection(), retained_text_state: RetainedState { text: BTreeMap::new(), _process_lock: Some(guard) } })
+        let company_period_command = company_periods::register(&conn)?;
+        Ok(Book { conn, callback_mode, owner_empty_command, company_period_command, pending_credential_masks: Default::default(), retained_text_guards: BTreeMap::new(), commits: 0, connection: next_connection(), retained_text_state: RetainedState { text: BTreeMap::new(), _process_lock: Some(guard) } })
     }
 
     fn finish_open(&mut self) -> Result<(), DbError> {
@@ -989,6 +997,7 @@ impl Book {
         let writer = Writer {
             tx: self.conn.transaction_with_behavior(TransactionBehavior::Immediate)?,
             callback_mode: self.callback_mode.clone(),
+            company_period_command: self.company_period_command.clone(),
             text_guards: std::cell::RefCell::new(self.retained_text_guards.values().cloned().collect()),
         };
         let empty: bool = writer.tx.query_row("SELECT NOT EXISTS(SELECT 1 FROM fb_user)", [], |r| r.get(0))?;
@@ -1033,7 +1042,9 @@ impl Book {
         if !self.conn.is_autocommit() {
             return Err("a transaction is still open");
         }
-        if self.callback_mode.load(Ordering::Relaxed) != 0 || self.owner_empty_command.load(Ordering::Relaxed) != 0 {
+        if self.callback_mode.load(Ordering::Relaxed) != 0 || self.owner_empty_command.load(Ordering::Relaxed) != 0
+            || self.company_period_command.load(Ordering::Relaxed) != 0
+        {
             return Err("a callback scope is still set");
         }
         let query_only: i64 = self.conn.query_row("PRAGMA query_only", [], |r| r.get(0)).map_err(|_| "the connection does not answer")?;
@@ -1104,6 +1115,7 @@ type TextGuard = Arc<dyn Fn(&str) -> rusqlite::Result<String> + Send + Sync>;
 pub struct Writer<'conn> {
     tx: Transaction<'conn>,
     callback_mode: Arc<AtomicU8>,
+    company_period_command: Arc<AtomicU8>,
     text_guards: std::cell::RefCell<Vec<TextGuard>>,
 }
 
@@ -1653,3 +1665,5 @@ mod recurring_upgrade_tests;
 mod job_tickets_upgrade_tests;
 #[cfg(test)]
 mod bankfeeds_matching_upgrade_tests;
+#[cfg(test)]
+mod company_periods_upgrade_tests;

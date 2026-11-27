@@ -12,14 +12,14 @@ mod accept;
 mod mapping;
 mod review;
 pub use review::{ReviewAccount, ReviewCandidates, ReviewDecision, ReviewRow, journal_receipt_ids, review_accounts, review_decision, review_page, review_snapshot};
-pub use mapping::{MappingTarget, NewAccountKind, save_mappings};
+pub use mapping::{ImportSettings, MappingTarget, NewAccountKind, save_mappings, save_mappings_and_import_settings};
 mod rules;
 pub mod qbo;
 mod automatic;
 pub use automatic::{auto_post,pending_automatic};
 mod secrets;
 mod staging;
-pub use staging::{ProviderIdEvidence, store_pull_for_desktop};
+pub use staging::{ProviderIdEvidence, begin_discovery, record_discovery_failure, store_discovery, store_pull_for_desktop};
 pub mod text;
 mod write;
 mod credentials;
@@ -121,6 +121,8 @@ pub struct Feed {
     pub currency: String,
     pub ledger_account_id: Option<String>,
     pub active: bool,
+    pub import_state: String,
+    pub import_from_date: Option<String>,
 }
 impl Feed {
     /// `str(feed)`.
@@ -132,7 +134,7 @@ impl Feed {
 pub(crate) fn feed_label(org_name: &str, name: &str) -> String {
     if org_name.is_empty() { name.to_owned() } else { format!("{org_name} · {name}") }
 }
-const FEED_COLS: &str = "f.id,f.connection_id,c.company_id,f.conn_key,f.remote_id,f.name,f.org_name,f.currency,f.ledger_account_id,f.active";
+const FEED_COLS: &str = "f.id,f.connection_id,c.company_id,f.conn_key,f.remote_id,f.name,f.org_name,f.currency,f.ledger_account_id,f.active,f.import_state,f.import_from_date";
 fn feed_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Feed> {
     Ok(Feed {
         id: r.get(0)?,
@@ -145,6 +147,8 @@ fn feed_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Feed> {
         currency: r.get(7)?,
         ledger_account_id: r.get(8)?,
         active: r.get(9)?,
+        import_state: r.get(10)?,
+        import_from_date: r.get(11)?,
     })
 }
 pub fn feed(q: &(impl Query + ?Sized), id: &str) -> FbResult<Option<Feed>> {

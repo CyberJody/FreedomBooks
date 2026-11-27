@@ -768,7 +768,12 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
                 }
             }
         };
-        if e.is_empty() && result_error(app.run(cmd), &mut e)?.is_some() {
+        let ok = if r.name == "checks:record" {
+            e.is_empty() && result_nonfield_error(app.run(cmd), &mut e)?.is_some()
+        } else {
+            e.is_empty() && result_error(app.run(cmd), &mut e)?.is_some()
+        };
+        if ok {
             return Ok(Outcome::Redirect {
                 location: url("checks:detail", &[&c.to_db(), &r.args["check_id"]]),
             });
@@ -991,6 +996,7 @@ fn record_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: 
     // `fresh` is the revision this very save produced. A re-sent copy of an older page can come
     // back with a draft edited since (same request key and fields): never post that one.
     let changed = revision != fresh;
+    let mut form_errors = Errors::new();
     match app.run(Command::ReviewCheck {
         company_id: c.to_db(),
         check_id: id.clone(),
@@ -1013,10 +1019,13 @@ fn record_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: 
                 {
                     return Ok(Outcome::Redirect { location: detail });
                 }
-                extra["post_notice"] = json!(format!(
-                    "Saved as a draft, not recorded: {}",
-                    nonfield(&e, "__all__").join(" ")
-                ));
+                let notice = nonfield(&e, "__all__")
+                    .into_iter()
+                    .chain(nonfield(&e, "date"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                extra["post_notice"] = json!(format!("Saved as a draft, not recorded: {notice}"));
+                form_errors = e;
             } else if changed {
                 extra["post_notice"] = json!(
                     "Not recorded: this draft was changed after that page was shown. Check it and choose Save and record again."
@@ -1040,7 +1049,7 @@ fn record_saved(app: &mut App, c: CompanyId, saved: &Value, shown: &str, fresh: 
         args: [("company_id".to_owned(), c.to_db()), ("check_id".to_owned(), id)].into(),
     };
     Ok(Outcome::Invalid {
-        html: form(app, &route, &edit, None, &Errors::new(), &[], &extra)?,
+        html: form(app, &route, &edit, None, &form_errors, &[], &extra)?,
     })
 }
 const PARTY_KEYS: &[&str] = &["display_name", "business_name", "contact_name", "billing_address", "email", "phone"];

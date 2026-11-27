@@ -208,7 +208,55 @@ function session(ses) {
   if (typeof ses.setSpellCheckerLanguages === 'function') ses.setSpellCheckerLanguages([]);
 }
 
-module.exports = { restoreBook, chooseBook, CSP, staticFile, command, query, target, setup, unlock, remotePair, hostingOn, hostingRevoke, hostingRepair, sender, window, session };
+const STATEMENT_CSV_ROUTES = new Set([
+  'reports:customer_statements',
+  'reports:cash_flow',
+  'reports:comparative_profit_and_loss',
+  'reports:sales_by_customer_item',
+  'reports:schedule_c_activity',
+  'reports:asset_depreciation_schedule',
+]);
+const REPORT_CSV_ROUTES = new Set(['profit_loss', 'balance_sheet', 'general_ledger', 'ar_aging', 'ap_aging', 'vendor_1099', ...STATEMENT_CSV_ROUTES]);
+const BANKING_CSV_ROUTES = new Set(['register', 'reconcile:report']);
+
+function csvExportFilename(route, url, status, body) {
+  if (status !== 200) return null;
+  if (route === 'history' && url.searchParams.getAll('format').at(-1) === 'csv' && typeof body === 'string' && body.startsWith('\uFEFF')) {
+    return 'audit-history.csv';
+  }
+  if (url.searchParams.getAll('output').at(-1) !== 'csv') return null;
+  if (REPORT_CSV_ROUTES.has(route)) return 'report.csv';
+  if (BANKING_CSV_ROUTES.has(route)) return 'banking.csv';
+  return null;
+}
+
+// Use the same response path for local and connected-host exports. A malformed
+// success response on a statement CSV route must never be rendered as HTML.
+function csvExportResponse(route, url, status, body, attachmentName) {
+  const filename = csvExportFilename(route, url, status, body);
+  if (!filename) return null;
+  const headers = {
+    'content-security-policy': CSP,
+    'cache-control': 'no-store',
+    'x-content-type-options': 'nosniff',
+  };
+  if (STATEMENT_CSV_ROUTES.has(route) && (typeof body !== 'string' || !body.startsWith('\uFEFF'))) {
+    return new Response('Report export unavailable.', {
+      status: 502,
+      headers: {...headers, 'content-type': 'text/plain; charset=utf-8'},
+    });
+  }
+  return new Response(body, {
+    status: 200,
+    headers: {
+      ...headers,
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="${attachmentName || filename}"`,
+    },
+  });
+}
+
+module.exports = { restoreBook, chooseBook, CSP, staticFile, csvExportFilename, csvExportResponse, command, query, target, setup, unlock, remotePair, hostingOn, hostingRevoke, hostingRepair, sender, window, session };
 
 
 // SEC-FIX1: COMMANDS above is the historical app vocabulary, not IPC authorization.

@@ -453,17 +453,49 @@ fn sync_audit_ok(v: &Value, number: u64) -> bool {
         &["ok", "scheduled", "summary"]
     };
     let optional: &[&str] = if v["ok"] == true {
-        &["window_start", "missing_from", "missing_to", "already_recorded", "bank_changed", "removed_characters"]
+        &["window_start", "missing_from", "missing_to", "already_recorded", "bank_changed", "removed_characters", "imported_feed_ids", "predecessor_gaps"]
     } else {
-        &["removed_characters"]
+        &["removed_characters", "imported_feed_ids"]
+    };
+    let imported_ids = v.get("imported_feed_ids").map(strings);
+    let imported_ok = match &imported_ids {
+        None => true,
+        Some(Some(list)) => {
+            (v["ok"] == true || list.is_empty())
+                && list.iter().all(|id| named(id))
+                && list.iter().collect::<BTreeSet<_>>().len() == list.len()
+        }
+        Some(None) => false,
     };
     let keys = v.as_object().is_some_and(|o| required.iter().all(|k| o.contains_key(*k)) && o.keys().all(|k| required.contains(&k.as_str()) || optional.contains(&k.as_str())));
     keys && v["ok"].is_boolean() && v["scheduled"].is_boolean() && v["summary"].is_string()
         && v.get("removed_characters").is_none_or(|n| audit_count(n).is_some_and(|n| n > 0))
+        && imported_ok
         && (v["ok"] == false || (
             timestamp(&v["at"]) && audit_count(&v["sync"]) == Some(number)
             && ["accounts", "new", "updated", "posted", "unchanged", "skipped", "errors", "pending_dropped"].iter().all(|k| audit_count(&v[k]).is_some())
             && strings(&v["pending_dropped_ids"]).is_some()
+            && v.get("predecessor_gaps").is_none_or(|gaps| {
+                gaps.as_array().is_some_and(|rows| {
+                    rows.iter().all(|row| {
+                        exact_keys(row, &["feed_id", "from"])
+                            && row["feed_id"].as_str().is_some_and(|id| {
+                                named(id)
+                                    && imported_ids
+                                        .as_ref()
+                                        .and_then(Option::as_ref)
+                                        .is_some_and(|ids| ids.contains(&id))
+                            })
+                            && !row["from"].is_null()
+                            && is_date(&row["from"])
+                    }) && rows
+                        .iter()
+                        .filter_map(|row| row["feed_id"].as_str())
+                        .collect::<BTreeSet<_>>()
+                        .len()
+                        == rows.len()
+                })
+            })
             && v.get("window_start").is_none_or(timestamp)
             && ["already_recorded", "bank_changed"].iter().all(|k| v.get(k).is_none_or(|n| audit_count(n).is_some_and(|n| n > 0)))
             && match (v.get("missing_from"), v.get("missing_to")) {
@@ -911,7 +943,8 @@ mod tests {
         let mut runner = crate::Runner::new(&scenario, &dir.path().join("shape.fbbook"));
         runner.run();
         let good = runner.dump();
-        assert!(crate::compare(&good, &good).ok());
+        let report = crate::compare(&good, &good);
+        assert!(report.ok(), "{:?}", report.failures);
         let rejects = |bad: Value| assert!(!crate::compare(&bad, &bad).ok());
         for key in ["already_recorded", "bank_changed", "missing"] {
             let mut bad = good.clone();
@@ -946,5 +979,37 @@ mod tests {
         bad["extra"] = json!(0);
         assert!(!sync_audit_ok(&bad, number));
         assert!(!sync_audit_ok(detail, number + 1));
+
+        // Legacy audit without either imported_feed_ids or predecessor_gaps remains valid.
+        let mut legacy = detail.clone();
+        legacy.as_object_mut().unwrap().remove("imported_feed_ids");
+        legacy.as_object_mut().unwrap().remove("predecessor_gaps");
+        assert!(sync_audit_ok(&legacy, number));
+
+        // Nonempty predecessor_gaps requires matching imported_feed_ids evidence.
+        let mut gap_without_imports = legacy.clone();
+        gap_without_imports["predecessor_gaps"] = json!([{"feed_id": "feed-a", "from": "2026-10-01"}]);
+        assert!(!sync_audit_ok(&gap_without_imports, number));
+
+        let mut gap_wrong_import = legacy.clone();
+        gap_wrong_import["imported_feed_ids"] = json!(["feed-b"]);
+        gap_wrong_import["predecessor_gaps"] = json!([{"feed_id": "feed-a", "from": "2026-10-01"}]);
+        assert!(!sync_audit_ok(&gap_wrong_import, number));
+
+        let mut gap_matched = legacy.clone();
+        gap_matched["imported_feed_ids"] = json!(["feed-a"]);
+        gap_matched["predecessor_gaps"] = json!([{"feed_id": "feed-a", "from": "2026-10-01"}]);
+        assert!(sync_audit_ok(&gap_matched, number));
+
+        let mut dup_imports = legacy.clone();
+        dup_imports["imported_feed_ids"] = json!(["feed-a", "feed-a"]);
+        assert!(!sync_audit_ok(&dup_imports, number));
+
+        let mut dup_gaps = gap_matched.clone();
+        dup_gaps["predecessor_gaps"] = json!([
+            {"feed_id": "feed-a", "from": "2026-10-01"},
+            {"feed_id": "feed-a", "from": "2026-10-02"}
+        ]);
+        assert!(!sync_audit_ok(&dup_gaps, number));
     }
 }

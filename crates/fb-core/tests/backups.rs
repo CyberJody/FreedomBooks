@@ -675,30 +675,21 @@ fn archive_links_traversal_extensions_and_oversized_metadata_are_refused() {
 fn stale_cleanup_keeps_live_other_host_and_unrecognized_work() {
     let f = Files::new();
     fs::create_dir(&f.work).unwrap();
-    let host = format!(
-        "{:x}",
-        Sha256::digest(
-            fs::read_to_string("/etc/hostname")
-                .unwrap()
-                .trim()
-                .as_bytes()
-        )
-    );
+    let host = backups::cleanup::host_tag().expect("unix host tag");
     let dead = f.work.join(format!(
-        ".fb-backup.{}.4294967295.ABCDEF123456",
-        &host[..16]
+        ".fb-backup.{host}.{}.ABCDEF123456",
+        i32::MAX
     ));
     fs::create_dir(&dead).unwrap();
     fs::write(dead.join("private"), b"synthetic").unwrap();
     let live = f.work.join(format!(
-        ".fb-backup.{}.{}.ABCDEF123456",
-        &host[..16],
+        ".fb-backup.{host}.{}.ABCDEF123456",
         std::process::id()
     ));
     fs::create_dir(&live).unwrap();
     let unknown = f.work.join("notes");
     fs::write(&unknown, b"keep").unwrap();
-    let other = f.work.join(".fb-backup.other.4294967295.ABCDEF123456");
+    let other = f.work.join(format!(".fb-backup.other.{}.ABCDEF123456", i32::MAX));
     fs::create_dir(&other).unwrap();
     let removed = backups::cleanup::cleanup_stale(&f.work).unwrap();
     assert_eq!(removed, vec![dead]);

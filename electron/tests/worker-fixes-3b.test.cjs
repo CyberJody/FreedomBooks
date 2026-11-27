@@ -1,5 +1,5 @@
 'use strict';
-// Bookkeeper round 7's missing bank-feed features (fix list items 46-48): the page
+// Bookkeeper round 7's missing bank-feed features (internal test notes, fix list items 46-48): the page
 // behaviour of a split row in Review and of a deposit of several received payments from one Review row, in a
 // real sandboxed Electron window with the real preload, page script and stylesheets. The main process side is
 // a stand-in for `books.run` that records each command and answers the review page with a prepared fragment.

@@ -21,7 +21,8 @@ fn a_format_95_book_is_backed_up_upgraded_and_reopens_with_only_the_deposit_view
     assert_eq!(MIGRATIONS[boundary - 1].0, "0208_ai_unattended");
     assert_eq!(MIGRATIONS[boundary].0, "0209_deposit_adjustments");
     assert_eq!(MIGRATIONS[boundary + 1].0, "0210_bankfeeds_matching");
-    assert_eq!(MIGRATIONS.len(), boundary + 2);
+    assert_eq!(MIGRATIONS[boundary + 2].0, "0211_company_and_bankfeed_defaults");
+    assert_eq!(MIGRATIONS.len(), boundary + 3);
     let conn = Connection::open(&path).unwrap();
     conn.execute_batch(&format!("PRAGMA key=\"x'{}'\"", hex(&key))).unwrap();
     Book::configure(&conn).unwrap();
@@ -42,18 +43,24 @@ fn a_format_95_book_is_backed_up_upgraded_and_reopens_with_only_the_deposit_view
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected a format-95 book"),
     };
-    assert_eq!((old.from(), old.to()), (95, 97));
+    assert_eq!((old.from(), old.to()), (95, 98));
     let backup = dir.path().join("verified-format-95.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
     let book = old.upgrade().unwrap();
     let after = test_support::snapshot(&book.conn).unwrap();
     assert_eq!(after.len(), before.len() + crate::bankfeeds_matching_upgrade_tests::TABLES);
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
+        if crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) {
+            assert_ne!(&upgraded[object], hash, "0211 extends {object}");
+            continue;
+        }
         if CHANGED.contains(&object.as_str()) {
             assert_ne!(&upgraded[object], hash, "0209 replaces {object}");
         } else if !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) {
@@ -62,7 +69,7 @@ fn a_format_95_book_is_backed_up_upgraded_and_reopens_with_only_the_deposit_view
     }
     let added: BTreeSet<&str> = upgraded.keys().filter(|k| !schema.contains_key(*k)).map(String::as_str)
         .filter(|k| !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k)).collect();
-    assert_eq!(added, OBJECTS.iter().copied().collect());
+    assert_eq!(added, OBJECTS.iter().chain(crate::company_periods_upgrade_tests::OBJECTS).copied().collect());
     // Every prior condition of the two views is kept; the sum of the deposit now counts the adjustments.
     let (invalid, expected) = (sql(&book.conn, "banking_deposit_invalid"), sql(&book.conn, "banking_deposit_expected"));
     for line in prior_invalid.lines().skip(1) {

@@ -921,6 +921,7 @@ pub(crate) fn post_journal_source_tx(tx: &Writer<'_>, actor: UserId, company: Co
     if manual {
         check_revision(journal.revision, expected_revision)?;
     }
+    crate::periods::require_open(tx, company, &journal.date)?;
     let lines = store::lines(tx, journal.id)?;
     for line in &lines {
         let ok = matches!(store::account(tx, line.account_id)?, Some(a) if a.company_id == company && a.active && a.postable);
@@ -998,6 +999,7 @@ pub(crate) fn reverse_journal_source_tx(tx: &Writer<'_>, actor: UserId, company:
     if reversal_date.to_string() < original.date || reason.is_empty() {
         return Err(FbError::validation("Supply a reason and a reversal date on or after the original date."));
     }
+    crate::periods::require_open(tx, company, &reversal_date.to_string())?;
     // Bound only the display summary, never the canonical reason audited below.
     let summary = py::py_truncate(&format!("Reversal of {}: {}", original.display(), reason), MEMO_MAX);
     let lines: Vec<Value> = store::lines(tx, original.id)?

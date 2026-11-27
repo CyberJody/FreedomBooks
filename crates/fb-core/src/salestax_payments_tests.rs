@@ -50,7 +50,11 @@ impl Fx {
     }
     /// Post an invoice of `amount` taxed with `tax` (a rate/group id, or None for a manual 5% rate).
     fn invoice(&mut self, date: &str, amount: &str, tax: Option<&Value>) -> String {
-        let mut input = json!({"request_key":new_id(),"customer_id":self.customer,"date":date,"memo":"Taxed sale","lines":[{"item_id":null,"description":"Work","quantity":"1","rate":amount,"taxable":true,"income_account_id":self.income.to_db()}]});
+        let lines = json!([{"item_id":null,"description":"Work","quantity":"1","rate":amount,"taxable":true,"income_account_id":self.income.to_db()}]);
+        self.invoice_with_lines(date, lines, tax)
+    }
+    fn invoice_with_lines(&mut self, date: &str, lines: Value, tax: Option<&Value>) -> String {
+        let mut input = json!({"request_key":new_id(),"customer_id":self.customer,"date":date,"memo":"Taxed sale","lines":lines});
         match tax {
             Some(item) => {
                 input["tax_mode"] = json!("ITEM");
@@ -517,7 +521,9 @@ fn open_time_checks_catch_a_payment_whose_triggers_were_bypassed() {
 #[test]
 fn wide_tax_report_totals_preserve_exact_cents_and_sign() {
     for n in [i128::from(i64::MAX) + 1, i128::from(i64::MIN) - 1] {
-        let value = Figures { opening: n, collected: 123, paid: 23 }.json();
+        let value = Figures {
+            opening: Money::from_cents(n), collected: Money::from_db(123), paid: Money::from_db(23),
+        }.json();
         assert_eq!(report_cents(&value["opening_cents"]), Some(n));
         assert_eq!(report_cents(&value["balance_cents"]), Some(n + 100));
         assert_eq!(value["balance"], money(n + 100));
@@ -617,4 +623,213 @@ fn a_numbering_preference_steps_over_a_tax_payment_reference_too() {
     f.pay(&p).unwrap();
     assert_eq!(next(&mut f), "0502");
     assert_eq!(crate::checks::next_number(&mut f.book, f.actor, f.co, f.bank2).unwrap(), "1", "another bank account is not affected");
+}
+
+fn breakdown_row<'a>(report: &'a Value, name: &str) -> &'a Value {
+    report["breakdown"].as_array().unwrap().iter().find(|row| row["name"] == name)
+        .unwrap_or_else(|| panic!("Missing {name} in {report}"))
+}
+
+#[test]
+fn breakdown_uses_frozen_jurisdictions_and_splits_taxable_and_exempt_on_both_bases() {
+    let mut f = Fx::new();
+    let group = f.group.clone();
+    let invoice = f.invoice_with_lines("2027-12-01", json!([
+        {"description":"Taxable work","quantity":"1","rate":"100.00","taxable":true,"income_account_id":f.income.to_db()},
+        {"description":"Exempt work","quantity":"1","rate":"30.00","taxable":false,"income_account_id":f.income.to_db()}
+    ]), Some(&group));
+    f.receive(&invoice, "2028-02-29", "68.25");
+    f.receive(&invoice, "2028-03-01", "68.25");
+    f.invoice("2027-11-30", "100.00", Some(&group));
+    f.invoice("2028-03-01", "100.00", Some(&group));
+    let direct_sale = json!({"request_key":new_id(),"customer_id":f.customer,"date":"2028-02-29",
+        "method":"CASH","destination":"BANK","bank_id":f.bank.to_db(),"tax_mode":"NONE",
+        "lines":[{"item_id":null,"description":"No tax","quantity":"1","rate":"12.34","taxable":true,"income_account_id":f.income.to_db()}]});
+    let review = sales::review_sales_receipt(&mut f.book, f.actor, f.co, &direct_sale).unwrap();
+    sales::record_sales_receipt(&mut f.book, f.actor, f.co, &direct_sale, Some(&review)).unwrap();
+    let agency = f.state_agency();
+    salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "item_id":f.state["id"],"expected_revision":f.state["revision"],"name":"Renamed state",
+        "description":"Updated state tax","rate":"5","agency_id":agency
+    })).unwrap();
+    let (start, end) = (Some("2027-12-01"), "2028-02-29");
+    let row_amounts = |report: &Value, name| {
+        let row = breakdown_row(report, name);
+        (row["taxable"].clone(), row["exempt"].clone(), row["collected"].clone())
+    };
+    let accrual = f.owed(start, end);
+    assert_eq!(breakdown_row(&accrual, "Combined")["jurisdiction"], "County Treasurer, State Revenue");
+    assert_eq!(breakdown_row(&accrual, "Combined")["rate"], "6.5");
+    assert_eq!(breakdown_row(&accrual, "Combined")["is_component"], false);
+    assert_eq!(row_amounts(&accrual, "Combined"), (json!("100.00"), json!("30.00"), json!("6.50")));
+    assert_eq!(breakdown_row(&accrual, "State")["jurisdiction"], "State Revenue");
+    assert_eq!(breakdown_row(&accrual, "County")["jurisdiction"], "County Treasurer");
+    assert_eq!(breakdown_row(&accrual, "County")["rate"], "2.5");
+    assert_eq!(breakdown_row(&accrual, "State")["is_component"], true);
+    assert_eq!(breakdown_row(&accrual, "County")["is_component"], true);
+    assert_eq!(row_amounts(&accrual, "State"), (Value::Null, Value::Null, json!("4.00")));
+    assert_eq!(row_amounts(&accrual, "County"), (Value::Null, Value::Null, json!("2.50")));
+    assert_eq!(row_amounts(&accrual, "No tax selected"), (json!("0.00"), json!("12.34"), json!("0.00")));
+    assert_eq!(accrual["breakdown_total"], json!({"taxable":"100.00","exempt":"42.34","collected":"6.50"}));
+    assert_eq!(accrual["total"]["collected"], "6.50");
+    f.set_basis("CASH");
+    let cash = f.owed(start, end);
+    assert_eq!(row_amounts(&cash, "Combined"), (json!("50.00"), json!("15.00"), json!("3.25")));
+    assert_eq!(row_amounts(&cash, "State"), (Value::Null, Value::Null, json!("2.00")));
+    assert_eq!(row_amounts(&cash, "County"), (Value::Null, Value::Null, json!("1.25")));
+    assert_eq!(row_amounts(&cash, "No tax selected"), (json!("0.00"), json!("12.34"), json!("0.00")));
+    assert_eq!(cash["breakdown_total"], json!({"taxable":"50.00","exempt":"27.34","collected":"3.25"}));
+    assert_eq!(cash["total"]["collected"], "3.25");
+
+    let immediate = f.owed(Some("2028-03-01"), "2028-03-01");
+    assert_eq!(row_amounts(&immediate, "Combined"), (json!("50.00"), json!("15.00"), json!("3.25")));
+    assert_eq!(row_amounts(&immediate, "State"), (Value::Null, Value::Null, json!("2.00")));
+    assert_eq!(row_amounts(&immediate, "County"), (Value::Null, Value::Null, json!("1.25")));
+}
+
+#[test]
+fn cash_breakdown_allocates_the_same_cents_across_partial_payments_and_period_boundaries() {
+    let mut f = Fx::new();
+    let group = f.group.clone();
+    let invoice = f.invoice("2027-12-01", "0.25", Some(&group));
+    f.receive(&invoice, "2027-12-02", "0.14");
+    f.receive(&invoice, "2027-12-03", "0.13");
+    f.set_basis("CASH");
+    let first = f.owed(Some("2027-12-02"), "2027-12-02");
+    let second = f.owed(Some("2027-12-03"), "2027-12-03");
+    let whole = f.owed(Some("2027-12-02"), "2027-12-03");
+    assert_eq!(breakdown_row(&whole, "Combined")["taxable"], "0.25");
+    assert_eq!(breakdown_row(&whole, "Combined")["collected"], "0.02");
+    for (name, agency) in [("State", f.state_agency()), ("County", f.county_agency())] {
+        assert_eq!(breakdown_row(&whole, name)["collected"], "0.01");
+        assert_eq!(breakdown_row(&whole, name)["taxable"], Value::Null);
+        assert_eq!(row(&whole, &agency)["collected"], "0.01");
+        let before = report_cents(&row(&first, &agency)["collected_cents"]).unwrap();
+        let after = report_cents(&row(&second, &agency)["collected_cents"]).unwrap();
+        assert_eq!(before + after, 1);
+    }
+    assert_eq!(whole["total"]["collected"], "0.02");
+}
+
+#[test]
+fn positive_cash_receipt_never_reduces_an_agencys_recognized_tax_and_reversal_releases_exact_cents() {
+    let mut f = Fx::new();
+    let r1 = salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "name": "Local A", "description": "Local A", "rate": "1", "new_agency_name": "Agency A", "expected_revision": 0
+    })).unwrap();
+    let r2 = salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "name": "Local B", "description": "Local B", "rate": "3", "new_agency_name": "Agency B", "expected_revision": 0
+    })).unwrap();
+    let r3 = salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "name": "Local C", "description": "Local C", "rate": "3", "new_agency_name": "Agency C", "expected_revision": 0
+    })).unwrap();
+    let trio = salestax::save_group(&mut f.book, f.actor, f.co, &json!({
+        "name": "Trio", "description": "Trio", "member_ids": [r1["id"], r2["id"], r3["id"]], "expected_revision": 0
+    })).unwrap();
+    f.set_basis("CASH");
+    let inv = f.invoice("2027-12-01", "1.00", Some(&trio)); // 1.07 total, 7 cents tax [1, 3, 3]
+    f.receive(&inv, "2027-12-02", "0.46"); // brings recognized tax to 3 cents
+    let p2_input = json!({
+        "request_key": new_id(), "customer_id": f.customer, "date": "2027-12-03", "method": "CASH",
+        "destination": "BANK", "bank_id": f.bank.to_db(), "amount": "0.15",
+        "allocations": [{"invoice_id": inv, "amount": "0.15"}]
+    });
+    let p2_rev = sales::review_receipt(&mut f.book, f.actor, f.co, &p2_input).unwrap();
+    let p2 = sales::record_receipt(&mut f.book, f.actor, f.co, &p2_input, Some(&p2_rev)).unwrap(); // brings recognized tax from 3 cents to 4 cents
+    let agencies = [
+        s(&r1, "agency_id").to_owned(),
+        s(&r2, "agency_id").to_owned(),
+        s(&r3, "agency_id").to_owned(),
+    ];
+    let day1 = f.owed(Some("2027-12-02"), "2027-12-02");
+    let day2 = f.owed(Some("2027-12-03"), "2027-12-03");
+    let mut day2_deltas = Vec::new();
+    for agency in &agencies {
+        let c1 = report_cents(&row(&day1, agency)["collected_cents"]).unwrap();
+        let c2 = report_cents(&row(&day2, agency)["collected_cents"]).unwrap();
+        assert!(c1 >= 0, "day1 agency {agency} went negative: {c1}");
+        assert!(c2 >= 0, "day2 agency {agency} went negative on positive receipt: {c2}");
+        day2_deltas.push(c2);
+    }
+    assert_eq!(day2_deltas.iter().sum::<i128>(), 1);
+    // Reversing the second receipt on day 3 releases the exact same agency cent.
+    sales::reverse_receipt(
+        &mut f.book,
+        f.actor,
+        f.co,
+        s(&p2, "id"),
+        Some(1),
+        &json!("2027-12-04"),
+        &json!("Undo second receipt"),
+    )
+    .unwrap();
+    let day3 = f.owed(Some("2027-12-04"), "2027-12-04");
+    for (agency, delta) in agencies.iter().zip(&day2_deltas) {
+        let c3 = report_cents(&row(&day3, agency)["collected_cents"]).unwrap();
+        assert_eq!(c3, -*delta, "reversal should release exact same cent for {agency}");
+    }
+}
+
+#[test]
+fn same_agency_tax_group_reports_sales_base_once_and_component_tax_separately() {
+    let mut f = Fx::new();
+    let agency = f.state_agency();
+    let part_a = salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "name": "NY State", "description": "NY State", "rate": "4", "agency_id": agency, "expected_revision": 0
+    })).unwrap();
+    let part_b = salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "name": "NY Local", "description": "NY Local", "rate": "4", "agency_id": agency, "expected_revision": 0
+    })).unwrap();
+    let ny_group = salestax::save_group(&mut f.book, f.actor, f.co, &json!({
+        "name": "NY Combined", "description": "NY Combined", "member_ids": [part_a["id"], part_b["id"]], "expected_revision": 0
+    })).unwrap();
+    f.invoice_with_lines("2027-12-05", json!([
+        {"description":"Taxable","quantity":"1","rate":"100.00","taxable":true,"income_account_id":f.income.to_db()},
+        {"description":"Exempt","quantity":"1","rate":"30.00","taxable":false,"income_account_id":f.income.to_db()}
+    ]), Some(&ny_group));
+    let report = f.owed(Some("2027-12-01"), "2028-02-29");
+    let group_row = breakdown_row(&report, "NY Combined");
+    assert_eq!(group_row["jurisdiction"], "State Revenue");
+    assert_eq!(group_row["taxable"], "100.00");
+    assert_eq!(group_row["exempt"], "30.00");
+    assert_eq!(group_row["collected"], "8.00");
+    assert_eq!(group_row["is_component"], false);
+    for comp in ["NY State", "NY Local"] {
+        let r = breakdown_row(&report, comp);
+        assert_eq!(r["jurisdiction"], "State Revenue");
+        assert_eq!(r["taxable"], Value::Null);
+        assert_eq!(r["exempt"], Value::Null);
+        assert_eq!(r["collected"], "4.00");
+        assert_eq!(r["is_component"], true);
+    }
+    assert_eq!(report["breakdown_total"], json!({"taxable":"100.00","exempt":"30.00","collected":"8.00"}));
+}
+
+#[test]
+fn accrual_breakdown_tracks_credit_memo_and_void_in_their_own_periods() {
+    let mut f = Fx::new();
+    let input = json!({"request_key":new_id(),"customer_id":f.customer,"date":"2027-11-30",
+        "tax_mode":"ITEM","tax_item_id":f.state["id"],"lines":[
+            {"item_id":null,"description":"Taxed return","quantity":"1","rate":"25.00","taxable":true,"income_account_id":f.income.to_db()},
+            {"item_id":null,"description":"Exempt return","quantity":"1","rate":"3.00","taxable":false,"income_account_id":f.income.to_db()}
+        ]});
+    let review = crate::credits::review_credit_memo(&mut f.book, f.actor, f.co, &input).unwrap();
+    let credit = crate::credits::record_credit_memo(&mut f.book, f.actor, f.co, &input, Some(&review)).unwrap();
+    crate::credits::void_credit_memo(&mut f.book, f.actor, f.co, s(&credit, "id"), Some(1),
+        &json!("2027-12-01"), &json!("Synthetic void")).unwrap();
+
+    for (date, taxable, exempt, collected) in [
+        ("2027-11-30", "-25.00", "-3.00", "-1.00"),
+        ("2027-12-01", "25.00", "3.00", "1.00"),
+    ] {
+        let report = f.owed(Some(date), date);
+        let state = breakdown_row(&report, "State");
+        assert_eq!(state["taxable"], taxable);
+        assert_eq!(state["exempt"], exempt);
+        assert_eq!(state["collected"], collected);
+        assert_eq!(report["total"]["collected"], collected);
+    }
+    f.set_basis("CASH");
+    let cash = f.owed(Some("2027-11-30"), "2027-12-01");
+    assert_eq!(cash["breakdown"], json!([]));
 }

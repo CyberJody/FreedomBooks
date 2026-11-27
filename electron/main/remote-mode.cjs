@@ -49,8 +49,10 @@ function stampTarget(target, marker) {
   return url.pathname + url.search + url.hash;
 }
 
-function csvPage(route, url, status) {
-  return status === 200 && ((route === 'history' && url.searchParams.get('format') === 'csv') || (['profit_loss', 'balance_sheet', 'general_ledger', 'register', 'reconcile:report'].includes(route) && url.searchParams.getAll('output').at(-1) === 'csv'));
+const guards = require('./guards.cjs');
+
+function csvPage(route, url, status, body) {
+  return Boolean(guards.csvExportFilename(route, url, status, body));
 }
 
 // The connected-host bar, added to every host page: who you are connected to, and the link state.
@@ -403,11 +405,11 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
           if (r.html === SIGN_IN && url.pathname !== SIGN_IN) current.signedIn = false;
           return {redirect: stampTarget(r.html, current.marker), marker: current.marker};
         }
+        const csv = csvPage(r.route, url, r.status, r.html);
         // Bind even a queryless print view to the session that supplied its visible contents.
-        if (!marker && r.status === 200 && r.html.includes('id="print-now"')) {
+        if (!csv && !marker && r.status === 200 && r.html.includes('id="print-now"')) {
           return {redirect: `${target}${url.search ? '&' : '?'}${PAGE_KEY}=${current.marker}`, marker: current.marker};
         }
-        const csv = csvPage(r.route, url, r.status);
         return {html: csv ? r.html : decorate(r.html, connected.host_name, link, current.marker), status: r.status, route: r.route, marker: current.marker};
       }
       if (r.type === 'Refused') {

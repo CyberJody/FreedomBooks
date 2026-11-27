@@ -552,3 +552,72 @@ fn imported_policy_and_queue_identities_are_permanent() {
     assert!(accepted.is_empty(), "accepted primary-key changes: {accepted:#?}");
     f.reopen_clean();
 }
+
+#[test]
+fn a_closed_period_holds_automatic_work_leaves_matches_available_and_preserves_accept_retries() {
+    let mut f = Fx::new();
+    f.connected_books();
+    import(&mut f, true, None).unwrap();
+    let auto = download(&mut f);
+    let old = f.journal("2026-10-01", "500", "100", "84.19");
+    let line: String = f.book.connection().query_row(
+        "SELECT l.id FROM ledger_journalline l JOIN ledger_account a ON a.id=l.account_id WHERE l.journal_id=?1 AND a.code='100'",
+        [&old], |r| r.get(0),
+    ).unwrap();
+    let input = json!({"kind":"JOURNAL","account_id":f.acc("410")});
+    let accepted = f.accept("TX-1006", input.clone()).unwrap();
+
+    f.book.write(|w| w.execute("INSERT INTO desktop_user(user_id,role,password_hash) VALUES(?1,'administrator',?3),(?2,'administrator',?3)",
+        params![f.u.to_db(), f.outsider.to_db(), format!("$argon2id$v=19${}", "synthetic".repeat(10))])).unwrap();
+    let policy = crate::periods::PeriodChange { fiscal_year_start_month: 1, closing_date: Some("2026-11-05".into()) };
+    crate::periods::set_policy(&mut f.book, f.u, f.c, 0, policy, None).unwrap();
+
+    let before = fb_db::test_support::snapshot(f.book.connection()).unwrap();
+    for (remote, values) in [
+        ("TX-1002", json!({"kind":"CHECK","split_lines":[{"account_id":f.acc("500"),"amount":"1200.00"}]})),
+        ("TX-1003", json!({"kind":"DEPOSIT","receipt_ids":[]})),
+        ("TX-1005", json!({"kind":"TRANSFER","transfer_account_id":f.acc("101")})),
+        ("TX-1007", json!({"kind":"JOURNAL","account_id":f.acc("500")})),
+    ] {
+        assert!(msg(f.accept(remote, values)).contains("closed through 2026-11-05"));
+    }
+    assert_eq!(f.accept("TX-1006", input).unwrap().journal_id, accepted.journal_id);
+    assert!(msg(undo_accept(&mut f.book, f.u, f.c, &accepted.id, &SecretSet::none())).contains("Date 2026-10-19"));
+    assert_eq!(fb_db::test_support::snapshot(f.book.connection()).unwrap(), before);
+    assert_eq!(f.accept("TX-1001", json!({"kind":"MATCH","journal_line_id":line})).unwrap().status, "MATCHED");
+
+    assert!(!auto_post(&mut f.book, f.u, f.c, &auto.id, &SecretSet::none()).unwrap());
+    assert_eq!(f.item("AUTO-1").status, "NEW");
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_auto_queue"), 0);
+    assert_eq!(f.count("SELECT count(*) FROM ledger_auditevent WHERE action='bankfeed.rule_auto_posted'"), 0);
+    let hold: String = f.book.connection().query_row(
+        "SELECT reason FROM bankfeeds_rule_review WHERE item_id=?1", [&auto.id], |r| r.get(0),
+    ).unwrap();
+    assert!(hold.starts_with("Date 2026-11-05 is in a closed period."));
+    assert!(hold.contains("/settings/accounting-periods/"));
+    assert!(!auto_post(&mut f.book, f.u, f.c, &auto.id, &SecretSet::none()).unwrap());
+    f.reopen_clean();
+}
+
+#[test]
+fn scoped_manual_winner_invalidates_an_imported_automatic_queue_entry() {
+    let mut f = Fx::new();
+    f.connected_books();
+    let savings = f.feed("ACT-savings");
+    let checking = f.feed("ACT-checking");
+    let mut manual = json!({"name":"Savings ACME","match_text":"ACME","account_id":f.acc("500"),"feed_account_id":savings});
+    let rule = save_rule(&mut f.book, f.u, f.c, &manual, &f.secrets).unwrap();
+    import(&mut f, true, None).unwrap();
+    let queued = download(&mut f);
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_auto_queue"), 1);
+    manual["rule_id"] = json!(rule.id);
+    manual["name"] = json!("Checking ACME");
+    manual["feed_account_id"] = json!(checking);
+    save_rule(&mut f.book, f.u, f.c, &manual, &f.secrets).unwrap();
+    let winner = rule_for(&active_rules(&mut f.book, f.u, f.c).unwrap(), &queued).unwrap().id.clone();
+    assert_eq!(winner, rule.id);
+    assert!(!auto_post(&mut f.book, f.u, f.c, &queued.id, &f.secrets).unwrap());
+    assert_eq!(f.count("SELECT count(*) FROM bankfeeds_auto_queue"), 0);
+    assert_eq!(f.count("SELECT count(*) FROM ledger_journal"), 0);
+    f.reopen_clean();
+}

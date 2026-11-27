@@ -1,7 +1,7 @@
-//! Transfers between two bank accounts.
+//! Transfers between eligible bank and credit card accounts.
 use crate::checks::support::*;
-use crate::{AccountId, Book, CompanyId, FbResult, Money, UserId, documents, py, services};
-use fb_db::{Query, Writer};
+use crate::{AccountId, Book, CompanyId, FbResult, Money, UserId, documents, model::Account, py, services};
+use fb_db::{Query, Writer, rusqlite::params};
 use serde_json::{Value, json};
 
 #[derive(Clone, Debug)]
@@ -28,39 +28,34 @@ fn normalize(p: &Value) -> FbResult<Value> {
     let to = id(&p["to_account_id"], false)?.unwrap();
     let memo = crate::card_numbers::card_free(field_text(p, "memo", 2000)?, "Memo")?;
     if from == to {
-        return Err(err("Transfer from and to two different bank accounts."));
+        return Err(err("Choose two different accounts for the transfer."));
     }
     Ok(
         json!({"request_key":key,"date":dt,"amount":amount,"from_account_id":from,"to_account_id":to,"memo":memo}),
     )
 }
 fn prepare(tx: &Writer<'_>, actor: UserId, co: CompanyId, d: &Value) -> FbResult<Plan> {
-    let from = account(tx, co, s(d, "from_account_id"))
-        .map_err(|_| err("Choose two bank accounts from this company."))?;
-    let to = account(tx, co, s(d, "to_account_id"))
-        .map_err(|_| err("Choose two bank accounts from this company."))?;
+    let keys = [s(d, "from_account_id"), s(d, "to_account_id")];
+    let eligible: bool = tx.query_row(
+        "SELECT count(*)=2 FROM fb_transfer_eligible WHERE company_id=?1 AND account_id IN (?2,?3)",
+        params![co.to_db(), keys[0], keys[1]], |r| r.get(0),
+    )?;
+    if !eligible {
+        return Err(err("Choose two eligible bank or credit card accounts from this company."));
+    }
+    let from = account(tx, co, keys[0])?;
+    let to = account(tx, co, keys[1])?;
+    let mut cards = Vec::new();
     for a in [&from, &to] {
-        if let Some(role) = documents::control_role(tx, co, a.id)? {
-            return Err(err(&(documents::control_message(a, &role)
-                + " Transfers move money between bank accounts only.")));
+        if a.kind.as_str() == "ASSET" {
+            documents::lock_configuration(tx, actor, co, &[], Some(a.id), &[])?;
+        } else {
+            cards.push(a.id);
         }
     }
-    let setup = documents::setup_snapshot(tx, co)?;
-    for a in [&from, &to] {
-        if a.kind.as_str() != "ASSET"
-            || !a.active
-            || !a.postable
-            || !setup["banks"]
-                .as_array()
-                .is_some_and(|v| v.contains(&json!(a.id.to_db())))
-        {
-            return Err(err(&format!(
-                "{} · {} is not an active bank account. Transfers move money between two bank accounts.",
-                a.code, a.name
-            )));
-        }
+    if !cards.is_empty() {
+        documents::lock_configuration(tx, actor, co, &[], None, &cards)?;
     }
-    documents::lock_configuration(tx, actor, co, &[], Some(from.id), &[to.id])?;
     let mapping = json!({"from":from.id.to_db(),"to":to.id.to_db()});
     let display = display_mapping(tx, co, &mapping)?;
     let amount = Money::from_db(d["amount"].as_i64().unwrap()).to_string();
@@ -79,10 +74,26 @@ fn prepare(tx: &Writer<'_>, actor: UserId, co: CompanyId, d: &Value) -> FbResult
         company,
         review: Review {
             digest,
-            display: json!({"mapping":display,"entries":entries,"balances":balances}),
+            display: json!({"mapping":display,"entries":entries,"balances":balances,"purpose":purpose(&from,&to)}),
         },
     })
 }
+/// Describe the two sides in the order used for the posting.
+pub fn purpose(from: &Account, to: &Account) -> &'static str {
+    match (from.detail_type.as_str() == "CREDIT_CARD", to.detail_type.as_str() == "CREDIT_CARD") {
+        (false, true) => "Card payment",
+        (true, false) => "Cash from card",
+        (true, true) => "Balance transfer",
+        (false, false) => "Bank transfer",
+    }
+}
+
+/// Transfer endpoint identities in the company’s current accounting setup.
+pub fn eligible_account_ids(q: &(impl Query + ?Sized), co: CompanyId) -> FbResult<Vec<String>> {
+    let mut st = q.prepare("SELECT account_id FROM fb_transfer_eligible WHERE company_id=?1")?;
+    Ok(st.query_map([co.to_db()], |r| r.get(0))?.collect::<Result<_, _>>()?)
+}
+
 fn balance(c: &(impl Query + ?Sized), aid: AccountId) -> FbResult<String> {
     let mut n = 0i128;
     let mut st=c.prepare("SELECT l.debit,l.credit FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id WHERE l.account_id=? AND j.status='POSTED'")?;

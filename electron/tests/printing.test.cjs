@@ -8,7 +8,7 @@ const vm = require('node:vm');
 function fixture(route='/c/0195b4a4-55af-719e-96cb-a2f946b067bf/invoices/0195b4a4-55af-719e-96cb-a2f946b067c0/print/', overrides={},remote=null) {
   const state={open:true,generation:1,url:'fb://app'+route,calls:[],saved:[],cancel:false,afterDialog:null,afterPdf:null,afterMenu:null};
   const win={isDestroyed:()=>false,loadURL:async target=>{state.url=target;state.calls.push('navigate');},webContents:{
-    getURL:()=>state.url,getTitle:()=> 'INV-000001 · Invoice',
+    getURL:()=>state.url,executeJavaScript:async()=>null,getTitle:()=> 'INV-000001 · Invoice',
     printToPDF:async options=>{state.calls.push(['pdf',options]);if(state.afterPdf)await state.afterPdf();return Buffer.from('%PDF-1.7\n');},
     print:(options,cb)=>{state.calls.push(['print',options]);cb(true);},
   }};
@@ -116,6 +116,82 @@ test('File action opens a document print view and native printing honors registe
   const bank=fixture('/c/0195b4a4-55af-719e-96cb-a2f946b067bf/accounts/0195b4a4-55af-719e-96cb-a2f946b067c0/register/?output=print');
   await bank.controller.perform(bank.win,'print');
   const opts=bank.state.calls.find(c=>c[0]==='print')[1];assert.equal(opts.landscape,true);assert.equal(opts.silent,false);
+});
+
+test('File Print and its accelerator open the Wave 2b report print views with their filters', async () => {
+  const company = '0195b4a4-55af-719e-96cb-a2f946b067bf';
+  for (const [slug, filter, landscape] of [
+    ['customer-statements', `customer=${company}`, false],
+    ['cash-flow', 'start=2028-02-01&end=2028-02-29', false],
+    ['comparative-profit-and-loss', 'period=quarterly', true],
+    ['comparative-profit-and-loss', 'period=fiscal_years', false],
+    ['sales-by-customer-item', 'group=customer_item', false],
+    ['schedule-c', 'basis=CASH&mappings=account%7Csynthetic%7CTech+consulting%7Cgross_receipts%7C1w', false],
+    ['asset-depreciation', 'start=2025-01-01&assets=Equipment%7C%7C%7C%7C2025-01-01%7C10000%7C0%7Cstraight_line%7C12%7C0', true],
+  ]) {
+    const page = `/c/${company}/reports/${slug}/?${filter}`;
+    const printPage = `${page}&output=print`;
+    for (const connected of [false, true]) {
+      const marker = 'synthetic-marker';
+      const remote = connected ? {
+        active: () => true,
+        printMarker: () => marker,
+        printPage: async (target, accepted) => {
+          assert.equal(target, printPage);
+          assert.equal(accepted, marker);
+          return {status: 200, html: '<button id="print-now">'};
+        },
+      } : null;
+      const {state, win, controller} = fixture(
+        page + (connected ? `&__fb_remote_page=${marker}` : ''), {}, remote,
+      );
+      const item = controller.menuItems[0];
+      assert.equal(item.accelerator, 'CmdOrCtrl+P');
+      await item.click(null, win);
+      const expected = `fb://app${page}` + (connected ? `&__fb_remote_page=${marker}` : '') + '&output=print';
+      assert.equal(state.url, expected, slug);
+      assert.equal(state.calls[0], 'navigate');
+      const options = state.calls.find(call => call[0] === 'print')?.[1];
+      assert.equal(options?.landscape, landscape, slug);
+    }
+  }
+});
+
+test('File Print keeps the dates and encoded input from the displayed report print link', async () => {
+  const path = '/c/0195b4a4-55af-719e-96cb-a2f946b067bf/reports/asset-depreciation/';
+  const page = path + '?preset=this_month';
+  const january = path + '?preset=custom&start=2028-01-01&end=2028-01-31&assets=Tool%2A~%21+shop&print=1';
+  const marker = 'january-report';
+  for (const connected of [false, true]) {
+    const renders = [];
+    const render = target => {
+      renders.push(target);
+      return {status: 200, html: '<button id="print-now">'};
+    };
+    const remote = connected ? {
+      active: () => true,
+      printMarker: () => marker,
+      printPage: async (target, accepted) => {
+        assert.equal(accepted, marker);
+        return render(target);
+      },
+    } : null;
+    const {state, win, controller} = fixture(page + (connected ? '&__fb_remote_page=' + marker : ''), {
+      render: target => JSON.stringify(render(target)),
+    }, remote);
+    win.webContents.executeJavaScript = async script => {
+      assert.match(script, /a\[data-report-print\]/);
+      return connected ? january + '&__fb_remote_page=' + marker : january;
+    };
+    await controller.menuItems[0].click(null, win);
+    assert.ok(renders.length && renders.every(target => target === january));
+    assert.equal(state.url, 'fb://app' + january + (connected ? '&__fb_remote_page=' + marker : ''));
+    assert.equal(state.calls.filter(call => call[0] === 'print').length, 1);
+
+    win.webContents.executeJavaScript = async () => january + '&__fb_remote_page=wrong-marker';
+    state.url = 'fb://app' + page + (connected ? '&__fb_remote_page=' + marker : '');
+    await assert.rejects(controller.perform(win, 'print'), /Open a printable document or report first/);
+  }
 });
 
 test('locked, non-print and foreign pages cannot open an output dialog',async()=>{

@@ -83,12 +83,7 @@
     customer.addEventListener('change',billTo);billTo();
   }
   const plusDays=(iso,days)=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return null;const[y,m,d]=iso.split('-').map(Number),day=new Date(Date.UTC(y,m-1,d));day.setUTCDate(day.getUTCDate()+days);return day.toISOString().slice(0,10);};
-  const terms=document.querySelector('[name="terms"]'),date=document.querySelector('[name="date"]'),due=document.querySelector('[name="due_date"]');
-  if (terms && date && due) {
-    const fillDue=()=>{if(terms.value==='')return;const next=plusDays(date.value,Number(terms.value));if(next)due.value=next;};
-    terms.addEventListener('change',fillDue);date.addEventListener('change',fillDue);
-    due.addEventListener('change',()=>{terms.value='';});
-  }
+  const date=document.querySelector('[name="date"]');
   // An estimate's expiry follows its date (30 days) until the person sets an expiry of their own.
   const expiry=document.querySelector('[name="expiry"]');
   if (date && expiry) {

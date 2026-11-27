@@ -643,6 +643,17 @@ pub(super) fn result_error(result: AppResult<Outcome>, e: &mut Errors) -> AppRes
     match result {
         Ok(Outcome::Done { data }) => Ok(Some(data)),
         Err(AppError::Core(FbError::Validation(messages))) => {
+            super::d2::posting_errors(e, "__all__", messages);
+            Ok(None)
+        }
+        Err(e) => Err(e),
+        _ => unreachable!(),
+    }
+}
+pub(super) fn result_nonfield_error(result: AppResult<Outcome>, e: &mut Errors) -> AppResult<Option<Value>> {
+    match result {
+        Ok(Outcome::Done { data }) => Ok(Some(data)),
+        Err(AppError::Core(FbError::Validation(messages))) => {
             error(e, "__all__", messages.join("; "));
             Ok(None)
         }

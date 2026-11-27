@@ -9,17 +9,17 @@
 use super::d2::{draw, put, token};
 use super::*;
 use crate::keys::MasterKey;
-use fb_core::backups::{self as core, BackupOptions, RestoreOptions, retention};
-use std::path::{Path, PathBuf};
+use fb_core::backups::{self as core, CopyTarget, CopyWorker, RestoreOptions, retention, scheduled};
+use std::{path::{Path, PathBuf}, time::{Duration, Instant}};
 
 const PAGE_ROWS: usize = 20;
 const NAME_MAX: usize = 60;
-const TICKET_SECONDS: u64 = 15 * 60;
+const TICKET_TTL: Duration = Duration::from_secs(15 * 60);
 
 enum Waiting {
     Folder { company: CompanyId },
     Restore { company: CompanyId, name: String },
-    Copy { company: CompanyId, file: PathBuf },
+    Copy { company: CompanyId, selection: ArchiveSelection },
     /// J-ATTACH: an attachments add POST; the native file chooser shares this one-dialog ticket.
     Attach(super::d9::attachments::Pick),
     Rules { company: CompanyId },
@@ -33,9 +33,9 @@ pub struct Host {
     key: Option<MasterKey>,
     messages: Vec<(&'static str, String, Option<String>)>,
     restored: Option<(String, PathBuf, MasterKey)>,
-    pub(crate) restore_pending: Option<(CompanyId, String, PathBuf)>,
+    restore_pending: Option<PendingRestore>,
     viewing: Option<String>,
-    ticket: Option<(String, std::time::Instant, Waiting)>,
+    ticket: Option<(String, Instant, Waiting)>,
     pub(crate) rule_import: Option<super::d9::rule_import::Preview>,
     /// After "Create backup" stopped on missing or damaged attachment files: the page offers to back up
     /// without them.
@@ -49,8 +49,8 @@ pub struct Host {
 pub(crate) struct Personal {
     messages: Vec<(&'static str, String, Option<String>)>,
     restored: Option<(String, PathBuf, MasterKey)>,
-    restore_pending: Option<(CompanyId, String, PathBuf)>,
-    ticket: Option<(String, std::time::Instant, Waiting)>,
+    restore_pending: Option<PendingRestore>,
+    ticket: Option<(String, Instant, Waiting)>,
     rule_import: Option<super::d9::rule_import::Preview>,
     incomplete_offer: bool,
 }
@@ -119,6 +119,32 @@ impl Host {
         self.ticket = None;
         self.rule_import = None;
     }
+    pub fn abandon_restore(&mut self) {
+        self.restore_pending = None;
+    }
+
+    fn pending_restore(&mut self) -> Option<&PendingRestore> {
+        if self.restore_pending.as_ref().is_some_and(|pending| pending.started.elapsed() > TICKET_TTL) {
+            self.abandon_restore();
+        }
+        self.restore_pending.as_ref()
+    }
+
+    pub(super) fn restore_prompt_active(&mut self) -> bool {
+        self.pending_restore().is_some()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn expire_restore_prompt_for_test(&mut self) {
+        self.restore_pending.as_mut().unwrap().started -= TICKET_TTL + Duration::from_secs(1);
+    }
+
+    pub(crate) fn maintenance_pending(&mut self) -> bool {
+        self.restore_prompt_active() || self.ticket.as_ref().is_some_and(|(_, started, action)| {
+            started.elapsed() <= TICKET_TTL &&
+                matches!(action, Waiting::Restore { .. } | Waiting::Copy { .. } | Waiting::Folder { .. })
+        })
+    }
     /// The banner text while a restored book (not the main one) is open.
     pub fn viewing_restored(&self) -> Option<&str> {
         self.viewing.as_deref()
@@ -177,7 +203,7 @@ impl Host {
     pub(crate) fn pick_rules(&mut self, company:CompanyId)->AppResult<String> {self.mint(Waiting::Rules{company})}
     fn mint(&mut self, waiting: Waiting) -> AppResult<String> {
         let ticket = crate::keys::to_hex(&crate::keys::random_bytes::<32>().map_err(|e| AppError::Invalid(e.to_string()))?);
-        self.ticket = Some((ticket.clone(), std::time::Instant::now(), waiting));
+        self.ticket = Some((ticket.clone(), Instant::now(), waiting));
         Ok(ticket)
     }
     pub(crate) fn mint_pick(&mut self, pick: super::d9::attachments::Pick) -> AppResult<String> {
@@ -403,6 +429,18 @@ pub(super) fn render(app: &mut App, route: &Route, params: &[(String, String)], 
     put(&mut vm, "folder_token", token(app, path));
     put(&mut vm, "restore_token", token(app, path));
     put(&mut vm, "open_token", token(app, path));
+    if crate::scheduled_backups::may_manage(app) {
+        let automatic = match crate::scheduled_backups::view(app) {
+            Ok(settings) => settings,
+            Err(e) => json!({"settings_error": e.to_string()}),
+        };
+        put(&mut vm, "automatic", automatic);
+        match scheduled_rows(app) {
+            Ok(rows) => put(&mut vm, "scheduled_rows", rows),
+            Err(_) => put(&mut vm, "scheduled_list_error", true),
+        }
+        put(&mut vm, "automatic_token", token(app, path));
+    }
     Ok((draw(app, "backups/page.html", &vm)?, 200))
 }
 
@@ -443,6 +481,13 @@ pub(super) fn submit(app: &mut App, route: &Route, fields: &[(String, String)]) 
             }
         }
         "backups:page" => match get(fields, "action") {
+            Some("automatic") => {
+                match crate::scheduled_backups::configure(app, c, fields) {
+                    Ok(()) => app.backups.say("success", "Automatic backup settings saved."),
+                    Err(e) => return Err(e),
+                }
+                Ok(page(c, None))
+            }
             Some("folder") => {
                 let folder = app.backups.folder()?.display().to_string();
                 let ticket = app.backups.mint(Waiting::Folder { company: c })?;
@@ -455,6 +500,11 @@ pub(super) fn submit(app: &mut App, route: &Route, fields: &[(String, String)]) 
                     Ok(name)
                 }) {
                     Ok(name) => {
+                        if let Some(name_on_disk) = get(fields, "scheduled_archive").filter(|s| !s.is_empty()) {
+                            let selection = scheduled::Slot::from_basename(name_on_disk)
+                                .map_err(|_| AppError::NotFound("No such automatic backup.".into()))?;
+                            return restore_selected(app, c, name, RestoreSource::Scheduled(selection));
+                        }
                         let folder = app.backups.folder()?.display().to_string();
                         let ticket = app.backups.mint(Waiting::Restore { company: c, name })?;
                         Ok(dialog("pick-backup", ticket, json!({"folder": folder})))
@@ -472,15 +522,92 @@ pub(super) fn submit(app: &mut App, route: &Route, fields: &[(String, String)]) 
     }
 }
 
-/// The renderer's Download link (`backups.views.download`): validate the name, then ask for a destination.
+// A managed selection is an exact slot, never a path supplied by the page.
+const MANAGED_PREFIX: &str = "scheduled.";
+
+enum ArchiveSelection {
+    Manual(String),
+    Scheduled(scheduled::Slot),
+}
+
+#[derive(Clone)]
+struct PendingRestore {
+    started: Instant,
+    company: CompanyId,
+    name: String,
+    source: RestoreSource,
+}
+
+#[derive(Clone)]
+enum RestoreSource {
+    Picked(PathBuf),
+    Scheduled(scheduled::Slot),
+}
+
+enum ArchiveFile {
+    Manual(PathBuf),
+    Scheduled(scheduled::StagedArchive),
+}
+
+impl ArchiveFile {
+    fn path(&self) -> &Path {
+        match self {
+            Self::Manual(path) => path,
+            Self::Scheduled(staged) => staged.path(),
+        }
+    }
+}
+
+fn resolve_scheduled(app: &mut App, slot: &scheduled::Slot) -> AppResult<scheduled::Verified> {
+    if !crate::scheduled_backups::may_manage(app) {
+        return Err(AppError::NotFound("No such automatic backup.".into()));
+    }
+    let folder = app.backups.folder()?;
+    scheduled::resolve(&mut app.open_mut()?.book, &folder, slot)
+        .map_err(|_| AppError::Invalid("The automatic backup could not be checked safely.".into()))?
+        .ok_or_else(|| AppError::NotFound("No such verified automatic backup.".into()))
+}
+
+fn stage_scheduled(app: &mut App, slot: &scheduled::Slot) -> AppResult<ArchiveFile> {
+    resolve_scheduled(app, slot)?
+        .stage(&app.backups.work()?.join("managed-archives"))
+        .map(ArchiveFile::Scheduled)
+        .map_err(|_| AppError::Invalid("The automatic backup could not be copied and verified safely.".into()))
+}
+
+fn resolve_manual_download(app: &App, name: &str) -> AppResult<PathBuf> {
+    let folder = app.backups.folder()?;
+    retention::backup_files(&folder, None).map_err(crate::protection::error)?
+        .into_iter().find(|p| p.file_name().and_then(|n| n.to_str()) == Some(name))
+        .ok_or_else(|| AppError::NotFound("No such backup.".into()))
+}
+
+fn scheduled_rows(app: &mut App) -> core::Result<Vec<Value>> {
+    let folder = app.backups.folder().map_err(|e| core::BackupError::refused(e.to_string()))?;
+    let open = app.open_mut().map_err(|e| core::BackupError::refused(e.to_string()))?;
+    Ok(scheduled::inventory(&mut open.book, &folder, PAGE_ROWS)?.into_iter().filter_map(|verified| {
+        let name = verified.path.file_name()?.to_str()?;
+        Some(json!({"name": name, "download": format!("{MANAGED_PREFIX}{name}"),
+            "slot": created_iso(name), "verified_at": verified.verified_at,
+            "size": std::fs::metadata(&verified.path).ok()?.len()}))
+    }).collect())
+}
+
+/// The renderer's Download link validates the selection before asking for a destination.
 pub(crate) fn export(app: &mut App, c: CompanyId, name: &str) -> AppResult<Outcome> {
     let route = Route { name: "backups:page".into(), args: BTreeMap::from([("company_id".into(), c.to_db())]) };
     company(app, &route)?;
-    let folder = app.backups.folder()?;
-    let files = retention::backup_files(&folder, None).map_err(|e| AppError::Invalid(e.to_string()))?;
-    let file = files.into_iter().find(|p| p.file_name().and_then(|n| n.to_str()) == Some(name)).ok_or_else(|| AppError::NotFound("No such backup.".into()))?;
-    let ticket = app.backups.mint(Waiting::Copy { company: c, file })?;
-    Ok(dialog("save-backup", ticket, json!({"filename": name})))
+    let selection = match name.strip_prefix(MANAGED_PREFIX) {
+        Some(name) => ArchiveSelection::Scheduled(scheduled::Slot::from_basename(name)
+            .map_err(|_| AppError::NotFound("No such automatic backup.".into()))?),
+        None => ArchiveSelection::Manual(name.into()),
+    };
+    let file = match &selection {
+        ArchiveSelection::Scheduled(slot) => resolve_scheduled(app, slot)?.path,
+        ArchiveSelection::Manual(name) => resolve_manual_download(app, name)?,
+    };
+    let ticket = app.backups.mint(Waiting::Copy { company: c, selection })?;
+    Ok(dialog("save-backup", ticket, json!({"filename": file.file_name().and_then(|n| n.to_str())})))
 }
 
 /// The restored book's folder must not exist. A folder left by a restore that crashed (only dead-pid
@@ -620,6 +747,34 @@ fn back_up(app: &mut App, c: CompanyId, allow_incomplete: bool) -> Result<Backed
 }
 
 
+pub(crate) fn scheduled_copy(
+    app: &mut App, actor: UserId, company: CompanyId, slot: &scheduled::Slot,
+) -> core::Result<()> {
+    let refused = |e: AppError| core::BackupError::refused(e.to_string());
+    let receipt_key = app.receipt_key().map_err(refused)?;
+    let folder = app.backups.folder().map_err(refused)?;
+    if !scheduled::published(&folder, slot)? {
+        rewrap_attachments(app, &receipt_key).map_err(core::BackupError::refused)?;
+    }
+    let (book, key) = app.backups.open_book().map_err(refused)?;
+    let protected = vec![app.backups.books().map_err(refused)?,
+        parent(book).to_owned(), app.backups.work().map_err(refused)?];
+    let receipts = parent(book).join("receipts");
+    let worker = scheduled::Worker {
+        root: &folder,
+        protected: &protected,
+        copy: CopyWorker {
+            receipts_root: Some(&receipts),
+            key,
+            receipt_key: &receipt_key,
+            envelope: app.protection.as_ref().map(|record| &record.keys),
+            app_version: &fb_diag::record_label(),
+        },
+    };
+    let open = app.open.as_mut().ok_or_else(|| core::BackupError::refused("The books are locked."))?;
+    worker.run(&mut open.book, actor, company, slot, (app.now)()).map(|_| ())
+}
+
 /// Write a backup of `source` into the backup folder, named after the book (plus `suffix`).
 #[allow(clippy::too_many_arguments)]
 fn write_copy(host: &Host, source: &dyn fb_db::SnapshotSource, book: &Path, key: &MasterKey, receipt_key: &MasterKey,
@@ -627,9 +782,11 @@ fn write_copy(host: &Host, source: &dyn fb_db::SnapshotSource, book: &Path, key:
     let folder = host.folder().map_err(|e| e.to_string())?;
     let work = host.work().map_err(|e| e.to_string())?;
     let books = host.books().map_err(|e| e.to_string())?;
-    if let Some(reason) = folder_refusal(&folder, &[books, parent(book).to_owned(), work.clone()]) {
+    let protected = [books, parent(book).to_owned(), work.clone()];
+    if let Some(reason) = folder_refusal(&folder, &protected) {
         return Err(reason.replacen("backups cannot go inside", "the backup folder is inside", 1).replacen("this folder contains", "the backup folder contains", 1).into());
     }
+    core::check_backup_folder(&folder, protected.iter().map(PathBuf::as_path)).map_err(|e| e.to_string())?;
     private_dir(&folder).map_err(|e| format!("the backup folder could not be prepared ({e})."))?;
     private_dir(&work).map_err(|e| format!("the work folder could not be prepared ({e})."))?;
     let stem = book.file_stem().and_then(|s| s.to_str()).unwrap_or("book");
@@ -646,21 +803,18 @@ fn write_copy(host: &Host, source: &dyn fb_db::SnapshotSource, book: &Path, key:
     }
     let receipts = parent(book).join("receipts");
     let receipts = receipts.is_dir().then_some(receipts);
-    let verifier = core::attachment_receipt_verifier_with(receipt_key, Some(key));
-    let options = BackupOptions {
-        output: &output, work_root: &work, receipts_root: receipts.as_deref(), verify_receipt: Some(&verifier),
-        label: &label, app_version: &fb_diag::record_label(), created_at: &created_at, passphrase: None, keep: None,
-        allow_incomplete,
-    };
-    core::create_backup_from(source, key, &options, envelope).map_err(|e| NotBackedUp { message: e.to_string(), absent: e.absent().to_vec() })
+    let worker = CopyWorker { key, receipt_key, receipts_root: receipts.as_deref(), envelope, app_version: &fb_diag::record_label() };
+    worker.write(source, &CopyTarget {
+        output: &output, work_root: &work, label: &label, created_at: &created_at, allow_incomplete,
+    }).map_err(|e| NotBackedUp { message: e.to_string(), absent: e.absent().to_vec() })
 }
 
 /// `verify_backup` on a written file; success is recorded beside it. Files attached before the
 /// receipt-key fix may still have their key wrapped under the master key: both keys are accepted.
 fn verify_copy(host: &Host, file: &Path, key: &MasterKey, receipt_key: &MasterKey) -> Result<(), String> {
     let work = host.work().map_err(|e| e.to_string())?;
-    let verifier = core::attachment_receipt_verifier_with(receipt_key, Some(key));
-    core::verify_backup_with_receipts(file, key, &work, None, true, Some(&verifier)).map(|_| ()).map_err(|e| e.to_string())
+    let worker = CopyWorker { key, receipt_key, receipts_root: None, envelope: None, app_version: &fb_diag::record_label() };
+    worker.verify(file, &work).map(|_| ()).map_err(|e| e.to_string())
 }
 
 /// The copy made before an upgrade: a normal backup of the not-yet-migrated book, in the backup
@@ -689,7 +843,7 @@ pub fn dialog_result(app: &mut App, ticket: &str, chosen: &str) -> AppResult<Out
     let Some((expected, at, waiting)) = app.backups.ticket.take() else {
         return Err(AppError::Invalid("This action has expired. Open the screen again and retry.".into()));
     };
-    if expected.len() != ticket.len() || expected != ticket || at.elapsed().as_secs() > TICKET_SECONDS {
+    if expected.len() != ticket.len() || expected != ticket || at.elapsed() > TICKET_TTL {
         return Err(AppError::Invalid("This action has expired. Open the screen again and retry.".into()));
     }
     let chosen = (!chosen.is_empty()).then(|| PathBuf::from(chosen));
@@ -715,26 +869,18 @@ pub fn dialog_result(app: &mut App, ticket: &str, chosen: &str) -> AppResult<Out
             }
             Ok(page(company, None))
         }
-        Waiting::Restore { company, name } => {
-            if let Some(file) = chosen {
-                let keys = archive_keys(&file).map_err(|e| AppError::Invalid(e.to_string()))?;
-                if keys.as_ref().is_some_and(|k| k.mode == core::portable::Mode::OwnPassword && k.receipts(app.backups.open_book().expect("open book").1).is_err()) {
-                    app.backups.restore_pending = Some((company, name, file));
-                    return Ok(Outcome::Redirect { location: "/settings/restore-backup/".into() });
-                }
-                match restore(app, &file, &name) {
-                    Ok(absent) => {
-                        app.backups.say("success", format!("Restored “{name}” from {} into a new book. Your open book was not changed.", file.file_name().and_then(|n| n.to_str()).unwrap_or("the backup")));
-                        if let Some(note) = restored_without(&absent) { app.backups.say("warning", note); }
-                    }
-                    Err(e) => app.backups.refuse_restore(e),
-                }
-            }
-            Ok(page(company, None))
-        }
-        Waiting::Copy { company, file } => {
+        Waiting::Restore { company, name } => match chosen {
+            Some(file) => restore_selected(app, company, name, RestoreSource::Picked(file)),
+            None => Ok(page(company, None)),
+        },
+        Waiting::Copy { company, selection } => {
             if let Some(dest) = chosen {
-                match save_copy(&file, &dest) {
+                let archive = match &selection {
+                    ArchiveSelection::Scheduled(slot) => stage_scheduled(app, slot)?,
+                    ArchiveSelection::Manual(name) => ArchiveFile::Manual(resolve_manual_download(app, name)?),
+                };
+                let file = archive.path();
+                match save_copy(file, &dest) {
                     Ok(bytes) => {
                         let name = file.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_owned();
                         audit(app, company, "backup.download", &name, json!({"file": name, "bytes": bytes}))?;
@@ -755,25 +901,23 @@ fn set_folder(app: &mut App, folder: &Path) -> AppResult<()> {
         return refused("that is not a folder.");
     }
     let (book, _) = host.open_book()?;
-    if let Some(reason) = folder_refusal(folder, &[host.books()?, parent(book).to_owned(), host.work()?]) {
+    let protected = [host.books()?, parent(book).to_owned(), host.work()?];
+    if let Some(reason) = folder_refusal(folder, &protected) {
         return refused(reason);
     }
-    let settings = host.settings()?;
-    let tmp = sidecar(&settings, ".tmp");
-    {
-        use std::io::Write;
-        let _ = std::fs::remove_file(&tmp);
-        let mut f = new_private_file(&tmp).map_err(|e| AppError::Invalid(e.to_string()))?;
-        f.write_all(json!({"folder": folder.display().to_string()}).to_string().as_bytes()).and_then(|()| f.sync_all()).map_err(|e| AppError::Invalid(e.to_string()))?;
-    }
-    std::fs::rename(&tmp, &settings).map_err(|e| AppError::Invalid(e.to_string()))
+    core::check_backup_folder(folder, protected.iter().map(PathBuf::as_path)).map_err(crate::protection::error)?;
+    crate::protection::write_private(&host.settings()?, json!({"folder": folder.display().to_string()}).to_string().as_bytes())?;
+    // A failed schedule update cannot undo the saved folder choice. The next
+    // eligible tick detects the mismatch before doing any backup work.
+    let _ = crate::scheduled_backups::folder_changed(host.root()?, folder, (app.now)());
+    Ok(())
 }
 
 fn save_copy(file: &Path, dest: &Path) -> Result<u64, String> {
     if std::fs::symlink_metadata(dest).is_ok() {
         return Err("a file with that name already exists there; choose a new name (existing files are never replaced).".into());
     }
-    let mut src = std::fs::File::open(file).map_err(|e| e.to_string())?;
+    let mut src = core::open_backup(file).map_err(|e| e.to_string())?;
     let mut out = new_private_file(dest).map_err(|e| e.to_string())?;
     let copied = std::io::copy(&mut src, &mut out).and_then(|n| out.sync_all().map(|()| n));
     copied.map_err(|e| {
@@ -803,11 +947,34 @@ fn plain(e: core::BackupError) -> Refusal {
 /// Restore `file` into a NEW book `<data>/books/restored-<name>/restored-<name>.fbbook` with its own
 /// receipts folder. The backup is verified first, so a bad file is refused before anything is created.
 /// Returns the attached files an incomplete backup did not hold.
-fn restore(app: &mut App, file: &Path, name: &str) -> Result<Vec<core::Absent>, Refusal> {
-    restore_with_secret(app, file, name, "")
+fn restore_selected(app: &mut App, company: CompanyId, name: String, source: RestoreSource) -> AppResult<Outcome> {
+    let file = restore_path(app, &source)?;
+    let keys = archive_keys(file.path()).map_err(|e| AppError::Invalid(e.to_string()))?;
+    let (_, current) = app.backups.open_book()?;
+    if keys.as_ref().is_some_and(|keys| keys.mode == core::portable::Mode::OwnPassword && keys.receipts(current).is_err()) {
+        app.backups.restore_pending = Some(PendingRestore {
+            started: Instant::now(), company, name, source,
+        });
+        return Ok(Outcome::Redirect { location: super::protection::RESTORE.into() });
+    }
+    match restore_with_secret(app, &file, &name, "") {
+        Ok(absent) => {
+            app.backups.say("success", format!("Restored “{name}” from {} into a new book. Your open book was not changed.",
+                file.path().file_name().and_then(|n| n.to_str()).unwrap_or("the backup")));
+            if let Some(note) = restored_without(&absent) { app.backups.say("warning", note); }
+        }
+        Err(e) => app.backups.refuse_restore(e),
+    }
+    Ok(page(company, None))
 }
 
-/// After restoring an incomplete backup: which attached files the restored book does not have.
+fn restore_path(app: &mut App, source: &RestoreSource) -> AppResult<ArchiveFile> {
+    match source {
+        RestoreSource::Picked(path) => Ok(ArchiveFile::Manual(path.clone())),
+        RestoreSource::Scheduled(slot) => stage_scheduled(app, slot),
+    }
+}
+
 pub(crate) fn restored_without(absent: &[core::Absent]) -> Option<String> {
     if absent.is_empty() {
         return None;
@@ -833,14 +1000,17 @@ pub(crate) fn archive_keys(file: &Path) -> AppResult<Option<core::portable::KeyE
 }
 
 pub(crate) fn finish_portable_restore(app: &mut App, secret: &str) -> AppResult<Outcome> {
-    let (company, name, file) = app.backups.restore_pending.clone().ok_or_else(|| AppError::Invalid("Choose a backup to restore first.".into()))?;
+    let PendingRestore { company, name, source, .. } = app.backups.pending_restore().cloned()
+        .ok_or_else(|| AppError::Invalid("Choose a backup to restore first.".into()))?;
+    let file = restore_path(app, &source)?;
     let absent = restore_with_secret(app, &file, &name, secret).map_err(|e| AppError::Invalid(e.to_string()))?;
     if let Some(note) = restored_without(&absent) { app.backups.say("warning", note); }
     app.backups.restore_pending = None;
     Ok(page(company, None))
 }
 
-fn restore_with_secret(app: &mut App, file: &Path, name: &str, secret: &str) -> Result<Vec<core::Absent>, Refusal> {
+fn restore_with_secret(app: &mut App, archive: &ArchiveFile, name: &str, secret: &str) -> Result<Vec<core::Absent>, Refusal> {
+    let file = archive.path();
     let (_, slug) = book_name(name).map_err(|e| e.to_string())?;
     let host = &app.backups;
     let (_, current) = host.open_book().map_err(|e| e.to_string())?;
@@ -850,7 +1020,10 @@ fn restore_with_secret(app: &mut App, file: &Path, name: &str, secret: &str) -> 
         _ => MasterKey::new(**current),
     };
     let receipt_key = match &envelope { Some(e) => e.receipts(&key).map_err(|e| e.to_string())?, None => MasterKey::new(*key) };
-    let work = host.work().map_err(|e| e.to_string())?;
+    let mut work = host.work().map_err(|e| e.to_string())?;
+    if matches!(archive, ArchiveFile::Scheduled(_)) {
+        work.push("restore");
+    }
     let dir = host.books().map_err(|e| e.to_string())?.join(&slug);
     let protected = host.protected().map_err(|e| e.to_string())?;
     // The name was free when the dialog opened; a crash residue that appeared since is cleared the same way.
@@ -1098,10 +1271,8 @@ mod tests {
 
     /// The name cleanup_stale recognises: `.fb-backup.<this host>.<pid>.<random>.partial`.
     fn partial_name(pid: u32) -> String {
-        use sha2::Digest;
-        let host = std::fs::read_to_string("/etc/hostname").unwrap();
-        let host = format!("{:x}", sha2::Sha256::digest(host.trim().as_bytes()));
-        format!(".fb-backup.{}.{pid}.Zq81xK2p.partial", &host[..16])
+        let host = fb_core::backups::cleanup::host_tag().expect("unix host tag");
+        format!(".fb-backup.{host}.{pid}.Zq81xK2p.partial")
     }
 
     fn restore_via_dialog(app: &mut App, c: CompanyId, name: &str, file: &Path) {
@@ -1116,7 +1287,7 @@ mod tests {
         // kill -9 mid-restore: the host's folder, the core's dead-pid partial and half the receipts.
         let dead = books.join("restored-crashed");
         std::fs::create_dir_all(dead.join("receipts")).unwrap();
-        std::fs::write(dead.join(partial_name(4_294_967_295)), b"half a book").unwrap();
+        std::fs::write(dead.join(partial_name(i32::MAX as u32)), b"half a book").unwrap();
         std::fs::write(dead.join("receipts").join("half"), b"r").unwrap();
         name_free(&dead, "Crashed").unwrap();
         assert!(!dead.exists(), "the residue is removed and the name is free");
@@ -1128,7 +1299,7 @@ mod tests {
         // The same residue planted after the dialog opened is cleared at restore time too.
         let late = books.join("restored-late");
         std::fs::create_dir_all(&late).unwrap();
-        std::fs::write(late.join(partial_name(4_294_967_295)), b"x").unwrap();
+        std::fs::write(late.join(partial_name(i32::MAX as u32)), b"x").unwrap();
         restore_via_dialog(&mut app, c, "Late", &file);
         assert_eq!(app.backups.messages.pop().unwrap().0, "success");
         assert!(late.join("restored-late.fbbook").is_file());

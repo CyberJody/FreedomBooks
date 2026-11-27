@@ -1,6 +1,6 @@
 {% extends 'ledger/base.html' %}
 {% block content %}
-<div class="heading"><div><h1>Accounting setup</h1><p>Default accounts for invoices, bills, receipts, and checks. Nothing on this page posts money.</p></div></div>
+<div class="heading"><div><h1>Accounting setup</h1><p>Default accounts for invoices, bills, receipts, and checks. Nothing on this page posts money.</p></div><a href="{{ url('company:periods', company.pk) }}">Accounting periods</a></div>
 {% for message in messages %}<p class="notice" role="status" data-reveal>{{ message }}</p>{% endfor %}
 <p>{% if setup %}Saved revision {{ setup.revision }}{% else %}Unconfigured — choose only the defaults you need.{% endif %}</p>
 <p class="muted">A new company made with the standard chart starts with these chosen from that chart, and turning on sales tax chooses Collected tax when the chart has one sales tax account; otherwise nothing is chosen for you. Each role must use a distinct account; a bank account cannot also be receivables or undeposited funds. Unavailable accounts stay listed until you replace or clear them. Amounts already posted keep the accounts they used.</p>

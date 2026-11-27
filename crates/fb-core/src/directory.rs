@@ -32,7 +32,7 @@ impl Model {
             "notes",
         ];
         match self {
-            Self::Customer => c.extend(["tax_status", "exemption_number"]),
+            Self::Customer => c.extend(["tax_status", "exemption_number", "default_terms"]),
             Self::Vendor => c.extend(["default_expense_account", "default_terms"]),
             Self::Item => {
                 return vec![
@@ -63,7 +63,10 @@ fn defaults(model: Model, company: CompanyId) -> Value {
         out[field] = json!("");
     }
     match model {
-        Model::Customer => out["tax_status"] = json!("TAXABLE"),
+        Model::Customer => {
+            out["tax_status"] = json!("TAXABLE");
+            out["default_terms"] = Value::Null;
+        }
         Model::Vendor => {
             out["default_terms"] = Value::Null;
             out["default_expense_account"] = Value::Null;
@@ -433,7 +436,7 @@ pub fn line_taxable_default(customer: Option<&Value>, item: Option<&Value>) -> b
 pub fn customer_tax_hints(conn: &(impl fb_db::Query + ?Sized), company: CompanyId) -> FbResult<Value> {
     let mut result = json!({});
     for c in list(conn, company, Model::Customer)? {
-        result[c["id"].as_str().unwrap()] = json!({"exempt":c["tax_status"]=="EXEMPT","certificate":c["exemption_number"]});
+        result[c["id"].as_str().unwrap()] = json!({"exempt":c["tax_status"]=="EXEMPT","certificate":c["exemption_number"],"terms":c["default_terms"]});
     }
     Ok(result)
 }

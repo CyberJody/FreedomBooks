@@ -136,6 +136,38 @@ fn simplefin_connect_pull_accept_reopen_through_fb_net() {
     let again = plugins::bankfeed_connect(&mut d.app, co, &bridge.setup_token(), "Again").unwrap();
     assert_eq!(again, Err("The setup token was refused. Obtain a new token from the provider.".into()));
 
+    d.app.simplefin = true;
+    let list = format!("/c/{co}/bank-feeds/");
+    assert!(fb_app::screens::render(&mut d.app, &list).unwrap().html.contains("Discover accounts"));
+    let sync = format!("/c/{co}/bank-feeds/{connection}/sync/");
+    let accounts = format!("/c/{co}/bank-feeds/{connection}/accounts/");
+    let token = d.app.tokens.mint(&sync);
+    let out = d.app.run_renderer(fb_app::Command::SubmitForm {
+        path: sync, token, fields: vec![("action".into(), "discover".into())],
+    }).unwrap();
+    assert!(matches!(&out, fb_app::Outcome::Redirect { location } if location == &accounts), "{out:?}");
+    assert!(plugins::bankfeed_discover(&mut d.app, co, &connection).unwrap().unwrap_err().contains("recently"));
+    let feed: String = {
+        let open = d.app.open_mut().unwrap();
+        assert!(bankfeeds::items(&mut open.book, open.owner, co).unwrap().is_empty(), "the fake supplied transactions during discovery");
+        let cleared: bool = open.book.read(|q| q.query_row(
+            "SELECT last_sync_at IS NULL AND last_sync_ok IS NULL AND sync_count=0 FROM bankfeeds_connection WHERE id=?1",
+            [&connection], |r| r.get(0),
+        )).unwrap();
+        assert!(cleared);
+        open.book.read(|q| q.query_row("SELECT id FROM bankfeeds_account WHERE import_state='PENDING'", [], |r| r.get(0))).unwrap()
+    };
+    let html = fb_app::screens::render(&mut d.app, &accounts).unwrap().html;
+    assert!(html.contains("Needs import setup") && html.contains("All available"));
+    for secret in [USER, PASS] { assert!(!html.contains(secret)); }
+    let token = d.app.tokens.mint(&accounts);
+    let save = d.app.run_renderer(fb_app::Command::SubmitForm {
+        path: accounts.clone(), token,
+        fields: vec![(format!("map_{feed}"), d.bank.to_db()), (format!("import_from_{feed}"), String::new()),
+            (format!("import_state_{feed}"), "PENDING".into()), (format!("import_expected_{feed}"), String::new())],
+    }).unwrap();
+    assert!(matches!(save, fb_app::Outcome::Redirect { .. }), "{save:?}");
+
     let summary = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().expect("pulled");
     // The desktop sync adds the automatic-posting outcome (no imported rules here, so none posted).
     assert_eq!(summary, SYNCED);
@@ -143,7 +175,14 @@ fn simplefin_connect_pull_accept_reopen_through_fb_net() {
     let soon = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap_err();
     assert!(soon.starts_with("Synced 0 min ago. SimpleFIN asks apps not to pull too often; try again in 10 min."), "{soon}");
     let requests = bridge.state.lock().unwrap().requests.clone();
-    assert_eq!(requests, ["POST /claim/SYNTHETIC-ONE-TIME-CLAIM", "POST /claim/SYNTHETIC-ONE-TIME-CLAIM", "GET /simplefin/accounts"]);
+    assert_eq!(requests, ["POST /claim/SYNTHETIC-ONE-TIME-CLAIM", "POST /claim/SYNTHETIC-ONE-TIME-CLAIM", "GET /simplefin/accounts", "GET /simplefin/accounts"]);
+    let queries = bridge.state.lock().unwrap().account_queries.clone();
+    assert_eq!(queries[0], "balances-only=1");
+    assert!(queries[1].starts_with("start-date="), "{queries:?}");
+    assert!(!queries[1].contains("account="));
+    let mapped = fb_app::screens::render(&mut d.app, &accounts).unwrap().html;
+    assert!(!mapped.contains(&format!("name=\"import_from_{feed}\"")));
+
 
     let accepted = map_and_accept(&mut d, "Fuel stop").expect("accepted");
     assert_eq!(accepted.status, "ACCEPTED");
@@ -450,5 +489,6 @@ fn simplefin_requires_os_sealing_before_claim_or_sync_and_preserves_saved_creden
     assert_eq!(texts(&mut d.app), before);
     assert!(envelope(&mut d.app, co, "simplefin", &connection), "keep the saved connection intact");
     d.app.os_store_usable = true;
-    assert_eq!(plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap(), SYNCED);
+    let after = plugins::bankfeed_sync(&mut d.app, co, &connection).unwrap().unwrap();
+    assert!(after.contains("1 accounts, 0 new transactions; 1 accounts need an import start"), "{after}");
 }

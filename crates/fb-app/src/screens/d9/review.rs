@@ -571,7 +571,7 @@ struct RowCtx {
     rules: Vec<bf::Rule>,
     categories: Vec<fb_core::model::Account>,
     banks: Vec<String>,
-    bank_accounts: Vec<fb_core::model::Account>,
+    transfer_accounts: Vec<fb_core::model::Account>,
     currency: String,
     owner: UserId,
     /// Worker item 47: the account a new fee line starts with (the company's bank-charges account).
@@ -581,14 +581,15 @@ fn row_ctx(app: &mut App, c: CompanyId) -> AppResult<RowCtx> {
     let owner = actor(app)?;
     let rules = bf::active_rules(&mut app.open_mut()?.book, owner, c)?;
     let categories = bf::rule_accounts(&mut app.open_mut()?.book, owner, c)?;
-    let (banks, bank_accounts, currency) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
+    let (banks, transfer_accounts, currency) = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
         let banks = designated(tx, c)?;
-        let bank_accounts: Vec<fb_core::model::Account> = store::accounts(tx, c)?.into_iter().filter(|a| banks.contains(&a.id.to_db())).collect();
+        let eligible = fb_core::transfers::eligible_account_ids(tx, c)?;
+        let transfer_accounts = store::accounts(tx, c)?.into_iter().filter(|a| eligible.contains(&a.id.to_db())).collect();
         let currency: String = tx.query_row("SELECT currency FROM ledger_company WHERE id=?1", [c.to_db()], |r| r.get(0))?;
-        Ok((banks, bank_accounts, currency))
+        Ok((banks, transfer_accounts, currency))
     })?;
     let fee_default = app.open_mut()?.book.read(|q| fb_core::banking::fee_account(q, c))?.map(|a| a.to_db());
-    Ok(RowCtx { rules, categories, banks, bank_accounts, currency, owner, fee_default })
+    Ok(RowCtx { rules, categories, banks, transfer_accounts, currency, owner, fee_default })
 }
 
 /// One review row's view model (the `row` of `bankfeeds/review_row.html`).
@@ -673,7 +674,14 @@ fn row_vm(tx: &(impl Query + ?Sized), c: CompanyId, ctx: &RowCtx, item: &bf::Ite
         })
         .transpose()?;
     let is_designated = feed.ledger_account_id.as_ref().is_some_and(|a| ctx.banks.contains(a));
-    let other: Vec<&fb_core::model::Account> = ctx.bank_accounts.iter().filter(|b| Some(b.id.to_db()) != feed.ledger_account_id && b.active && b.postable).collect();
+    let transfer_source = ctx.transfer_accounts.iter().find(|a| Some(a.id.to_db()) == feed.ledger_account_id);
+    let mut other = Vec::new();
+    if let Some(mapped) = transfer_source {
+        for a in ctx.transfer_accounts.iter().filter(|a| a.id != mapped.id) {
+            let (from, to) = if item.money_in() { (a, mapped) } else { (mapped, a) };
+            other.push((a, fb_core::transfers::purpose(from, to)));
+        }
+    }
     let all = post.posted.get(&item.ordinal);
     let posted = all.filter(|_| !post.fresh.contains(&item.ordinal));
     let has_posted_multi = posted.is_some_and(|x| !x.match_lines.is_empty());
@@ -701,7 +709,7 @@ fn row_vm(tx: &(impl Query + ?Sized), c: CompanyId, ctx: &RowCtx, item: &bf::Ite
         }
         options.push(("JOURNAL", if !is_designated { "Charge (journal)" } else { "Journal entry" }));
     }
-    if is_designated && !other.is_empty() {
+    if !other.is_empty() {
         options.push(("TRANSFER", "Transfer"));
     }
     let default_kind = if !item.money_in() && is_designated { "CHECK" } else { "JOURNAL" };
@@ -746,7 +754,7 @@ fn row_vm(tx: &(impl Query + ?Sized), c: CompanyId, ctx: &RowCtx, item: &bf::Ite
         "category_valid": category_valid,
         "draft_retained": if posted.is_some() && post.edited.as_ref().is_none_or(|e| e.contains(&item.ordinal)) { "true" } else { "false" },
         "selected": all.is_some_and(|x| x.selected),
-        "other_bank_valid": posted.is_none_or(|x| x.other_bank.is_empty() || other.iter().any(|a| a.id.to_db() == x.other_bank)),
+        "other_bank_valid": posted.is_none_or(|x| x.other_bank.is_empty() || other.iter().any(|(a, _)| a.id.to_db() == x.other_bank)),
         "line_valid": posted.is_none_or(|x| x.line.is_empty() || s.matches.iter().any(|m| m.line_id == x.line)),
         "multi_match": {
             "amount": cents(abs_amount),
@@ -778,7 +786,7 @@ fn row_vm(tx: &(impl Query + ?Sized), c: CompanyId, ctx: &RowCtx, item: &bf::Ite
         "payee": payee,
         "number": number,
         "categories": ctx.categories.iter().filter(|a| Some(a.id.to_db()) != feed.ledger_account_id).map(|a| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name})).collect::<Vec<_>>(),
-        "other_banks": other.iter().map(|a| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name})).collect::<Vec<_>>(),
+        "other_banks": other.iter().map(|(a, purpose)| json!({"pk": a.id.to_db(), "code": a.code, "name": a.name, "purpose": purpose})).collect::<Vec<_>>(),
         "error": posted.map(|x| x.error.clone()),
         "category_error": posted.is_some_and(|x| x.error == MISSING_CATEGORY),
         // Worker item 46: the split, as posted (drawn only for a row the person split, so a page of rows
@@ -1083,6 +1091,7 @@ pub(super) fn rule_initial(
             .read(|tx| transaction_by_ordinal(tx, c, ordinal))?;
         if let Some(item) = source {
             let d = &item.description;
+            initial.insert("feed_account", Some(item.feed_account_id.clone()));
             initial.insert(
                 "name",
                 Some(if d.is_empty() {

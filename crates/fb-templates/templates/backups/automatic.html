@@ -1,0 +1,44 @@
+<section class="backup-panel">
+  <h2>Automatic backups</h2>
+  {% if automatic.settings_error %}<p class="errorlist" role="alert">{{ automatic.settings_error }}</p>{% else %}
+  <p>Backups run while a local Administrator is signed in to the main books and hosting is off.</p>
+  <dl>
+    <div><dt>Target folder</dt><dd><code>{{ automatic.folder }}</code></dd></div>
+    <div><dt>Next scheduled run</dt><dd>{% if automatic.next_utc %}{{ automatic.next_utc }} · {{ automatic.next_local }} local{% elif automatic.enabled %}Waiting for the schedule to update{% else %}Off{% endif %}</dd></div>
+    <div><dt>Last verified automatic backup in this folder</dt><dd>{% if scheduled_rows %}{{ scheduled_rows[0].verified_at|date('Y-m-d H:i:s') }} UTC{% else %}None yet{% endif %}</dd></div>
+  </dl>
+  {% if automatic.status %}<p class="errorlist" role="status">{{ automatic.status }}</p>{% endif %}
+  <form method="post" action="{{ url('backups:page', company.pk) }}">
+    {{ automatic_token|safe }}
+    <input type="hidden" name="action" value="automatic">
+    <p><label><input type="checkbox" name="enabled" value="1"{% if automatic.enabled %} checked{% endif %}> Enable automatic backups</label></p>
+    <p><label for="id_backup_frequency">Frequency</label>
+      <select id="id_backup_frequency" name="frequency">
+        <option value="daily"{% if automatic.frequency == 'daily' %} selected{% endif %}>Daily</option>
+        <option value="weekly"{% if automatic.frequency == 'weekly' %} selected{% endif %}>Weekly</option>
+      </select></p>
+    <p><label for="id_backup_weekday">Day (weekly only)</label>
+      <select id="id_backup_weekday" name="weekday">
+        {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+        <option value="{{ loop.index }}"{% if automatic.weekday == loop.index %} selected{% endif %}>{{ day }}</option>
+        {% endfor %}
+      </select></p>
+    <p><label for="id_backup_time">Time (UTC)</label> <input id="id_backup_time" type="time" name="time_utc" value="{{ automatic.time_utc }}" required></p>
+    <p><label for="id_backup_keep">Automatic backups to keep for this schedule</label> <input id="id_backup_keep" type="number" name="keep_count" min="1" max="90" value="{{ automatic.keep_count }}" required></p>
+    <p class="muted">Saving here records future backup activity under this company.</p>
+    <button type="submit">Save automatic backup settings</button>
+  </form>
+  {% endif %}
+  <h3>Verified automatic backups</h3>
+  {% if scheduled_list_error %}<p class="errorlist" role="alert">Automatic backup files could not be checked safely.</p>{% elif scheduled_rows %}
+  <table class="backup-files"><thead><tr><th>File</th><th>Scheduled slot (UTC)</th><th class="num">Size</th><th>Verified (UTC)</th><th>File copy</th></tr></thead><tbody>
+    {% for archive in scheduled_rows %}
+    <tr>
+      <td><code>{{ archive.name }}</code></td><td class="nowrap">{{ archive.slot|date('Y-m-d H:i') }}</td>
+      <td class="num">{{ archive.size|filesizeformat }}</td><td class="nowrap">{{ archive.verified_at|date('Y-m-d H:i:s') }}</td>
+      <td><a href="{{ url('backups:download', company.pk, archive.download) }}" download>Download</a></td>
+    </tr>
+    {% endfor %}
+  </tbody></table>
+  {% else %}<p>No verified automatic backup files here yet.</p>{% endif %}
+</section>

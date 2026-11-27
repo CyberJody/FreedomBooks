@@ -6,10 +6,12 @@ pub mod cleanup;
 pub mod crypto;
 pub mod manifest;
 mod paths;
+pub use paths::Directory;
 mod restore_limits;
 pub mod recovery;
 pub mod portable;
 pub mod retention;
+pub mod scheduled;
 
 use fb_db::{Book, Key, Query};
 use serde::{Deserialize, Serialize};
@@ -27,55 +29,92 @@ pub const FORMAT: &str = "freedombooks-backup";
 pub const FORMAT_VERSION: u64 = 4;
 pub type Result<T> = std::result::Result<T, BackupError>;
 #[derive(Debug)]
-pub struct BackupError(String, Vec<Absent>, Option<&'static str>);
+pub struct BackupError {
+    message: String,
+    absent: Vec<Absent>,
+    receipt_problem: Option<&'static str>,
+    failure: Failure,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Failure {
+    Validation,
+    Retryable,
+    Conflict,
+}
 impl BackupError {
+    fn new(message: impl Into<String>, failure: Failure) -> Self {
+        Self { message: message.into(), absent: Vec::new(), receipt_problem: None, failure }
+    }
     pub fn refused(message: impl Into<String>) -> Self {
-        Self(message.into(), Vec::new(), None)
+        Self::new(message, Failure::Validation)
+    }
+    fn retryable(message: impl Into<String>) -> Self {
+        Self::new(message, Failure::Retryable)
+    }
+    fn conflict(message: impl Into<String>) -> Self {
+        Self::new(message, Failure::Conflict)
+    }
+    fn archive_conflict(mut self) -> Self {
+        if self.failure == Failure::Validation {
+            self.failure = Failure::Conflict;
+        }
+        self
+    }
+    pub fn is_conflict(&self) -> bool {
+        self.failure == Failure::Conflict
     }
     /// A receipt verifier's verdict on one attachment file: [`DAMAGED`] or [`NO_KEY`]. Any other verifier
     /// error is about this computer, not the file, and stops a backup.
     pub fn receipt(message: impl Into<String>, problem: &'static str) -> Self {
-        Self(message.into(), Vec::new(), Some(problem))
+        let mut error = Self::refused(message);
+        error.receipt_problem = Some(problem);
+        error
     }
     /// The attachment files that stopped a complete backup. Empty for every other refusal.
     pub fn absent(&self) -> &[Absent] {
-        &self.1
+        &self.absent
     }
     /// For a verifier's verdict on a file: [`DAMAGED`] or [`NO_KEY`].
     pub fn problem(&self) -> Option<&'static str> {
-        self.2
+        self.receipt_problem
     }
 }
 impl std::fmt::Display for BackupError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.message)
     }
 }
 impl std::error::Error for BackupError {}
 #[cfg(unix)]
 impl From<rustix::io::Errno> for BackupError {
     fn from(e: rustix::io::Errno) -> Self {
-        Self(format!("Backup path refused: {e}"), Vec::new(), None)
+        Self::retryable(format!("Backup path refused: {e}"))
     }
 }
 impl From<std::io::Error> for BackupError {
     fn from(e: std::io::Error) -> Self {
-        Self(format!("Backup I/O failed: {e}"), Vec::new(), None)
+        Self::retryable(format!("Backup I/O failed: {e}"))
     }
 }
 impl From<fb_db::DbError> for BackupError {
     fn from(e: fb_db::DbError) -> Self {
-        Self(format!("Book verification failed: {e}"), Vec::new(), None)
+        let message = format!("Book verification failed: {e}");
+        if e.is_damage() || matches!(e, fb_db::DbError::WrongKeyOrNotABook | fb_db::DbError::TooNew { .. }) {
+            Self::refused(message)
+        } else {
+            Self::retryable(message)
+        }
     }
 }
 impl From<fb_db::rusqlite::Error> for BackupError {
     fn from(e: fb_db::rusqlite::Error) -> Self {
-        Self(format!("Manifest query failed: {e}"), Vec::new(), None)
+        Self::retryable(format!("Manifest query failed: {e}"))
     }
 }
 impl From<serde_json::Error> for BackupError {
     fn from(_: serde_json::Error) -> Self {
-        Self("Malformed backup manifest.".into(), Vec::new(), None)
+        Self::refused("Malformed backup manifest.")
     }
 }
 
@@ -182,7 +221,7 @@ pub fn attachment_receipt_verifier_with<'a>(receipt_key: &'a Key, master_key: Op
         match storage::verify_staged_checked(&keys, company, &stored, staged) {
             Ok(()) => Ok(()),
             Err(ReadError::NoKey) => Err(BackupError::receipt("No key these books hold opens a receipt file.", NO_KEY)),
-            Err(ReadError::System(e)) => Err(BackupError::refused(format!("A receipt file could not be read ({e})."))),
+            Err(ReadError::System(e)) => Err(BackupError::retryable(format!("A receipt file could not be read ({e})."))),
             Err(_) => Err(damaged()),
         }
     }
@@ -214,6 +253,56 @@ pub struct BackupOptions<'a> {
     /// such a backup is refused and the error lists the files (`BackupError::absent`).
     pub allow_incomplete: bool,
 }
+/// Desktop copy plumbing shared by manual, pre-upgrade and automatic backups.
+pub struct CopyWorker<'a> {
+    pub key: &'a Key,
+    pub receipt_key: &'a Key,
+    pub receipts_root: Option<&'a Path>,
+    pub envelope: Option<&'a portable::KeyEnvelope>,
+    pub app_version: &'a str,
+}
+
+pub struct CopyTarget<'a> {
+    pub output: &'a Path,
+    pub work_root: &'a Path,
+    pub label: &'a str,
+    pub created_at: &'a str,
+    pub allow_incomplete: bool,
+}
+
+impl CopyWorker<'_> {
+    pub fn write(&self, source: &dyn fb_db::SnapshotSource, target: &CopyTarget<'_>) -> Result<BackupResult> {
+        self.write_slot(source, target, None)
+    }
+
+    fn write_slot(&self, source: &dyn fb_db::SnapshotSource, target: &CopyTarget<'_>, slot: Option<&scheduled::Slot>) -> Result<BackupResult> {
+        let verifier = attachment_receipt_verifier_with(self.receipt_key, Some(self.key));
+        let options = BackupOptions {
+            output: target.output, work_root: target.work_root, label: target.label, created_at: target.created_at,
+            allow_incomplete: target.allow_incomplete, receipts_root: self.receipts_root, app_version: self.app_version,
+            verify_receipt: Some(&verifier), passphrase: None, keep: None,
+        };
+        create_with_keys(source, self.key, &options, self.envelope, slot)
+    }
+
+    pub fn verify(&self, file: &Path, work: &Path) -> Result<Manifest> {
+        let verified = self.check_copy(file, work, None)?;
+        if let Some(summary) = verified.summary {
+            retention::record_verified_matching(file, &verified.fingerprint, summary)?;
+        }
+        Ok(verified.manifest)
+    }
+
+    fn check_copy(&self, file: &Path, work: &Path, slot: Option<(&scheduled::Slot, &[String])>) -> Result<CheckedBackup> {
+        let verifier = attachment_receipt_verifier_with(self.receipt_key, Some(self.key));
+        let options = VerifyOptions {
+            work_root: work, passphrase: None, record: true,
+            verify_receipt: Some(&verifier), money_check: None,
+        };
+        check_backup(file, self.key, &options, slot)
+    }
+}
+
 pub struct RestoreOptions<'a> {
     pub verify_receipt: Option<&'a ReceiptVerifier<'a>>,
     pub target: &'a Path,
@@ -237,7 +326,9 @@ pub struct RestoreResult {
 }
 
 fn hash_file(path: &Path) -> Result<(u64, String)> {
-    let mut f = paths::regular(path)?;
+    hash_open_file(paths::regular(path)?)
+}
+pub(super) fn hash_open_file(mut f: File) -> Result<(u64, String)> {
     let mut sha = Sha256::new();
     let mut bytes = 0u64;
     let mut buf = [0; 65536];
@@ -269,13 +360,14 @@ fn parse_json(raw: &[u8]) -> Result<Value> {
 /// archive, has no valid header, uses another format, or is cut short (an entry runs past the end of
 /// the file) is an error, so the Backups page can mark it Unreadable before anyone tries to restore it.
 pub fn read_header(path: &Path) -> Result<Value> {
-    let file = paths::regular(path)?;
+    read_header_file(open_backup(path)?)
+}
+pub(super) fn read_header_file(file: File) -> Result<Value> {
     let len = file.metadata()?.len();
     let mut tar = tar::Archive::new(file);
     let mut header = None;
-    let unreadable = |_| BackupError::refused("Not a FreedomBooks backup (not a readable archive).");
-    for item in tar.entries_with_seek().map_err(unreadable)?.raw(true) {
-        let mut item = item.map_err(unreadable)?;
+    for item in tar.entries_with_seek().map_err(archive_io)?.raw(true) {
+        let mut item = item.map_err(archive_io)?;
         let end = item.raw_file_position().checked_add(item.size());
         if end.is_none_or(|end| end > len) {
             return Err(BackupError::refused("This backup file is incomplete (cut short)."));
@@ -285,7 +377,7 @@ pub fn read_header(path: &Path) -> Result<Value> {
                 return Err(BackupError::refused("Not a FreedomBooks backup: invalid header.json."));
             }
             let mut raw = Vec::new();
-            item.read_to_end(&mut raw).map_err(unreadable)?;
+            item.read_to_end(&mut raw).map_err(archive_io)?;
             header = Some(raw);
         }
     }
@@ -304,6 +396,22 @@ pub fn read_header(path: &Path) -> Result<Value> {
     }
     Ok(header)
 }
+/// Open a local backup for export without following links or opening special files.
+pub fn open_backup(path: &Path) -> Result<File> {
+    paths::regular(path)
+}
+
+/// Refuse ambiguous, linked or overlapping backup folders before any writes.
+pub fn check_backup_folder<'a>(root: &Path, protected: impl IntoIterator<Item = &'a Path>) -> Result<()> {
+    paths::resolve(root)?;
+    for path in protected {
+        if paths::overlap(root, path)? {
+            return Err(BackupError::refused("The backup folder overlaps a live book, receipts or work folder."));
+        }
+    }
+    Ok(())
+}
+
 fn hex_valid(s: &str, len: usize) -> bool {
     s.len() == len
         && s.bytes()
@@ -425,10 +533,12 @@ fn stage(root: &Path, avoid: &[&Path]) -> Result<TempDir> {
         }
     }
     let root = paths::private_dir(root)?;
-    cleanup::cleanup_stale(&root)?;
-    Ok(tempfile::Builder::new()
-        .prefix(&cleanup::prefix())
-        .tempdir_in(root)?)
+    stage_in(&root)
+}
+
+fn stage_in(root: &Path) -> Result<TempDir> {
+    cleanup::cleanup_stale(root)?;
+    paths::temp_directory(root, &cleanup::prefix())
 }
 fn append_bytes<W: Write>(tar: &mut tar::Builder<W>, name: &str, bytes: &[u8]) -> Result<()> {
     let mut h = tar::Header::new_ustar();
@@ -587,7 +697,7 @@ pub fn incomplete_message(absent: &[Absent], folder_missing: bool) -> String {
 }
 
 pub fn create_backup(book: &Book, key: &Key, options: &BackupOptions<'_>) -> Result<BackupResult> {
-    create_with_keys(book, key, options, None)
+    create_backup_from(book, key, options, None)
 }
 
 /// Desktop archives carry authenticated password/recovery wraps in their public header.
@@ -598,14 +708,14 @@ pub fn create_portable_backup(book: &Book, key: &Key, options: &BackupOptions<'_
 /// A backup of any snapshot source, such as a book opened before its upgrade. The manifest lists
 /// the migrations the snapshot carries, so restore upgrades it like any older backup.
 pub fn create_backup_from(source: &dyn fb_db::SnapshotSource, key: &Key, options: &BackupOptions<'_>, envelope: Option<&portable::KeyEnvelope>) -> Result<BackupResult> {
+    create_with_keys(source, key, options, envelope, None)
+}
+
+fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &BackupOptions<'_>, envelope: Option<&portable::KeyEnvelope>, scheduled: Option<&scheduled::Slot>) -> Result<BackupResult> {
     if let Some(envelope) = envelope {
         envelope.validate()?;
         envelope.receipts(key)?;
     }
-    create_with_keys(source, key, options, envelope)
-}
-
-fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &BackupOptions<'_>, envelope: Option<&portable::KeyEnvelope>) -> Result<BackupResult> {
     if options.label.is_empty() {
         return Err(BackupError::refused("A backup label is required."));
     }
@@ -688,7 +798,7 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
         absent.sort_by(|a, b| a.owner.id.cmp(&b.owner.id));
         if !absent.is_empty() && !options.allow_incomplete {
             let mut e = BackupError::refused(incomplete_message(&absent, options.receipts_root.is_none()));
-            e.1 = absent;
+            e.absent = absent;
             return Err(e);
         }
     }
@@ -723,6 +833,10 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     // "incomplete" without opening the backup, and a restore checks it against the manifest.
     if !data.complete() {
         header["incomplete"] = json!(true);
+    }
+    if let Some(slot) = scheduled {
+        // The encrypted manifest authenticates the scheduled identity along with the rest of the header.
+        header["scheduled"] = slot.identity();
     }
     if let Some(envelope) = envelope {
         header["book_keys"] = serde_json::to_value(envelope)?;
@@ -774,6 +888,16 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     })
 }
 
+fn archive_io(e: std::io::Error) -> BackupError {
+    use std::io::ErrorKind;
+    // tar reports malformed headers and truncated blocks as synthetic I/O errors.
+    if e.raw_os_error().is_none() && matches!(e.kind(), ErrorKind::Other | ErrorKind::InvalidData | ErrorKind::UnexpectedEof) {
+        BackupError::refused("Not a FreedomBooks backup (not a readable archive).")
+    } else {
+        e.into()
+    }
+}
+
 /// Strict flat extraction, never tar::unpack. Entry names, types, duplicates,
 /// counts and bounded metadata are checked before any path is constructed.
 fn extract(archive: &Path, work: &Path, outer: bool, data: Option<&Manifest>) -> Result<BTreeSet<String>> {
@@ -784,8 +908,8 @@ fn extract(archive: &Path, work: &Path, outer: bool, data: Option<&Manifest>) ->
     let mut tar = tar::Archive::new(file);
     let mut total = 0u64;
     let mut seen = BTreeSet::new();
-    for item in tar.entries_with_seek()?.raw(true) {
-        let mut item = item?;
+    for item in tar.entries_with_seek().map_err(archive_io)?.raw(true) {
+        let mut item = item.map_err(archive_io)?;
         let raw = item.path_bytes();
         let name = std::str::from_utf8(&raw)
             .map_err(|_| BackupError::refused("Invalid archive entry."))?
@@ -897,6 +1021,9 @@ fn unpack(
     verify_receipt: Option<&ReceiptVerifier<'_>>,
 ) -> Result<Manifest> {
     let members = extract(path, work, true, None)?;
+    if !members.contains("header.json") {
+        return Err(BackupError::refused("Not a FreedomBooks backup: no header.json."));
+    }
     let raw = fs::read(work.join("header.json"))?;
     let header = parse_json(&raw)?;
     if header["format"] != FORMAT
@@ -926,8 +1053,8 @@ fn unpack(
         // plaintext reaches a temporary file, removed automatically on any error.
         let mut tar = tar::Archive::new(paths::regular(path)?);
         let mut dst = restore_limits::Payload::new(work)?;
-        for entry in tar.entries_with_seek()?.raw(true) {
-            let mut entry = entry?;
+        for entry in tar.entries_with_seek().map_err(archive_io)?.raw(true) {
+            let mut entry = entry.map_err(archive_io)?;
             if entry.path_bytes().as_ref() == b"payload.enc" {
                 crypto::decrypt_stream(&mut entry, &mut dst, pass, &header, &raw)?;
             }
@@ -1208,6 +1335,25 @@ pub fn verify_backup_with_options(
     key: &Key,
     options: &VerifyOptions<'_>,
 ) -> Result<Manifest> {
+    let checked = check_backup(path, key, options, None)?;
+    if let Some(summary) = checked.summary {
+        retention::record_verified_matching(path, &checked.fingerprint, summary)?;
+    }
+    Ok(checked.manifest)
+}
+
+struct CheckedBackup {
+    manifest: Manifest,
+    fingerprint: (u64, String),
+    summary: Option<Value>,
+}
+
+fn check_backup(
+    path: &Path,
+    key: &Key,
+    options: &VerifyOptions<'_>,
+    scheduled: Option<(&scheduled::Slot, &[String])>,
+) -> Result<CheckedBackup> {
     let work = stage(options.work_root, &[path])?;
     // Verify a private, immutable copy. The eventual sidecar is bound to these
     // exact bytes, even if another process replaces the original during verify.
@@ -1234,14 +1380,17 @@ pub fn verify_backup_with_options(
         json!({"run":false,"reason":"L4-LIFECYCLE-VERIFY-PORT: independent lifecycle verifier awaits integration"})
     };
     drop(book);
-    if options.record {
+    let summary = if options.record || scheduled.is_some() {
         let header = parse_json(&fs::read(work.path().join("header.json"))?)?;
+        if let Some((slot, companies)) = scheduled {
+            slot.check_capture(&header, &data, companies)?;
+        }
         let attachment_bytes = data
             .attachments
             .iter()
             .try_fold(0u64, |n, a| n.checked_add(a.bytes))
             .ok_or_else(|| BackupError::refused("Attachment size overflow."))?;
-        let summary = json!({
+        Some(json!({
             "verified_at":chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             "backup_created_at":data.created_at,
             "company_tags":data.contents.companies.iter().map(|c| retention::company_tag(key, &c.id)).collect::<Result<Vec<_>>>()?,
@@ -1256,10 +1405,11 @@ pub fn verify_backup_with_options(
             "attachment_bytes":attachment_bytes,
             "complete":data.complete(),
             "missing_attachments":data.absent.len(),
-        });
-        retention::record_verified_matching(path, &fingerprint, summary)?;
-    }
-    Ok(data)
+        }))
+    } else {
+        None
+    };
+    Ok(CheckedBackup { manifest: data, fingerprint, summary })
 }
 
 fn restore_partial(book: &Book, key: &Key, parent: &Path) -> Result<tempfile::NamedTempFile> {
@@ -1291,9 +1441,12 @@ mod review_publication_tests {
             name.starts_with(&cleanup::prefix()) && name.ends_with(".partial"),
             "{name}"
         );
-        let dead =
-            d.path()
-                .join(name.replacen(&format!(".{}.", std::process::id()), ".4294967295.", 1));
+        // Positive pid_t well above Linux/macOS PID_MAX so kill(pid, 0) returns ESRCH.
+        let dead = d.path().join(name.replacen(
+            &format!(".{}.", std::process::id()),
+            &format!(".{}.", i32::MAX),
+            1,
+        ));
         fs::copy(partial.path(), &dead).unwrap();
         assert_eq!(
             cleanup::cleanup_stale(d.path()).unwrap(),

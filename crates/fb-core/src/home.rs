@@ -41,7 +41,7 @@ pub fn summary(book: &mut Book, actor: UserId, co: CompanyId, today: &str) -> Fb
                        "balance": money(Money::from_db(balance))})
             })
             .collect::<Vec<_>>();
-        let (start, end) = params::preset_range("this_month", today)?;
+        let (start, end) = params::preset_range("this_month", today, 1)?;
         let pl = financial::accrual_period(q, co, start, end)?;
         let section = |key: &str| pl.section(key).map(|s| s.total).unwrap_or(Money::ZERO);
         let income = section("income") + section("other_income");

@@ -2,7 +2,7 @@
 use super::d2::{checked, clean_date, clean_text, draw, error, nonfield, put, token};
 use super::d6::{
     attachments, banks, bind_fields, choice as raw_choice, contacts, ctx, evidence, formset_errors,
-    integer, management, ordered, references, result_error, reversal_fields, reverse_values, s,
+    integer, management, ordered, references, result_error, result_nonfield_error, reversal_fields, reverse_values, s,
     scoped_rows, select, set_errors,
 };
 use super::*;

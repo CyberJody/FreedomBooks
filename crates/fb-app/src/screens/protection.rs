@@ -71,7 +71,7 @@ pub(super) fn render(app: &mut App, path: &str, errors: &[String]) -> AppResult<
             "desktop/restored-book.html"
         }
         RESTORE => {
-            if app.backups.restore_pending.is_none() {
+            if !app.backups.restore_prompt_active() {
                 return Err(AppError::Invalid(
                     "Choose a backup to restore first.".into(),
                 ));
@@ -164,7 +164,7 @@ pub(super) fn submit(app: &mut App, path: &str, fields: Posted<'_>) -> AppResult
                 return Ok(Outcome::Done { data: json!({"desktop_keys":"use-restored"}) });
             }
             (RESTORE, "cancel") => {
-                app.backups.restore_pending = None;
+                app.backups.abandon_restore();
             }
             _ => return Err(AppError::Invalid("Unknown protection action.".into())),
         }

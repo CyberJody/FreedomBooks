@@ -1,4 +1,4 @@
-//! Bookkeeper test rounds 4 and 5 of 2026-11-23 (fix list items 22-36).
+//! Bookkeeper test rounds 4 and 5 of 2026-11-23 (internal test notes, fix list items 22-36).
 mod support;
 mod worker_support;
 use fb_app::commands::StarterChart;

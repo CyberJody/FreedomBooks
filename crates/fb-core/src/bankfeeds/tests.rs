@@ -23,6 +23,7 @@ mod fix10;
 mod dfix3;
 mod mapping;
 mod sync_safety;
+mod import_and_transfer;
 
 struct Fx {
     book: Book,
@@ -545,8 +546,8 @@ fn transfer_posts_once_and_the_other_side_matches_it() {
     assert_eq!((matched.status.as_str(), matched.journal_id.clone()), ("MATCHED", Some(j)));
     assert_eq!(f.count("SELECT count(*) FROM ledger_journal"), 1);
     assert!(f.accept("TX-1001", json!({"kind":"MATCH","journal_line_id":line})).is_err());
-    assert!(f.accept("TX-3001", json!({"kind":"TRANSFER","transfer_account_id":f.a["100"].to_db()})).is_err());
-    let _ = transfers::Review::clone;
+    let cash = f.accept("TX-3001", json!({"kind":"TRANSFER","transfer_account_id":f.a["100"].to_db()})).unwrap();
+    assert_eq!(f.lines(cash.journal_id.as_deref().unwrap()), [("100".into(), 64_040, 0), ("220".into(), 0, 64_040)]);
     f.reopen_clean();
 }
 
@@ -1483,7 +1484,7 @@ fn populated_format_93_feeds_upgrade_without_losing_rows_or_decisions() {
     let fb_db::Opened::Behind(mut old) = Book::open_staged(&copy_path, &[91; 32]).unwrap() else {
         panic!("expected a format-93 book before upgrade");
     };
-    assert_eq!((old.from(), old.to()), (93, 97)); // 0207, 0208, 0209 and 0210
+    assert_eq!((old.from(), old.to()), (93, 98)); // 0207 through 0211
     for table in ["bankfeeds_account", "bankfeeds_transaction"] {
         let has_provenance: bool = old.read(|q| {
             let stmt = q.prepare(&format!("SELECT * FROM {table}"))?;
@@ -1955,15 +1956,20 @@ fn review_safety_after(f: &mut Fx, accepted: &Item, account: &str, revised: Stag
 /// A capped window's gap and its review (`bankfeed.gap_reviewed`; dates only, no provider text).
 fn review_safety_gap(f: &mut Fx) {
     let conn = f.conn.clone();
-    store_pull(&mut f.book, f.u, f.c, &conn, &StagedPull::default(), "2027-01-01T12:00:00Z", false, None, &SecretSet::none()).unwrap();
+    // A gap is reported for a feed that was actually imported in both pulls.
+    let pull = StagedPull {
+        accounts: vec![acct("audit-gap-feed", "Gap fixture", vec![])],
+        ..Default::default()
+    };
+    store_pull(&mut f.book, f.u, f.c, &conn, &pull, "2027-01-01T12:00:00Z", false, None, &SecretSet::none()).unwrap();
     let start = begin_sync(&mut f.book, f.u, f.c, &conn, "2027-06-01T12:00:00Z", 0, true).unwrap();
-    let r = store_pull(&mut f.book, f.u, f.c, &conn, &StagedPull::default(), "2027-06-01T12:00:00Z", false, Some(start), &SecretSet::none()).unwrap();
+    let r = store_pull(&mut f.book, f.u, f.c, &conn, &pull, "2027-06-01T12:00:00Z", false, Some(start), &SecretSet::none()).unwrap();
     assert!(r["missing"].is_object(), "{r}");
     review_sync_gap(&mut f.book, f.u, f.c, &conn, &SecretSet::none()).unwrap();
 }
 
 fn fix4_emitted_actions() -> std::collections::BTreeSet<String> {
-    let sources = [include_str!("mod.rs"), include_str!("staging.rs"), include_str!("accept.rs"), include_str!("rules.rs")];
+    let sources = [include_str!("mod.rs"), include_str!("staging.rs"), include_str!("accept.rs"), include_str!("rules.rs"), include_str!("mapping.rs")];
     let found: std::collections::BTreeSet<String> = sources
         .iter()
         .flat_map(|s| s.split("\"bankfeed.").skip(1).map(|rest| rest.chars().take_while(|c| c.is_ascii_lowercase() || *c == '_').collect::<String>()))
@@ -1997,6 +2003,24 @@ fn drive_imported_auto_post_off(f: &mut Fx, returned: &mut Vec<String>) {
     let selection = qbo::Selection { row: 2, preserve_auto_post: true, account_id: f.acc("500"), scope: f.feed("ACT-checking"), kind: "EXPENSE".into(), payee_id: String::new(), payee_table: String::new() };
     returned.push(qbo::import_rules(&mut f.book, f.u, f.c, &qbo::Import { hash: "4".repeat(64), rows: vec![row] }, &[selection], true, &SecretSet::none()).unwrap().to_string());
     assert_eq!(turn_off_imported_auto_post(&mut f.book, f.u, f.c, None, &SecretSet::none()).unwrap(), 1);
+}
+
+fn drive_discovery(f: &mut Fx, conn_id: &str, pull: &StagedPull, failure: &str, secrets: &SecretSet) -> [String; 2] {
+    let discovery = StagedPull {
+        accounts: pull.accounts.iter().enumerate().map(|(n, a)| StagedAccount {
+            remote_id: format!("discovery {n} {}", a.remote_id), ..a.clone()
+        }).collect(),
+        ..pull.clone()
+    };
+    let failure = record_discovery_failure(&mut f.book, f.u, f.c, conn_id, NOW, failure, secrets).unwrap();
+    let discovered = store_discovery(&mut f.book, f.u, f.c, conn_id, &discovery, NOW, secrets, &[]).unwrap().to_string();
+    let feed_account_id = f.book.connection().query_row(
+        "SELECT id FROM bankfeeds_account WHERE connection_id=?1 ORDER BY id LIMIT 1", [conn_id], |r| r.get(0)
+    ).unwrap();
+    save_mappings_and_import_settings(&mut f.book, f.u, f.c, conn_id, &[], &[ImportSettings {
+        feed_account_id, expected_state: "PENDING".into(), expected_date: None, import_from_date: None,
+    }], secrets).unwrap();
+    [failure, discovered]
 }
 
 #[test]
@@ -2049,7 +2073,6 @@ fn fix4_every_audit_writer_is_credential_fuzzed_on_every_provider_field() {
         };
         let creds: std::collections::HashMap<&str, String> = FIELDS.iter().map(|k| (*k, cred(k))).collect();
         let connection = connect(&mut f.book, f.u, f.c, &json!("F4"), &creds["host"], &SecretSet::none()).unwrap();
-        forget(&mut f.book, f.u, f.c, connection["id"].as_str().unwrap(), &SecretSet::none()).unwrap();
         returned.push(connection.to_string());
         record_sync_failure(&mut f.book, f.u, f.c, &f.conn.clone(), NOW, &creds["fail"], i % 2 == 0, &SecretSet::none()).unwrap();
         let money_in = i % 2 == 0;
@@ -2060,6 +2083,9 @@ fn fix4_every_audit_writer_is_credential_fuzzed_on_every_provider_field() {
         let mut other = acct(&format!("F4-other-{i}"), "Other", vec![]);
         other.currency = creds["cu"].clone();
         let pull = StagedPull { accounts: vec![account, other], skipped: vec![creds["ps"].clone()], errors: vec![creds["pe"].clone()] };
+        let conn_id = connection["id"].as_str().unwrap();
+        returned.extend(drive_discovery(&mut f, conn_id, &pull, &creds["fail"], &SecretSet::none()));
+        forget(&mut f.book, f.u, f.c, conn_id, &SecretSet::none()).unwrap();
         returned.push(f.sync(&pull).to_string());
         f.map(&creds["ar"], Some("100")).unwrap();
         let staged = StagedTransaction { posted_on: Some("2026-10-21".into()), ..tx(&creds["sr"], "2026-10-21", if money_in { -100 } else { 100 }, &creds["sd"]) };
@@ -2199,13 +2225,16 @@ fn r5_independent_provider_field_fuzz_and_all_audits() {
             let values: std::collections::HashMap<_,_>=FIELDS.iter().map(|k|(*k,r5_vector(i,k,&mut seed))).collect();
             let connection=connect(&mut f.book,f.u,f.c,&json!("R5"),&values["host"], &SecretSet::none()).unwrap();
             returned.push_str(&connection.to_string());
-            returned.push_str(&forget(&mut f.book,f.u,f.c,connection["id"].as_str().unwrap(), &SecretSet::none()).unwrap().to_string());
             record_sync_failure(&mut f.book,f.u,f.c,&f.conn.clone(),NOW,&values["failure"],i%2==0, &SecretSet::none()).unwrap();
             let amount=if i%2==0 {100} else {-100};
             let mut a=acct(&values["accountid"],&values["accountname"],vec![tx(&values["txid"],"2026-10-20",amount,&values["description"])]);
             a.conn_key=values["connkey"].clone(); a.org_name=values["org"].clone(); a.skipped.push(values["accountskip"].clone());
             let mut other=acct(&format!("other-{i}"),"Other",vec![]); other.currency=values["currency"].clone();
-            returned.push_str(&f.sync(&StagedPull{accounts:vec![a,other],skipped:vec![values["pullskip"].clone()],errors:vec![values["error"].clone()]}).to_string());
+            let pull = StagedPull { accounts: vec![a, other], skipped: vec![values["pullskip"].clone()], errors: vec![values["error"].clone()] };
+            let conn_id = connection["id"].as_str().unwrap();
+            returned.push_str(&drive_discovery(&mut f, conn_id, &pull, &values["failure"], &SecretSet::none()).concat());
+            returned.push_str(&forget(&mut f.book, f.u, f.c, conn_id, &SecretSet::none()).unwrap().to_string());
+            returned.push_str(&f.sync(&pull).to_string());
             returned.push_str(&f.map(&values["accountid"],Some("100")).unwrap().to_string());
             returned.push_str(&format!("{:?}",stage_bank_transactions(&mut f.book,f.u,f.c,&f.conn.clone(),&[(values["accountid"].clone(),tx(&values["stageid"],"2026-10-20",-amount,&values["stagedesc"]))], &SecretSet::none()).unwrap()));
             let rejected=stage_bank_transactions(&mut f.book,f.u,f.c,&f.conn.clone(),&[(values["stageaccount"].clone(),tx("unused","2026-10-20",1,"x"))], &SecretSet::none());

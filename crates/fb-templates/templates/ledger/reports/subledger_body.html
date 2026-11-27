@@ -1,0 +1,22 @@
+<header class="report-head"><p class="report-company">{{ company.name }}</p><h2 class="report-title">{{ title }}</h2>
+<p class="report-dates">{% if vendor_1099 %}{{ date_span(start, end) }}{% else %}As of {{ long_date(end) }}{% endif %}</p>
+<p class="report-basis">{{ company.currency }}</p></header>
+{% if vendor_1099 %}
+<div class="table-wrap"><table class="fin-report">
+<thead><tr><th scope="col">Vendor</th><th scope="col">Billing address</th><th scope="col" class="amount">Payments</th><th scope="col" class="amount">Total paid</th></tr></thead>
+<tbody>{% for row in rows %}<tr><th scope="row"><a href="{{ row.url }}">{{ row.name }}</a></th><td class="vendor-billing-address">{{ row.address }}</td><td class="amount">{{ row.count }}</td><td class="amount">{{ row.total|money }}</td></tr>
+{% else %}<tr><td colspan="4">No vendor payments in this date range.</td></tr>{% endfor %}</tbody>
+<tfoot><tr class="fin-grand fin-final"><th scope="row" colspan="2">Total</th><td class="amount">{{ count }}</td><td class="amount">{{ total|money }}</td></tr></tfoot>
+</table></div>
+<p class="report-foot">Includes posted bill payments and direct checks and expenses paid to vendors, with reversals and voids on their effective dates. Review which payments are reportable before filing.</p>
+{% else %}
+<div class="table-wrap"><table class="fin-report">
+<thead><tr><th scope="col">{{ party_label }}</th>{% for label in headings %}<th scope="col" class="amount">{{ label }}</th>{% endfor %}</tr></thead>
+<tbody>{% for row in rows %}<tr><th scope="row"><a href="{{ row.url }}">{{ row.name }}</a>
+<details class="screen-only"><summary>{{ document_label }} ({{ row.documents|length }})</summary><ul>{% for doc in row.documents %}<li><a href="{{ doc.url }}">{{ doc.number }}</a> · {% if doc.credit %}issued{% else %}due{% endif %} {{ doc.due|date('Y-m-d') }} · {{ doc.balance|money }}</li>{% endfor %}</ul></details>
+</th>{% for amount in row.amounts %}<td class="amount">{{ amount|money }}</td>{% endfor %}</tr>
+{% else %}<tr><td colspan="{{ headings|length + 1 }}">No open {{ document_label|lower }} on this date.</td></tr>{% endfor %}</tbody>
+<tfoot><tr class="fin-grand fin-final"><th scope="row">Total</th>{% for amount in totals %}<td class="amount">{{ amount|money }}</td>{% endfor %}</tr></tfoot>
+</table></div>
+<p class="report-foot">{% if receivables %}The age columns include open invoices. Net A/R includes unapplied credits.{% else %}Balances reflect posted documents and settlements through the selected date.{% endif %} The 90+ column starts at 91 days past due.</p>
+{% endif %}

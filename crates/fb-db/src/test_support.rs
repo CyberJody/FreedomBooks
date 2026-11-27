@@ -21,6 +21,29 @@ pub fn snapshot(conn: &Connection) -> rusqlite::Result<Snapshot> {
         .collect()
 }
 
+/// 0211 appends these columns to existing rows. Upgrade tests keep checking every old cell
+/// and assert the new defaults explicitly, using the column names in the upgraded schema.
+#[cfg(test)]
+pub(crate) fn company_period_defaults(snapshot: &mut Snapshot, current: &Connection) {
+    for (table, column, default) in [
+        ("ledger_company", "fiscal_year_start_month", Value::Integer(1)),
+        ("ledger_company", "closing_date", Value::Null),
+        ("ledger_company", "period_policy_revision", Value::Integer(0)),
+        ("directory_customer", "default_terms", Value::Null),
+        ("bankfeeds_account", "import_from_date", Value::Null),
+        ("bankfeeds_account", "import_state", Value::Text("ACTIVE".into())),
+        ("bankfeeds_rule", "feed_account_id", Value::Null),
+    ] {
+        let Some(rows) = snapshot.get_mut(table) else { continue };
+        let index = current.prepare(&format!("SELECT * FROM {table}")).unwrap()
+            .column_names().position(|name| name == column).expect("0211 column");
+        for row in rows {
+            assert_eq!(index, row.len(), "{table}.{column} must follow the historical columns");
+            row.push(default.clone());
+        }
+    }
+}
+
 /// Identity columns of migration 0136 (`(table, column, domain, text column)`).
 const IDENTITY_COLUMNS: &[(&str, &str, &str, &str)] = &[
     ("bankfeeds_account", "conn_key_identity", "connection-key", "conn_key"),
@@ -443,6 +466,13 @@ impl PriorCopy {
                 assert_eq!(rows, desktop_user_backfill(source).unwrap(), "0185 derives every role from fb_user");
             } else {
                 assert!(rows.is_empty(), "the later {table} table must be empty");
+            }
+        }
+        for table in ["ledger_company", "directory_customer"] {
+            if let Some(width) = self.before.get(table).and_then(|rows| rows.first()).map(Vec::len) {
+                for row in at_boundary.get_mut(table).expect("prior table") {
+                    row.truncate(width);
+                }
             }
         }
         at_boundary

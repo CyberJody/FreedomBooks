@@ -64,6 +64,14 @@ fn action(code: &str) -> String {
     if code == JOURNAL_DELETED_ACTION.0 { return JOURNAL_DELETED_ACTION.1.into(); }
     if let Some((_, label)) = SALES_TAX_PAYMENT_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
     if let Some((_, label)) = USER_ACTIONS.iter().find(|(key, _)| *key == code) { return (*label).into(); }
+    match code {
+        "company.fiscal_year_changed" => return "Fiscal-year start changed".into(),
+        "company.period_closed" => return "Accounting period closed".into(),
+        "company.period_reopened" => return "Accounting period reopened".into(),
+        "bankfeed.import_start_changed" => return "Bank-feed import start changed".into(),
+        "bankfeed.discovered" => return "Bank-feed account discovery".into(),
+        _ => {}
+    }
     if code=="numbering.changed" {return "Next document number changed".into();}
     LABELS["ACTION_LABELS"][code]
         .as_str()

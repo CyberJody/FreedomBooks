@@ -1,4 +1,4 @@
-//! Bookkeeper round 7, the missing bank-feed features (fix list items 46-48):
+//! Bookkeeper round 7, the missing bank-feed features (internal test notes, fix list items 46-48):
 //! a row split over several accounts in Review, fee and adjustment lines on deposits and payments, and a
 //! deposit of several received payments from one Review row. Page behaviour is tested in
 //! `electron/tests/worker-fixes-3b.test.cjs`; this file tests what is posted and what the server draws.
@@ -502,7 +502,7 @@ fn a_populated_format_95_book_upgrades_and_then_takes_a_deposit_with_a_fee() {
     let old_path = dir.join("format-95.fbbook");
     let copy = test_support::populated_copy(app.open_mut().unwrap().book.connection(), &old_path, &key_bytes, "0208_ai_unattended", true).unwrap();
     let Opened::Behind(old) = Book::open_staged(&old_path, &key_bytes).unwrap() else { panic!("expected a format-95 book") };
-    assert_eq!((old.from(), old.to()), (95, 97));
+    assert_eq!((old.from(), old.to()), (95, 98));
     let backup = dir.join("verified-format-95.fbbook");
     old.snapshot(&backup, &key_bytes).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key_bytes).unwrap(), copy.before, "the backup is the book as it was");
@@ -659,7 +659,7 @@ fn a_payment_received_net_of_its_fee_is_what_the_payout_row_matches() {
     assert_eq!(f.journals(), before, "a match posts nothing");
 }
 
-// --- review fixes ----------------------------------------
+// --- review fixes (internal test notes) ----------------------------------------
 
 /// Record deposit as the form posts it: Review deposit, then Record deposit with that review's token and,
 /// when the review carried one, its `fee_ok`. Returns the review page and the recorded deposit's address.
@@ -949,7 +949,7 @@ fn a_format_95_book_with_a_reversed_and_a_reconciled_deposit_upgrades_and_passes
     let old_path = dir.join("format-95-reconciled.fbbook");
     let copy = test_support::populated_copy(app.open_mut().unwrap().book.connection(), &old_path, &key_bytes, "0208_ai_unattended", true).unwrap();
     let Opened::Behind(old) = Book::open_staged(&old_path, &key_bytes).unwrap() else { panic!("expected a format-95 book") };
-    assert_eq!((old.from(), old.to()), (95, 97));
+    assert_eq!((old.from(), old.to()), (95, 98));
     let backup = dir.join("verified-format-95-reconciled.fbbook");
     old.snapshot(&backup, &key_bytes).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key_bytes).unwrap(), copy.before, "the backup is the book as it was");

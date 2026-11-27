@@ -132,7 +132,8 @@ fn every_protected_primary_key_is_permanent_even_without_references() {
         "banking_seal", "banking_seal_due", "banking_reconciliationactor",
         // Populated singleton/owner-parent identity matrix: tests/accounts.rs.
         "accounts_owner",
-        // Bank feeds' populated key/identity attacks: bankfeeds/tests.rs.
+        // Bank feeds' populated key/identity attacks: bankfeeds/tests.rs. Format 98 adds
+        // import policy and an optional rule scope to these existing identities.
         "bankfeeds_connection", "bankfeeds_account", "bankfeeds_transaction", "bankfeeds_rule", "bankfeeds_counter",
         "bankfeeds_retired",
         // FIX5: the one permanent identity secret (bankfeeds/tests.rs fix5_identity_keys_*).

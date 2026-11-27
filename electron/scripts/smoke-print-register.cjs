@@ -1,7 +1,7 @@
 async function finishRecovery(page) {
   await page.getByRole('button', {name:'Remind me later'}).click();
   await page.waitForURL(/\/settings\/book-protection\/$/);
-  await Promise.all([page.waitForURL(/\/home\/$/), page.locator('a[href$="/home/"]').first().click()]);
+  await Promise.all([page.waitForURL(/\/home\/$/), page.locator('nav.appnav a[href$="/home/"]').click()]);
 }
 'use strict';
 // A real native landscape PDF check, isolated from the existing smoke's completed book.
@@ -21,7 +21,13 @@ const {spawnSync}=require('node:child_process');
     await page.fill('#id_owner_name','Dana Whitfield');await page.fill('#id_company_name','Print Register Supply');
     await page.selectOption('#id_starter_chart', 'empty');
     await page.check('#id_protect');await page.fill('#id_lock_password','print-synthetic-lock');await page.fill('#id_lock_password2','print-synthetic-lock');
-    await Promise.all([page.waitForURL(/\/settings\/recovery-key\/$/),page.click('button:has-text("Create books")')]);
+    await Promise.all([page.waitForURL(/\/desktop\/sign-in\/$/),page.getByRole('button',{name:'Create books',exact:true}).click()]);
+    await page.fill('#id_password','print-synthetic-owner-password');
+    await page.fill('#id_password_repeat','print-synthetic-owner-password');
+    await Promise.all([
+      page.waitForURL(/\/settings\/recovery-key\/$/),
+      page.getByRole('button',{name:'Set password and continue',exact:true}).click(),
+    ]);
     await finishRecovery(page);
     const company=/\/c\/([0-9a-f-]{36})\//.exec(page.url())[1];
     for(const [code,name,type]of[['100','Checking','BANK'],['400','Service income','INCOME']]){
@@ -54,9 +60,9 @@ const {spawnSync}=require('node:child_process');
     // Spatial layout interleaves adjacent columns when a long number/type wraps. Raw extraction
     // retains each cell's glyph order; verify both the long identity and all column content there.
     const raw=spawnSync('pdftotext',['-raw',file,'-'],{encoding:'utf8'});assert.equal(raw.status,0,raw.stderr);
-    for(const pattern of [/PRINT-\s*REGISTER-1/,/1234\.56/,/General\s+journal/,/Synthetic\s+customer/,/longer\s+memo/,/Date/,/Number/,/Type/,/Payee\s+\/\s+name/,/Account/,/Memo/,/Payment/,/✓/,/Deposit/,/Balance/,/Page 1 of 1/])assert.match(raw.stdout,pattern);
+    for(const pattern of [/PRINT-\s*REGISTER-1/,/Ending balance\s+1,234\.56\b/,/General\s+journal/,/Synthetic\s+customer/,/longer\s+memo/,/Date/,/Number/,/Type/,/Payee\s+\/\s+name/,/Account/,/Memo/,/Payment/,/✓/,/Deposit/,/Balance/,/Page 1 of 1/])assert.match(raw.stdout,pattern);
     fs.writeFileSync(path.join(out,'register.txt'),text.stdout);fs.writeFileSync(path.join(out,'register-pdfinfo.txt'),info.stdout);
     const render=spawnSync('pdftoppm',['-f','1','-singlefile','-scale-to','1440','-png',file,path.join(out,'register-page1')],{encoding:'utf8'});assert.equal(render.status,0,render.stderr);
-    console.log('SMOKE PRINT REGISTER OK: native Save dialog; landscape Letter 792x612; all ten columns, number, 1234.56 balance and page footer extracted');
+    console.log('SMOKE PRINT REGISTER OK: native Save dialog; landscape Letter 792x612; all ten columns, number, 1,234.56 ending balance and page footer extracted');
   }finally{await app.close();fs.rmSync(data,{recursive:true,force:true});}
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1;});

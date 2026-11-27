@@ -37,7 +37,17 @@ fn live_text_columns(conn: &Connection) -> BTreeMap<String, BTreeMap<String, Cla
 fn every_text_column_has_its_class_guard_at_insert_update_and_open_with_exact_counts() {
     let dir = tempfile::tempdir().unwrap();
     let book = Book::create(&dir.path().join("inventory.fbbook"), &[61; 32]).unwrap();
-    let live = live_text_columns(&book.conn);
+    let mut live = live_text_columns(&book.conn);
+    // 0211 constrains its additive columns inline and checks them in Book::check.
+    for (table, column, class) in [
+        ("ledger_company", "closing_date", Class::Date),
+        ("directory_customer", "default_terms", Class::Text),
+        ("bankfeeds_account", "import_from_date", Class::Date),
+        ("bankfeeds_account", "import_state", Class::Text),
+        ("bankfeeds_rule", "feed_account_id", Class::Uuid),
+    ] {
+        assert_eq!(live.get_mut(table).unwrap().remove(column), Some(class));
+    }
     // The checked-in generator inventory agrees with the live schema and the Rust rule.
     let fixture: serde_json::Value = serde_json::from_str(include_str!("../tests/fb_value_guard_inventory.json")).unwrap();
     let fixture: BTreeMap<String, BTreeMap<String, Class>> = fixture.as_object().unwrap().iter().map(|(t, cols)| {
@@ -123,10 +133,12 @@ fn desktop_value_guard_upgrade_preserves_enrolled_users_and_prior_schema() {
     let book = old.upgrade().unwrap();
     // Every row that was there survives, and tables added since start empty. No list of later tables to keep.
     let after = test_support::snapshot(&book.conn).unwrap();
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before { assert_eq!(&after[table], rows, "rows in {table} survive the upgrade"); }
     for (table, rows) in &after { if !before.contains_key(table) { assert!(rows.is_empty(), "new table {table} starts empty"); } }
     let upgraded = schema_hashes(&book.conn).unwrap();
-    for (object, hash) in &schema { if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid","view:fb_json_invalid"].contains(&object.as_str()) && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) { assert_eq!(&upgraded[object],hash,"changed {object}"); } }
+    for (object, hash) in &schema { if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid","view:fb_json_invalid"].contains(&object.as_str()) && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) && !crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) { assert_eq!(&upgraded[object],hash,"changed {object}"); } }
     let new_view: String = book.conn.query_row("SELECT sql FROM sqlite_schema WHERE name='fb_value_invalid'", [], |r| r.get(0)).unwrap();
     assert_eq!(new_view.split("\nUNION ALL\nSELECT 'invalid stored value in desktop_user'").next().unwrap(), view.trim_end_matches(';'));
     assert!(book.check().unwrap().is_empty());

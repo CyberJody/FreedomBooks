@@ -41,11 +41,11 @@ pub const HOST_ONLY: &[&str] = &[
 /// Route-table names a connected computer may use (the session layer's role and company checks
 /// still apply, and `fb_remote_proto::policy` still refuses host-only form actions on them).
 pub const ALLOWED: &[&str] = &[
-    "account_edit", "account_new", "accounts", "balance_sheet",
+    "account_edit", "account_new", "accounts", "ap_aging", "ar_aging", "balance_sheet",
     "bankfeeds:accounts", "bankfeeds:list", "bankfeeds:review", "bankfeeds:rule_edit", "bankfeeds:rule_new", "bankfeeds:rules",
     "bills:calendar", "bills:detail", "bills:edit", "bills:list", "bills:new", "bills:post", "bills:review", "bills:revision", "bills:void",
     "checks:detail", "checks:edit", "checks:list", "checks:new", "checks:number", "checks:record", "checks:review", "checks:revision", "checks:void",
-    "company", "company_edit", "company_home", "company_new",
+    "company", "company:periods", "company_edit", "company_home", "company_new",
     "credits:apply", "credits:detail", "credits:list", "credits:new", "credits:refund", "credits:refund_detail", "credits:refund_void", "credits:unapply", "credits:void",
     "deposits:detail", "deposits:list", "deposits:new", "deposits:reverse",
     "directory:detail", "directory:edit", "directory:list", "directory:new", "directory:status",
@@ -56,6 +56,8 @@ pub const ALLOWED: &[&str] = &[
     "payments:detail", "payments:list", "payments:new", "payments:reverse",
     "prepayments:apply", "prepayments:detail", "prepayments:invoice_apply", "prepayments:list", "prepayments:new", "prepayments:print", "prepayments:refund", "prepayments:refund_detail", "prepayments:refund_void", "prepayments:unapply", "prepayments:void",
     "profit_loss",
+    "reports:customer_statements", "reports:cash_flow", "reports:comparative_profit_and_loss", "reports:sales_by_customer_item",
+    "reports:schedule_c_activity", "reports:asset_depreciation_schedule",
     "receipts:detail", "receipts:list", "receipts:new", "receipts:reverse",
     "reconcile:begin", "reconcile:history", "reconcile:list", "reconcile:report", "reconcile:screen", "reconcile:undo",
     "recurring:detail", "recurring:edit", "recurring:list", "recurring:new",
@@ -65,7 +67,7 @@ pub const ALLOWED: &[&str] = &[
     "salestax:bulk_step", "salestax:group_edit", "salestax:group_new", "salestax:list", "salestax:rate_edit", "salestax:rate_new", "salestax:record_payment", "salestax:settings", "salestax:setup", "salestax:status", "salestax:tax_payment", "salestax:void_payment", "salestax:what_you_owe",
     "settings", "setup_done", "setup_fill", "setup_start", "stripe:payments",
     "time:edit", "time:list", "time:new",
-    "transfers:detail", "transfers:list", "transfers:new", "transfers:void", "trial_balance",
+    "transfers:detail", "transfers:list", "transfers:new", "transfers:void", "trial_balance", "vendor_1099",
 ];
 
 /// The desktop's own pages (not in the route table), by path.
@@ -125,6 +127,14 @@ mod tests {
         }
         for (path, _) in DESKTOP {
             assert!(fb_app::screens::resubmit::desktop_route_name(path).is_some(), "{path} is not a desktop page any more");
+        }
+    }
+
+    #[test]
+    fn report_routes_are_allowed_for_connected_sessions() {
+        let root = "/c/0195b4a4-55af-719e-96cb-a2f946b067bf/reports";
+        for slug in ["customer-statements", "cash-flow", "comparative-profit-and-loss", "sales-by-customer-item", "schedule-c", "asset-depreciation"] {
+            assert_eq!(classify(&format!("{root}/{slug}/")), Some(Allowed));
         }
     }
 

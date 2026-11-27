@@ -114,7 +114,7 @@ fn bank_type_accounts_are_bank_accounts_without_a_designation_step() {
     let other = account(&mut f.app, &f.c, "1200", "OTHER_CURRENT_ASSET");
     let values = json!({"request_key":uuid(),"date":"2026-11-02","from_account_id":f.bank,"to_account_id":other,"amount":"5.00","memo":""});
     let err = try_command(&mut f.app, json!({"type":"ReviewTransfer","company_id":f.c,"values":values})).unwrap_err();
-    assert!(err.contains("is not an active bank account"), "{err}");
+    assert!(err.contains("Choose two eligible bank or credit card accounts"), "{err}");
     // A new designation is refused at both entry points, even when supplied directly by ID.
     let rev = current_revision(&mut f.app, &f.c);
     let audits = count(&mut f.app, "SELECT count(*) FROM ledger_auditevent");

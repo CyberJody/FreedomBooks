@@ -29,6 +29,7 @@ body.shell main table.fin-report thead th { font-size: 11px; text-transform: upp
 body.shell main table.fin-report .amount, table.fin-report .amount { text-align: right; white-space: nowrap; width: 9.5em }
 body.shell main table.fin-report .fin-heading th { font-weight: 700; color: #35253e; padding-top: 12px; font-size: 13.5px }
 body.shell main table.fin-report .fin-account td:first-child { padding-left: 26px }
+table.fin-report .vendor-billing-address { white-space: pre-line }
 table.fin-report .fin-computed small { color: #675d6b; font-size: 11.5px; margin-left: 6px }
 body.shell main table.fin-report .fin-total th { font-weight: 650 }
 body.shell main table.fin-report .fin-total td.amount { border-top: 1px solid #6e6274; font-weight: 600 }
@@ -79,7 +80,15 @@ body.shell main table.gl-report tfoot td.amount { border-top: 1px solid #35253e;
   body.shell main table.gl-report td.gl-memo { overflow-wrap: break-word; word-break: normal }
 }
 
-/* Print sheet (N09 print.css supplies the page, toolbar, watermark and page counter). */
+/* Print sheet (N09 print.css supplies the page, toolbar and watermark; reports.css supplies CSP-safe page counters). */
+@page {
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    text-align: center;
+    font: 8pt system-ui, sans-serif;
+    color: #444;
+  }
+}
 .report-print .report-head { margin-bottom: 12px }
 .report-print table.fin-report th, .report-print table.fin-report td { font-size: 9.5pt; padding: 2px 6px }
 .report-print table.gl-report th, .report-print table.gl-report td { font-size: 8pt; padding: 1px 4px }
@@ -117,3 +126,35 @@ body.shell main table.fin-report tr.fin-d2 > :first-child, .report-print table.f
 body.shell main table.fin-report tr.fin-d3 > :first-child, .report-print table.fin-report tr.fin-d3 > :first-child { padding-left: 58px }
 body.shell main table.fin-report .fin-heading.fin-d1 th, body.shell main table.fin-report .fin-heading.fin-d2 th { font-size: 13px; padding-top: 8px }
 body.shell main table.fin-report .fin-heading.fin-d2 th, body.shell main table.fin-report .fin-total.fin-d2 th { font-weight: 600 }
+
+body.shell main table.statement-table, table.statement-table { max-width: none }
+table.statement-table th:first-child { min-width: 8em }
+.report-comparison table.statement-table thead th:not(:first-child) { min-width: 5em; text-align: right }
+@media print {
+  @page comparison {
+    size: letter landscape;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font: 8pt system-ui, sans-serif;
+      color: #444;
+    }
+  }
+  .report-landscape { page: comparison }
+  .report-print .report-comparison table.statement-table th,
+  .report-print .report-comparison table.statement-table td { font-size: 7.5pt; padding: 2px 3px }
+  .report-print .report-comparison table.statement-table .amount { width: auto }
+}
+
+.worksheet-options { flex: 1 0 100%; min-width: 0; margin: 0.5rem 0 }
+.worksheet-options summary { cursor: pointer; font-weight: 600 }
+.worksheet-options textarea { box-sizing: border-box; width: 100%; font-family: monospace }
+.worksheet-options code { overflow-wrap: anywhere }
+.worksheet-builder:not([hidden]) { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: end; margin: 0.75rem 0 }
+.worksheet-builder label[hidden] { display: none }
+.worksheet-builder input { max-width: 18rem }
+.statement-section { margin: 1.25rem 0 0.5rem; break-after: avoid }
+@media print {
+  .report-print .report-landscape .statement-table th,
+  .report-print .report-landscape .statement-table td { overflow-wrap: anywhere }
+  .report-print .report-landscape .statement-table .amount { width: auto }
+}

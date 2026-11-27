@@ -128,8 +128,8 @@ fn only_punctuation_tie_inversions_are_accepted_and_counted() {
 fn l2_order_ties_do_not_mask_changed_values_duplicates_or_company_moves() {
     let mut py=dump();
     py["l2a"]["directory"]=json!([
-        {"id":"x","company_id":"c1","model":"customer","display_name":"1â","notes":"Keep 123","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":""},
-        {"id":"y","company_id":"c1","model":"customer","display_name":"1,â","notes":"Keep 456","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":""}
+        {"id":"x","company_id":"c1","model":"customer","display_name":"1â","notes":"Keep 123","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":"","default_terms":null},
+        {"id":"y","company_id":"c1","model":"customer","display_name":"1,â","notes":"Keep 456","active":true,"business_name":"","contact_name":"","email":"","phone":"","billing_address":"","tax_status":"TAXABLE","exemption_number":"","default_terms":null}
     ]);
     let mut rs=py.clone();rs["l2a"]["directory"].as_array_mut().unwrap().reverse();
     let report=fb_harness::compare(&py,&rs);

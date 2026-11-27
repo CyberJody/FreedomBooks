@@ -50,12 +50,14 @@ fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_the_host_record_added
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected the format-92 schema"),
     };
-    assert_eq!((old.from(), old.to()), (92, 97));
+    assert_eq!((old.from(), old.to()), (92, 98));
     let backup = dir.path().join("verified-format-92.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
     let book = old.upgrade().unwrap();
     let after = test_support::snapshot(&book.conn).unwrap();
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
@@ -63,6 +65,10 @@ fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_the_host_record_added
     assert!(after["remote_host"].is_empty(), "no book is hosted by the upgrade");
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
+        if crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) {
+            assert_ne!(&upgraded[object], hash, "0211 extends {object}");
+            continue;
+        }
         if ["table:bankfeeds_account", "table:bankfeeds_transaction"].contains(&object.as_str()) {
             assert_ne!(&upgraded[object], hash, "0207 must extend {object}");
         } else if object != "view:fb_value_invalid"
@@ -76,7 +82,7 @@ fn a_format_92_book_is_backed_up_upgraded_and_reopens_with_the_host_record_added
         .filter(|k| !crate::ai_unattended_upgrade_tests::AI_UNATTENDED_OBJECTS.contains(k)
             && !crate::deposit_adjustments_upgrade_tests::OBJECTS.contains(k)
             && !crate::bankfeeds_matching_upgrade_tests::OBJECTS.contains(k)).collect();
-    assert_eq!(added, REMOTE_HOST_OBJECTS.iter().copied().collect::<BTreeSet<_>>());
+    assert_eq!(added, REMOTE_HOST_OBJECTS.iter().chain(crate::company_periods_upgrade_tests::OBJECTS).copied().collect::<BTreeSet<_>>());
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(upgraded, schema_hashes(&fresh.conn).unwrap());
     assert!(book.check().unwrap().is_empty());

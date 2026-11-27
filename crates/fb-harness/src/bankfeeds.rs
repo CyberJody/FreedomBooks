@@ -819,5 +819,17 @@ pub(super) fn normalize_audit(v: &mut Value, ids: &audit::Ids) -> bool {
     if let Some(x) = d.get("previous").and_then(|p| p.get("journal_id")).cloned() {
         d["previous"]["journal_id"] = mapped(&x, "bf_journal");
     }
+    if let Some(items) = d.get_mut("imported_feed_ids").and_then(Value::as_array_mut) {
+        for item in items {
+            *item = mapped(item, "bankfeedaccount");
+        }
+    }
+    if let Some(gaps) = d.get_mut("predecessor_gaps").and_then(Value::as_array_mut) {
+        for gap in gaps {
+            if let Some(feed_id) = gap.get("feed_id").cloned() {
+                gap["feed_id"] = mapped(&feed_id, "bankfeedaccount");
+            }
+        }
+    }
     true
 }

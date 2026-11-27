@@ -101,13 +101,17 @@ module.exports = async () => {
     await shot(page, 'attach-02-attached');
     pass('"Attach a file" opened the native chooser (PDF, PNG, JPEG or WebP) and the PDF is listed with "Attached inv1.pdf."');
 
-    // The Attach button does the same; a cancelled chooser stores nothing and says nothing.
+    // The Attach button does the same; a cancelled chooser stores nothing and explains why.
     await chooser({ canceled: true, filePaths: [] });
     await Promise.all([page.waitForEvent('load'), page.click('#attachments form.attachments-add button[type=submit]')]);
     assert.equal(await count(), before + 1);
-    assert.equal(await panel().locator('.attachments-note').count(), 0);
+    assert.equal(await panel().locator('.attachments-note').count(), 1);
+    assert.equal(
+      await panel().locator('.attachments-warning[role="status"]').innerText(),
+      'No file was chosen, so nothing was attached. Choose a file and click Open.'
+    );
     assert.equal((await asked()).length, 1);
-    pass('Attach opened the chooser too; cancelling stored nothing and showed no note');
+    pass('Attach opened the chooser too; cancelling stored nothing and showed the no-file warning');
 
     // A file over 10 MB is refused by Rust before it is stored, with the panel's own error note.
     await chooser({ canceled: false, filePaths: [big] });

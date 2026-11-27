@@ -63,7 +63,7 @@ fn transfer_changed_after_review_refuses_without_posting_and_lock_drops_review()
 fn invalid_form_fields_precede_business_rules_and_do_not_write(){
     let (mut app,c,bank,_,_,_)=fixture();let before=count(&mut app,"ledger_auditevent");
     let out=submit(&mut app,&format!("/c/{c}/transfers/new/"),vec![("request_key","bad".into()),("date","bad".into()),("from_account",bank.clone()),("to_account",bank),("amount","1".into())]);
-    let Outcome::Page{html,status}=out else{panic!("{out:?}")};assert_eq!(status,400);assert!(html.contains("Enter a valid UUID."));assert!(html.contains("Enter a valid date."));assert!(html.contains("Choose a different bank account"));assert_eq!(count(&mut app,"ledger_auditevent"),before);
+    let Outcome::Page{html,status}=out else{panic!("{out:?}")};assert_eq!(status,400);assert!(html.contains("Enter a valid UUID."));assert!(html.contains("Enter a valid date."));assert!(html.contains("Choose a different account"));assert_eq!(count(&mut app,"ledger_auditevent"),before);
     let html=screens::render(&mut app,&format!("/c/{c}/bills/calendar/?year=1900&month=1")).unwrap().html;assert!(html.contains("January 1900"));assert!(html.contains("aria-disabled=\"true\""));
 }
 

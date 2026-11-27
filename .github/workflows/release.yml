@@ -7,27 +7,72 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_BUILD_JOBS: '4'
+
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            platform: linux
-          - runner: windows-latest
-            platform: win32
-    runs-on: ${{ matrix.runner }}
+  verify:
+    runs-on: ubuntu-24.04
     env:
+      RUST_TEST_THREADS: '8'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: electron/package-lock.json
+      - name: Install Linux test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential perl pkg-config locales xvfb xauth libgtk-3-0t64 libnss3 libasound2t64
+          sudo locale-gen en_US.UTF-8
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - name: Install locked Electron dependencies
+        run: npm ci --prefix electron
+      - name: Configure Electron sandbox on Ubuntu 24.04
+        run: |
+          # Both Rust integration tests (fb-app) and Electron tests launch the real Electron binary.
+          sandbox=electron/node_modules/electron/dist/chrome-sandbox
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.22.1
+      - name: Check locked dependency policy
+        run: cargo deny --locked check licenses bans sources
+      - name: Check third-party notices
+        run: python3 tools/gen_third_party_notices.py --check
+      - name: Check core, host and remote dependency isolation
+        run: bash scripts/gate.sh --isolation-only
+      - name: Lint Rust workspace
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Test Rust workspace at default seeded case counts
+        run: |
+          TMPDIR="$(mktemp -d /tmp/fb-rs-XXXXXX)"
+          export TMPDIR
+          trap 'rm -rf -- "$TMPDIR"' EXIT
+          xvfb-run -a cargo test --locked --workspace --no-fail-fast
+      - name: Test Electron
+        run: |
+          TMPDIR="$(mktemp -d /tmp/fb-el-XXXXXX)"
+          export TMPDIR FB_DESKTOP_USER_DATA="$TMPDIR/profile"
+          trap 'rm -rf -- "$TMPDIR"' EXIT
+          xvfb-run -a npm test --prefix electron
+  build-linux:
+    needs: verify
+    runs-on: ubuntu-24.04
+    env:
+      PLATFORM: linux
       RELEASE_TAG: ${{ github.ref_name }}
-      CARGO_BUILD_JOBS: '4'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/packaging/.work/builder-cache
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: .node-version
           cache: npm
           cache-dependency-path: |
             packaging/package-lock.json
@@ -40,44 +85,97 @@ jobs:
         run: |
           mkdir -p packaging/.work/tmp
           echo "TMPDIR=$GITHUB_WORKSPACE/packaging/.work/tmp" >> "$GITHUB_ENV"
-      - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal
+      - name: Install pinned Rust toolchain
+        run: rustup show
       - name: Install Linux build and headless test tools
-        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential perl pkg-config xvfb xauth xdotool dbus-x11 p7zip-full
       - name: Install locked packaging tools
         run: npm ci --prefix packaging
       - name: Install locked host-side smoke driver
         run: npm ci --prefix electron
       - name: Build native module, harden, wrap and verify artifacts
-        run: python packaging/ci.py ${{ matrix.platform }}
+        run: python packaging/ci.py linux
       - name: Signing placeholder (unsigned alpha; fail if configured)
         env:
-          FB_WINDOWS_SIGNING_CERT_BASE64: ${{ matrix.platform == 'win32' && secrets.FB_WINDOWS_SIGNING_CERT_BASE64 || '' }}
-          FB_WINDOWS_SIGNING_PASSWORD: ${{ matrix.platform == 'win32' && secrets.FB_WINDOWS_SIGNING_PASSWORD || '' }}
-          FB_LINUX_GPG_PRIVATE_KEY: ${{ matrix.platform == 'linux' && secrets.FB_LINUX_GPG_PRIVATE_KEY || '' }}
-          FB_LINUX_GPG_PASSPHRASE: ${{ matrix.platform == 'linux' && secrets.FB_LINUX_GPG_PASSPHRASE || '' }}
-        run: python packaging/signing-placeholder.py ${{ matrix.platform }}
+          FB_WINDOWS_SIGNING_CERT_BASE64: ''
+          FB_WINDOWS_SIGNING_PASSWORD: ''
+          FB_LINUX_GPG_PRIVATE_KEY: ${{ secrets.FB_LINUX_GPG_PRIVATE_KEY || '' }}
+          FB_LINUX_GPG_PASSPHRASE: ${{ secrets.FB_LINUX_GPG_PASSPHRASE || '' }}
+        run: python packaging/signing-placeholder.py linux
       - uses: actions/upload-artifact@v4
         with:
-          name: installers-${{ matrix.platform }}
+          name: installers-linux
           path: |
             packaging/dist/*.AppImage
             packaging/dist/*.deb
+            packaging/dist/*.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-checks-linux
+          path: |
+            packaging/.work/appimage-smoke
+            packaging/.work/deb-smoke
+            packaging/dist/npm-production-*.json
+          if-no-files-found: ignore
+  build-windows:
+    needs: verify
+    runs-on: windows-latest
+    env:
+      PLATFORM: win32
+      RELEASE_TAG: ${{ github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/packaging/.work/builder-cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: |
+            packaging/package-lock.json
+            electron/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Set isolated temporary directory
+        shell: bash
+        run: |
+          mkdir -p packaging/.work/tmp
+          echo "TMPDIR=$GITHUB_WORKSPACE/packaging/.work/tmp" >> "$GITHUB_ENV"
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - name: Install locked packaging tools
+        run: npm ci --prefix packaging
+      - name: Install locked host-side smoke driver
+        run: npm ci --prefix electron
+      - name: Build native module, harden, wrap and verify artifacts
+        run: python packaging/ci.py win32
+      - name: Signing placeholder (unsigned alpha; fail if configured)
+        env:
+          FB_WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.FB_WINDOWS_SIGNING_CERT_BASE64 || '' }}
+          FB_WINDOWS_SIGNING_PASSWORD: ${{ secrets.FB_WINDOWS_SIGNING_PASSWORD || '' }}
+          FB_LINUX_GPG_PRIVATE_KEY: ''
+          FB_LINUX_GPG_PASSPHRASE: ''
+        run: python packaging/signing-placeholder.py win32
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-win32
+          path: |
             packaging/dist/FreedomBooks-Setup-*.exe
             packaging/dist/*.sha256
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: installer-checks-${{ matrix.platform }}
+          name: installer-checks-win32
           path: |
-            packaging/.work/appimage-smoke
-            packaging/.work/deb-smoke
             packaging/dist/npm-production-*.json
           if-no-files-found: ignore
   release:
-    needs: build
+    needs: [verify, build-linux, build-windows]
+    if: always() && needs.verify.result == 'success' && needs.build-linux.result == 'success'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -88,7 +186,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: installers-*
+          pattern: ${{ needs.build-windows.result == 'success' && 'installers-*' || 'installers-linux' }}
           merge-multiple: true
           path: installers
       - name: Attach verified unsigned alpha installers

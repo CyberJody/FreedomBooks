@@ -66,14 +66,14 @@ fn identity_secret(q: &impl Query) -> FbResult<Vec<u8>> {
 
 fn accounts(q: &impl Query, company: CompanyId, secret: &[u8]) -> FbResult<Vec<ReviewAccount>> {
     let mut statement = q.prepare(&format!(
-        "SELECT {FEED_COLS},c.host,f.remote_identity,c.active AND NOT c.needs_reconnect,f.provider_id_verified
+        "SELECT {FEED_COLS},c.host,f.remote_identity,c.active AND NOT c.needs_reconnect AS connection_active,f.provider_id_verified
          FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id
          WHERE c.company_id=?1 AND f.active=1 ORDER BY f.id"
     ))?;
     let accounts = statement.query_map([company.to_db()], |r| {
         let feed = feed_row(r)?;
-        let identity = ReviewIdentity::new(r.get(10)?, feed.currency.clone(), &r.get::<_, String>(11)?, &feed.remote_id, ACCOUNT_DOMAIN, secret, r.get(13)?);
-        Ok(ReviewAccount { feed, identity, connection_active: r.get(12)? })
+        let identity = ReviewIdentity::new(r.get("host")?, feed.currency.clone(), &r.get::<_, String>("remote_identity")?, &feed.remote_id, ACCOUNT_DOMAIN, secret, r.get("provider_id_verified")?);
+        Ok(ReviewAccount { feed, identity, connection_active: r.get("connection_active")? })
     })?;
     accounts.collect::<Result<Vec<_>, _>>().map_err(Into::into)
 }

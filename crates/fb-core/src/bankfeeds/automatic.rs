@@ -87,6 +87,7 @@ pub fn auto_post(
         }
         let (item, f) = accept::validated(w, co, item_id)?;
         let Some(f) = f else { return Ok(false) };
+        crate::periods::require_open(tx, co, item.date().unwrap_or_default())?;
         let mapped = f.ledger_account_id.as_deref().unwrap_or("");
         let name = qbo::validate_policy(tx, co, policy, &rule.account_id)?;
         if mapped == rule.account_id || item.amount == 0 {
@@ -127,7 +128,7 @@ pub fn auto_post(
             ));
         }
         // A two-line journal correctly records both bank transfers and card payments;
-        // the separate transfer-document service supports designated asset banks only.
+        // keep the imported policy on its existing journal path.
         let kind = "JOURNAL";
         let input = json!({"account_id":rule.account_id,"transfer_account_id":rule.account_id,"payee_name":name});
         let posted = accept::finish(w, actor, co, &item, &f, kind, &input, None)?;
@@ -150,6 +151,7 @@ pub fn auto_post(
             // Refusal is visible; posting and decision were rolled back together.
             // Never turn authorization/database failures into successful results.
             let message = match &e {
+                FbError::Validation(messages) if messages.first().is_some_and(|m| crate::periods::is_closed_message(m)) => e.message(),
                 FbError::Validation(_) => e.to_string(),
                 _ => return Err(e),
             };

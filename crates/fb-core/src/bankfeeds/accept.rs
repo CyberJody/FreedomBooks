@@ -423,6 +423,9 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
     let (debit, credit) = direction(item)?;
     let amount = magnitude(item)?;
     let date = item.date().unwrap_or("").to_owned();
+    if matches!(kind, "CHECK" | "DEPOSIT" | "TRANSFER" | "JOURNAL") {
+        crate::periods::require_open(tx, co, &date)?;
+    }
     match kind {
         "MATCH" => {
             let multi_ids: Option<Vec<String>> = match field(input, "journal_line_ids") {
@@ -555,8 +558,11 @@ pub(super) fn finish(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, item: &It
             decide(w, actor, co, item, Decision { status: "ACCEPTED", kind: "DEPOSIT", journal_id: &journal, line_id: &line, reference: &number, url: format!("deposits:detail:{dep_id}"), matched_lines: vec![] })
         }
         "TRANSFER" => {
+            if !field(input, "lines").is_null() {
+                return Err(err("A transfer must have exactly two accounts. Remove the split lines."));
+            }
             let other = id(field(input, "transfer_account_id"), false)?.unwrap_or_default();
-            let (from, to) = if item.money_in() { (other, mapped.clone()) } else { (mapped.clone(), other) };
+            let (from, to) = if debit > 0 { (other, mapped.clone()) } else { (mapped.clone(), other) };
             let payload = w.value(&json!({"request_key":request_key("TRANSFER", item, ""),"date":date,"amount":money(amount),"from_account_id":from,"to_account_id":to,"memo":memo(item)}));
             let review = transfers::review_transfer_tx(tx, actor, co, &payload)?;
             let trf = transfers::record_transfer_tx(tx, actor, co, &payload, &review)?;
@@ -618,6 +624,7 @@ fn check_draft(w: &Writes<'_, '_>, actor: UserId, co: CompanyId, transaction_id:
     services::access(tx, actor, co)?;
     let (item, f) = validated(w, co, transaction_id)?;
     let Some(f) = f else { return Ok(Err(item)) };
+    crate::periods::require_open(tx, co, item.date().unwrap_or_default())?;
     if item.money_in() {
         return Err(err("Money coming in cannot be recorded as a check."));
     }
@@ -818,6 +825,9 @@ pub fn undo_status(q: &(impl Query + ?Sized), actor: UserId, co: CompanyId, item
         return Ok(None);
     }
     let refuse = |reason: String| Ok(Some(Err(reason)));
+    if let Some(reason) = crate::periods::closed_message(q, co, &date)? {
+        return refuse(reason);
+    }
     if let Some(reason) = return_blocker(q, co, item)? {
         return refuse(reason);
     }

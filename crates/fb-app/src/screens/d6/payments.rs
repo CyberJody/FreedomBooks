@@ -468,7 +468,11 @@ fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppR
     match app.run(Command::RecordBillPayments { company_id: c.to_db(), payments, review_tokens: tokens }) {
         Ok(Outcome::Done { .. }) => Ok(Outcome::Redirect { location: format!("{}?paid={key}", url("payments:new", &[&c.to_db()])) }),
         Err(AppError::Core(FbError::Validation(m))) => {
-            page.errors.push(format!("Nothing was paid: {}", m.join(" ")));
+            if m.iter().all(|message| fb_core::periods::is_closed_message(message)) {
+                page.field_errors.insert("date".into(), m.join(" "));
+            } else {
+                page.errors.push(format!("Nothing was paid: {}", m.join(" ")));
+            }
             Ok(Outcome::Invalid { html: pay_bills_page(app, r, path, &[], Some(&run), &page)? })
         }
         Err(e) => Err(e),

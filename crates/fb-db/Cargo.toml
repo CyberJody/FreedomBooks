@@ -5,6 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
+fb-ids = { path = "../fb-ids" }
 fb-money = { path = "../fb-money" }
 rust_decimal = "1"
 chrono = { version = "0.4", default-features = false, features = ["std"] }

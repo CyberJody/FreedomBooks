@@ -37,8 +37,9 @@ tempfile = "3"
 fs2 = "0.4"
 same-file = "1"
 
-# Unix attachment/backup file handling (directory-relative, no-follow opens).
+# Unix attachment and backup file handling, including staging cleanup.
 [target.'cfg(unix)'.dependencies]
+libc = "0.2"
 rustix = { version = "1", features = ["fs", "process"] }
 
 # Windows attachment store backend (see src/attachments/storage/windows.rs). Already in Cargo.lock via rustix/errno.

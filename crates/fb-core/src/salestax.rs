@@ -1,10 +1,58 @@
 //! FX11 tax settings, rates/groups, resolver and one-time bulk step, translated from salestax.services.
 use crate::{Book, CompanyId, FbError, FbResult, UserId, calculations, directory, documents, py, services};
+use chrono::{Datelike, NaiveDate};
 use fb_db::Writer;
 use fb_db::rusqlite::{OptionalExtension, params};
 use rust_decimal::Decimal;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+
+pub const OWED_PERIOD_PRESETS: [(&str, &str); 9] = [
+    ("filing_period", "Current filing period"),
+    ("month", "This month"),
+    ("calendar_quarter", "This calendar quarter"),
+    ("year", "This year"),
+    ("ny_dec_feb", "NY Dec–Feb"),
+    ("ny_mar_may", "NY Mar–May"),
+    ("ny_jun_aug", "NY Jun–Aug"),
+    ("ny_sep_nov", "NY Sep–Nov"),
+    ("custom", "Custom"),
+];
+
+fn month_span(index: i32, months: i32) -> (NaiveDate, NaiveDate) {
+    let first = |i: i32| NaiveDate::from_ymd_opt(i.div_euclid(12), i.rem_euclid(12) as u32 + 1, 1)
+        .expect("supported filing year");
+    (first(index), first(index + months).pred_opt().expect("first of month"))
+}
+
+/// The calendar period containing the reporting date.
+pub fn current_period(today: NaiveDate, frequency: &str) -> (NaiveDate, NaiveDate) {
+    let months = match frequency {
+        "MONTHLY" => 1,
+        "ANNUALLY" => 12,
+        _ => 3,
+    };
+    let index = today.year() * 12 + today.month0() as i32;
+    month_span(index.div_euclid(months) * months, months)
+}
+
+/// NY's quarterly filing year runs March through February. January and February
+/// belong to the cycle that began in March of the prior calendar year.
+pub fn owed_period_preset(key: &str, today: NaiveDate, frequency: &str) -> Option<(NaiveDate, NaiveDate)> {
+    let month = match key {
+        "filing_period" => return Some(current_period(today, frequency)),
+        "month" => return Some(current_period(today, "MONTHLY")),
+        "calendar_quarter" => return Some(current_period(today, "QUARTERLY")),
+        "year" => return Some(current_period(today, "ANNUALLY")),
+        "ny_dec_feb" => 12,
+        "ny_mar_may" => 3,
+        "ny_jun_aug" => 6,
+        "ny_sep_nov" => 9,
+        _ => return None,
+    };
+    let year = today.year() - i32::from(today.month() < 3);
+    Some(month_span(year * 12 + month - 1, 3))
+}
 
 pub fn percent(v: Decimal) -> String {
     v.normalize().to_string()
@@ -553,4 +601,29 @@ pub fn configure(book: &mut Book, actor: UserId, company: CompanyId, input: &Val
         let (settings, _) = save_settings_tx(tx, actor, company, &json!({"expected_revision":input["expected_revision"],"charge_tax":charge,"default_item_id":default,"owed_basis":before["owed_basis"],"filing_frequency":before["filing_frequency"]}))?;
         Ok(settings)
     })
+}
+
+#[cfg(test)]
+mod period_tests {
+    use super::*;
+
+    #[test]
+    fn ny_filing_quarters_follow_the_march_through_february_cycle() {
+        let day = |s: &str| s.parse::<NaiveDate>().unwrap();
+        for (key, start, end) in [
+            ("ny_dec_feb", "2027-12-01", "2028-02-29"),
+            ("ny_mar_may", "2027-03-01", "2027-05-31"),
+            ("ny_jun_aug", "2027-06-01", "2027-08-31"),
+            ("ny_sep_nov", "2027-09-01", "2027-11-30"),
+        ] {
+            for today in ["2027-03-01", "2027-12-01", "2028-02-29"] {
+                assert_eq!(owed_period_preset(key, day(today), "MONTHLY"), Some((day(start), day(end))));
+            }
+        }
+        assert_eq!(owed_period_preset("ny_dec_feb", day("2028-03-01"), "QUARTERLY"),
+            Some((day("2028-12-01"), day("2029-02-28"))));
+        assert_eq!(owed_period_preset("calendar_quarter", day("2028-02-29"), "MONTHLY"),
+            Some((day("2028-01-01"), day("2028-03-31"))));
+        assert_eq!(owed_period_preset("custom", day("2028-02-29"), "MONTHLY"), None);
+    }
 }

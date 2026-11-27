@@ -35,7 +35,8 @@ fn a_format_96_book_is_backed_up_upgraded_and_reopens_cleanly() {
     let boundary = 96;
     assert_eq!(MIGRATIONS[boundary - 1].0, "0209_deposit_adjustments");
     assert_eq!(MIGRATIONS[boundary].0, "0210_bankfeeds_matching");
-    assert_eq!(MIGRATIONS.len(), boundary + 1);
+    assert_eq!(MIGRATIONS[boundary + 1].0, "0211_company_and_bankfeed_defaults");
+    assert_eq!(MIGRATIONS.len(), boundary + 2);
     let conn = Connection::open(&path).unwrap();
     conn.execute_batch(&format!("PRAGMA key=\"x'{}'\"", hex(&key))).unwrap();
     Book::configure(&conn).unwrap();
@@ -53,19 +54,25 @@ fn a_format_96_book_is_backed_up_upgraded_and_reopens_cleanly() {
         Opened::Behind(old) => old,
         Opened::Current(_) => panic!("expected a format-96 book"),
     };
-    assert_eq!((old.from(), old.to()), (96, 97));
+    assert_eq!((old.from(), old.to()), (96, 98));
     let backup = dir.path().join("verified-format-96.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), before);
     let book = old.upgrade().unwrap();
     let after = test_support::snapshot(&book.conn).unwrap();
     assert_eq!(after.len(), before.len() + TABLES);
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before {
         assert_eq!(&after[table], rows, "upgrade changed {table}");
     }
     assert!(after["bankfeeds_transaction_match"].is_empty());
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in &schema {
+        if crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str()) {
+            assert_ne!(&upgraded[object], hash, "0211 extends {object}");
+            continue;
+        }
         if CHANGED.contains(&object.as_str()) {
             assert_ne!(&upgraded[object], hash, "0210 replaces {object}");
         } else {
@@ -73,7 +80,7 @@ fn a_format_96_book_is_backed_up_upgraded_and_reopens_cleanly() {
         }
     }
     let added: BTreeSet<&str> = upgraded.keys().filter(|k| !schema.contains_key(*k)).map(String::as_str).collect();
-    assert_eq!(added, OBJECTS.iter().copied().collect());
+    assert_eq!(added, OBJECTS.iter().chain(crate::company_periods_upgrade_tests::OBJECTS).copied().collect());
     let fresh = Book::create(&dir.path().join("fresh.fbbook"), &key).unwrap();
     assert_eq!(upgraded, schema_hashes(&fresh.conn).unwrap());
     assert!(book.check().unwrap().is_empty());

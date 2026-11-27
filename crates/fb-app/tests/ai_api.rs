@@ -973,11 +973,27 @@ fn feed_review_proves_unchanged_ids_and_lists_each_state_once() {
          "currency":"USD","balance":100,"available":null,"balance_epoch":null,"transactions":[
              {"remote_id":"wire-row","posted_on":null,"transacted_on":"2026-11-02","amount":42,"description":"Synthetic wire row","pending":true}]}
     ]})).unwrap();
+    let evidence = [
+        bankfeeds::ProviderIdEvidence { account_exact: true, transactions_exact: vec![true] },
+        bankfeeds::ProviderIdEvidence { account_exact: false, transactions_exact: vec![false] },
+    ];
     bankfeeds::store_pull_for_desktop(&mut open.book, open.owner, f.company, &connection, &pull, "2026-11-02T12:00:00Z", false, None,
-        &bankfeeds::SecretSet::none(), &[
-            bankfeeds::ProviderIdEvidence { account_exact: true, transactions_exact: vec![true] },
-            bankfeeds::ProviderIdEvidence { account_exact: false, transactions_exact: vec![false] },
-        ]).unwrap();
+        &bankfeeds::SecretSet::none(), &evidence).unwrap();
+    let pending_ids: Vec<String> = open.book.read(|q| -> Result<Vec<String>, fb_db::DbError> {
+        let mut st = q.prepare("SELECT id FROM bankfeeds_account WHERE connection_id=?1 AND import_state='PENDING' ORDER BY id")?;
+        let rows = st.query_map([&connection], |r| r.get::<_, String>(0))?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }).unwrap();
+    assert_eq!(pending_ids.len(), 2);
+    let settings: Vec<_> = pending_ids.into_iter().map(|feed_account_id| bankfeeds::ImportSettings {
+        feed_account_id,
+        expected_state: "PENDING".into(),
+        expected_date: None,
+        import_from_date: None,
+    }).collect();
+    bankfeeds::save_mappings_and_import_settings(&mut open.book, open.owner, f.company, &connection, &[], &settings, &bankfeeds::SecretSet::none()).unwrap();
+    bankfeeds::store_pull_for_desktop(&mut open.book, open.owner, f.company, &connection, &pull, "2026-11-02T12:00:00Z", false, None,
+        &bankfeeds::SecretSet::none(), &evidence).unwrap();
     let writer = f.app.ai_grant(f.company, "Synthetic writer", Permission::AccountingWrite).unwrap();
     let reader = f.app.ai_grant(f.company, "Synthetic reader", Permission::ReadOnly).unwrap();
     let read = reader["token"].as_str().unwrap();
@@ -2630,7 +2646,7 @@ fn only_a_review_that_asks_reads_the_settlement() {
     assert_eq!(asked["review"], plain["review"]);
 }
 
-// Second review of the settlement guard: its five probes, kept as tests.
+// Second review of the settlement guard (internal test notes): its five probes, kept as tests.
 // The first pins a limit the documentation now states: after a lost refusal, the key only compares
 // against the fresh review, so the caller must compare that review's settlement with the one it acted on.
 

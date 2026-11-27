@@ -21,11 +21,12 @@ pub(super) fn render(
     .unwrap();
     vm["can_write"] = json!(app.authenticated_session()?.role != crate::identity::Role::Readonly);
     let today = (app.today)();
+    let start_month = super::d8::fiscal_start_month(app, c)?;
     vm["presets"] = json!(
         p::PRESETS
             .iter()
             .map(|(key, label)| {
-                let (start, end) = p::preset_range(key, today)
+                let (start, end) = p::preset_range(key, today, start_month)
                     .map(|(a, b)| (a.to_string(), b.to_string()))
                     .unwrap_or_default();
                 json!([key, label, start, end])
@@ -58,6 +59,7 @@ pub(super) fn render(
             end: get(params, "end"),
         },
         today,
+        start_month,
     );
     let mut errors = Vec::new();
     let account = if raw_account.is_empty() {

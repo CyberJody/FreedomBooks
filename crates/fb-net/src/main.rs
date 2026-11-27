@@ -165,6 +165,8 @@ struct Request {
     #[serde(default)]
     start_epoch: Option<i64>,
     #[serde(default)]
+    discovery: bool,
+    #[serde(default)]
     zone: Option<String>,
     #[serde(default)]
     gmail: Option<gmail::Input>,
@@ -275,13 +277,17 @@ struct Pull<'a> {
 
 fn simplefin_fetch(request: &Request) -> PluginResult<()> {
     let record = request.record.as_deref().ok_or(PluginError::NeedsSignIn)?;
-    let start = request.start_epoch.ok_or(PluginError::InvalidConfiguration)?;
+    let start = if request.discovery {
+        None
+    } else {
+        Some(request.start_epoch.ok_or(PluginError::InvalidConfiguration)?)
+    };
     let plugin = SimpleFin::new(request.zone.as_deref().unwrap_or("UTC"))?;
     let zone = plugin.zone();
     let (cx, _store) = context(fb_plugin_simplefin::MANIFEST.id, simplefin_http()?, Some(record))?;
     let connection = FeedConnection { id: cx.connection_id() };
     // Python `_sync_locked`: start date only, no end date, no pending items (the protocol default).
-    let set = plugin.fetch_account_set(&cx, &connection, FetchOptions { start_epoch: Some(start), ..Default::default() })?;
+    let set = plugin.fetch_account_set(&cx, &connection, FetchOptions { start_epoch: start, balances_only: request.discovery, ..Default::default() })?;
     let pull = Pull {
         accounts: set
             .accounts
@@ -295,10 +301,11 @@ fn simplefin_fetch(request: &Request) -> PluginResult<()> {
                 balance: Some(a.balance_cents),
                 available: a.available_cents,
                 balance_epoch: a.balance_epoch,
-                skipped: &a.skipped_text,
+                skipped: if request.discovery { &[] } else { &a.skipped_text },
                 transactions: a
                     .transactions
                     .iter()
+                    .filter(|_| !request.discovery)
                     .map(|t| PullTransaction {
                         remote_id: &t.remote_id,
                         posted_on: parse::local_date(t.posted_epoch, zone),
@@ -320,7 +327,7 @@ fn simplefin_fetch(request: &Request) -> PluginResult<()> {
     }
     let identity_evidence = set.accounts.iter().map(|account| IdEvidence {
         account_exact: account.remote_id_exact,
-        transactions_exact: account.transactions.iter().map(|transaction| transaction.remote_id_exact).collect(),
+        transactions_exact: account.transactions.iter().filter(|_| !request.discovery).map(|transaction| transaction.remote_id_exact).collect(),
     }).collect();
     #[derive(Serialize)]
     struct Fetched<'a> {

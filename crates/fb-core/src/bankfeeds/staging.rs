@@ -1,7 +1,7 @@
 //! The DB phase of a sync (`_sync_locked` preflight, `_record_sync`, `_store`) and the plugin's
 //! `CoreBridge::stage_bank_transactions` entry point. The network phase is the simplefin plugin's.
 use super::*;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use serde::Deserialize;
 
 /// One parsed transaction, as the plugin hands it over: local accounting dates in the book's zone,
@@ -127,7 +127,7 @@ struct AccountKeys {
     remote: String,
     transactions: Vec<String>,
 }
-fn account_keys(secret: &[u8], a: &StagedAccount) -> AccountKeys {
+fn account_keys(secret: &[u8], a: &StagedAccount, include_transactions: bool) -> AccountKeys {
     let key = |domain: &str, raw: &str| fb_db::bankfeeds_text::identity_key(secret, domain, raw);
     AccountKeys {
         conn_key: key(CONN_KEY_DOMAIN, &a.conn_key),
@@ -135,6 +135,7 @@ fn account_keys(secret: &[u8], a: &StagedAccount) -> AccountKeys {
         transactions: a
             .transactions
             .iter()
+            .filter(|_| include_transactions)
             .map(|t| key(TRANSACTION_DOMAIN, &t.remote_id))
             .collect(),
     }
@@ -169,7 +170,7 @@ fn removed_characters(value: &str) -> usize {
 fn transaction_removed(t: &StagedTransaction) -> usize {
     removed_characters(&t.remote_id) + removed_characters(&t.description)
 }
-fn pull_removed(pull: &StagedPull) -> usize {
+fn pull_removed(pull: &StagedPull, include_transactions: bool) -> usize {
     let all = |values: &[String]| values.iter().map(|s| removed_characters(s)).sum::<usize>();
     all(&pull.skipped)
         + all(&pull.errors)
@@ -181,9 +182,10 @@ fn pull_removed(pull: &StagedPull) -> usize {
                     .into_iter()
                     .map(|s| removed_characters(s))
                     .sum::<usize>()
-                    + all(&a.skipped)
+                    + if include_transactions { all(&a.skipped) } else { 0 }
                     + a.transactions
                         .iter()
+                        .filter(|_| include_transactions)
                         .map(transaction_removed)
                         .sum::<usize>()
             })
@@ -196,7 +198,7 @@ fn audit_removed(mut detail: Value, count: usize) -> Value {
     }
     detail
 }
-fn provider_pull(secrets: &SecretSet, pull: &StagedPull) -> StagedPull {
+fn provider_pull(secrets: &SecretSet, pull: &StagedPull, include_transactions: bool) -> StagedPull {
     let one = |s: &str| provider_ingress(secrets, s);
     let all = |v: &[String]| v.iter().map(|s| one(s)).collect::<Vec<_>>();
     StagedPull {
@@ -211,13 +213,16 @@ fn provider_pull(secrets: &SecretSet, pull: &StagedPull) -> StagedPull {
                     name,
                     org_name,
                     currency: one(&a.currency),
-                    skipped: all(&a.skipped),
+                    skipped: if include_transactions { all(&a.skipped) } else { vec![] },
                     transactions: a
                         .transactions
                         .iter()
+                        .filter(|_| include_transactions)
                         .map(|t| provider_transaction(secrets, t))
                         .collect(),
-                    ..a.clone()
+                    balance: a.balance,
+                    available: a.available,
+                    balance_epoch: a.balance_epoch,
                 }
             })
             .collect(),
@@ -239,7 +244,7 @@ fn parse_now(now: &str) -> FbResult<DateTime<Utc>> {
 fn stamp(d: DateTime<Utc>) -> String {
     d.format("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()
 }
-fn opt_date(d: &Option<String>) -> FbResult<Option<String>> {
+pub(super) fn opt_date(d: &Option<String>) -> FbResult<Option<String>> {
     d.as_deref()
         .map(|s| {
             fb_db::dates::parse_iso_date(s)
@@ -303,42 +308,112 @@ pub fn begin_sync(
                 return Err(err(format!("Synced {}. SimpleFIN asks apps not to pull too often; try again in {minutes} min.", ago(since))));
             }
         }
-        Ok(window_start(q, co, connection_id, now)?.timestamp())
+        let cap = back(now, MAX_WINDOW_DAYS)?;
+        let first = back(now, FIRST_SYNC_DAYS)?;
+        let mut st = q.prepare(
+            "SELECT id FROM bankfeeds_account WHERE connection_id=?1 AND active=1 AND import_state IN ('READY','ACTIVE')",
+        )?;
+        let ids = st.query_map([connection_id], |row| row.get::<_, String>(0))?;
+        let mut start = None;
+        for id in ids {
+            let id = id?;
+            let account = feed(q, &id)?.ok_or_else(|| err("The downloaded account could not be read."))?;
+            let window = feed_window(q, co, &account, now)?;
+            let mut wanted = match window.history.last {
+                Some(good) => back(good, OVERLAP_DAYS)?,
+                None if window.history.future => cap,
+                None => first,
+            };
+            if account.import_state == "READY" {
+                if let Some(date) = &account.import_from_date {
+                    wanted = wanted.min(floor_start(date, cap)?);
+                } else if window.predecessor.is_none()
+                    && let Some(good) = candidate_last_good(q, co, connection_id, now)?
+                {
+                    wanted = wanted.min(back(good, OVERLAP_DAYS)?);
+                }
+            }
+            if let Some(reach) = window.predecessor
+                && window.before_coverage(reach.max(cap))
+            {
+                wanted = wanted.min(reach);
+            }
+            start = Some(start.map_or(wanted, |prior: DateTime<Utc>| prior.min(wanted)));
+        }
+        // Before there are importable accounts, only the connection-level cursor and possible
+        // predecessor connections are known. Discovery and pending pulls establish no feed coverage.
+        let start = match start {
+            Some(start) => start,
+            None => connection_window(q, co, connection_id, now, first, cap)?,
+        };
+        Ok(start.max(cap).timestamp())
     })
+}
+/// Discovery rate-limits its own provider requests using its audit trail.
+pub fn begin_discovery(book: &mut Book, actor: UserId, co: CompanyId, connection_id: &str, now: &str) -> FbResult<()> {
+    book.read(|q| {
+        services::access(q, actor, co)?;
+        require_active_connection(q, co, connection_id)?;
+        let now = parse_now(now)?;
+        let last: Option<String> = q.query_row(
+            "SELECT json_extract(detail,'$.at') FROM ledger_auditevent
+              WHERE company_id=?1 AND target=?2 AND action='bankfeed.discovered'
+                AND json_extract(detail,'$.at')<=?3
+              ORDER BY json_extract(detail,'$.at') DESC,id DESC LIMIT 1",
+            params![co.to_db(), format!("bankfeedconnection:{connection_id}"), stamp(now)], |r| r.get(0),
+        ).optional()?.flatten();
+        if let Some(last) = last.as_deref().map(parse_now).transpose()?
+            && now - last < chrono::Duration::seconds(MANUAL_MIN_INTERVAL_SECS)
+        {
+            return Err(err("Accounts were checked recently. Wait a few minutes before trying Discover accounts again."));
+        }
+        Ok(())
+    })
+}
+
+pub fn record_discovery_failure(book: &mut Book, actor: UserId, co: CompanyId, connection_id: &str, now: &str, summary: &str, secrets: &SecretSet) -> FbResult<String> {
+    command(book, secrets, |w| {
+        let user = services::access(w.tx, actor, co)?;
+        require_active_connection(w.tx, co, connection_id)?;
+        let summary = written(secrets, summary, 500);
+        w.audit(&user, co, "bankfeed.discovered", format!("bankfeedconnection:{connection_id}"),
+            json!({"ok":false,"at":stamp(parse_now(now)?),"summary":summary}))?;
+        Ok(summary)
+    })
+}
+
+/// First local instant in the requested day, within the provider lookback.
+fn floor_start(date: &str, cap: DateTime<Utc>) -> FbResult<DateTime<Utc>> {
+    if date < local_day(cap).as_str() {
+        return Ok(cap);
+    }
+    let mut local = parse_date(date)?.and_hms_opt(0, 0, 0).ok_or_else(|| err("Invalid timestamp."))?;
+    let zone = zone();
+    // Some zones advance their clocks at midnight or skip a calendar day.
+    loop {
+        if let Some(start) = zone.from_local_datetime(&local).earliest() {
+            return Ok(start.with_timezone(&Utc));
+        }
+        local = local.checked_add_signed(chrono::Duration::minutes(1)).ok_or_else(|| err("Invalid timestamp."))?;
+    }
 }
 fn back(from: DateTime<Utc>, days: i64) -> FbResult<DateTime<Utc>> {
     from.checked_sub_signed(chrono::Duration::days(days)).ok_or_else(|| err("Invalid timestamp."))
 }
-/// Where the next window starts (`_window`), never earlier than the provider's [`MAX_WINDOW_DAYS`] cap:
-///
-/// - From this connection's last COMPLETE sync less the overlap, never from the last attempt: a failed attempt
-///   or a pull with provider errors downloaded nothing it can vouch for (review 2026-11-10, code-1 finding 3).
-/// - A connection that never completed a sync: [`FIRST_SYNC_DAYS`], or further back (within the cap) to the
-///   latest complete sync of a connection it may be replacing (another connection of the company that was
-///   disconnected or needs reconnecting). Its downloaded accounts are not mapped yet, so which connection it
-///   replaces is not known; the window is never shorter than the first-sync default for that reason.
-/// - Once its accounts are mapped, the connections it replaced are known ([`replaced_last_good`]): when the
-///   dates between their last complete sync (less the overlap) and this connection's first window can still
-///   be reached, the next window reaches back to them; when the cap prevents it, that sync names the dates
-///   ([`missing_dates`]) and later windows do not keep reaching (nothing more can be fetched).
-fn window_start(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, now: DateTime<Utc>) -> FbResult<DateTime<Utc>> {
-    let cap = back(now, MAX_WINDOW_DAYS)?;
-    let Some(good) = last_complete_sync(q, co, connection_id, now)? else {
-        if complete_syncs(q, co, connection_id)? > 0 {
-            // Every complete sync was recorded under a clock ahead of this one: none can be trusted.
-            return Ok(cap);
-        }
-        let first = back(now, FIRST_SYNC_DAYS)?;
-        return Ok(match candidate_last_good(q, co, connection_id, now)? {
-            Some(earlier) => first.min(back(earlier, OVERLAP_DAYS)?).max(cap),
-            None => first,
-        });
-    };
-    let own = back(good, OVERLAP_DAYS)?;
-    let cov = coverage_start(q, co, connection_id)?;
-    let reach = replaced_reach(q, co, connection_id, now)?.filter(|want| cov.is_some_and(|cov| (*want).max(cap) < cov));
-    Ok(reach.map_or(own, |want| own.min(want)).max(cap))
+fn connection_window(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, now: DateTime<Utc>, first: DateTime<Utc>, cap: DateTime<Utc>) -> FbResult<DateTime<Utc>> {
+    if let Some(good) = last_complete_sync(q, co, connection_id, now)? {
+        return back(good, OVERLAP_DAYS);
+    }
+    if complete_syncs(q, co, connection_id)? > 0 {
+        // Every complete sync was recorded under a clock ahead of this one.
+        return Ok(cap);
+    }
+    Ok(match candidate_last_good(q, co, connection_id, now)? {
+        Some(good) => first.min(back(good, OVERLAP_DAYS)?),
+        None => first,
+    })
 }
+
 /// The latest complete sync among other connections of the company that a new connection may be replacing:
 /// those disconnected or needing reconnect.
 fn candidate_last_good(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, now: DateTime<Utc>) -> FbResult<Option<DateTime<Utc>>> {
@@ -350,52 +425,87 @@ fn candidate_last_good(q: &(impl Query + ?Sized), co: CompanyId, connection_id: 
     }
     Ok(latest)
 }
-/// The connections this one replaced: other connections of the company with a downloaded account that is,
-/// or once was (`bankfeed.mapped`), mapped to a ledger account one of this connection's accounts maps to now.
-fn replaced(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str) -> FbResult<Vec<String>> {
+#[derive(Default)]
+struct FeedHistory {
+    last: Option<DateTime<Utc>>,
+    earliest: Option<DateTime<Utc>>,
+    future: bool,
+}
+
+struct FeedWindow {
+    history: FeedHistory,
+    predecessor: Option<DateTime<Utc>>,
+}
+
+impl FeedWindow {
+    fn before_coverage(&self, at: DateTime<Utc>) -> bool {
+        self.history.last.is_none() || self.history.earliest.is_some_and(|start| at < start)
+    }
+}
+
+fn feed_window(q: &(impl Query + ?Sized), co: CompanyId, feed: &Feed, now: DateTime<Utc>) -> FbResult<FeedWindow> {
+    // A READY feed has not yet completed its first import; ambiguous legacy count-only
+    // audits from other accounts on the connection must not advance its cursor.
+    let history = feed_history(q, co, &feed.connection_id, &feed.id, now, feed.import_state != "READY")?;
+    // A reconnect can follow an explicit unmap. Match the prior feed's historical
+    // ledger mapping as well as its current mapping, and use only that feed's pulls.
     let mut st = q.prepare(
-        "SELECT DISTINCT o.connection_id FROM bankfeeds_account f JOIN bankfeeds_account o ON o.connection_id<>f.connection_id
-           JOIN bankfeeds_connection oc ON oc.id=o.connection_id
-          WHERE f.connection_id=?2 AND f.ledger_account_id IS NOT NULL AND oc.company_id=?1
-            AND (o.ledger_account_id=f.ledger_account_id OR EXISTS(SELECT 1 FROM ledger_auditevent m WHERE m.company_id=?1 AND m.action='bankfeed.mapped'
-                 AND m.target='bankfeedaccount:'||o.id AND json_extract(m.detail,'$.after')=f.ledger_account_id))
-          ORDER BY o.connection_id",
+        "SELECT o.connection_id,o.id FROM bankfeeds_account o
+          JOIN bankfeeds_connection oc ON oc.id=o.connection_id
+          WHERE o.connection_id<>?2 AND oc.company_id=?1 AND ?3 IS NOT NULL
+            AND (o.ledger_account_id=?3 OR EXISTS(SELECT 1 FROM ledger_auditevent m WHERE m.company_id=?1 AND m.action='bankfeed.mapped'
+                 AND m.target='bankfeedaccount:'||o.id AND json_extract(m.detail,'$.after')=?3))",
     )?;
-    Ok(st.query_map(params![co.to_db(), connection_id], |r| r.get(0))?.collect::<Result<Vec<_>, _>>()?)
-}
-/// The latest complete sync among the connections this one replaced ([`replaced`]).
-pub(crate) fn replaced_last_good(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, now: DateTime<Utc>) -> FbResult<Option<DateTime<Utc>>> {
+    let mut rows = st.query(params![co.to_db(), feed.connection_id, feed.ledger_account_id.as_deref()])?;
     let mut latest = None;
-    for other in replaced(q, co, connection_id)? {
-        latest = latest.max(last_complete_sync(q, co, &other, now)?);
+    while let Some(row) = rows.next()? {
+        latest = latest.max(feed_history(q, co, &row.get::<_, String>(0)?, &row.get::<_, String>(1)?, now, true)?.last);
     }
-    Ok(latest)
+    let predecessor = latest.map(|good| back(good, OVERLAP_DAYS)).transpose()?;
+    Ok(FeedWindow { history, predecessor })
 }
-/// Where coverage of the replaced connections ended (their latest complete sync less the overlap), when this
-/// connection's own windows began later than that: the dates in between were downloaded by neither.
-fn replaced_reach(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, now: DateTime<Utc>) -> FbResult<Option<DateTime<Utc>>> {
-    let Some(cov) = coverage_start(q, co, connection_id)? else { return Ok(None) };
-    let Some(good) = replaced_last_good(q, co, connection_id, now)? else { return Ok(None) };
-    let want = back(good, OVERLAP_DAYS)?;
-    Ok((want < cov).then_some(want))
-}
-/// The earliest window start among this connection's complete syncs: where its own downloads begin. None
-/// when it has none, or when one carried no window (a pull that was not limited, or one recorded before
-/// windows were audited): then nothing earlier is known to be missing.
-fn coverage_start(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str) -> FbResult<Option<DateTime<Utc>>> {
-    let (earliest, unbounded, n): (Option<String>, i64, i64) = q.query_row(
-        &format!("SELECT min(json_extract(detail,'$.window_start')),coalesce(sum(json_type(detail,'$.window_start') IS NULL),0),count(*) FROM ledger_auditevent WHERE {COMPLETE_SYNC}"),
-        params![co.to_db(), format!("bankfeedconnection:{connection_id}")],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
-    if n == 0 || unbounded > 0 {
-        return Ok(None);
+
+fn feed_history(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, feed_id: &str, now: DateTime<Utc>, allow_legacy_fallback: bool) -> FbResult<FeedHistory> {
+    // Older events sometimes listed IDs in imported_feeds. Events with only a
+    // count (or neither field) retain their connection-wide meaning only for
+    // already-established feeds, never for a READY feed awaiting its first import.
+    let mut st = q.prepare(&format!(
+        "SELECT coalesce(json_extract(detail,'$.at'),occurred_at),json_extract(detail,'$.window_start')
+         FROM ledger_auditevent WHERE {COMPLETE_SYNC}
+           AND CASE
+               WHEN json_type(detail,'$.imported_feed_ids') IS NOT NULL
+                   THEN EXISTS(SELECT 1 FROM json_each(detail,'$.imported_feed_ids') WHERE value=?3)
+               WHEN json_type(detail,'$.imported_feeds')='array'
+                   THEN EXISTS(SELECT 1 FROM json_each(detail,'$.imported_feeds') WHERE value=?3)
+               ELSE ?4=1 AND coalesce(json_extract(detail,'$.imported_feeds'),1)>0 END
+         ORDER BY json_type(detail,'$.sync') IS NULL,json_extract(detail,'$.sync') DESC,id DESC"
+    ))?;
+    let mut rows = st.query(params![co.to_db(), format!("bankfeedconnection:{connection_id}"), feed_id, allow_legacy_fallback as i64])?;
+    let mut history = FeedHistory::default();
+    let mut unbounded = false;
+    while let Some(row) = rows.next()? {
+        let at = parse_now(&row.get::<_, String>(0)?)?;
+        if at > now {
+            history.future = true;
+            continue;
+        }
+        history.last.get_or_insert(at);
+        if let Some(start) = row.get::<_, Option<String>>(1)? {
+            let start = parse_now(&start)?;
+            history.earliest = Some(history.earliest.map_or(start, |earliest| earliest.min(start)));
+        } else {
+            unbounded = true;
+        }
     }
-    earliest.as_deref().map(parse_now).transpose()
+    if unbounded {
+        history.earliest = None;
+    }
+    Ok(history)
 }
+
 /// A `bankfeed.synced` event of connection `?2` in company `?1` that stored a pull with no provider errors.
 const COMPLETE_SYNC: &str =
-    "company_id=?1 AND action='bankfeed.synced' AND target=?2 AND json_extract(detail,'$.ok')=1 AND coalesce(json_extract(detail,'$.errors'),0)=0";
+    "company_id=?1 AND action='bankfeed.synced' AND target=?2 AND json_extract(detail,'$.ok')=1 AND coalesce(json_extract(detail,'$.errors'),0)=0 AND coalesce(json_extract(detail,'$.incomplete'),0)=0";
 fn complete_syncs(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str) -> FbResult<i64> {
     Ok(q.query_row(&format!("SELECT count(*) FROM ledger_auditevent WHERE {COMPLETE_SYNC}"), params![co.to_db(), format!("bankfeedconnection:{connection_id}")], |r| r.get(0))?)
 }
@@ -462,33 +572,62 @@ fn local_minute(at: DateTime<Utc>) -> String {
 /// as display-zone dates like the transactions' own: from where coverage should have resumed (this
 /// connection's last complete sync less the overlap, or the replaced connections' when this connection began
 /// later than they ended) to the day before the window start. A replaced connection's gap is named once.
-fn missing_dates(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str, now: DateTime<Utc>, start: i64) -> FbResult<Option<(String, String)>> {
-    let start = DateTime::<Utc>::from_timestamp(start, 0).ok_or_else(|| err("Invalid timestamp."))?;
-    let mut from: Option<DateTime<Utc>> = None;
-    let mut to: Option<DateTime<Utc>> = None;
-    if let Some(good) = last_complete_sync(q, co, connection_id, now)? {
+struct FeedGap {
+    dates: (String, String),
+    predecessor_from: Option<String>,
+}
+
+fn missing_dates(
+    q: &(impl Query + ?Sized), co: CompanyId, account: &Feed, now: DateTime<Utc>, start: DateTime<Utc>,
+) -> FbResult<Option<FeedGap>> {
+    let window = feed_window(q, co, account, now)?;
+    let mut gap = None;
+    let mut reported_from = None;
+    if let Some(good) = window.history.last {
         let own = back(good, OVERLAP_DAYS)?;
-        if start > own {
-            from = Some(own);
-            to = Some(start);
+        if own < start {
+            gap = Some((own, start));
         }
-        if let Some(want) = replaced_reach(q, co, connection_id, now)? {
-            let cov = coverage_start(q, co, connection_id)?.map_or(start, |c| c.min(start));
+    }
+    if let Some(want) = window.predecessor
+        && window.before_coverage(want)
+    {
+        let until = window.history.earliest.map_or(start, |covered| covered.min(start));
+        if want < until {
+            let from = local_day(want);
             let reported: bool = q.query_row(
-                &format!("SELECT EXISTS(SELECT 1 FROM ledger_auditevent WHERE {COMPLETE_SYNC} AND json_extract(detail,'$.missing_from')=?3)"),
-                params![co.to_db(), format!("bankfeedconnection:{connection_id}"), local_day(want)],
+                &format!("SELECT EXISTS(SELECT 1 FROM ledger_auditevent WHERE {COMPLETE_SYNC} AND
+                    ((json_type(detail,'$.imported_feed_ids') IS NULL AND json_extract(detail,'$.missing_from')=?3)
+                     OR EXISTS(SELECT 1 FROM json_each(detail,'$.predecessor_gaps')
+                               WHERE json_extract(value,'$.feed_id')=?4 AND json_extract(value,'$.from')=?3)))"),
+                params![co.to_db(), format!("bankfeedconnection:{}", account.connection_id), from, account.id],
                 |r| r.get(0),
             )?;
-            if want < cov && !reported {
-                from = Some(from.map_or(want, |f| f.min(want)));
-                to = Some(to.map_or(cov, |t| t.max(cov)));
+            if !reported {
+                gap = Some(gap.map_or((want, until), |(first, last)| (first.min(want), last.max(until))));
+                reported_from = Some(from);
             }
         }
     }
-    let (Some(from), Some(to)) = (from, to) else { return Ok(None) };
-    let last = to.checked_sub_signed(chrono::Duration::seconds(1)).ok_or_else(|| err("Invalid timestamp."))?;
-    Ok(Some((local_day(from), local_day(last))))
+    gap.map(|(from, to)| {
+        Ok(FeedGap {
+            dates: (local_day(from), local_day(back_second(to)?)),
+            predecessor_from: reported_from,
+        })
+    }).transpose()
 }
+
+fn back_second(at: DateTime<Utc>) -> FbResult<DateTime<Utc>> {
+    at.checked_sub_signed(chrono::Duration::seconds(1)).ok_or_else(|| err("Invalid timestamp."))
+}
+
+fn merge_gap(gap: &mut Option<(String, String)>, (from, to): (String, String)) {
+    *gap = Some(match gap.take() {
+        Some((old_from, old_to)) => (old_from.min(from), old_to.max(to)),
+        None => (from, to),
+    });
+}
+
 /// Dates a sync could not reach: its window started after the last complete sync less the overlap, because
 /// the provider window is capped at [`MAX_WINDOW_DAYS`]. Transactions dated `from`..=`to` may be missing.
 #[derive(Clone, Debug, PartialEq)]
@@ -571,7 +710,7 @@ pub fn record_sync_failure(
             "bankfeed.synced",
             format!("bankfeedconnection:{connection_id}"),
             audit_removed(
-                json!({"ok":false,"summary":summary,"scheduled":scheduled}),
+                json!({"ok":false,"summary":summary,"scheduled":scheduled,"imported_feed_ids":[]}),
                 removed,
             ),
         )
@@ -596,6 +735,8 @@ struct Counts {
     unchanged: i64,
     /// Decided rows whose amount the bank changed since (kept as decided, reported).
     bank_changed: i64,
+    skipped_pre_start: i64,
+    skipped_undated: i64,
 }
 /// Message of Django's `validate_unique` for `bankfeed_transaction_once`.
 const DUPLICATE_IN_PULL: &str =
@@ -607,14 +748,15 @@ const DUPLICATE_IN_PULL: &str =
 /// the key, never by the displayed id.
 fn upsert(
     w: &Writes<'_, '_>,
-    feed_id: &str,
+    feed: &Feed,
     t: &StagedTransaction,
     (identity, provider_id_verified): (&str, bool),
     now: &str,
     counts: &mut Counts,
     inserted: Option<&mut Vec<String>>,
-) -> FbResult<String> {
+) -> FbResult<Option<String>> {
     let tx = w.tx;
+    let feed_id = &feed.id;
     let posted_on = opt_date(&t.posted_on)?;
     let transacted_on = opt_date(&t.transacted_on)?;
     let existing = tx
@@ -643,6 +785,23 @@ fn upsert(
         return Err(err(DUPLICATE_IN_PULL));
     }
     let Some(row) = existing else {
+        if inserted.is_none() && feed.import_state != "ACTIVE" {
+            return Err(err("Complete the first sync for this feed before staging transactions."));
+        }
+        if let Some(floor) = feed.import_from_date.as_deref() {
+            let date = posted_on.as_deref().or(transacted_on.as_deref());
+            if date.is_none_or(|date| date < floor) {
+                if inserted.is_none() {
+                    return Err(err("A transaction has no date on or after this feed’s import start."));
+                }
+                if date.is_none() {
+                    counts.skipped_undated += 1;
+                } else {
+                    counts.skipped_pre_start += 1;
+                }
+                return Ok(None);
+            }
+        }
         check_transaction(t)?;
         if let Some(seen) = inserted {
             seen.push(identity.to_owned());
@@ -658,7 +817,7 @@ fn upsert(
             params![key, ordinal, feed_id, t.remote_id, posted_on, transacted_on, t.amount, t.description, t.pending, now, identity, provider_id_verified],
         )?;
         counts.new += 1;
-        return Ok(key);
+        return Ok(Some(key));
     };
     if !provider_id_verified {
         w.execute("UPDATE bankfeeds_transaction SET provider_id_verified=0 WHERE id=?1 AND provider_id_verified=1", &[&row.id])?;
@@ -667,7 +826,7 @@ fn upsert(
         // Decided values are frozen. A bank revision of the amount is recorded beside the row and reported,
         // and the books change only through the user (review 2026-11-10, code-1 finding 10).
         bank_change(w, &row, t.amount, counts)?;
-        return Ok(row.id);
+        return Ok(Some(row.id));
     }
     let changed = row.posted_on != posted_on
         || row.transacted_on != transacted_on
@@ -676,7 +835,7 @@ fn upsert(
         || row.pending != t.pending;
     if !changed {
         counts.unchanged += 1;
-        return Ok(row.id);
+        return Ok(Some(row.id));
     }
     if row.pending && !t.pending {
         counts.posted += 1;
@@ -688,7 +847,7 @@ fn upsert(
         "UPDATE bankfeeds_transaction SET posted_on=?2,transacted_on=?3,amount=?4,description=?5,pending=?6,updated_at=?7 WHERE id=?1",
         params![row.id, posted_on, transacted_on, t.amount, t.description, t.pending, now],
     )?;
-    Ok(row.id)
+    Ok(Some(row.id))
 }
 /// Record (or clear) the bank's current amount for a decided row. A change the user chose to keep for this
 /// same bank amount is not reported again.
@@ -775,6 +934,33 @@ fn active_connection(tx: &Writer<'_>, co: CompanyId, connection_id: &str) -> FbR
     Ok(c)
 }
 
+fn require_active_connection(q: &(impl Query + ?Sized), co: CompanyId, connection_id: &str) -> FbResult<()> {
+    let c = connection_row(q, co, connection_id)?;
+    if c["needs_reconnect"] == true {
+        return Err(err(UNSAFE_CREDENTIAL));
+    }
+    if c["active"] != true {
+        return Err(err("This connection was forgotten. Connect again with a new setup token."));
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum PullMode {
+    Adapter,
+    Desktop,
+    Discovery,
+}
+
+/// Refresh account metadata only. Transaction data and the sync cursor are left out of discovery.
+#[allow(clippy::too_many_arguments)]
+pub fn store_discovery(
+    book: &mut Book, actor: UserId, co: CompanyId, connection_id: &str, pull: &StagedPull,
+    now: &str, secrets: &SecretSet, identity_evidence: &[ProviderIdEvidence],
+) -> FbResult<Value> {
+    store_pull_mode(book, actor, co, connection_id, pull, now, false, None, secrets, PullMode::Discovery, Some(identity_evidence))
+}
+
 /// `_store`: the DB phase of a complete sync. Upserts accounts and transactions (dedupe on the feed account
 /// and SimpleFIN transaction id), withdraws superseded pending rows first seen inside this pull's window,
 /// and records the result on the connection. `window_start` is the pull's start epoch; None disables the
@@ -803,7 +989,7 @@ pub fn store_pull(
         scheduled,
         window_start,
         secrets,
-        false,
+        PullMode::Adapter,
         None,
     )
 }
@@ -830,7 +1016,7 @@ pub fn store_pull_for_desktop(
         scheduled,
         window_start,
         secrets,
-        true,
+        PullMode::Desktop,
         Some(identity_evidence),
     )
 }
@@ -845,23 +1031,29 @@ fn store_pull_mode(
     scheduled: bool,
     window_start: Option<i64>,
     secrets: &SecretSet,
-    automatic: bool,
+    mode: PullMode,
     identity_evidence: Option<&[ProviderIdEvidence]>,
 ) -> FbResult<Value> {
     let raw = pull;
-    let removed = pull_removed(pull);
-    let pull = &provider_pull(secrets, pull);
+    let include_transactions = mode != PullMode::Discovery;
+    let removed = pull_removed(pull, include_transactions);
+    let pull = &provider_pull(secrets, pull, include_transactions);
     command(book, secrets, |w| {
         let tx = w.tx;
         let user = services::access(tx, actor, co)?;
-        active_connection(tx, co, connection_id)?;
+        if mode == PullMode::Adapter {
+            active_connection(tx, co, connection_id)?;
+        } else {
+            require_active_connection(tx, co, connection_id)?;
+        }
         let secret = identity_secret(w)?;
         let keys: Vec<AccountKeys> = raw
             .accounts
             .iter()
-            .map(|a| account_keys(&secret, a))
+            .map(|a| account_keys(&secret, a, include_transactions))
             .collect();
-        let now_text = stamp(parse_now(now)?);
+        let now = parse_now(now)?;
+        let now_text = stamp(now);
         let mut counts = Counts::default();
         let mut auto_post_candidates = Vec::new();
         let mut accounts = 0i64;
@@ -870,11 +1062,18 @@ fn store_pull_mode(
         let mut dropped_ids: Vec<String> = vec![];
         let mut reasons: Vec<String> = pull.skipped.clone();
         let window = window_start.map(epoch_text).transpose()?;
-        let missing = match window_start {
-            Some(start) => missing_dates(tx, co, connection_id, parse_now(now)?, start)?,
-            None => None,
-        };
+        let mut missing = None;
+        let mut predecessor_gaps = Vec::new();
         let mut recorded = 0i64;
+        let mut awaiting_setup = 0i64;
+        let mut awaiting_complete = 0i64;
+        let mut activated = 0i64;
+        let mut imported_feeds: Vec<String> = Vec::new();
+        let initial_state = if mode == PullMode::Adapter { "ACTIVE" } else { "PENDING" };
+        let window_at = window.as_deref().map(parse_now).transpose()?;
+        let mut floor_gap = None;
+        let has_skips = !pull.skipped.is_empty() || pull.accounts.iter().any(|a| !a.skipped.is_empty());
+        let complete = pull.errors.is_empty() && !has_skips;
         for (index, (entry, keys)) in pull.accounts.iter().zip(&keys).enumerate() {
             let proof = identity_evidence.and_then(|evidence| evidence.get(index));
             let account_verified = identity_evidence.is_none() || proof.is_some_and(|entry| entry.account_exact);
@@ -909,34 +1108,66 @@ fn store_pull_mode(
                 None => {
                     let key = fb_ids::new_v7().to_string();
                     w.execute(
-                        "INSERT INTO bankfeeds_account(id,connection_id,conn_key,remote_id,name,org_name,currency,balance,available_balance,balance_at,ledger_account_id,mapped_at,first_seen_at,last_seen_at,active,conn_key_identity,remote_identity,provider_id_verified) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,NULL,NULL,?11,?12,1,?13,?14,?15)",
-                        params![key, connection_id, entry.conn_key, entry.remote_id, entry.name, entry.org_name, entry.currency, entry.balance, entry.available, balance_at, py::now_utc(), now_text, keys.conn_key, keys.remote, account_verified],
+                        "INSERT INTO bankfeeds_account(id,connection_id,conn_key,remote_id,name,org_name,currency,balance,available_balance,balance_at,ledger_account_id,mapped_at,first_seen_at,last_seen_at,active,conn_key_identity,remote_identity,provider_id_verified,import_state) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,NULL,NULL,?11,?12,1,?13,?14,?15,?16)",
+                        params![key, connection_id, entry.conn_key, entry.remote_id, entry.name, entry.org_name, entry.currency, entry.balance, entry.available, balance_at, py::now_utc(), now_text, keys.conn_key, keys.remote, account_verified, initial_state],
                     )?;
                     key
                 }
             };
             accounts += 1;
-            let label = feed(tx, &feed_id)?.map(|f| f.label()).unwrap_or_default();
+            let f = feed(tx, &feed_id)?.ok_or_else(|| err("The downloaded account could not be read."))?;
+            let label = f.label();
             reasons.extend(entry.skipped.iter().map(|why| format!("{label}: {why}")));
             skipped += entry.skipped.len() as i64;
+            if !include_transactions {
+                continue;
+            }
+            if f.import_state == "PENDING" {
+                awaiting_setup += 1;
+                continue;
+            }
+            if f.import_state == "READY" {
+                if !complete {
+                    awaiting_complete += 1;
+                    continue;
+                }
+                if let (Some(floor), Some(start)) = (&f.import_from_date, window_at)
+                    && floor_start(floor, back(start, 1)?)? < start
+                {
+                    floor_gap = Some(floor_gap.map_or(floor.clone(), |first: String| first.min(floor.clone())));
+                }
+                w.execute("UPDATE bankfeeds_account SET import_state='ACTIVE' WHERE id=?1", &[&f.id])?;
+                activated += 1;
+            }
+            if !imported_feeds.contains(&f.id) {
+                imported_feeds.push(f.id.clone());
+                if let Some(start) = window_at
+                    && let Some(gap) = missing_dates(tx, co, &f, now, start)?
+                {
+                    merge_gap(&mut missing, gap.dates);
+                    if let Some(from) = gap.predecessor_from {
+                        predecessor_gaps.push(json!({"feed_id":f.id,"from":from}));
+                    }
+                }
+            }
             let mut inserted = vec![];
             for (index, (t, identity)) in entry.transactions.iter().zip(&keys.transactions).enumerate() {
                 let verified = identity_evidence.is_none() || proof.and_then(|a| a.transactions_exact.get(index)) == Some(&true);
                 let before = (counts.new, counts.posted);
-                let id = upsert(
+                let Some(id) = upsert(
                     w,
-                    &feed_id,
+                    &f,
                     t,
                     (identity, verified),
                     &py::now_utc(),
                     &mut counts,
                     Some(&mut inserted),
-                )?;
+                )? else { continue };
                 if counts.new > before.0 && already_recorded(tx, co, &item(tx, co, &id)?)?.is_some() {
                     recorded += 1;
                 }
                 if !t.pending && before != (counts.new, counts.posted) {
-                    if automatic {
+                    if mode == PullMode::Desktop {
                         super::automatic::enqueue(w, co, &id)?;
                     }
                     auto_post_candidates.push(id);
@@ -969,12 +1200,39 @@ fn store_pull_mode(
                 pending_dropped += 1;
             }
         }
+        if !include_transactions {
+            let summary = if pull.errors.is_empty() {
+                format!("{accounts} accounts discovered")
+            } else {
+                format!("{accounts} accounts discovered; SimpleFIN: {}", pull.errors.join("; "))
+            };
+            let summary = written(secrets, &summary, 500);
+            w.audit(&user, co, "bankfeed.discovered", format!("bankfeedconnection:{connection_id}"),
+                audit_removed(json!({"ok":pull.errors.is_empty(),"at":now_text,"summary":summary,
+                    "accounts":accounts,"skipped":skipped,"errors":pull.errors.len()}), removed))?;
+            return Ok(json!({"summary":summary,"accounts":accounts,"provider_errors":pull.errors,"skipped":skipped}));
+        }
+        if let (Some(from), Some(start)) = (floor_gap, window_at) {
+            merge_gap(&mut missing, (from, local_day(back_second(start)?)));
+        }
         let mut messages = vec![format!(
             "{accounts} accounts, {} new transactions",
             counts.new
         )];
         if removed > 0 {
             messages.push(format!("{removed} control/format characters removed"));
+        }
+        if awaiting_setup > 0 {
+            messages.push(format!("{awaiting_setup} accounts need an import start in Bank feed accounts"));
+        }
+        if awaiting_complete > 0 {
+            messages.push(format!("{awaiting_complete} accounts are waiting for a complete sync before importing"));
+        }
+        if counts.skipped_pre_start > 0 {
+            messages.push(format!("{} transactions before the import start skipped", counts.skipped_pre_start));
+        }
+        if counts.skipped_undated > 0 {
+            messages.push(format!("{} undated transactions skipped", counts.skipped_undated));
         }
         if counts.posted > 0 {
             messages.push(format!("{} now posted", counts.posted));
@@ -1023,16 +1281,36 @@ fn store_pull_mode(
             .map(|i| written(secrets, i, 200))
             .collect();
         let errors = pull.errors.len() as i64;
+        let mut detail = json!({"ok":true,"scheduled":scheduled,"summary":summary,"pending_dropped_ids":dropped,"accounts":accounts,"new":counts.new,"updated":counts.updated,"posted":counts.posted,"unchanged":counts.unchanged,"skipped":skipped,"errors":errors,"pending_dropped":pending_dropped});
+        detail["imported_feed_ids"] = json!(imported_feeds);
+        if !predecessor_gaps.is_empty() {
+            detail["predecessor_gaps"] = json!(predecessor_gaps);
+        }
+        if mode == PullMode::Desktop && has_skips {
+            detail["incomplete"] = json!(true);
+        }
+        let import_counts = [("skipped_pre_start", counts.skipped_pre_start), ("skipped_undated", counts.skipped_undated),
+            ("awaiting_setup", awaiting_setup), ("awaiting_complete", awaiting_complete), ("activated", activated)];
+        let show_import_counts = mode == PullMode::Desktop || import_counts.iter().any(|&(_, count)| count > 0);
+        if show_import_counts {
+            for (key, count) in import_counts {
+                detail[key] = json!(count);
+            }
+            if awaiting_setup > 0 || awaiting_complete > 0 || activated > 0 {
+                detail["imported_feeds"] = json!(imported_feeds);
+            }
+        }
         w.audit(
-            &user,
-            co,
-            "bankfeed.synced",
-            format!("bankfeedconnection:{connection_id}"),
-            audit_removed(sync_detail(json!({"ok":true,"scheduled":scheduled,"summary":summary,"pending_dropped_ids":dropped,"accounts":accounts,"new":counts.new,"updated":counts.updated,"posted":counts.posted,"unchanged":counts.unchanged,"skipped":skipped,"errors":errors,"pending_dropped":pending_dropped}), &now_text, sync_number(tx, connection_id)?, window.as_deref(), &missing, recorded, counts.bank_changed), removed),
+            &user, co, "bankfeed.synced", format!("bankfeedconnection:{connection_id}"),
+            audit_removed(sync_detail(detail, &now_text, sync_number(tx, connection_id)?, window.as_deref(), &missing, recorded, counts.bank_changed), removed),
         )?;
-        Ok(
-            json!({"auto_post_candidates":auto_post_candidates,"summary":summary,"already_recorded":recorded,"bank_changed":counts.bank_changed,"missing":missing.as_ref().map(|(from, to)| json!({"from":from,"to":to})),"provider_errors":pull.errors,"reasons":reasons.iter().map(|r| secrets.mask(r)).collect::<Vec<_>>(),"accounts":accounts,"new":counts.new,"updated":counts.updated,"posted":counts.posted,"unchanged":counts.unchanged,"skipped":skipped,"errors":errors,"pending_dropped":pending_dropped}),
-        )
+        let mut result = json!({"auto_post_candidates":auto_post_candidates,"summary":summary,"already_recorded":recorded,"bank_changed":counts.bank_changed,"missing":missing.as_ref().map(|(from, to)| json!({"from":from,"to":to})),"provider_errors":pull.errors,"reasons":reasons.iter().map(|r| secrets.mask(r)).collect::<Vec<_>>(),"accounts":accounts,"new":counts.new,"updated":counts.updated,"posted":counts.posted,"unchanged":counts.unchanged,"skipped":skipped,"errors":errors,"pending_dropped":pending_dropped});
+        if show_import_counts {
+            for (key, count) in import_counts {
+                result[key] = json!(count);
+            }
+        }
+        Ok(result)
     })
 }
 
@@ -1121,15 +1399,16 @@ pub fn stage_bank_transactions(
             };
             let identity =
                 fb_db::bankfeeds_text::identity_key(&secret, TRANSACTION_DOMAIN, &raw_t.remote_id);
+            let f = feed(tx, feed_id)?.ok_or_else(|| err("The downloaded account could not be read."))?;
             out.push(upsert(
                 w,
-                feed_id,
+                &f,
                 t,
                 (&identity, true),
                 &py::now_utc(),
                 &mut counts,
                 None,
-            )?);
+            )?.ok_or_else(|| err("The transaction could not be staged."))?);
         }
         let staged: Vec<Value> = transactions.iter().map(|(account, t)| json!({"account":written(secrets, account, 200),"remote_id":written(secrets, &t.remote_id, 200)})).collect();
         w.audit(

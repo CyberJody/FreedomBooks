@@ -15,8 +15,10 @@ pub struct Rule {
     pub payee_name: String,
     pub active: bool,
     pub policy: Option<qbo::Policy>,
+    pub feed_account_id: Option<String>,
+    feed_scope_active: bool,
 }
-const RULE_COLS: &str = "id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active,(SELECT data FROM bankfeeds_rule_policy WHERE rule_id=bankfeeds_rule.id)";
+const RULE_COLS: &str = "id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active,(SELECT data FROM bankfeeds_rule_policy WHERE rule_id=bankfeeds_rule.id),feed_account_id,(feed_account_id IS NULL OR EXISTS(SELECT 1 FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE f.id=bankfeeds_rule.feed_account_id AND f.active=1 AND c.active=1))";
 fn rule_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Rule> {
     Ok(Rule {
         id: r.get(0)?,
@@ -31,6 +33,8 @@ fn rule_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Rule> {
         payee_name: r.get(9)?,
         active: r.get(10)?,
         policy: r.get::<_,Option<String>>(11)?.map(|s|fb_db::parse_unique_json(&s).and_then(serde_json::from_value).map_err(|e|fb_db::rusqlite::Error::FromSqlConversionFailure(11,fb_db::rusqlite::types::Type::Text,Box::new(e)))).transpose()?,
+        feed_account_id: r.get(12)?,
+        feed_scope_active: r.get(13)?,
     })
 }
 fn rules_where(q: &(impl Query + ?Sized), co: CompanyId, extra: &str) -> FbResult<Vec<Rule>> {
@@ -64,6 +68,8 @@ pub fn rule_for<'r>(rules: &'r [Rule], item: &Item) -> Option<&'r Rule> {
     rules.iter().find(|rule| {
         if let Some(policy)=&rule.policy { return rule.active && policy.matches(item); }
         rule.active
+            && rule.feed_scope_active
+            && rule.feed_account_id.as_ref().is_none_or(|id| *id == item.feed_account_id)
             && text.contains(&text::py_lower(&rule.match_text))
             && !(rule.sign == "IN" && !item.money_in())
             && !(rule.sign == "OUT" && item.money_in())
@@ -135,6 +141,21 @@ pub fn save_rule(book: &mut Book, actor: UserId, co: CompanyId, values: &Value, 
         if !account.active || !account.postable {
             return Err(err("Choose an active posting account."));
         }
+        let previous_scope = previous.as_ref().and_then(|r| r.feed_account_id.as_ref());
+        let feed_scope = match values.get("feed_account_id") {
+            Some(v) => id(v, true)?,
+            None => previous_scope.cloned(),
+        };
+        if let Some(scope) = &feed_scope
+            && Some(scope) != previous_scope
+            && !tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id
+                  WHERE f.id=?1 AND c.company_id=?2 AND f.active=1 AND c.active=1)",
+                params![scope, co.to_db()], |r| r.get::<_, bool>(0),
+            )?
+        {
+            return Err(err("Choose an active feed account of this company."));
+        }
         let active = truthy(values.get("active").unwrap_or(&json!(true)));
         let now = py::now_utc();
         let rule_id = get("rule_id");
@@ -147,8 +168,8 @@ pub fn save_rule(book: &mut Book, actor: UserId, co: CompanyId, values: &Value, 
             let position = top.filter(|p| *p != 0).unwrap_or(0).checked_add(1).ok_or_else(|| err("Too many rules."))?;
             let key = fb_ids::new_v7().to_string();
             w.execute(
-                "INSERT INTO bankfeeds_rule(id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?12)",
-                params![key, co.to_db(), position, name, match_text, sign, amount_min, amount_max, account.id.to_db(), payee_name, active, now],
+                "INSERT INTO bankfeeds_rule(id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active,created_at,updated_at,feed_account_id) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?12,?13)",
+                params![key, co.to_db(), position, name, match_text, sign, amount_min, amount_max, account.id.to_db(), payee_name, active, now, feed_scope],
             )?;
             (key, "bankfeed.rule_created")
         } else {
@@ -157,18 +178,16 @@ pub fn save_rule(book: &mut Book, actor: UserId, co: CompanyId, values: &Value, 
                 tx.query_row("SELECT id FROM bankfeeds_rule WHERE company_id=?1 AND id=?2", params![co.to_db(), key], |r| r.get(0)).optional()?;
             let key = found.ok_or_else(|| err("Choose a rule of this company."))?;
             w.execute(
-                "UPDATE bankfeeds_rule SET name=?2,match_text=?3,sign=?4,amount_min=?5,amount_max=?6,account_id=?7,payee_name=?8,active=?9,updated_at=?10 WHERE id=?1",
-                params![key, name, match_text, sign, amount_min, amount_max, account.id.to_db(), payee_name, active, now],
+                "UPDATE bankfeeds_rule SET name=?2,match_text=?3,sign=?4,amount_min=?5,amount_max=?6,account_id=?7,payee_name=?8,active=?9,updated_at=?10,feed_account_id=?11 WHERE id=?1",
+                params![key, name, match_text, sign, amount_min, amount_max, account.id.to_db(), payee_name, active, now, feed_scope],
             )?;
             (key, "bankfeed.rule_edited")
         };
-        w.audit(
-            &user,
-            co,
-            action,
-            format!("bankfeedrule:{key}"),
-            json!({"name":name,"match_text":match_text,"sign":sign,"amount_min":opt_money(amount_min),"amount_max":opt_money(amount_max),"account_id":account.id.to_db(),"payee_name":payee_name,"active":active}),
-        )?;
+        let mut detail = json!({"name":name,"match_text":match_text,"sign":sign,"amount_min":opt_money(amount_min),"amount_max":opt_money(amount_max),"account_id":account.id.to_db(),"payee_name":payee_name,"active":active});
+        if feed_scope.is_some() || previous_scope.is_some() {
+            detail["feed_account_id"] = json!(feed_scope);
+        }
+        w.audit(&user, co, action, format!("bankfeedrule:{key}"), detail)?;
         Ok(tx.query_row(&format!("SELECT {RULE_COLS} FROM bankfeeds_rule WHERE id=?1"), [&key], rule_row)?)
     })
 }

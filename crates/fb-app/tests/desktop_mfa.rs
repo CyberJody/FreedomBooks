@@ -559,7 +559,7 @@ fn a_format_93_book_with_bank_lines_and_two_factor_sign_in_upgrades_and_signs_in
     let Opened::Behind(old) = Book::open_staged(&old_path, &key).unwrap() else {
         panic!("expected a format-93 book");
     };
-    assert_eq!((old.from(), old.to()), (93, 97));
+    assert_eq!((old.from(), old.to()), (93, 98));
     let backup = root.join("verified-format-93.fbbook");
     old.snapshot(&backup, &key).unwrap();
     assert_eq!(test_support::snapshot_file(&backup, &key).unwrap(), copy.before, "the backup is the book as it was");

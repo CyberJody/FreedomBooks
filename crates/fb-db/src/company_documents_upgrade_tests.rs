@@ -101,6 +101,8 @@ fn upgrade_at(boundary_name: &str) {
     drop(conn);
     let book = Book::open(&path, &key).unwrap();
     let after = test_support::snapshot(&book.conn).unwrap();
+    let mut before = before;
+    test_support::company_period_defaults(&mut before, &book.conn);
     for (table, rows) in &before {
         assert_eq!(after[table], *rows, "changed prior table {table}");
     }
@@ -117,7 +119,7 @@ fn upgrade_at(boundary_name: &str) {
     let upgraded = schema_hashes(&book.conn).unwrap();
     for (object, hash) in schema {
         if !["table:bankfeeds_account","table:bankfeeds_transaction","view:banking_deposit_expected","view:banking_deposit_invalid","table:documents_documentidentity","table:documents_documentsequence","trigger:fb_sales_revision_insert","trigger:fb_sales_invoice_tax_account","trigger:fb_sales_invoice_line_insert","trigger:fb_sales_invoice_seal","view:sales_snapshot_violations","view:sales_expected_entries","view:sales_expected_references","view:fb_value_invalid", "view:fb_json_invalid", "trigger:fb_owner_user_insert", "trigger:fb_owner_user_update"].contains(&object.as_str())
-            && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str())
+            && !crate::bankfeeds_matching_upgrade_tests::CHANGED.contains(&object.as_str()) && !crate::company_periods_upgrade_tests::CHANGED.contains(&object.as_str())
         {
             assert_eq!(upgraded[&object], hash, "changed prior schema {object}");
         }

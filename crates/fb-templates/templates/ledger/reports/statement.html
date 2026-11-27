@@ -1,0 +1,42 @@
+{% extends 'ledger/base.html' %}
+{% block extra_head %}<link rel="stylesheet" href="{{ static('ledger/reports.css') }}">{% if worksheet %}<script src="{{ static('ledger/report-worksheet.js') }}" defer></script>{% endif %}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if customer_statement %}
+<form class="filters" method="get" action="{{ path }}" aria-label="Find customers">
+<label>Customer name <input type="search" name="customer_q" value="{{ customer_q }}" maxlength="120"></label>
+<input type="hidden" name="customer" value="{{ controls.customer }}">
+<input type="hidden" name="preset" value="{{ controls.preset }}">
+<input type="hidden" name="start" value="{{ controls.start }}">
+<input type="hidden" name="end" value="{{ controls.end }}">
+<button type="submit">Find customers</button>
+</form>
+{% if customers_truncated %}<p class="report-foot">Showing the first {{ customer_picker_limit }} matching customers. Search by name to narrow the list.</p>{% endif %}
+{% endif %}
+<form class="filters report-controls" method="get" action="{{ path }}" aria-label="Report options"{% if worksheet %} data-worksheet-target-limit="{{ worksheet_limit }}" data-worksheet-limit-error="{{ worksheet_limit_error }}"{% endif %}>
+{% if customer_statement %}
+<input type="hidden" name="customer_q" value="{{ customer_q }}">
+<label>Customer <select name="customer" required><option value="">Select a customer</option>{% for customer in customers %}<option value="{{ customer.id }}"{% if controls.customer == customer.id %} selected{% endif %}>{{ customer.name }}{% if not customer.active %} (archived){% endif %}</option>{% endfor %}</select></label>
+{% endif %}
+<label>Dates <select name="preset" id="report-preset">{% for key, label, start, end in presets %}<option value="{{ key }}"{% if end %} data-start="{{ start }}" data-end="{{ end }}"{% endif %}{% if controls.preset == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>From <input type="date" name="start" value="{{ controls.start }}"></label>
+<label>To <input type="date" name="end" value="{{ controls.end }}"></label>
+{% if bases %}
+<label>Basis <select name="basis">{% for key, label in bases %}<option value="{{ key }}"{% if controls.basis == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+{% endif %}
+{% if comparative %}
+<label>Compare <select name="period">{% for key, label in period_choices %}<option value="{{ key }}"{% if controls.period == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+{% endif %}
+{% if sales_report %}<label>Group by <select name="group">{% for key, label in group_choices %}<option value="{{ key }}"{% if controls.group == key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>{% endif %}
+{% if worksheet %}{% include 'ledger/reports/_worksheet_options.html' %}{% endif %}
+<button type="submit">Run report</button>
+{% if print_url %}<span class="report-actions"><a class="button secondary" data-report-print href="{{ print_url }}">Print</a> <a class="button secondary" href="{{ csv_url }}">Download CSV</a></span>{% endif %}
+</form>
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
+{% if comparative %}<p class="report-foot">Fiscal-year comparisons use the fiscal year containing the To date and the preceding fiscal year.</p>{% endif %}
+{% if pick_customer %}
+<p>{% if customers %}Select a customer to see their opening balance, activity, and closing balance.{% elif customer_q %}No customers match this search.{% else %}There are no customers in this company.{% endif %}</p>
+{% elif not invalid %}
+<section class="report-sheet report-wide" aria-label="{{ title }}">{% include 'ledger/reports/statement_body.html' %}</section>
+{% endif %}
+{% endblock %}

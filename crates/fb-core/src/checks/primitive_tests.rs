@@ -337,7 +337,13 @@ fn every_checks_guard_message_has_an_executed_refusal() {
         .filter(|(n, _)| n.starts_with("003"))
     {
         for fragment in sql.split("RAISE(ABORT,'").skip(1) {
-            messages.insert(fragment.split('\'').next().unwrap().to_owned());
+            let message = fragment.split('\'').next().unwrap().to_owned();
+            // 0211 replaced fb_transfer_insert to allow bank or credit card accounts.
+            if message == "transfer_journal_split: Transfer journal must be exactly one credit on the from bank and one debit on the to bank" {
+                messages.insert("transfer_journal_split: Transfer journal must be exactly one credit on the from account and one debit on the to account".to_owned());
+            } else {
+                messages.insert(message);
+            }
         }
     }
     let missing = OBSERVED.with(|o| {

@@ -4,8 +4,14 @@ use chrono::NaiveDate;
 use fb_core::py;
 use fb_core::reports::{financial as f, params as p};
 
+mod statements;
+mod subledgers;
+mod worksheets;
+
 pub(super) fn is_route(name: &str) -> bool {
     matches!(name, "profit_loss" | "balance_sheet" | "general_ledger")
+        || subledgers::Report::from_route(name).is_some()
+        || statements::Report::from_route(name).is_some()
 }
 
 enum Clean {
@@ -39,7 +45,7 @@ impl Clean {
 fn choice_error(value: &str) -> String {
     format!("Select a valid choice. {value} is not one of the available choices.")
 }
-fn clean(name: &str, params: &[(String, String)], today: NaiveDate) -> Result<Clean, Vec<String>> {
+fn clean(name: &str, params: &[(String, String)], today: NaiveDate, start_month: u32) -> Result<Clean, Vec<String>> {
     let input = p::RangeInput {
         basis: get(params, "basis"),
         preset: get(params, "preset"),
@@ -72,9 +78,10 @@ fn clean(name: &str, params: &[(String, String)], today: NaiveDate) -> Result<Cl
             },
             get(params, "group"),
             today,
+            start_month,
         )
         .map(Clean::Ledger),
-        _ => p::range(&input, today).map(Clean::Range),
+        _ => p::range(&input, today, start_month).map(Clean::Range),
     };
     let mut errors = match &result {
         Err(FbError::Validation(e)) => e.clone(),
@@ -149,7 +156,8 @@ fn controls(name: &str, params: &[(String, String)], cleaned: Option<&Clean>) ->
     out
 }
 /// SIM-FIX item 5: with a preset other than Custom, replace submitted `start`/`end` (which the preset
-/// overrides) by the resolved dates, at the first date key's place. Queries without dates are unchanged.
+/// overrides) by the resolved dates, at the first date key's place. Fiscal links carry a
+/// custom range so a later policy change cannot reinterpret the dates shown on the screen.
 fn canonical_dates(params: &[(String, String)], cleaned: &Clean) -> Vec<(String, String)> {
     let range = match cleaned {
         Clean::Range(r) => r,
@@ -157,6 +165,15 @@ fn canonical_dates(params: &[(String, String)], cleaned: &Clean) -> Vec<(String,
         Clean::AsOf(..) => return params.to_vec(),
     };
     let dated = |k: &str| k == "start" || k == "end";
+    if matches!(range.preset.as_str(), "this_year" | "year_to_date" | "this_quarter") {
+        let mut fixed = params.iter().filter(|(key, _)| !dated(key) && key != "preset").cloned().collect::<Vec<_>>();
+        fixed.extend([
+            ("preset".into(), "custom".into()),
+            ("start".into(), range.start.map(|d| d.to_string()).unwrap_or_default()),
+            ("end".into(), range.end.to_string()),
+        ]);
+        return fixed;
+    }
     if range.preset == "custom" || !params.iter().any(|(k, _)| dated(k)) {
         return params.to_vec();
     }
@@ -378,12 +395,19 @@ pub(super) fn render(
         },
     )?)
     .unwrap();
+    if let Some(report) = subledgers::Report::from_route(&route.name) {
+        return subledgers::render(app, report, params, path, c, vm);
+    }
+    if let Some(report) = statements::Report::from_route(&route.name) {
+        return statements::render(app, report, params, path, c, vm);
+    }
     let template = format!("ledger/reports/{}.html", route.name);
     // SIM-FIX item 5: each preset carries the dates it stands for today (same clock as the report),
     // so the desktop fills From/To as soon as a preset is chosen, before Run (electron/preload).
     let today = (app.today)();
+    let start_month = fiscal_start_month(app, c)?;
     vm["presets"] = json!(p::PRESETS.iter().map(|(key, label)| {
-        let (start, end) = p::preset_range(key, today).map(|(a, b)| (a.to_string(), b.to_string())).unwrap_or_default();
+        let (start, end) = p::preset_range(key, today, start_month).map(|(a, b)| (a.to_string(), b.to_string())).unwrap_or_default();
         json!([key, label, start, end])
     }).collect::<Vec<_>>());
     vm["bases"] = json!(f::BASES);
@@ -396,7 +420,7 @@ pub(super) fn render(
                 .collect::<Vec<_>>()
         );
     }
-    let cleaned = match clean(&route.name, params, (app.today)()) {
+    let cleaned = match clean(&route.name, params, today, start_month) {
         Ok(v) => v,
         Err(errors) => {
             vm["invalid"] = json!(true);
@@ -487,13 +511,17 @@ pub(super) fn render(
     }
     if output == "print" {
         vm["title"] = json!(match route.name.as_str() { "profit_loss"=>"Profit and loss", "balance_sheet"=>"Balance sheet", _=>"General ledger" });
-        vm["body"] = json!(template.replace(".html", "_body.html"));
-        vm["generated"] = json!((app.now)().to_rfc3339());
-        vm["screen_url"] = json!(format!("{path}?{}",with(params,Some(("output","")))));
-        let target = format!("{path}?{}",urlencode(params));
-        return super::printing::draw(app,"ledger/reports/print.html",&mut vm,&target,"internal");
+        return draw_print(app, &mut vm, &template.replace(".html", "_body.html"), path, params);
     }
     Ok((app.screens.render(&template, &vm)?, 200))
+}
+
+fn draw_print(app: &mut App, vm: &mut Value, body: &str, path: &str, params: Posted<'_>) -> AppResult<(String, u16)> {
+    vm["body"] = json!(body);
+    vm["generated"] = json!((app.now)().to_rfc3339());
+    vm["screen_url"] = json!(format!("{path}?{}", with(params, Some(("output", "")))));
+    let target = format!("{path}?{}", urlencode(params));
+    super::printing::draw(app, "ledger/reports/print.html", vm, &target, "internal")
 }
 
 fn csv_row(out: &mut String, cells: impl IntoIterator<Item = String>) {
@@ -504,15 +532,17 @@ fn csv_row(out: &mut String, cells: impl IntoIterator<Item = String>) {
     out.push_str(&cells.join(","));
     out.push_str("\r\n");
 }
-fn meta(vm: &Value, clean: &Clean, title: &str) -> String {
+fn meta(vm: &Value, title: &str, basis: Option<&str>) -> String {
     let mut out = String::new();
     for (k, v) in [
         ("Report", title),
         ("Company", vm["company"]["name"].as_str().unwrap()),
         ("Currency", vm["company"]["currency"].as_str().unwrap()),
-        ("Basis", clean.basis().label()),
     ] {
         csv_row(&mut out, [p::csv_text(k), p::csv_text(v)]);
+    }
+    if let Some(basis) = basis {
+        csv_row(&mut out, ["Basis".into(), p::csv_text(basis)]);
     }
     out
 }
@@ -521,7 +551,7 @@ fn csv_tail_meta(out: &mut String) {
     out.push_str("\r\n");
 }
 fn financial_csv(vm: &Value, clean: &Clean, title: &str, rows: &[p::DisplayRow]) -> String {
-    let mut out = meta(vm, clean, title);
+    let mut out = meta(vm, title, Some(clean.basis().label()));
     if title == "Balance sheet" {
         csv_row(&mut out, ["As of".into(), clean.end().to_string()]);
         csv_row(
@@ -575,7 +605,7 @@ fn ledger_csv(
     report: &f::GeneralLedger,
     sources: &BTreeMap<String, SourceVm>,
 ) -> String {
-    let mut out = meta(vm, clean, "General ledger");
+    let mut out = meta(vm, "General ledger", Some(clean.basis().label()));
     csv_row(
         &mut out,
         [
@@ -669,6 +699,10 @@ fn ledger_csv(
     }
     out
 }
+pub(super) fn fiscal_start_month(app: &mut App, c: CompanyId) -> AppResult<u32> {
+    Ok(app.open_mut()?.book.read(|query| fb_core::periods::policy(query, c))?.values.fiscal_year_start_month)
+}
+
 pub(crate) fn export_report(
     app: &mut App,
     c: CompanyId,
@@ -692,12 +726,19 @@ pub(crate) fn export_report(
             "Correct the report options before exporting.".into(),
         ));
     }
-    let clean =
-        clean(report, &filters, (app.today)()).map_err(|e| AppError::Invalid(e.join("; ")))?;
-    let name = match report {
-        "profit_loss" => "profit-and-loss",
-        "balance_sheet" => "balance-sheet",
-        _ => "general-ledger",
+    let today = (app.today)();
+    let (name, end) = if let Some(report) = subledgers::Report::from_route(report) {
+        (report.slug(), report.end(&filters, today)?)
+    } else if let Some(report) = statements::Report::from_route(report) {
+        (report.slug(), statements::end(&filters, today, fiscal_start_month(app, c)?)?)
+    } else {
+        let clean = clean(report, &filters, today, fiscal_start_month(app, c)?).map_err(|e| AppError::Invalid(e.join("; ")))?;
+        let name = match report {
+            "profit_loss" => "profit-and-loss",
+            "balance_sheet" => "balance-sheet",
+            _ => "general-ledger",
+        };
+        (name, clean.end())
     };
     // The Save dialog is visible UI too: use the book's stable company creation ordinal, not a UUID.
     let ordinal = app.open_mut()?.book.read(|tx| -> Result<_, FbError> {
@@ -712,7 +753,7 @@ pub(crate) fn export_report(
             .ok_or_else(|| FbError::missing("Company"))
     })?;
     Ok(Outcome::Export {
-        filename: format!("{name}-{ordinal}-{}.csv", clean.end()),
+        filename: format!("{name}-{ordinal}-{end}.csv"),
         contents,
     })
 }

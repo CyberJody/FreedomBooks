@@ -224,12 +224,12 @@ fn fix8_every_write_goes_through_the_choke_point() {
         }
     }
     let staging=include_str!("../staging.rs");
-    assert!(staging.contains("fn store_pull_mode(") && staging.contains("automatic: bool"));
+    assert!(staging.contains("fn store_pull_mode(") && staging.contains("PullMode::Desktop"));
     assert!(staging.contains("super::automatic::enqueue(w, co, &id)?"));
     write_paths.sort();
     let expected = [
-        "accept", "auto_post", "connect", "forget", "ignore", "import_rules", "keep_recorded", "link_existing", "map_account", "move_rule", "record_sync_failure", "return_to_review", "review_sync_gap",
-        "save_mappings", "save_rule", "set_rule_active", "stage_bank_transactions", "store_pull_for_desktop", "turn_off_imported_auto_post", "undo_accept",
+        "accept", "auto_post", "connect", "forget", "ignore", "import_rules", "keep_recorded", "link_existing", "map_account", "move_rule", "record_discovery_failure", "record_sync_failure", "return_to_review", "review_sync_gap",
+        "save_mappings_and_import_settings", "save_rule", "set_rule_active", "stage_bank_transactions", "store_pull_for_desktop", "turn_off_imported_auto_post", "undo_accept",
     ];
     assert_eq!(write_paths, expected, "the write paths changed: drive the new one in fix8_split_secrets_every_write_path_and_audit_action and list it here");
     assert_eq!(credential_paths, ["restore_connection_credentials", "flag_unreadable_credential"], "credential load paths changed: add public-admission, quarantine and later-writer regressions");
@@ -249,7 +249,7 @@ impl Fx {
         self.book.connection().query_row("SELECT id FROM bankfeeds_transaction WHERE feed_account_id=?1 AND remote_id=?2", [feed, remote], |r| r.get(0)).unwrap()
     }
 }
-const FIX8_ACTIONS: [&str; 19] = [
+const FIX8_ACTIONS: [&str; 21] = [
     "bankfeed.accepted",
     "bankfeed.bank_change_kept",
     "bankfeed.gap_reviewed",
@@ -257,6 +257,8 @@ const FIX8_ACTIONS: [&str; 19] = [
     "bankfeed.recorded_again",
     "bankfeed.undone",
     "bankfeed.connected",
+    "bankfeed.discovered",
+    "bankfeed.import_start_changed",
     "bankfeed.forgotten",
     "bankfeed.ignored",
     "bankfeed.mapped",
@@ -300,6 +302,16 @@ fn fix8_split_secrets_every_write_path_and_audit_action() {
         t.description = "R8memo-split-desc".into();
     }
     let second = connect(&mut f.book, f.u, f.c, &json!("R8orgsplit"), "R8namesplit.test", &known).unwrap();
+    let second_id = second["id"].as_str().unwrap();
+    returned.push(record_discovery_failure(&mut f.book, f.u, f.c, second_id, NOW, "R8err-first; SimpleFIN: R8err-second", &known).unwrap());
+    returned.push(store_discovery(&mut f.book, f.u, f.c, second_id, &pull, NOW, &known, &[]).unwrap().to_string());
+    let pending_feed: String = f.book.connection().query_row(
+        "SELECT id FROM bankfeeds_account WHERE connection_id=?1 ORDER BY id LIMIT 1", [second_id], |r| r.get(0)
+    ).unwrap();
+    save_mappings_and_import_settings(&mut f.book, f.u, f.c, second_id, &[], &[ImportSettings {
+        feed_account_id: pending_feed, expected_state: "PENDING".into(), expected_date: None,
+        import_from_date: Some("2026-10-01".into()),
+    }], &known).unwrap();
     returned.push(second.to_string());
     returned.push(record_sync_failure(&mut f.book, f.u, f.c, &f.conn.clone(), NOW, "R8err-first; SimpleFIN: R8err-second", false, &known).map(|_| String::new()).unwrap());
     returned.push(store_pull(&mut f.book, f.u, f.c, &f.conn.clone(), &pull, NOW, false, None, &known).unwrap().to_string());
@@ -343,7 +355,7 @@ fn fix8_split_secrets_every_write_path_and_audit_action() {
     assert!(auto_post(&mut f.book,f.u,f.c,&auto_item.id,&known).unwrap());
     assert_eq!(turn_off_imported_auto_post(&mut f.book,f.u,f.c,None,&known).unwrap(),1);
     // The inline account-creation path must mask the user-entered name and its downstream audit.
-    let card = f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE remote_id='ACT-card'", [], |r| r.get::<_,String>(0)).unwrap();
+    let card = f.book.connection().query_row("SELECT id FROM bankfeeds_account WHERE remote_id='ACT-card' AND connection_id=?1", [&f.conn], |r| r.get::<_,String>(0)).unwrap();
     // Each new account has its own name (account names are unique in a company); every one holds the secret.
     for (kind, label) in [(NewAccountKind::Checking, "checking"), (NewAccountKind::Savings, "savings"), (NewAccountKind::CreditCard, "card")] {
         save_mappings(&mut f.book, f.u, f.c, &f.conn, &[(card.clone(), MappingTarget::New { name: format!("{password} {label}"), kind })], &known).unwrap();

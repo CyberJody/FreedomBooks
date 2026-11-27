@@ -175,6 +175,7 @@ pub fn apply_credit(
             }
             return Ok(a);
         }
+        crate::periods::require_open(tx, c, stored_str(&data, "date")?)?;
         let p = prepare(tx, c, &m, &data)?;
         if p["digest"] != reviewed {
             return Err(FbError::validation(
@@ -238,6 +239,7 @@ pub fn unapply_credit(
                 "The unapply date cannot precede the application date.",
             ));
         }
+        crate::periods::require_open(tx, c, &d)?;
         let u = json!({"id":new_id(),"application_id":key,"date":d,"reason":reason,"actor_id":actor.to_db(),"actor_name":user.username});
         tx.execute("INSERT INTO credits_creditunapplication(id,application_id,date,actor_id,data) VALUES(?1,?2,?3,?4,?5)",params![u["id"].as_str(),key,d,actor.to_db(),u.to_string()])?;
         seal(tx, "unapplication", u["id"].as_str().unwrap())?;

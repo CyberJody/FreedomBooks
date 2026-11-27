@@ -372,6 +372,9 @@ const REPLAYED: &[&str] = &[
 /// classification test reads it: anything not in `REPLAYED` is already refused.
 #[cfg(test)]
 const NEVER_REPLAYED: &[&str] = &[
+    "ap_aging", "ar_aging", "vendor_1099",
+    "reports:customer_statements", "reports:cash_flow", "reports:comparative_profit_and_loss", "reports:sales_by_customer_item",
+    "reports:schedule_c_activity", "reports:asset_depreciation_schedule",
     "assistant:disconnect", "assistant:key", "assistant:model", "assistant:models_refresh",
     "assistant:notice", "assistant:page", "assistant:read_attachment",
     "assistant:read_attachments", "assistant:read_upload", "attachments:add_document",
@@ -379,7 +382,7 @@ const NEVER_REPLAYED: &[&str] = &[
     "backups:download", "backups:page", "balance_sheet", "bankfeeds:accounts", "bankfeeds:connect",
     "bankfeeds:forget", "bankfeeds:list", "bankfeeds:review", "bankfeeds:rule_edit",
     "bankfeeds:rule_new", "bankfeeds:rules", "bankfeeds:sync", "company", "company_edit",
-    "company_home", "documents:setup", "expenses", "find", "general_ledger", "history",
+    "company:periods", "company_home", "documents:setup", "expenses", "find", "general_ledger", "history",
     "invoices:email_preview", "profit_loss", "reminders:page", "reminders:settings", "reports",
     "salestax:settings", "salestax:setup", "settings", "setup_done", "setup_fill", "setup_start",
     "stripe:payments", "trial_balance",
@@ -713,7 +716,9 @@ impl SessionHost {
         let generation = slot.state.identity_generation();
         state::swap_in(&mut self.app, &mut slot.state);
         self.app.tokens.stamp = WRITE_SEQ.load(Ordering::SeqCst);
+        self.app.remote_session = !slot.client.local;
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(&mut self.app)));
+        self.app.remote_session = false;
         let failed = result.is_err();
         // Near the end of its generation block the session is ended here, in this one request
         // (signed out while swapped in, then not put back), never by re-entering it.

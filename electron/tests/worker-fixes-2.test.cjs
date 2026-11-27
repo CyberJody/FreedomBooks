@@ -1,5 +1,5 @@
 'use strict';
-// Bookkeeper test rounds 4 and 5 of 2026-11-23: the page behaviour behind items
+// Bookkeeper test rounds 4 and 5 of 2026-11-23 (internal test notes): the page behaviour behind items
 // 25 and 30, in a real sandboxed Electron window with the real preload and page scripts. Hidden window,
 // headless platform: no display is used.
 const test = require('node:test');

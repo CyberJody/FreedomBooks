@@ -382,6 +382,8 @@
     const kind = field(row, 'kind')?.value;
     if (!kind) return;
     for (const el of row.querySelectorAll('.for-kind')) el.hidden = !(el.dataset.kinds || '').split(' ').includes(kind);
+    const transfer = row.querySelector('[data-transfer-account]');
+    if (transfer) transfer.disabled = kind !== 'TRANSFER';
   }
   function prepare(root) {
     root.querySelectorAll('select[data-combobox]').forEach(enhance);

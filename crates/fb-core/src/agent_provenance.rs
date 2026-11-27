@@ -24,6 +24,10 @@ pub fn with<T>(context: Context, work: impl FnOnce() -> T) -> T {
     let _restore = Restore(CURRENT.with(|c| c.replace(Some(context))));
     work()
 }
+pub(crate) fn is_active() -> bool {
+    CURRENT.with(|c| c.borrow().is_some())
+}
+
 pub(crate) fn record(
     tx: &Writer<'_>,
     user: &User,

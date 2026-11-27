@@ -513,6 +513,7 @@ fn a_rule_saves_through_submit_form_and_lists_in_order() {
             ("sign", "OUT"),
             ("amount_min", ""),
             ("amount_max", "50.00"),
+            ("feed_account", ""),
             ("account", &expense),
             ("payee_name", "Office Depot"),
             ("active", "on"),
@@ -540,6 +541,7 @@ fn a_rule_saves_through_submit_form_and_lists_in_order() {
             ("sign", "ANY"),
             ("amount_min", "9"),
             ("amount_max", "1"),
+            ("feed_account", ""),
             ("account", &expense),
         ],
     ));

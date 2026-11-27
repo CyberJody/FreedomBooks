@@ -2,11 +2,11 @@
 
 FreedomBooks is a desktop accounting application for small businesses, built with Rust, SQLCipher and Electron. Your books stay on your computer. Bank downloads use your own SimpleFIN Bridge account.
 
-## Source preview — November 26, 2026
+## Source preview — November 27, 2026
 
-This is a **code-only preview** of the version being used and tested internally on Linux and Apple Silicon macOS. New since the November 17 preview: split bank-feed rows, deposit and receipt fee or adjustment lines, 180-day late-clearing check matching and multi-entry bank matching, grouped exact money formatting, client-side document printing and PDF export, live Hosting presence and safety controls, optional locked AI assistant access, and bill due-date and payment workflow fixes. There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
+This is a **code-only preview** of the version being used and tested internally on Linux and Apple Silicon macOS. New since the November 26 preview: A/R and A/P Aging summaries, Vendor 1099 Summary, NY Sales Tax non-calendar quarters with jurisdiction and taxable-vs-exempt breakdown, fiscal-year start month and inclusive closing-date period locks, customer default payment terms and taxability, per-account bank-feed import start dates and account-scoped rules, credit-card transfers, scheduled automatic backups with verified retention pruning and staged restore, Customer Statements, Direct-Method Cash-Flow Statement, Multi-Period Comparative Profit & Loss, Sales by Customer/Item, Schedule C Activity Worksheet, and Fixed-Asset Depreciation Schedule (all with desktop and connected-host printing and CSV export). There are no installer downloads in this publication, and it is not a production-readiness certification. Use a synthetic company when evaluating it; broader compatibility and recovery verification remains in progress.
 
-The application source comes from the internally tested `0d5ca0b47949021234b846a10e5c0e0a2eed0fe9` build; application behavior is unchanged, and public documentation and internal test-file notes were adjusted for publication. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
+The application source comes from the internally tested `df86f80b9ebcf1c3593c196ba2d224d6d9c97a46` build; application behavior is unchanged, and public documentation and internal test-file notes were adjusted for publication. The public repository contains source snapshots; private development history, local books, credentials and build artifacts are not published.
 
 ## Available in the desktop app
 

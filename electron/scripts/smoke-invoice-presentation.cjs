@@ -31,7 +31,13 @@ assert.ok(process.env.FB_NATIVE_MODULE&&process.env.DISPLAY&&![':0',':0.0',':20'
   async function pdf(name){const bytes=await app.evaluate(async({BrowserWindow})=>Array.from(await BrowserWindow.getAllWindows()[0].webContents.printToPDF({printBackground:true,preferCSSPageSize:true})));fs.writeFileSync(path.join(out,name+'.pdf'),Buffer.from(bytes));}
   await page.goto(prefix+'/print/');await readyImages();assert.equal(await page.locator('#print-total').innerText(),'0.54');assert.match(await page.locator('body').innerText(),/Proposed amount/);assert.equal(await page.locator('a[href^="https://buy.stripe.com"]').count(),0);await page.screenshot({path:path.join(out,'draft-invoice.png'),fullPage:true});await pdf('draft-invoice');
   await page.goto(prefix+'/email-preview/');await readyImages();assert.match(await page.locator('body').innerText(),/Draft total/);assert.match(await page.locator('body').innerText(),/\$0\.54/);assert.equal(await page.locator('button[value="email_send"]').count(),0);await page.screenshot({path:path.join(out,'draft-email.png'),fullPage:true});
-  await page.goto(prefix+'/edit/');assert.match(await page.locator('.invoice-payment-options').innerText(),/payments@example.test/);await page.screenshot({path:path.join(out,'editor-payment-options.png'),fullPage:true});
+  await page.goto(prefix+'/edit/');
+  const paymentOptions=page.locator('.invoice-payment-options');
+  const paymentSummary=paymentOptions.locator('summary');
+  assert.equal(await paymentSummary.innerText(),'Payment options on this invoice: Zelle® on · Stripe not connected');
+  await paymentSummary.click();
+  assert.match(await paymentOptions.innerText(),/payments@example\.test/);
+  await page.screenshot({path:path.join(out,'editor-payment-options.png'),fullPage:true});
   // A synthetic posted invoice can show static Zelle instructions, still without a live Stripe link.
   await call('command_PostInvoice',{invoice_id:draft.id,expected_revision:draft.revision});
   await page.goto(prefix+'/print/');await readyImages();assert.equal(await page.locator('#print-balance').innerText(),'0.54');await page.screenshot({path:path.join(out,'posted-invoice.png'),fullPage:true});await pdf('posted-invoice');

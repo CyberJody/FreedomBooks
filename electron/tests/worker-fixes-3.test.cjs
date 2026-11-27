@@ -1,5 +1,5 @@
 'use strict';
-// Bookkeeper rounds 6 and 7 and the Neon tests of 2026-11-24 (fix list items 37-45):
+// Bookkeeper rounds 6 and 7 and the Neon tests of 2026-11-24 (internal test notes, fix list items 37-45):
 // the page behaviour behind items 37, 38, 39, 42, 43 and 45, and the review fixes S2 and M5, in a real
 // sandboxed Electron window with the real preload, page scripts and stylesheets. The main process side is a
 // stand-in for `books.run` that records each command and answers the review page with prepared fragments

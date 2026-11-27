@@ -518,7 +518,6 @@ fn r6_known_secret_persisted_all_provider_fields_and_audit_writers() {
             if r6_leaks(&connection.to_string()) {
                 failures.insert(format!("{}/connect-return", case.name));
             }
-            forget(&mut f.book, f.u, f.c, connection["id"].as_str().unwrap(), &SecretSet::none()).unwrap();
             let failure = record_sync_failure(&mut f.book, f.u, f.c, &f.conn.clone(), NOW, value, n % 2 == 0, s);
             if r6_leaks(&format!("{failure:?}")) {
                 failures.insert(format!("{}/failure-return", case.name));
@@ -531,6 +530,11 @@ fn r6_known_secret_persisted_all_provider_fields_and_audit_writers() {
             let mut other = acct(&format!("other-{n}"), "Other", vec![]);
             other.currency = value.clone();
             let pull = StagedPull { accounts: vec![a, other], skipped: vec![value.clone()], errors: vec![value.clone()] };
+            let conn_id = connection["id"].as_str().unwrap();
+            if r6_leaks(&drive_discovery(&mut f, conn_id, &pull, value, s).concat()) {
+                failures.insert(format!("{}/discovery-return", case.name));
+            }
+            forget(&mut f.book, f.u, f.c, conn_id, &SecretSet::none()).unwrap();
             let result = store_pull(&mut f.book, f.u, f.c, &f.conn.clone(), &pull, NOW, false, None, s).unwrap();
             if r6_leaks(&result.to_string()) {
                 failures.insert(format!("{}/sync-return", case.name));

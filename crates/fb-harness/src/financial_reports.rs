@@ -162,11 +162,11 @@ fn form_dump(case: &Value) -> Value {
     let refused = |e: FbError| json!({"ok": false, "errors": e.messages()});
     let date = |d: Option<NaiveDate>| d.map(|d| d.to_string());
     match case["form"].as_str() {
-        Some("range") => match params::range(&input, today) {
+        Some("range") => match params::range(&input, today, 1) {
             Ok(r) => json!({"ok": true, "basis": r.basis.as_str(), "preset": r.preset, "start": date(r.start), "end": r.end.to_string()}),
             Err(e) => refused(e),
         },
-        Some("ledger") => match params::ledger_range(&input, get("account"), get("group"), today) {
+        Some("ledger") => match params::ledger_range(&input, get("account"), get("group"), today, 1) {
             Ok(l) => json!({"ok": true, "basis": l.range.basis.as_str(), "preset": l.range.preset, "start": date(l.range.start),
                             "end": l.range.end.to_string(), "group": l.group}),
             Err(e) => refused(e),
@@ -1149,7 +1149,7 @@ fn validate_bs(v: &Value, ev: &Evidence, as_of: NaiveDate, cash: bool, at: &str)
         }
         sections.insert(key, (rows, sum));
     }
-    let fy = financial::fiscal_year_start(as_of);
+    let fy = financial::fiscal_year_start(as_of, 1).expect("fixture fiscal year");
     if canonical_date(&v["fiscal_year_start"], at)? != fy {
         return Err(format!("{at}: fiscal year start disagrees"));
     }

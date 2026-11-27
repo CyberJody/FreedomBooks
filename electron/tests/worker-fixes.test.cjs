@@ -1,5 +1,5 @@
 'use strict';
-// Bookkeeper test rounds of 2026-11-23: the page behaviour behind items 1, 6, 11,
+// Bookkeeper test rounds of 2026-11-23 (internal test notes): the page behaviour behind items 1, 6, 11,
 // 12 and 18 and the review's S1 and N3, in a real sandboxed Electron window with the real preload, page
 // scripts and stylesheets. The main process side is a stand-in for `books.run` that records each command. Hidden window, headless
 // platform: no display is used. Input events are real (sendInputEvent), not synthetic DOM events.
