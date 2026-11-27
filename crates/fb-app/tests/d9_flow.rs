@@ -395,7 +395,7 @@ fn accepting_a_downloaded_transaction_from_the_review_page_posts_it_and_shows_th
     assert_eq!(audit(&mut app), before);
 
     // Mapping through the accounts form redirects to the list, like Django.
-    let outcome = submit(&mut app, &accounts, &[(&field, &bank)]);
+    let outcome = submit(&mut app, &accounts, &[(&field, &bank), (&format!("expected_map_{feed}"), &equipment)]);
     assert!(
         matches!(&outcome, Outcome::Redirect { location } if *location == format!("/c/{c}/bank-feeds/")),
         "{outcome:?}"

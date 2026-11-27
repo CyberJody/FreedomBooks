@@ -210,6 +210,7 @@ fn aging_and_1099_routes_drills_print_and_typed_csv() {
         };
         assert_eq!(actual, filename);
         assert_eq!(contents, direct.html);
+        assert!(contents.as_bytes().starts_with(&[0xef, 0xbb, 0xbf]));
         assert!(contents.contains(expected), "{contents}");
     }
     for (slug, party, party_id, documents, document_id) in [

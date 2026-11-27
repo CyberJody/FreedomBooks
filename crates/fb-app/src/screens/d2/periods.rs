@@ -42,6 +42,7 @@ fn page_with(
     let mut vm = ctx(app, route)?;
     let editable = app.ai.operation_actor(Some(c))?.is_none()
         && app.authenticated_session()?.role == Role::Administrator;
+    put(&mut vm, "messages", std::mem::take(&mut app.messages));
     put(&mut vm, "editable", editable);
     put(
         &mut vm,

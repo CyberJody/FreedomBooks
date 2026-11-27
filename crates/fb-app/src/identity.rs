@@ -533,7 +533,8 @@ impl App {
             );
         }
         let permission = match command {
-            Command::ExportHistory { .. }
+            Command::ExportAttachment { .. }
+            | Command::ExportHistory { .. }
             | Command::ExportReport { .. }
             | Command::ExportBankRegister { .. }
             | Command::ExportReconciliation { .. } => Permission::Read,
@@ -582,7 +583,8 @@ impl App {
             .get("company_id")
             .map(|id| crate::session::company(id))
             .transpose()?;
-        let admin = route.name.starts_with("backups:")
+        let admin = (route.name.starts_with("backups:")
+            && !(route.name == "backups:page" && permission == Permission::Read))
             || route.name.starts_with("assistant:")
             || matches!(route.name.as_str(), "company_new" | "company_edit");
         self.authorize(

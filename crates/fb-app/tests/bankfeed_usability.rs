@@ -187,3 +187,22 @@ fn connection_instructions_name_the_bridge_app_button() {
     assert!(html.contains("Apps"));
     assert!(html.contains("New app connection"));
 }
+
+#[test]
+fn stale_bulk_mapping_rolls_back_other_rows_and_retries_are_idempotent() {
+    let (_dir, mut app, path, feeds) = fixture();
+    let html = screens::render(&mut app, &path).unwrap().html;
+    for feed in &feeds { assert!(html.contains(&format!(r#"name="expected_map_{feed}" value="""#))); }
+    let change = |idx: usize, name: &str| vec![
+        (format!("expected_map_{}", feeds[idx]), String::new()), (format!("map_{}", feeds[idx]), "__new__".into()),
+        (format!("name_{}", feeds[idx]), name.into()), (format!("type_{}", feeds[idx]), "CHECKING".into())];
+    let winning = change(1, "First save");
+    assert!(matches!(post(&mut app, &path, winning.clone()), Outcome::Redirect {..}));
+    assert!(matches!(post(&mut app, &path, winning), Outcome::Redirect {..}));
+    let mut stale = change(0, "Other row");
+    stale.extend([(format!("expected_map_{}", feeds[1]), String::new()), (format!("map_{}", feeds[1]), String::new())]);
+    assert!(matches!(post(&mut app, &path, stale), Outcome::Invalid {html} if html.contains("mapping changed")));
+    let co = app.first_company().unwrap().unwrap();
+    let accounts = app.open_mut().unwrap().book.read(|q| store::accounts(q, co)).unwrap();
+    assert_eq!(accounts.iter().map(|a| a.name.as_str()).collect::<Vec<_>>(), ["First save"]);
+}

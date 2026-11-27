@@ -1067,7 +1067,9 @@
     "account_id": "fees",
     "payee_name": ""
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This transaction looks already recorded as 1 · J000004 (2026-10-08, “By hand”): an entry on this account with the same amount, 5 days or less apart. Match it to that entry, or confirm that you want to record it again."
   },
   {
    "op": "bankfeeds_map",
@@ -1119,9 +1121,7 @@
    "op": "bankfeeds_return",
    "company": "co",
    "tx": "conn/org1/chk/seed3",
-   "expect_error": true,
-   "expect_kind": "ValidationError",
-   "expect_message": "JE 3 is still posted. Void or reverse it from its own page first; then return this transaction to review."
+   "expect_error": false
   },
   {
    "op": "bankfeeds_save_rule",
@@ -1165,7 +1165,9 @@
     "account_id": "bank",
     "payee_name": ""
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Choose a category other than the feed account itself."
   },
   {
    "op": "bankfeeds_accept",
@@ -1552,7 +1554,9 @@
      "sale2"
     ]
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "The selected receipts total 20.00, not the bank's 1234.56."
   },
   {
    "op": "bankfeeds_map",
@@ -2168,7 +2172,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_accept",
@@ -2697,7 +2701,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_return",
@@ -3044,7 +3048,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_sync",
@@ -3206,7 +3210,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_map",
@@ -3763,7 +3767,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_return",
@@ -3843,9 +3847,7 @@
    "tx": "conn/org1/chk/seed3",
    "date": "2026-10-20",
    "reason": "Random undo",
-   "expect_error": true,
-   "expect_kind": "ValidationError",
-   "expect_message": "Only an unreversed original posted journal can be reversed."
+   "expect_error": false
   },
   {
    "op": "bankfeeds_accept",
@@ -4317,7 +4319,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_save_rule",
@@ -4387,7 +4389,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_sync",
@@ -4634,7 +4636,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_accept",
@@ -4879,7 +4881,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_sync",
@@ -5419,7 +5421,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_map",
@@ -5480,7 +5482,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_accept",
@@ -5654,7 +5656,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_sync",
@@ -6147,7 +6149,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_accept",
@@ -6160,7 +6162,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_ignore",
@@ -6356,7 +6358,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_suggest",
@@ -7057,7 +7059,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_save_rule",
@@ -7415,7 +7417,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_undo",
@@ -7744,7 +7746,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_store",
@@ -8099,7 +8101,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_accept",
@@ -8112,7 +8114,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_save_rule",
@@ -8686,7 +8688,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_save_rule",
@@ -8828,7 +8830,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_accept",
@@ -8925,7 +8927,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days."
+   "expect_message": "Choose an unmatched posted entry on the mapped account with the same amount and a date within 5 days (or a matching check within 180 days)."
   },
   {
    "op": "bankfeeds_return",
@@ -9314,7 +9316,9 @@
     "account_id": "income",
     "payee_name": "Payee"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "This transaction looks already recorded as 10 · J000017 (2026-10-03, “Bank feed: Rent”): an entry on this account with the same amount, 5 days or less apart. Match it to that entry, or confirm that you want to record it again."
   },
   {
    "op": "bankfeeds_save_rule",

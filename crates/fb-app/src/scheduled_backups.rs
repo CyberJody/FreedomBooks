@@ -415,7 +415,7 @@ pub(crate) fn view(app: &mut App) -> AppResult<Value> {
     let status = match settings.status.filter(|_| current && settings.enabled) {
         Some(Status::Verified) | None => None,
         Some(Status::RetentionFailed) => {
-            Some("The backup was verified. Older automatic backups could not be removed.")
+            Some("The backup was verified. Older automatic backups could not be removed. Check the schedule folder, including hidden .fb-retention- folders, for retained files.")
         }
         Some(Status::Retry) => Some(
             "The automatic backup could not be verified or recorded. FreedomBooks will retry. Check the backup folder and available space.",

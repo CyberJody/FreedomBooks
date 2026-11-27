@@ -2033,7 +2033,7 @@ fn linked_asset_cost_requires_disambiguation_and_cannot_be_claimed_twice() {
     asset.cost_cents = Some(4000);
     let split = AssetInput {
         cost_cents: Some(4000),
-        ..duplicate
+        ..duplicate.clone()
     };
     let report = run(&mut f, &[asset.clone(), split.clone()]).unwrap();
     assert_eq!(report.known_assets.cost, money(8000));
@@ -2045,8 +2045,20 @@ fn linked_asset_cost_requires_disambiguation_and_cannot_be_claimed_twice() {
         cost_cents: Some(2000),
         ..asset.clone()
     };
-    let report = run(&mut f, &[journal_only, asset, split]).unwrap();
+    let report = run(&mut f, &[journal_only.clone(), asset.clone(), split]).unwrap();
     assert_eq!(report.known_assets.cost, money(10000));
+    services::reverse_journal(&mut f.book, f.actor, f.company, acquisition, "2025-02-01", "Duplicate").unwrap();
+    assert!(run(&mut f, std::slice::from_ref(&asset)).is_ok());
+    for link in [asset, journal_only] {
+        let err = asset_report::asset_depreciation_schedule(&mut f.book, f.actor, f.company,
+            day("2025-01-01"), day("2025-02-01"), &[link]).unwrap_err();
+        assert!(err.message().contains("posted fixed-asset cost debit"));
+    }
+    // Reversing a disposal creates a debit, which is also ineligible as a purchase.
+    let disposal = entry(&mut f, "2025-01-20", bank, equipment, "5");
+    let reversal = services::reverse_journal(&mut f.book, f.actor, f.company, disposal, "2025-01-21", "Correct disposal").unwrap();
+    let link = AssetInput { journal: Some(reversal.id), line: None, ..duplicate };
+    assert!(run(&mut f, &[link]).unwrap_err().message().contains("posted fixed-asset cost debit"));
 }
 
 #[test]

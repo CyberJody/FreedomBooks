@@ -490,3 +490,26 @@ fn blank_number_assigns_a_bank_debit_reference_once() {
     second_bank["check_number"] = json!("");
     assert_eq!(f.save(&second_bank)["current"]["check_number"], "EFT-M1");
 }
+
+#[test]
+fn transfer_review_matches_credit_card_register_when_owed_and_overpaid() {
+    let mut f = Fx::new();
+    let card = services::save_account(&mut f.book, f.actor, f.co, AccountInput::new("211", "Card").detail("CREDIT_CARD")).unwrap().id;
+    for (from, to, amount, expected, side) in [
+        (card, f.bank, "7.00", "7.00", "from"),
+        (f.bank, card, "10.00", "-3.00", "to"),
+    ] {
+        let mut p = f.transfer();
+        p["request_key"] = json!(fb_ids::new_v7().to_string());
+        p["from_account_id"] = json!(from.to_db());
+        p["to_account_id"] = json!(to.to_db());
+        p["amount"] = json!(amount);
+        let review = crate::transfers::review_transfer(&mut f.book, f.actor, f.co, &p).unwrap();
+        crate::transfers::record_transfer(&mut f.book, f.actor, f.co, &p, &review).unwrap();
+        p["request_key"] = json!(fb_ids::new_v7().to_string());
+        let review = crate::transfers::review_transfer(&mut f.book, f.actor, f.co, &p).unwrap();
+        let register = crate::banking::build(&mut f.book, f.actor, f.co, &card.to_db(), &json!({}), 1, 20).unwrap();
+        assert_eq!(review.display["balances"][side], register["closing"]);
+        assert_eq!(register["closing"], expected);
+    }
+}

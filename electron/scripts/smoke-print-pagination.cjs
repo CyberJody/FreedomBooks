@@ -31,7 +31,7 @@ module.exports=async({app,page,company,ids,shot,pass})=>{
     await page.click('#print-now');await page.waitForFunction(()=>!document.querySelector('#print-now').disabled);
     assert.ok(fs.existsSync(file));
     const info=spawnSync('pdfinfo',[file],{encoding:'utf8'});assert.equal(info.status,0,info.stderr);
-    const pages=Number(/Pages:\s+(\d+)/.exec(info.stdout)[1]);assert.ok(pages>=2);
+    const pages=Number(/Pages:\s+(\d+)/.exec(info.stdout)[1]);assert.equal(pages,2);
     const text=spawnSync('pdftotext',['-layout',file,'-'],{encoding:'utf8'});assert.equal(text.status,0,text.stderr);
     assert.ok(text.stdout.includes(number));assert.match(text.stdout,/Total USD\s+1,000\.00/);
     assert.equal((text.stdout.match(/Line \d{2}:/g)||[]).length,40);

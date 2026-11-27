@@ -90,6 +90,22 @@ test('a lock, unlock, sign-in or user switch clears history: Back never reaches 
   assert.equal(f.h.entries.length, 1);
 });
 
+test('a remote user switch drops worksheet history immediately and again when the next page commits', () => {
+  const f = fixture();
+  f.visit('fb://app/c/' + C + '/home/');
+  f.visit('fb://app/c/' + C + '/reports/schedule-c/?mappings=private-A');
+  Object.assign(f.session, {signed_in:false, session_generation:4});
+  f.nav.reset();
+  assert.equal(f.nav.actions.back(), false);
+  f.visit('fb://app/desktop/sign-in/');
+  Object.assign(f.session, {signed_in:true, session_generation:5});
+  f.nav.reset();
+  assert.equal(f.nav.actions.back(), false);
+  f.visit('fb://app/');
+  assert.deepEqual(f.h.entries, ['fb://app/']);
+  assert.equal(f.nav.actions.back(), false);
+});
+
 test('while the books are busy nothing moves, nothing throws, and history is kept', () => {
   const f = fixture();
   f.visit(`fb://app/c/${C}/home/`);

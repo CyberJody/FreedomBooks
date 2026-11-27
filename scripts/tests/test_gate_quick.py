@@ -27,11 +27,11 @@ if [ "$1" = test ]; then echo "cargo $* FB_TEST_FULL_CASES=${FB_TEST_FULL_CASES:
 if [ "$1" = test ]; then echo "$TMPDIR" >> "$GATE_LOG.tmp"; [ -d "$TMPDIR" ] || echo MISSING >> "$GATE_LOG.tmp"; fi
 if [ "$1" = test ]; then echo "${RUST_TEST_THREADS:-unset}" >> "$GATE_LOG.threads"; fi
 if [ "$1" = metadata ]; then exec "$REAL_CARGO" "$@"; fi
-if [ "${CARGO_STUB_FAIL:-}" = "$1" ] && { [ "$1" != tree ] || [ "${CARGO_TREE_CRATE:-}" = "$3" ]; }; then
+if [ "${CARGO_STUB_FAIL:-}" = "$1" ] && { [ "$1" != tree ] || [ "${CARGO_TREE_CRATE:-}" = "$4" ]; }; then
   echo "fixture: cargo $1 failed" >&2
   exit "${CARGO_STUB_FAIL_RC:-73}"
 fi
-if [ "$1" = tree ] && [ "${CARGO_TREE_CRATE:-}" = "$3" ]; then
+if [ "$1" = tree ] && [ "${CARGO_TREE_CRATE:-}" = "$4" ]; then
   echo "${CARGO_TREE_OUTPUT:-}"
 fi
 exit "${CARGO_STUB_RC:-0}"
@@ -132,12 +132,12 @@ class Fixture:
 
 CLIPPY = "cargo clippy --workspace --all-targets -- -D warnings"
 ISOLATION = [
-    "cargo tree -p fb-core -e normal --prefix none",
-    "cargo tree -p fb-app -e normal,build --prefix none",
-    "cargo tree -p fb-node -e normal,build --prefix none",
-    "cargo tree -p fb-remote-proto -e normal,build --prefix none",
-    "cargo tree -p fb-host -e normal,build --prefix none",
-    "cargo tree -p fb-remote -e normal,build --prefix none",
+    "cargo tree --locked -p fb-core -e normal --prefix none",
+    "cargo tree --locked -p fb-app -e normal,build --prefix none",
+    "cargo tree --locked -p fb-node -e normal,build --prefix none",
+    "cargo tree --locked -p fb-remote-proto -e normal,build --prefix none",
+    "cargo tree --locked -p fb-host -e normal,build --prefix none",
+    "cargo tree --locked -p fb-remote -e normal,build --prefix none",
 ]
 KEY_TESTS = ("cargo test -p fb-app --features key-test-hooks --test key_crashes --test protection_audit "
              "--test protection_publication --no-fail-fast")

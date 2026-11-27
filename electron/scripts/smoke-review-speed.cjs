@@ -8,6 +8,7 @@
 // After a reconnect (fixture `--reconnect`): the old connection's accepted row that the new copy is linked to
 // offers no Undo and says why; an Undo pressed anyway through the real token path is refused and voids nothing.
 // node scripts/smoke-review-speed.cjs <fixture dir> <fb-node.node>   (under a private Xvfb)
+// Use a SimpleFIN- or plugins-enabled native module for the review screen.
 // Fixture: cargo run -p fb-app --example ai_synthetic_fixture -- <dir> --builtin --reconnect
 const {_electron: electron} = require('playwright');
 const assert = require('node:assert/strict');
@@ -114,7 +115,9 @@ const pass = text => console.log(`PASS REVIEW ${++checks}: ${text}`);
     await old.waitFor();
     assert.equal(await old.locator('button[name=undo_one]').count(), 0, 'no Undo on a row a re-download is linked to');
     assert.match(await old.innerText(), /Undo not available: the copy downloaded again \(Synthetic Savings 2026-10-30 Synthetic reconnect fee\) is linked to it\. Return that copy to review first\./);
-    assert.match(await old.innerText(), /void or reverse JE \d+ from its page/);
+    assert.doesNotMatch(await old.innerText(), /void or reverse/i);
+    const journalLabel = /Accepted: \d+ · J\d{6} \(journal entry\)/.exec(await old.innerText());
+    assert.ok(journalLabel, 'the linked row identifies its accepted journal entry');
     await shot('6-undo-not-available');
     const reversals = () => app.evaluate((_e, input) => JSON.parse(process.mainModule.require(input.nativePath).query(JSON.stringify({type: 'Register', company_id: input.company, account_id: input.bank}))), {nativePath, company: fixture.company_id, bank: fixture.savings});
     const register = await reversals();
@@ -129,7 +132,7 @@ const pass = text => console.log(`PASS REVIEW ${++checks}: ${text}`);
     await page.waitForSelector('#review-status .results li.bad');
     assert.match(await page.locator('#review-status .results').innerText(), /cannot be undone here: the copy downloaded again/);
     assert.equal(await page.evaluate(() => window.__samePage), 'again', 'refused in place, no page load');
-    assert.match(await old.innerText(), /Accepted: JE \d+/, 'the old row keeps its entry');
+    assert.ok((await old.innerText()).includes(journalLabel[0]), 'the old row keeps the same entry');
     assert.deepEqual(await reversals(), register, 'nothing was voided');
     await shot('7-undo-refused');
     pass('after a reconnect, Undo on the old row a new copy is linked to is not offered, says why, and is refused when pressed anyway');

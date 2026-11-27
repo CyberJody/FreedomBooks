@@ -36,14 +36,13 @@ fn post(app: &mut App, path: &str, fields: &[(&str, &str)]) -> Outcome {
         .next()
         .unwrap()
         .into();
-    app.run(Command::SubmitForm {
-        path: path.into(),
-        token,
-        fields: fields
-            .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect(),
-    })
+    let mut submitted: Vec<_> = fields.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+    if !fields.iter().any(|(k, _)| *k == "expected_snapshot")
+        && let Some((_, tail)) = html.split_once(r#"name="expected_snapshot" value=""#)
+    {
+        submitted.push(("expected_snapshot".into(), tail.split('"').next().unwrap().into()));
+    }
+    app.run(Command::SubmitForm { path: path.into(), token, fields: submitted })
     .unwrap()
 }
 fn saved(outcome: Outcome) -> String {
@@ -393,4 +392,23 @@ fn item_form_puts_type_first_and_asks_for_an_income_account_only_for_items_you_s
     // A sold item with its income account saves; so does an item you only buy.
     saved(post(&mut app, &path, &[("kind", "SERVICE"), ("code", "MOW"), ("sale_rate", "45.00"), ("income_account", &income), ("expense_account", "")]));
     saved(post(&mut app, &path, &[("kind", "NONSTOCK"), ("code", "GLOVES"), ("sale_rate", "0"), ("income_account", ""), ("expense_account", &expense)]));
+}
+
+#[test]
+fn contact_edits_refuse_stale_snapshots_and_allow_an_identical_retry() {
+    let (mut app, c) = fixture();
+    for (list, model) in [("customers", Model::Customer), ("vendors", Model::Vendor)] {
+        let location = saved(post(&mut app, &format!("/c/{c}/lists/{list}/new/"), &[("display_name", "Original")]));
+        let edit = format!("{location}edit/");
+        let page = screens::render(&mut app, &edit).unwrap();
+        let snapshot = page.html.split_once(r#"name="expected_snapshot" value=""#).unwrap().1.split('"').next().unwrap();
+        let winner = [("display_name", "First save"), ("expected_snapshot", snapshot)];
+        assert_eq!(saved(post(&mut app, &edit, &winner)), location);
+        let audits = audit_count(&mut app);
+        assert_eq!(saved(post(&mut app, &edit, &winner)), location);
+        let stale = [("display_name", "Stale save"), ("expected_snapshot", snapshot)];
+        assert!(matches!(post(&mut app, &edit, &stale), Outcome::Invalid {html} if html.contains("changed since you opened")));
+        assert_eq!(audit_count(&mut app), audits);
+        assert_eq!(get(&mut app, &c, model, id(&location))["display_name"], "First save");
+    }
 }

@@ -391,6 +391,7 @@ fn form(
         for k in ["date", "due_date", "memo", "reference", "reentry_reason"] {
             initial[k] = r[k].clone();
         }
+        initial["terms"] = r["vendor_snapshot"]["bill_terms"].clone();
         initial["vendor"] = r["vendor_id"].clone();
         initial["supersedes"] = r["supersedes_id"].clone();
         initial["expected_revision"] = b["revision"].clone();
@@ -824,10 +825,15 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
     // Worker item 15 and review N1: a blank due date is the bill date plus the chosen terms, or the
     // bill date itself with no terms; the bill's page then says which date was set.
     let typed_due = clean_date(p, "due_date", false, &mut e).filter(|d| !d.is_empty());
+    let (calculated, notice) = due_from_terms(&date, named(&fs, "terms"), &terms);
     let (due, due_note) = match typed_due {
+        Some(d) if !terms.is_empty() && current.as_ref().is_some_and(|saved|
+            saved["vendor_snapshot"]["bill_terms"] == terms && saved["date"] != date && saved["due_date"] == d
+        ) => (calculated.clone(), None),
         Some(d) => (d, None),
-        None => due_from_terms(&date, named(&fs, "terms"), &terms),
+        None => (calculated.clone(), notice),
     };
+    let terms = (!terms.is_empty() && due == calculated).then_some(terms);
     let memo = clean_text(p, "memo", 2000, false, true, &mut e);
     let ch = choices(app, c, current.as_ref())?;
     let mut lines = vec![];
@@ -914,6 +920,7 @@ pub(super) fn submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> App
             vendor_id: vendor,
             date,
             due_date: due,
+            terms,
             memo,
             reference,
             supersedes_id: (!supersedes.is_empty()).then_some(supersedes),

@@ -1,6 +1,6 @@
 //! Private main-process capabilities. No renderer bridge registration.
 use super::{app_blocking, app_error, fail};
-use crate::boundary::{Class, guarded, within};
+use crate::boundary::{Class, at_door, guarded, within};
 use napi::{Env, Result, Task, bindgen_prelude::AsyncTask};
 use napi_derive::napi;
 use zeroize::Zeroizing;
@@ -76,26 +76,25 @@ pub fn ai_forget_all() -> Result<bool> {
 }
 #[napi]
 pub fn ai_request_async(token: String, request: Option<String>, proof: Option<String>) -> Result<AsyncTask<AgentWork>> {
-    if token.len() != 64 || proof.as_ref().is_some_and(|p| p.len() > 4096)
-        || request
-            .as_ref()
-            .is_some_and(|r| r.len() > fb_app::commands::MAX_REQUEST_BYTES)
-    {
-        return Err(fail("Invalid agent request."));
-    }
-    let proof = proof.map(Zeroizing::new);
-    let (generation, token) = guarded("ai_request_async", Class::Read, |app| {
+    guarded("ai_request_async", Class::Read, |app| {
+        if token.len() != 64 || proof.as_ref().is_some_and(|p| p.len() > 4096)
+            || request
+                .as_ref()
+                .is_some_and(|r| r.len() > fb_app::commands::MAX_REQUEST_BYTES)
+        {
+            return Err(fail("Invalid agent request."));
+        }
+        let proof = proof.map(Zeroizing::new);
         let token = if let Some(proof) = proof.as_ref() {
             app.ai_prepare_unattended(proof).map_err(app_error)?
         } else { token };
         let token = Zeroizing::new(token);
-        Ok((app.ai_session(&token).map_err(app_error)?, token))
-    })?;
-    Ok(AsyncTask::new(AgentWork {
-        generation,
-        token,
-        request: request.map(Zeroizing::new),
-    }))
+        Ok(AsyncTask::new(AgentWork {
+            generation: app.ai_session(&token).map_err(app_error)?,
+            token,
+            request: request.map(Zeroizing::new),
+        }))
+    })
 }
 pub struct AgentWork {
     generation: (u64, u64),
@@ -115,15 +114,14 @@ impl Task for AgentWork {
     type JsValue = String;
     fn compute(&mut self) -> Result<String> {
         // A pool thread, guarded like the main thread's calls (see boundary.rs).
-        let mut app = app_blocking()?;
-        crate::hosting::with_desk(&mut app, crate::hosting::TASK_WAIT, |app| within("ai_request", Class::Write, app, |app| {
+        at_door("ai_request", Class::Write, app_blocking, |door| crate::hosting::with_desk(door, crate::hosting::TASK_WAIT, |app| within("ai_request", Class::Write, app, |app| {
             self.current(app)?;
             let value = app
                 .ai_response(&self.token, self.request.as_deref().map(|s| s.as_str()))
                 .map_err(app_error)?;
             self.current(app).map_err(|_| fail(if self.request.is_some() { "outcome_unknown" } else { "paused_signed_out" }))?;
             Ok(value.to_string())
-        }))
+        })))
     }
     fn resolve(&mut self, _env: Env, output: String) -> Result<String> {
         Ok(output)

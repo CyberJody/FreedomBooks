@@ -821,3 +821,25 @@ fn active_template_37_overdue_gives_one_notice_is_marked_stalled_and_can_be_dele
     assert_eq!(count(&mut f), 0);
     assert!(!page(&mut f, "recurring-bills/").contains("data-recurring-stalled"));
 }
+
+#[test]
+fn closed_catch_up_dates_are_counted_in_confirmation_and_result() {
+    let mut f = fixture();
+    let o = f.app.open_mut().unwrap();
+    let ap = services::save_account(&mut o.book, o.owner, f.c, AccountInput::new("2100", "Accounts payable").detail("PAYABLE")).unwrap().id;
+    let mut setup = o.book.read(|q| fb_core::documents::setup_snapshot(q, f.c)).unwrap();
+    setup["payables"] = json!(ap.to_db());
+    fb_core::documents::save_setup(&mut o.book, o.owner, f.c, &setup, setup["revision"].as_i64()).unwrap();
+    fb_core::periods::set_policy(&mut o.book, o.owner, f.c, 0, fb_core::periods::PeriodChange {
+        fiscal_year_start_month:1, closing_date:Some("2026-09-30".into())
+    }, None).unwrap();
+    f.values["auto_post"] = json!(true);
+    let path = format!("/c/{}/recurring-bills/new/", f.c);
+    let mut fields = posted(&f.values);
+    let Outcome::Page {html, ..} = screens::submit(&mut f.app, &path, &fields).unwrap() else { panic!("missing confirmation") };
+    assert!(html.contains("Bills to save as drafts due to the closing date: 1. Bills eligible for automatic posting: 1."));
+    fields.push(("confirmation".into(),hidden(&html, "confirmation")));
+    assert!(matches!(screens::submit(&mut f.app, &path, &fields).unwrap(), Outcome::Redirect {..}));
+    fb_app::recurring_bills::desktop_tick(&mut f.app).unwrap();
+    assert!(page(&mut f, "recurring-bills/").contains("1 posted, 1 saved as drafts due to the closing date."));
+}

@@ -154,10 +154,21 @@ struct Row {
     cells: Vec<Cell>,
 }
 
+#[derive(Serialize)]
+struct Heading {
+    label: String,
+    number: bool,
+}
+
+impl Heading {
+    fn text(label: &str) -> Self { Self { label: label.into(), number: false } }
+    fn number(label: &str) -> Self { Self { label: label.into(), number: true } }
+}
+
 #[derive(Default, Serialize)]
 pub(super) struct Table {
     title: Option<&'static str>,
-    headings: Vec<String>,
+    headings: Vec<Heading>,
     rows: Vec<Row>,
     pub(super) notes: Vec<String>,
     metadata: Vec<(String, String)>,
@@ -165,25 +176,32 @@ pub(super) struct Table {
 }
 
 impl Table {
-    fn new(headings: &[&str]) -> Self {
+    fn new(labels: &[&str], amounts: &[&str]) -> Self {
         Self {
-            headings: headings.iter().map(|s| (*s).into()).collect(),
+            headings: labels.iter().map(|s| Heading::text(s)).chain(amounts.iter().map(|s| Heading::number(s))).collect(),
             ..Self::default()
         }
     }
 
     pub(super) fn push(&mut self, kind: &'static str, cells: impl IntoIterator<Item = Cell>) {
-        self.rows.push(Row {
-            kind,
-            cells: cells.into_iter().collect(),
-        });
+        let cells: Vec<_> = cells.into_iter().collect();
+        if kind == "heading" {
+            debug_assert_eq!(cells.len(), 1); // Rendered with colspan across all columns.
+        } else {
+            debug_assert_eq!(cells.len(), self.headings.len());
+        }
+        self.rows.push(Row { kind, cells });
     }
 
-    pub(super) fn titled(title: &'static str, headings: &[&str]) -> Self {
+    pub(super) fn titled(title: &'static str, labels: &[&str], amounts: &[&str]) -> Self {
         Self {
             title: Some(title),
-            ..Self::new(headings)
+            ..Self::new(labels, amounts)
         }
+    }
+
+    pub(super) fn text_heading(&mut self, label: &str) {
+        self.headings.push(Heading::text(label));
     }
 
     fn csv(&self, output: &mut String) {
@@ -199,7 +217,7 @@ impl Table {
         let mut headings = self
             .headings
             .iter()
-            .map(|h| p::csv_text(h))
+            .map(|h| p::csv_text(&h.label))
             .collect::<Vec<_>>();
         if self.csv_journal_link {
             headings.push("Journal link".into());
@@ -207,7 +225,7 @@ impl Table {
         csv_row(output, headings);
         for row in &self.rows {
             let mut cells = row.cells.iter().map(Cell::csv).collect::<Vec<_>>();
-            cells.resize(self.headings.len(), String::new());
+            cells.resize(cells.len().max(self.headings.len()), String::new());
             if self.csv_journal_link {
                 let link = row
                     .cells
@@ -284,6 +302,13 @@ pub(super) fn render(
     let print = raw("print");
     let printing = output == "print" || print == "1";
     let mut errors = Vec::new();
+    if let Some((key, _)) = &worksheet {
+        for (name, _) in params {
+            if name != *key && !matches!(name.as_str(), "preset" | "start" | "end" | "basis" | "output" | "print" | "__fb_remote_page") {
+                errors.push(format!("Unknown worksheet parameter ‘{name}’."));
+            }
+        }
+    }
     if !matches!(output, "" | "print" | "csv") {
         errors.push(choice_error(output));
     }
@@ -486,6 +511,7 @@ fn statement_table(company: CompanyId, report: customer_statement::CustomerState
         "Activity",
         "Date",
         "Reference",
+    ], &[
         "A/R change",
         "Credit allocated",
         "Net A/R balance",
@@ -572,7 +598,7 @@ fn statement_table(company: CompanyId, report: customer_statement::CustomerState
 }
 
 fn cash_table(company: CompanyId, report: cash_flow::CashFlow) -> Table {
-    let mut table = Table::new(&["Activity", "Date", "Journal", "Memo", "Cash change"]);
+    let mut table = Table::new(&["Activity", "Date", "Journal", "Memo"], &["Cash change"]);
     table.csv_journal_link = true;
     let summary = |label, amount| {
         [
@@ -619,9 +645,9 @@ fn cash_table(company: CompanyId, report: cash_flow::CashFlow) -> Table {
 }
 
 fn comparative_table(report: comparative::ComparativeProfitAndLoss, fiscal_years: bool) -> Table {
-    let mut table = Table::new(&["Account"]);
+    let mut table = Table::new(&["Account"], &[]);
     for column in &report.columns {
-        table.headings.push(column.label.clone());
+        table.headings.push(Heading::number(&column.label));
         table.notes.push(format!(
             "{} · {} through {}",
             column.label,
@@ -632,7 +658,7 @@ fn comparative_table(report: comparative::ComparativeProfitAndLoss, fiscal_years
     if fiscal_years {
         table
             .headings
-            .extend(["Variance".into(), "Variance %".into()]);
+            .extend(["Variance", "Variance %"].map(Heading::number));
     }
     if report.unconverted > 0 {
         table.notes.push(format!("Cash basis includes {} unconverted receivables or payables lines through the latest period.", report.unconverted));
@@ -652,12 +678,12 @@ fn comparative_table(report: comparative::ComparativeProfitAndLoss, fiscal_years
 }
 
 fn sales_table(report: sales::SalesByCustomerItem, group: Group) -> Table {
-    let mut table = Table::new(&[]);
+    let mut table = Table::new(&[], &[]);
     if group != Group::Item {
-        table.headings.push("Customer".into());
+        table.headings.push(Heading::text("Customer"));
     }
     if group != Group::Customer {
-        table.headings.push("Item".into());
+        table.headings.push(Heading::text("Item"));
     }
     table.headings.extend(
         [
@@ -667,7 +693,7 @@ fn sales_table(report: sales::SalesByCustomerItem, group: Group) -> Table {
             "Net quantity",
             "Activity lines",
         ]
-        .map(str::to_owned),
+        .map(Heading::number),
     );
     let totals = |amounts: sales::SalesAmounts| {
         [

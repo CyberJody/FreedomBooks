@@ -36,6 +36,8 @@ unsound = "all"
 ignore = [
     # Add entries here only with an `id` + `reason`, after review, e.g.
     # { id = "RUSTSEC-0000-0000", reason = "..." },
+    { id = "RUSTSEC-2026-0543", reason = "chrono is marked unmaintained with no drop-in patch; no security vulnerability is reported. Planned migration to jiff/time is tracked separately." },
+    { id = "RUSTSEC-2026-0555", reason = "chrono-tz is marked unmaintained alongside chrono with no drop-in patch; no security vulnerability is reported. Planned migration to jiff/time is tracked separately." },
 ]
 
 # ---------------------------------------------------------------------------

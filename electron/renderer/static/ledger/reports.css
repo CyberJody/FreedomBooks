@@ -83,7 +83,7 @@ body.shell main table.gl-report tfoot td.amount { border-top: 1px solid #35253e;
 /* Print sheet (N09 print.css supplies the page, toolbar and watermark; reports.css supplies CSP-safe page counters). */
 @page {
   @bottom-center {
-    content: "Page " counter(page) " of " counter(pages);
+    content: var(--fb-print-footer, "") "Page " counter(page) " of " counter(pages);
     text-align: center;
     font: 8pt system-ui, sans-serif;
     color: #444;
@@ -129,12 +129,12 @@ body.shell main table.fin-report .fin-heading.fin-d2 th, body.shell main table.f
 
 body.shell main table.statement-table, table.statement-table { max-width: none }
 table.statement-table th:first-child { min-width: 8em }
-.report-comparison table.statement-table thead th:not(:first-child) { min-width: 5em; text-align: right }
+.report-comparison table.statement-table thead th:not(:first-child) { min-width: 5em }
 @media print {
   @page comparison {
     size: letter landscape;
     @bottom-center {
-      content: "Page " counter(page) " of " counter(pages);
+      content: var(--fb-print-footer, "") "Page " counter(page) " of " counter(pages);
       font: 8pt system-ui, sans-serif;
       color: #444;
     }

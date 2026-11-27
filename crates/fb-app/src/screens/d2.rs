@@ -1532,7 +1532,7 @@ fn submit_journal(
                 amounts.push(None);
                 continue;
             }
-            match fb_core::services::money_json(&json!(if text.is_empty() { "0" } else { &text })) {
+            match fb_core::services::journal_amount(&json!(if text.is_empty() { "0" } else { &text })) {
                 Ok(m) => amounts.push(Some(m)),
                 Err(FbError::Validation(e)) => {
                     for e in e {

@@ -27,6 +27,7 @@ mod d9;
 mod home;
 pub(crate) mod fees;
 pub(crate) use d8::export_report;
+pub(crate) use d9::attachments::export_attachment;
 pub(crate) use d6::{is_d6_command, run_d6_command};
 use crate::commands::{InvoiceLineValues, InvoiceValues, Outcome};
 use crate::session::{App, AppError, AppResult, save_invoice};
@@ -1001,7 +1002,7 @@ pub fn render_gate_in(app: &App, mode: &str, context: &crate::books::GateContext
     if !["setup", "unlock", "choose", "error"].contains(&mode) {
         return Err(AppError::Invalid("Unknown gate screen.".into()));
     }
-    const REASONS: [&str; 10] = ["", "builtin", "password", "missing", "unreadable", "keyring", "ask", "locked", "idle", "choose"];
+    const REASONS: [&str; 11] = ["", "newer", "builtin", "password", "missing", "unreadable", "keyring", "ask", "locked", "idle", "choose"];
     let reason = if REASONS.contains(&context.reason.as_str()) { context.reason.as_str() } else { "" };
     let mut vm = context.view();
     vm["reason"] = json!(reason);

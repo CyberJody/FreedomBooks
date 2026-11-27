@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const vm = require('node:vm');
-const {create, MESSAGE} = require('../main/save-file.cjs');
+const {create, exportName, MESSAGE} = require('../main/save-file.cjs');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'fb-save-test-'));
@@ -19,6 +19,12 @@ function fixture(t) {
   return {root,dataDir,book,output,saver};
 }
 const rejected = fn => assert.throws(fn,error=>error.message===MESSAGE);
+
+test('JPEG attachment names use a single jpg extension', () => {
+  for (const name of ['photo.jpeg', 'photo.JPG', 'photo.JPEG']) {
+    assert.equal(exportName(name, 'jpg'), 'photo.jpg');
+  }
+});
 
 test('new PDF/CSV and confirmed regular-file replacements are private atomic saves',t=>{
   const {output,saver}=fixture(t);

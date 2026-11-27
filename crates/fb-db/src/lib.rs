@@ -11,6 +11,7 @@
 //! * Guard errors are `RAISE(ABORT, '<name>: <message>')`; `constraint_of` recovers the name.
 
 mod backup;
+pub use backup::RestoreTarget;
 pub mod assistant;
 pub mod collation;
 pub mod dates;
@@ -549,60 +550,113 @@ struct ProcessBookGuard {
 }
 impl ProcessBookGuard {
     fn ensure_single_link(&self) -> Result<(), DbError> {
-        #[cfg(unix)] {
-            use std::os::unix::fs::MetadataExt;
-            if self.book.metadata().map_err(DbError::Io)?.nlink() != 1 {
-                return Err(DbError::Pragma("This book has hard links. Restore a backup as a separate book before opening or changing protection.".into()));
-            }
+        #[cfg(unix)]
+        let links = std::os::unix::fs::MetadataExt::nlink(&self.book.metadata().map_err(DbError::Io)?);
+        #[cfg(windows)]
+        let links = winapi_util::file::information(&self.book).map_err(DbError::Io)?.number_of_links();
+        #[cfg(any(unix, windows))]
+        if links != 1 {
+            return Err(DbError::Pragma("This book has hard links. Restore a backup as a separate book before opening or changing protection.".into()));
         }
         Ok(())
     }
     fn verify(&self) -> Result<(), DbError> {
-        let actual = std::fs::metadata(&self.path).map_err(DbError::Io)?;
-        let held = self.book.metadata().map_err(DbError::Io)?;
-        #[cfg(unix)] {
+        #[cfg(unix)]
+        let matches = {
             use std::os::unix::fs::MetadataExt;
-            if (actual.dev(), actual.ino()) != (held.dev(), held.ino()) {
-                return Err(DbError::Pragma("The book file changed while opening. Try again.".into()));
-            }
+            let actual = std::fs::metadata(&self.path).map_err(DbError::Io)?;
+            let held = self.book.metadata().map_err(DbError::Io)?;
+            (actual.dev(), actual.ino()) == (held.dev(), held.ino())
+        };
+        #[cfg(windows)]
+        let matches = same_file::Handle::from_file(self.book.try_clone().map_err(DbError::Io)?).map_err(DbError::Io)?
+            == same_file::Handle::from_path(&self.path).map_err(DbError::Io)?;
+        #[cfg(any(unix, windows))]
+        if !matches {
+            return Err(DbError::Pragma("The book file changed while opening. Try again.".into()));
         }
-        #[cfg(not(unix))] { let _ = (actual, held); }
         Ok(())
     }
 }
-/// The OS lock that keeps other processes from opening this book's inode under another name.
-/// Elsewhere it is a lock on the book file itself. On macOS `flock` and SQLite's own `fcntl`
-/// locks are one lock, so SQLite would find its book busy: there the lock is on a sidecar named
-/// by the inode, beside the book (a link or rename in the same folder maps to the same sidecar,
-/// and opening refuses a book with more than one link). Like `<book>.lock`, it is never unlinked.
-struct InodeLock(#[allow(dead_code)] Option<std::fs::File>);
-fn lock_book_file(file: &std::fs::File, _path: &Path) -> Result<InodeLock, DbError> {
-    #[cfg(target_os = "macos")]
-    let (holder, keep) = {
-        use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-        let meta = file.metadata().map_err(DbError::Io)?;
-        let folder = _path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
-        let name = folder.join(format!(".freedombooks-inode-{}-{}.lock", meta.dev(), meta.ino()));
-        // As for `<book>.lock`, the book folder is trusted; still refuse a redirected sidecar.
-        let not_file = || DbError::Pragma("Book lock is not a regular file".into());
-        match std::fs::symlink_metadata(&name) {
-            Ok(m) if !m.file_type().is_file() => return Err(not_file()),
-            Ok(_) => {}
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => return Err(DbError::Io(e)),
+
+/// macOS flock interacts with SQLite's fcntl locks. Windows locks are mandatory even
+/// for SQLite in this process. On both systems, lock a sidecar keyed by file identity.
+struct InodeLock {
+    #[cfg(any(target_os = "macos", windows))]
+    file: std::fs::File,
+    #[cfg(any(target_os = "macos", windows))]
+    created: Option<std::path::PathBuf>,
+}
+
+impl InodeLock {
+    fn remove_owned(&self) -> std::io::Result<()> {
+        #[cfg(any(target_os = "macos", windows))]
+        if let Some(path) = &self.created {
+            backup::require_owned(path, &self.file)?;
+            // Rust's Windows OpenOptions shares DELETE by default. Keep the lock held
+            // through unlink. A waiter must verify the name after acquiring its lock.
+            std::fs::remove_file(path)?;
         }
-        let sidecar = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).mode(0o600)
-            .open(&name).map_err(DbError::Io)?;
-        if !sidecar.metadata().map_err(DbError::Io)?.is_file() { return Err(not_file()); }
-        (sidecar, true)
-    };
-    #[cfg(not(target_os = "macos"))]
-    let (holder, keep) = (file.try_clone().map_err(DbError::Io)?, false);
-    match holder.try_lock() {
-        Ok(()) => Ok(InodeLock(keep.then_some(holder))),
-        Err(std::fs::TryLockError::WouldBlock) => Err(DbError::Pragma("This book is already open.".into())),
-        Err(std::fs::TryLockError::Error(e)) => Err(DbError::Io(e)),
+        Ok(())
     }
+}
+
+#[cfg(any(target_os = "macos", windows))]
+fn inode_lock_path(file: &std::fs::File, path: &Path) -> std::io::Result<std::path::PathBuf> {
+    #[cfg(target_os = "macos")]
+    let (volume, index) = {
+        use std::os::unix::fs::MetadataExt;
+        let meta = file.metadata()?;
+        (meta.dev(), meta.ino())
+    };
+    #[cfg(windows)]
+    let (volume, index) = {
+        let info = winapi_util::file::information(file)?;
+        (info.volume_serial_number(), info.file_index())
+    };
+    Ok(path.with_file_name(format!(".freedombooks-inode-{volume}-{index}.lock")))
+}
+
+fn open_lock_sidecar(path: &Path) -> std::io::Result<(std::fs::File, bool)> {
+    use std::fs::OpenOptions;
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create_new(true);
+    #[cfg(unix)] {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    match options.open(path) {
+        Ok(file) => Ok((file, true)),
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+            if !std::fs::symlink_metadata(path)?.is_file() {
+                return Err(std::io::Error::other("Book lock is not a regular file"));
+            }
+            Ok((OpenOptions::new().read(true).write(true).open(path)?, false))
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn lock_book_file(file: &std::fs::File, _path: &Path) -> Result<InodeLock, DbError> {
+    #[cfg(any(target_os = "macos", windows))]
+    let path = inode_lock_path(file, _path).map_err(DbError::Io)?;
+    #[cfg(any(target_os = "macos", windows))]
+    let (holder, created) = open_lock_sidecar(&path).map_err(DbError::Io)?;
+    #[cfg(not(any(target_os = "macos", windows)))]
+    let holder = file;
+    match holder.try_lock() {
+        Ok(()) => {}
+        Err(std::fs::TryLockError::WouldBlock) => return Err(DbError::Pragma("This book is already open.".into())),
+        Err(std::fs::TryLockError::Error(e)) => return Err(DbError::Io(e)),
+    }
+    #[cfg(any(target_os = "macos", windows))]
+    backup::require_owned(&path, &holder).map_err(DbError::Io)?;
+    Ok(InodeLock {
+        #[cfg(any(target_os = "macos", windows))]
+        file: holder,
+        #[cfg(any(target_os = "macos", windows))]
+        created: created.then_some(path),
+    })
 }
 
 // Absence is authoritative only while the sidecar/inode locks (or a shared admission lock)
@@ -689,29 +743,13 @@ fn process_book_lock(path: &Path, create: bool, maintenance: bool) -> Result<Arc
     let mut lock_name = canonical.as_os_str().to_owned();
     lock_name.push(".lock");
     let lock_path = Path::new(&lock_name);
-    let mut options = OpenOptions::new();
-    options.read(true).write(true).create_new(true);
-    #[cfg(unix)] {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let file = match options.open(lock_path) {
-        Ok(file) => file,
-        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-            // Refuse a redirected or non-file guard. The enclosing book folder must remain trusted,
-            // as for book-lock-fix; never delete/replace a guard while another opener may hold it.
-            if !std::fs::symlink_metadata(lock_path).map_err(fail)?.file_type().is_file() {
-                return Err(fail(std::io::Error::other("Book lock is not a regular file")));
-            }
-            OpenOptions::new().read(true).write(true).open(lock_path).map_err(fail)?
-        }
-        Err(error) => return Err(fail(error)),
-    };
+    let (file, _) = open_lock_sidecar(lock_path).map_err(fail)?;
     match file.try_lock() {
         Ok(()) => {}
         Err(std::fs::TryLockError::WouldBlock) => return Err(DbError::Pragma("This book is already open.".into())),
         Err(std::fs::TryLockError::Error(error)) => return Err(fail(error)),
     }
+    backup::require_owned(lock_path, &file).map_err(fail)?;
     // Do not erase or reinterpret book-lock-fix's foreign/stale record or implement takeover here.
     if !file.metadata().map_err(fail)?.is_file() || file.metadata().map_err(fail)?.len() != 0 {
         return Err(fail(std::io::Error::other("Existing book-lock record requires the matching book-lock version")));

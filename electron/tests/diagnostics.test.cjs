@@ -116,7 +116,8 @@ test('the two log buttons work only on their pages, take no arguments and reveal
 function launchMain(native) {
   const handlers = {};
   const windows = [];
-  class BrowserWindow { constructor() { this.webContents = {getURL: () => 'fb://app/'}; windows.push(this); } once() {} loadURL(url) { this.url = url; } isDestroyed() { return false; } }
+  class BrowserWindow { constructor() { this.webContents = {getURL: () => 'fb://app/', isDestroyed: () => false, send() {},
+      navigationHistory: {clear() {}, canGoBack: () => false, canGoForward: () => false}}; windows.push(this); } once() {} loadURL(url) { this.url = url; } isDestroyed() { return false; } }
   const electron = {
     app: {getVersion: () => '0.1.0-test', commandLine: {appendSwitch() {}}, enableSandbox() {}, whenReady: () => new Promise(() => {}), on() {}, isPackaged: false, exit() {}},
     protocol: {registerSchemesAsPrivileged() {}}, ipcMain: {handle: (name, fn) => { handlers[name] = fn; }}, BrowserWindow,

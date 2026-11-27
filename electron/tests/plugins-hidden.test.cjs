@@ -76,6 +76,9 @@ test('the main process keys every plugin surface off the compiled flag', () => {
     }
     assert.doesNotMatch(text, /require\('node:(https?|net|tls|dgram)'\)|require\('(https?|net|tls|dgram)'\)|\bnet\.(fetch|request)\(/, file);
   }
-  const build = fs.readFileSync(path.join(__dirname, '../scripts/build-native.cjs'), 'utf8');
-  assert.match(build, /if \(network\) \{\n {2}\/\/ The network helper builds/);
+  const buildEntry = fs.readFileSync(path.join(__dirname, '../scripts/build-native.cjs'), 'utf8');
+  assert.match(buildEntry, /require\('\.\.\/\.\.\/packaging\/build-native\.cjs'\)/);
+  const build = fs.readFileSync(path.join(__dirname, '../../packaging/build-native.cjs'), 'utf8');
+  assert.match(build, /if \(network\) cargoBuild\(\['--release', '-p', 'fb-net', '--bin', 'fb-net'/);
+  assert.match(build, /if \(!network\) rmSync\(path\.join\(output, helper\), \{force: true\}\);/);
 });

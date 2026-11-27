@@ -10,7 +10,8 @@ const os = require('node:os');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const shots = process.env.FB_SMOKE_SHOTS || path.join(root, 'staging-run');
+process.env.FB_SMOKE_SHOTS ||= path.join(root, 'staging-run');
+const shots = process.env.FB_SMOKE_SHOTS;
 fs.mkdirSync(shots, { recursive: true });
 const userData = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'fb-smoke-'));
 const configRoot = path.join(userData, 'isolated-config');
@@ -305,6 +306,9 @@ async function heading(page) {
     assert.equal(await page.locator('#id_memo').getAttribute('aria-invalid'), 'true');
     await shot(page, 'd2-06-journal-form-invalid');
     await page.fill('#id_memo', 'Supplies adjustment');
+    await page.click('button:has-text("Save draft")');
+    await page.getByText('Enter journal amounts with at most two decimal places.', {exact:true}).waitFor();
+    await page.fill('#id_lines-0-debit', '12.35');
     await Promise.all([page.waitForURL(/\/journals\/[0-9a-f-]{36}\/$/), page.click('button:has-text("Save draft")')]);
     const journalUrl = page.url();
     assert.match(await heading(page), /Draft/);
@@ -322,7 +326,7 @@ async function heading(page) {
     await Promise.all([page.waitForURL((u) => u.href !== journalUrl && /\/journals\/[0-9a-f-]{36}\/$/.test(u.href)), page.click('button:has-text("Create reversal")')]);
     assert.match(await page.locator('main').textContent(), /Reversal of/);
     await shot(page, 'd2-09-journal-reversal');
-    pass('general journal Add line + half-up totals; invalid POST kept added line; draft edit, post and reversal through real forms');
+    pass('general journal retains the added line, refuses fractional cents and posts and reverses the corrected draft');
 
     await page.goto(`fb://app/c/${company}/`);
     assert.equal(await heading(page), 'Journal entries');

@@ -93,6 +93,10 @@ fn stored(e: &Entry) -> usize {
     }
 }
 
+pub(crate) fn interrupted() -> HostResponse {
+    HostResponse::refused(crate::wire::RefusalCode::Refused, "The host could not finish this request. Reopen the page and check before trying again.")
+}
+
 impl Dedupe {
     pub fn new(ttl: Duration, per_device: usize) -> Self {
         Dedupe::with_bytes(ttl, per_device, PER_DEVICE_BYTES, TOTAL_BYTES)
@@ -138,12 +142,26 @@ impl Dedupe {
         Begin::Run
     }
 
+    /// A panic can happen after commit. Wake waiters with a definitive refusal instead of
+    /// permitting the same request to run again with an unknown outcome.
+    pub(crate) fn complete(&self, device: &str, id: &str, fingerprint: [u8; 32], run: impl FnOnce() -> HostResponse) -> HostResponse {
+        let response = std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)).unwrap_or_else(|_| interrupted());
+        self.finish_matching(device, id, Some(fingerprint), response.clone());
+        response
+    }
+
     /// Store the answer for retries, then trim the device's and everyone's stored bytes, oldest
     /// first. Does nothing if the entry was forgotten while the command ran.
     pub fn finish(&self, device: &str, request_id: &str, response: HostResponse) {
+        self.finish_matching(device, request_id, None, response);
+    }
+
+    fn finish_matching(&self, device: &str, request_id: &str, fingerprint: Option<[u8; 32]>, response: HostResponse) {
         let mut entries = self.lock();
         let n = size(&response);
-        if let Some(e) = entries.get_mut(&(device.to_owned(), request_id.to_owned())) {
+        if let Some(e) = entries.get_mut(&(device.to_owned(), request_id.to_owned()))
+            && fingerprint.is_none_or(|fp| fp == e.fingerprint)
+        {
             e.state = State::Done(response, n);
             e.at = Instant::now();
         }

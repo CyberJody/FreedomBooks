@@ -139,7 +139,9 @@
    "code": "A",
    "name": "A",
    "kind": "ASSET",
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An account named \u201ca\u201d already exists (a). Choose a different name."
   },
   {
    "op": "l2_save",
@@ -149,7 +151,9 @@
    "values": {
     "display_name": "A"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201ca\u201d already exists. Choose a different name."
   },
   {
    "op": "save_account",
@@ -291,7 +295,9 @@
    "code": "\u00c9",
    "name": "\u00c9",
    "kind": "ASSET",
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An account named \u201c\u00e9\u201d already exists (\u00e9). Choose a different name."
   },
   {
    "op": "l2_save",
@@ -301,7 +307,9 @@
    "values": {
     "display_name": "\u00c9"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201c\u00e9\u201d already exists. Choose a different name."
   },
   {
    "op": "save_account",
@@ -405,7 +413,9 @@
    "code": "z",
    "name": "z",
    "kind": "ASSET",
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "An account named \u201cZ\u201d already exists (Z). Choose a different name."
   },
   {
    "op": "l2_save",
@@ -415,7 +425,9 @@
    "values": {
     "display_name": "z"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cZ\u201d already exists. Choose a different name."
   },
   {
    "op": "save_account",
@@ -585,7 +597,9 @@
     "rate": "1",
     "new_agency_name": "Agency"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A vendor named \u201cAgency\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -613,7 +627,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+   "expect_message": "A vendor named \u201cAgency\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -637,7 +651,9 @@
     "rate": "1",
     "new_agency_name": "Agency"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A vendor named \u201cAgency\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -665,7 +681,7 @@
    },
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "A tax rate or group with this name already exists in this company (including inactive ones)."
+   "expect_message": "A vendor named \u201cAgency\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -689,7 +705,9 @@
     "rate": "1",
     "new_agency_name": "Agency"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A vendor named \u201cAgency\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -713,7 +731,9 @@
     "rate": "1",
     "new_agency_name": "Agency"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A vendor named \u201cAgency\u201d already exists. Choose a different name."
   }
  ]
 }

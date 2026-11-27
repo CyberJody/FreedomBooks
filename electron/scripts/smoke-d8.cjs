@@ -33,6 +33,11 @@ module.exports=async()=>{
     await page.fill('#id_date','2026-10-10');await page.fill('#id_entry_number','REPORT-1');await page.fill('#id_memo','Report flow evidence');
     await page.fill('#id_lines-0-account-search','Checking');await page.press('#id_lines-0-account-search','Enter');await page.fill('#id_lines-0-debit','1234.56');
     await page.fill('#id_lines-1-account-search','Service income');await page.press('#id_lines-1-account-search','Enter');await page.fill('#id_lines-1-credit','1234.56');
+    await page.fill('#id_lines-0-debit', '1234.565');
+    await page.getByRole('button', {name: 'Save draft', exact:true}).click();
+    await page.getByText(/two decimal places/).first().waitFor();
+    await page.fill('#id_lines-0-debit', '1234.56');
+    pass('manual journal shows a fractional-cent field error and accepts a correction');
     await Promise.all([page.waitForURL(/journals\/[0-9a-f-]+\/$/),page.click('button:has-text("Save draft")')]);
     ids.journal=/journals\/([0-9a-f-]+)\/$/.exec(page.url())[1];
     await Promise.all([page.waitForURL(/journals\/[0-9a-f-]+\/$/),page.click('button:has-text("Post journal")')]);
@@ -76,6 +81,45 @@ module.exports=async()=>{
     assert.ok((await page.content()).includes('value="bad"'));
     assert.equal(await page.locator('.report-sheet').count(),0);
     await page.screenshot({path:path.join(shots,'d8-flow-invalid.png')});pass('invalid GET options retain raw HTML input and suppress the report and export actions');
+    const base = 'fb://app/c/' + company;
+    for (const slug of ['ar-aging', 'ap-aging', 'vendor-1099']) {
+      const result = await app.evaluate(async ({net}, target) => {
+        const response = await net.fetch(target);
+        return [response.status, ...new Uint8Array(await response.arrayBuffer()).slice(0, 3)];
+      }, base + '/reports/' + slug + '/?output=csv');
+      assert.deepEqual(result, [200, 0xef, 0xbb, 0xbf], slug);
+    }
+    pass('all three aging and 1099 CSV downloads carry the UTF-8 BOM');
+    for (const [slug, parameter] of [['schedule-c', 'mapping'], ['asset-depreciation', 'mappings']]) {
+      const response = await page.goto(base + '/reports/' + slug + '/?' + parameter + '=x');
+      assert.equal(response.status(), 400);
+      assert.match(await page.locator('main').innerText(), /Unknown worksheet parameter/);
+    }
+    pass('worksheet paths reject misspelled and misplaced parameter names');
+    await page.goto(base + '/reports/asset-depreciation/');
+    const columns = await page.locator('table').filter({hasText:'Total fixed-asset cost'}).locator('thead th').allTextContents();
+    assert.deepEqual(columns.slice(-3), ['Reversals', 'Closing cost', 'Book value contribution']);
+    await page.goto(base + '/reports/asset-depreciation/?output=print');
+    const pdf = await app.evaluate(async ({BrowserWindow}) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      return Array.from(await win.webContents.printToPDF({printBackground:true, preferCSSPageSize:true}));
+    });
+    fs.writeFileSync(path.join(shots, 'fixed-asset-rollforward.pdf'), Buffer.from(pdf));
+    pass('the fixed-asset cost table labels reversals, closing cost and book value');
+    await page.goto(base + '/settings/accounting-periods/');
+    await page.selectOption('[name=fiscal_year_start_month]', '4');
+    await page.getByRole('button', {name:'Save', exact:true}).click();
+    await page.getByRole('status').filter({hasText:'Accounting periods saved.'}).waitFor();
+    const today = new Date();
+    const fiscalYear = today.getFullYear() - Number(today.getMonth() < 3);
+    for (const preset of ['this_year', 'year_to_date']) {
+      await page.goto(base + '/accounts/' + ids.bank + '/register/?preset=' + preset);
+      assert.equal(await page.inputValue('[name=start]'), fiscalYear + '-04-01');
+      const end = preset === 'this_year' ? (fiscalYear + 1) + '-03-31'
+        : [today.getFullYear(), today.getMonth() + 1, today.getDate()].map(n => String(n).padStart(2, '0')).join('-');
+      assert.equal(await page.inputValue('[name=end]'), end);
+    }
+    pass('period save confirms immediately and both register year presets follow April');
     assert.deepEqual(errors,[]);pass('report navigation and packaged styling run under the production CSP without page errors');
     console.log(`SMOKE D8 OK: ${checks} checks`);
   }finally{await app.close();fs.rmSync(data,{recursive:true,force:true});}

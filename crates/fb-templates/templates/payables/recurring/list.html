@@ -1,5 +1,6 @@
 {% extends 'ledger/base.html' %}
-{% block content %}<h1>Recurring bills</h1>{% include 'ledger/tabs.html' %}
+{% block content %}
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}<h1>Recurring bills</h1>{% include 'ledger/tabs.html' %}
 {% if can_write %}<p><a class="button" href="{{ url('recurring:new', company.pk) }}">New recurring bill</a></p>{% endif %}
 <p>Monthly and yearly bills are created while these books are open and a user who can save changes is signed in. Each starts as a draft unless you choose automatic posting. When resuming after a pause, choose whether to skip or create the missed bills.</p>
 <table><thead><tr><th>Template</th><th>Vendor</th><th>Repeat</th><th>Next scheduled date</th><th>Status</th><th>Creates</th></tr></thead><tbody>{% for t in templates %}<tr><td><a href="{{ url('recurring:detail', company.pk, t.id) }}">{{ t.name }}</a></td><td>{{ vendor_labels|party_label(t.data.vendor_id) }}</td><td>{{ t.frequency|title }}</td><td>{{ t.next_date or 'Complete' }}{% if not t.active and t.next_date and t.next_date <= today %} — Missed — choose on Resume{% endif %}</td><td>{% if t.stalled %}<strong data-recurring-stalled>Active, but more than 36 bill dates are overdue, so none are created. Pause, then Resume.</strong>{% elif t.active %}Active{% else %}Paused{% endif %}</td><td>{% if t.auto_post %}Posted bills{% else %}Drafts for review{% endif %}</td></tr>{% else %}<tr><td colspan="6">No recurring bills yet.</td></tr>{% endfor %}</tbody></table>{% endblock %}

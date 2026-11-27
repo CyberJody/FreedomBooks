@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 
@@ -22,6 +21,8 @@ env = dict(os.environ, FB_RELEASE_VERSION=tag[1:], CSC_IDENTITY_AUTO_DISCOVERY='
 def run(command):
     subprocess.run(command, cwd=root, env=env, check=True)
 run([sys.executable, str(pkg / 'build-native.py'), args.platform])
+# Always wrap the output just built for this runner.
+env.pop('FB_INSTALLER_NATIVE', None)
 run(['node', str(pkg / 'installers.cjs'), args.platform])
 patterns = ['*.AppImage', '*.deb'] if args.platform == 'linux' else ['FreedomBooks-Setup-*.exe']
 artifacts = [file for pattern in patterns for file in (pkg / 'dist').glob(pattern)]

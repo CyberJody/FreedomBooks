@@ -165,6 +165,20 @@ const iso = (year, month, day) => `${year}-${String(month).padStart(2, '0')}-${S
       await shot(skip?'skipped-period-history':'created-period-history');
       pass(skip?'Resume lists missed dates; skip records permanent history without bills; reload preserves it':'Resume create choice produces exactly two drafts; reload never duplicates them');
     }
+    await page.goto(base + '/settings/accounting-periods/');
+    await page.fill('#id_closing_date', pausedIso);
+    await page.getByRole('button', {name:'Save', exact:true}).click();
+    await page.getByText('Accounting periods saved.', {exact:true}).waitFor();
+    await fillTemplate('Closing boundary catch-up', pausedIso, true, true);
+    await page.getByRole('button', {name:'Save recurring bill',exact:true}).click();
+    const confirmation = page.locator('[data-recurring-save-confirmation]');
+    assert.match(await confirmation.innerText(), /Bills to save as drafts due to the closing date: 1. Bills eligible for automatic posting: 1/);
+    await click('Confirm and save recurring bill', /\/recurring-bills\/[0-9a-f-]{36}\/$/);
+    const detail = await page.locator('main').innerText();
+    assert.match(detail, /1 posted, 1 saved as drafts due to the closing date/);
+    assert.equal(await page.locator('[data-recurring-occurrence]').filter({hasText:'Draft'}).count(), 1);
+    assert.equal(await page.locator('[data-recurring-occurrence]').filter({hasText:'Open'}).count(), 1);
+    pass('A catch-up crossing the closing date reports one closed-period draft and one posted bill');
     await page.goto(yearlyUrl); assert.equal(await page.locator('[data-recurring-occurrence]').count(), 2);
     assert.deepEqual(await page.evaluate(() => ({require: typeof window.require, process: typeof window.process, fb: typeof window.fb})), {require: 'undefined', process: 'undefined', fb: 'undefined'});
     assert.deepEqual(errors, []); pass('Renderer remains sandboxed and all flows finish without page errors');

@@ -72,10 +72,10 @@ impl Fx {
         sales::post_invoice(&mut self.book, self.actor, self.co, &key, Some(1), Some(&review)).unwrap();
         key
     }
-    fn receive(&mut self, invoice: &str, date: &str, amount: &str) {
+    fn receive(&mut self, invoice: &str, date: &str, amount: &str) -> String {
         let input = json!({"request_key":new_id(),"customer_id":self.customer,"date":date,"method":"CHECK","destination":"BANK","bank_id":self.bank.to_db(),"amount":amount,"allocations":[{"invoice_id":invoice,"amount":amount}]});
         let r = sales::review_receipt(&mut self.book, self.actor, self.co, &input).unwrap();
-        sales::record_receipt(&mut self.book, self.actor, self.co, &input, Some(&r)).unwrap();
+        sales::record_receipt(&mut self.book, self.actor, self.co, &input, Some(&r)).unwrap()["id"].as_str().unwrap().into()
     }
     fn input(&self, agency: &str, date: &str, tax: &str) -> Value {
         json!({"request_key":new_id(),"agency_id":agency,"date":date,"bank_id":self.bank.to_db(),"tax_amount":tax,"penalty_amount":"0","expense_account_id":null,
@@ -832,4 +832,69 @@ fn accrual_breakdown_tracks_credit_memo_and_void_in_their_own_periods() {
     f.set_basis("CASH");
     let cash = f.owed(Some("2027-11-30"), "2027-12-01");
     assert_eq!(cash["breakdown"], json!([]));
+}
+
+#[test]
+fn seven_cent_invoice_every_settlement_and_release_agrees_across_reports() {
+    use crate::reports::financial::{balance_sheet, profit_and_loss};
+    let mut f = Fx::new();
+    let second = services::save_account(&mut f.book, f.actor, f.co, AccountInput::new("401", "Second income").kind("INCOME")).unwrap().id;
+    let rate = salestax::save_rate(&mut f.book, f.actor, f.co, &json!({
+        "name":"Tiny sale tax","description":"Test","rate":"10","new_agency_name":"Tiny sale agency","expected_revision":0
+    })).unwrap();
+    let lines = [f.income, second].map(|a| json!({"description":"Taxable","quantity":"1","rate":"0.03","taxable":true,"income_account_id":a.to_db()}));
+    let invoice = f.invoice_with_lines("2028-01-01", json!(lines), Some(&rate));
+    f.set_basis("CASH");
+    let mut receipts = vec![];
+    let mut tax_deltas = vec![];
+    let mut income_deltas = vec![];
+    let mut recognized_income = [0; 2];
+    let mut tax = 0;
+    for step in 1..=14 {
+        let date = NaiveDate::from_ymd_opt(2028, 1, step+1).unwrap();
+        let day = date.to_string();
+        let received = if step <= 7 {
+            receipts.push(f.receive(&invoice, &day, "0.01"));
+            1
+        } else {
+            sales::reverse_receipt(&mut f.book, f.actor, f.co, &receipts.pop().unwrap(), Some(1), &json!(day), &json!("Release")).unwrap();
+            -1
+        };
+        let owed = f.owed(Some(&day), &day);
+        let delta = report_cents(&owed["total"]["collected_cents"]).unwrap();
+        if received == 1 {
+            assert!((0..=1).contains(&delta));
+            tax_deltas.push(delta);
+        } else {
+            assert_eq!(delta, -tax_deltas.pop().unwrap());
+        }
+        let display = Money::from_cents(delta).to_string();
+        assert_eq!(row(&owed, s(&rate, "agency_id"))["collected"], display);
+        assert_eq!(owed["breakdown_total"]["collected"], display);
+        assert_eq!(owed["breakdown_total"]["taxable"], Money::from_cents(received - delta).to_string());
+        tax += delta;
+        let pl = profit_and_loss(&mut f.book, f.actor, f.co, Basis::Cash, Some(date), date).unwrap();
+        assert_eq!(pl.net_income.cents(), received - delta);
+        let income_rows = &pl.section("income").unwrap().rows;
+        let legs = [f.income, second].map(|id| income_rows.iter()
+            .find(|r| r.account.id == id).map_or(0, |r| r.amount.cents()));
+        if received > 0 {
+            assert!(legs.iter().all(|amount| (0..=1).contains(amount)));
+            income_deltas.push(legs);
+        } else {
+            assert_eq!(legs, income_deltas.pop().unwrap().map(|amount| -amount));
+        }
+        for (sum, amount) in recognized_income.iter_mut().zip(legs) {
+            *sum += amount;
+        }
+        if step == 7 { assert_eq!(recognized_income, [3, 3]); }
+        let bs = balance_sheet(&mut f.book, f.actor, f.co, Basis::Cash, date).unwrap();
+        assert!(bs.balanced);
+        assert_eq!(bs.liabilities.total.cents(), tax);
+        let settled = i128::from(step.min(14-step));
+        assert_eq!(bs.net_income.cents(), settled - tax);
+        if step == 7 { assert_eq!((bs.net_income.cents(), tax), (6, 1)); }
+    }
+    assert_eq!(tax, 0);
+    assert_eq!(recognized_income, [0, 0]);
 }

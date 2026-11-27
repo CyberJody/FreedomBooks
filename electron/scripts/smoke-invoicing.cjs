@@ -60,22 +60,21 @@ async function main() {
     await page.fill('#id_invoice_zelle_instructions', 'Include {invoice_number}.\nThank you.');
     await page.fill('#id_invoice_footer', 'Synthetic footer\nSecond line');
     await page.check('#id_invoice_stripe_enabled');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    // A new empty company is sent through the normal unfinished-setup screen.
-    await page.waitForURL(url => url.pathname !== `/c/${company}/edit/`);
+    await page.getByRole('button', { name: 'Save company settings', exact: true }).click();
+    await page.getByText('Company profile saved.', {exact: true}).waitFor();
     await settings();
     assert.equal(await page.inputValue('#id_invoice_zelle_instructions'), 'Include {invoice_number}.\nThank you.');
     assert.equal(await page.inputValue('#id_invoice_footer'), 'Synthetic footer\nSecond line');
     assert.equal(await page.inputValue('#id_invoice_email_mode'), 'DRAFT');
     assert.match(await page.locator('body').innerText(), /keyring/);
-    assert.equal(await page.locator('input[name="stripe_key"]').count(), 0);
+    const keyInputs = page.locator('input[name="stripe_key"]');
+    assert.deepEqual(await keyInputs.evaluateAll(inputs => inputs.map(i => [i.type, i.value])), [['password', ''], ['password', '']]);
     await page.screenshot({ path: path.join(shots, 'settings.png'), fullPage: true });
-    pass('typed settings save multiline payment text and refuse connection without a usable OS keyring');
+    pass('typed settings save multiline payment text and show empty masked credential fields');
     await page.goto(`fb://app/c/${company}/stripe/`);
     assert.match(await page.locator('body').innerText(), /No payments downloaded yet/);
-    const notice = page.waitForEvent('dialog');
     await page.getByRole('button', { name: 'Refresh payment status', exact: true }).click();
-    assert.match((await notice).message(), /keyring/);
+    await page.getByText(/Stripe connections need this computer’s keyring/).waitFor();
     await native('stripeRefreshAsync', [company]);
     const bridge = await page.evaluate(() => ({ keys: Object.keys(window.freedomBooks || {}), require: typeof require }));
     assert.equal(bridge.require, 'undefined');

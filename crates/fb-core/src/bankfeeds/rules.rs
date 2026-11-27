@@ -18,6 +18,12 @@ pub struct Rule {
     pub feed_account_id: Option<String>,
     feed_scope_active: bool,
 }
+impl Rule {
+    pub fn edit_snapshot(&self) -> String {
+        services::snapshot_token(&json!([self.id, self.name, self.match_text, self.sign,
+            self.amount_min, self.amount_max, self.account_id, self.payee_name, self.active, self.feed_account_id]))
+    }
+}
 const RULE_COLS: &str = "id,company_id,position,name,match_text,sign,amount_min,amount_max,account_id,payee_name,active,(SELECT data FROM bankfeeds_rule_policy WHERE rule_id=bankfeeds_rule.id),feed_account_id,(feed_account_id IS NULL OR EXISTS(SELECT 1 FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE f.id=bankfeeds_rule.feed_account_id AND f.active=1 AND c.active=1))";
 fn rule_row(r: &Row<'_>) -> fb_db::rusqlite::Result<Rule> {
     Ok(Rule {
@@ -157,6 +163,17 @@ pub fn save_rule(book: &mut Book, actor: UserId, co: CompanyId, values: &Value, 
             return Err(err("Choose an active feed account of this company."));
         }
         let active = truthy(values.get("active").unwrap_or(&json!(true)));
+        if let (Some(current), Some(expected)) = (&previous, values["expected_snapshot"].as_str()) {
+            if current.name == name && current.match_text == match_text && current.sign == sign
+                && current.amount_min == amount_min && current.amount_max == amount_max
+                && current.account_id == account_key && current.payee_name == payee_name
+                && current.active == active && current.feed_account_id == feed_scope {
+                return Ok(current.clone());
+            }
+            if current.edit_snapshot() != expected {
+                return Err(err("This rule changed since you opened the form. Reload it before saving."));
+            }
+        }
         let now = py::now_utc();
         let rule_id = get("rule_id");
         let (key, action) = if rule_id.is_null() {

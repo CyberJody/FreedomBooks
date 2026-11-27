@@ -418,6 +418,9 @@ fn linked_cost(
          FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id
          JOIN ledger_account a ON a.id=l.account_id
          WHERE j.company_id=?1 AND a.company_id=?1 AND j.status='POSTED' AND j.date<=?2
+           AND j.reversal_of_id IS NULL AND NOT EXISTS (
+               SELECT 1 FROM ledger_journal z WHERE z.reversal_of_id=j.id AND z.company_id=j.company_id
+                 AND z.status='POSTED' AND z.date<=?2)
            AND a.detail_type='FIXED_ASSET' AND a.is_contra=0 AND l.debit>l.credit
            AND (?3 IS NULL OR j.id=?3) AND (?4 IS NULL OR l.id=?4) AND (?5 IS NULL OR a.id=?5)
          ORDER BY l.id",

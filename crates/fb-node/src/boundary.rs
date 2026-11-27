@@ -107,10 +107,31 @@ pub(crate) fn start_failed() -> Option<Error> {
 
 /// A call with the books: takes the main thread's lease (never waits), then [`within`].
 pub(crate) fn guarded<T>(op: &'static str, class: Class, f: impl FnOnce(&mut App) -> Result<T>) -> Result<T> {
-    init();
-    let mut app = crate::app()?;
-    // While these books are hosted, the call runs as the host's local session (hosting.rs).
-    crate::hosting::with_desk(&mut app, crate::hosting::DOOR_WAIT, |app| within(op, class, app, f))
+    at_door(op, class, crate::app, |door| {
+        crate::hosting::with_desk(door, crate::hosting::DOOR_WAIT, |app| within(op, class, app, f))
+    })
+}
+
+/// Keep the mutex guard outside the book-aware catch, and protect acquisition and routing as well.
+pub(crate) fn at_door<T>(op: &'static str, class: Class,
+    acquire: fn() -> Result<std::sync::MutexGuard<'static, App>>,
+    f: impl FnOnce(&mut App) -> Result<T>) -> Result<T> {
+    free(op, || {
+        let mut door = acquire()?;
+        within(op, class, &mut *door, f)
+    })
+}
+
+pub(crate) trait Books {
+    fn books(&mut self) -> &mut App;
+}
+
+impl Books for App {
+    fn books(&mut self) -> &mut App { self }
+}
+
+impl Books for fb_app::multiuser::SessionHost {
+    fn books(&mut self) -> &mut App { self.host_app() }
 }
 
 /// Which connection was open, and how many write transactions it had committed.
@@ -119,15 +140,16 @@ fn commits(app: &App) -> Option<(u64, u64)> {
 }
 
 /// Run `f` with the books already leased (the guard stays outside the catch, see the module notes).
-pub(crate) fn within<T>(op: &'static str, class: Class, app: &mut App, f: impl FnOnce(&mut App) -> Result<T>) -> Result<T> {
+pub(crate) fn within<T, B: Books>(op: &'static str, class: Class, books: &mut B, f: impl FnOnce(&mut B) -> Result<T>) -> Result<T> {
     init();
     let _current = Current::enter(op);
-    let was_open = app.is_open();
-    let before = commits(app);
-    match fb_diag::catch(|| f(app)) {
+    let was_open = books.books().is_open();
+    let before = commits(books.books());
+    match fb_diag::catch(|| f(books)) {
         Ok(result) => result,
         Err(caught) => {
             let (op, route) = current();
+            let app = books.books();
             // Recovery is itself guarded: if it panics too, the books are dropped directly.
             Err(match fb_diag::quietly(|| recover(class, app, was_open, before, caught, op, route)) {
                 Some(error) => error,
@@ -142,16 +164,17 @@ pub(crate) fn within<T>(op: &'static str, class: Class, app: &mut App, f: impl F
 
 /// A call that does not touch the books (key wrapping, file checks, build facts).
 pub(crate) fn free<T>(op: &'static str, f: impl FnOnce() -> Result<T>) -> Result<T> {
-    init();
-    let _current = Current::enter(op);
-    match fb_diag::catch(f) {
+    match fb_diag::catch(|| {
+        init();
+        let _current = Current::enter(op);
+        f()
+    }) {
         Ok(result) => result,
         Err(caught) => {
-            let (op, route) = current();
-            fb_diag::record(fb_diag::Entry {
-                op: op.into(), route, kind: "panic".into(), detail: Some(caught.category), location: Some(caught.location),
+            fb_diag::quietly(|| fb_diag::record(fb_diag::Entry {
+                op: op.into(), kind: "panic".into(), detail: Some(caught.category), location: Some(caught.location),
                 backtrace: caught.backtrace, outcome: vec!["no books involved"], ..Default::default()
-            });
+            }));
             Err(panic_error(false, false, "none", op))
         }
     }

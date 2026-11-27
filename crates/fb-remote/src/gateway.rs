@@ -12,7 +12,7 @@ use rustls::{ServerConfig, ServerConnection, StreamOwned};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{IpAddr, Shutdown, TcpListener, TcpStream};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
@@ -27,7 +27,7 @@ pub const REPLY: Duration = Duration::from_secs(120);
 pub const PAIR_FRAME: Duration = Duration::from_secs(5);
 
 struct ConnEntry {
-    device_id: String,
+    device: DeviceRef,
     socket: TcpStream,
     replies: Sender<(u64, HostResponse)>,
 }
@@ -42,7 +42,6 @@ struct Shared {
     parent: Mutex<Box<dyn Write + Send>>,
     host_pin: Pin,
     host_name: String,
-    next: AtomicU64,
     stopping: AtomicBool,
 }
 
@@ -77,8 +76,27 @@ impl Shared {
         self.tell(&FromGateway::Event { kind: kind.into(), peer: peer.to_string(), device: device.cloned(), detail: detail.into() });
     }
 
+    fn admit(self: &Arc<Self>, ip: IpAddr, control: std::io::Result<TcpStream>) -> Option<ConnectionSlot> {
+        let control = control.ok()?;
+        let admission = lock(&self.limits).admit(ip, Instant::now());
+        let Some(admission) = admission else {
+            if lock(&self.limits).report(ip, Instant::now()) {
+                self.event("connection.limited", ip, None, "too many connections from this address");
+            }
+            return None;
+        };
+        let mut pending = lock(&self.pending);
+        pending.insert(admission.admitted.id, control);
+        for id in admission.evict {
+            if let Some(s) = pending.remove(&id) {
+                let _ = s.shutdown(Shutdown::Both);
+            }
+        }
+        Some(ConnectionSlot { shared: self.clone(), ip, admitted: Some(admission.admitted) })
+    }
+
     fn close_device(&self, device_id: &str) {
-        for c in lock(&self.conns).values().filter(|c| c.device_id == device_id) {
+        for c in lock(&self.conns).values().filter(|c| c.device.id == device_id) {
             let _ = c.socket.shutdown(Shutdown::Both);
         }
     }
@@ -140,7 +158,6 @@ pub fn run(mut input: impl Read, output: impl Write + Send + 'static) -> i32 {
         parent,
         host_pin: identity.pin(),
         host_name: registry::clean_name(&host_name).unwrap_or_else(|| "FreedomBooks host".into()),
-        next: AtomicU64::new(1),
         stopping: AtomicBool::new(false),
     });
     let config = match tls::server_config(&identity, shared.clone()) {
@@ -245,35 +262,44 @@ fn accept(listener: TcpListener, shared: Arc<Shared>, config: Arc<ServerConfig>)
                     }
                     continue;
                 }
-                let admission = lock(&shared.limits).admit(ip, Instant::now());
-                let Some(admission) = admission else {
-                    if lock(&shared.limits).report(ip, Instant::now()) {
-                        shared.event("connection.limited", ip, None, "too many connections from this address");
-                    }
-                    continue;
-                };
-                let Ok(handle) = socket.try_clone() else { continue };
-                let mut admitted = admission.admitted;
-                {
-                    // Make room: the pending connections the limits chose are closed now.
-                    let mut pending = lock(&shared.pending);
-                    pending.insert(admitted.id, handle);
-                    for id in admission.evict {
-                        if let Some(s) = pending.remove(&id) {
-                            let _ = s.shutdown(Shutdown::Both);
-                        }
-                    }
+                if let Some(slot) = shared.admit(ip, socket.try_clone()) {
+                    let config = config.clone();
+                    // Dropping the closure also returns the slot if the OS cannot start a worker.
+                    let _ = std::thread::Builder::new().spawn(move || slot.serve(config, socket));
                 }
-                let (shared, config) = (shared.clone(), config.clone());
-                std::thread::spawn(move || {
-                    let id = admitted.id;
-                    serve(&shared, config, socket, ip, &mut admitted);
-                    lock(&shared.pending).remove(&id);
-                    lock(&shared.limits).closed(admitted);
-                });
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => std::thread::sleep(Duration::from_millis(20)),
             Err(_) => std::thread::sleep(Duration::from_millis(100)),
+        }
+    }
+}
+
+/// Owns admission from the accept loop through the end of the connection worker.
+struct ConnectionSlot {
+    shared: Arc<Shared>,
+    ip: IpAddr,
+    admitted: Option<Admitted>,
+}
+
+impl ConnectionSlot {
+    fn serve(mut self, config: Arc<ServerConfig>, socket: TcpStream) {
+        if let Some(admitted) = self.admitted.as_mut() {
+            serve(&self.shared, config, socket, self.ip, admitted);
+        }
+    }
+}
+
+impl Drop for ConnectionSlot {
+    fn drop(&mut self) {
+        let Some(admitted) = self.admitted.take() else { return };
+        let conn = admitted.id;
+        lock(&self.shared.pending).remove(&conn);
+        let entry = lock(&self.shared.conns).remove(&conn);
+        lock(&self.shared.limits).closed(admitted);
+        if let Some(entry) = entry {
+            let _ = entry.socket.shutdown(Shutdown::Both);
+            self.shared.tell(&FromGateway::Disconnected { conn });
+            self.shared.event("disconnect", self.ip, Some(&entry.device), "");
         }
     }
 }
@@ -310,7 +336,7 @@ fn serve(shared: &Arc<Shared>, config: Arc<ServerConfig>, mut socket: TcpStream,
                 }
                 return;
             }
-            connected(shared, stream, control, ip, device)
+            connected(shared, stream, control, ip, device, admitted.id)
         }
         // A pairing connection stays pending, so it can be closed to make room.
         None => pair(shared, stream, control, ip, pin),
@@ -319,14 +345,13 @@ fn serve(shared: &Arc<Shared>, config: Arc<ServerConfig>, mut socket: TcpStream,
 
 type Tls = StreamOwned<ServerConnection, TcpStream>;
 
-fn connected(shared: &Arc<Shared>, mut stream: Tls, control: TcpStream, ip: IpAddr, device: DeviceRef) {
-    let conn = shared.next.fetch_add(1, Ordering::SeqCst);
+fn connected(shared: &Arc<Shared>, mut stream: Tls, control: TcpStream, ip: IpAddr, device: DeviceRef, conn: u64) {
     let (tx, rx) = mpsc::channel();
     let Ok(socket) = control.try_clone() else { return };
     if control.set_read_timeout(Some(IDLE)).is_err() {
         return;
     }
-    lock(&shared.conns).insert(conn, ConnEntry { device_id: device.id.clone(), socket, replies: tx });
+    lock(&shared.conns).insert(conn, ConnEntry { device: device.clone(), socket, replies: tx });
     shared.event("connect", ip, Some(&device), "");
     let mut seq = 0;
     loop {
@@ -361,10 +386,6 @@ fn connected(shared: &Arc<Shared>, mut stream: Tls, control: TcpStream, ip: IpAd
             break;
         }
     }
-    let _ = control.shutdown(Shutdown::Both);
-    lock(&shared.conns).remove(&conn);
-    shared.tell(&FromGateway::Disconnected { conn });
-    shared.event("disconnect", ip, Some(&device), "");
 }
 
 fn pair(shared: &Arc<Shared>, mut stream: Tls, control: TcpStream, ip: IpAddr, device_pin: Pin) {
@@ -425,4 +446,48 @@ fn pair(shared: &Arc<Shared>, mut stream: Tls, control: TcpStream, ip: IpAddr, d
     let _ = frame::send(&mut stream, &reply, MAX_REQUEST);
     let _ = stream.flush();
     let _ = control.shutdown(Shutdown::Both);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn failed_control_socket_and_interrupted_workers_release_admission() {
+        let dir = tempfile::tempdir().unwrap();
+        let shared = Arc::new(Shared {
+            registry: Mutex::new(Registry::load(dir.path(), [0; 32], 0).unwrap()),
+            pairing: Mutex::default(), conns: Mutex::default(), limits: Mutex::default(),
+            pending: Mutex::default(), parent: Mutex::new(Box::new(std::io::sink())),
+            host_pin: [0; 32], host_name: "Synthetic host".into(), stopping: AtomicBool::new(false),
+        });
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let peer = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let (socket, addr) = listener.accept().unwrap();
+        let ip = addr.ip();
+        // A failed clone must not consume the rate budget, evict another client or hold a slot.
+        for _ in 0..20 {
+            assert!(shared.admit(ip, Err(std::io::Error::other("no control socket"))).is_none());
+        }
+        let slot = shared.admit(ip, socket.try_clone()).unwrap();
+        let id = slot.admitted.as_ref().unwrap().id;
+        assert!(lock(&shared.pending).contains_key(&id));
+        let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _slot = slot;
+            panic!("interrupted connection worker");
+        }));
+        assert!(run.is_err());
+        assert!(lock(&shared.pending).is_empty());
+        let mut authenticated = shared.admit(ip, socket.try_clone()).unwrap();
+        let admitted = authenticated.admitted.as_mut().unwrap();
+        assert!(lock(&shared.limits).authenticated(admitted, Instant::now()));
+        let (replies, _) = mpsc::channel();
+        lock(&shared.conns).insert(admitted.id, ConnEntry {
+            device: DeviceRef { id: "device".into(), name: "Test".into() }, socket, replies,
+        });
+        drop(authenticated);
+        assert!(lock(&shared.conns).is_empty());
+        assert!(lock(&shared.pending).is_empty());
+        drop(peer);
+    }
 }

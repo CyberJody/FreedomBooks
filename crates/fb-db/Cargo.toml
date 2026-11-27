@@ -5,13 +5,14 @@ edition = "2024"
 publish = false
 
 [dependencies]
+same-file = "1"
 fb-ids = { path = "../fb-ids" }
 fb-money = { path = "../fb-money" }
 rust_decimal = "1"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
-rusqlite = { version = "0.41", features = ["bundled-sqlcipher-vendored-openssl", "collation", "functions", "hooks", "backup"] }
+rusqlite = { version = "0.43", features = ["bundled-sqlcipher-vendored-openssl", "collation", "functions", "hooks", "backup"] }
 
 icu_collator = { version = "=2.4.0", features = ["compiled_data"] }
 icu_locale = "=2.4.0"
@@ -21,6 +22,9 @@ sha2 = "0.10"
 regex = "1"
 chacha20poly1305 = "0.10"
 zeroize = "1"
+
+[target.'cfg(windows)'.dependencies]
+winapi-util = "0.1"
 
 [features]
 # Deliberate escape hatch for integration attacks only. Never enable in product crates.

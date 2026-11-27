@@ -318,6 +318,7 @@ pub enum Command {
 
 
     SaveDirectoryRecord {
+        expected_snapshot: Option<String>,
         company_id: Id,
         record_id: Option<Id>,
         values: DirectoryValues,
@@ -376,6 +377,10 @@ pub enum Command {
         company_id: String,
         report: String,
         filters: Vec<(String, String)>,
+    },
+    ExportAttachment {
+        company_id: Id,
+        attachment_id: Id,
     },
     ExportHistory {
         company_id: Id,
@@ -644,7 +649,7 @@ mod tests {
 #[serde(deny_unknown_fields)]
 pub struct BillValues {
     pub bill_id: Option<Id>, pub expected_revision: i64, pub request_key: String,
-    pub vendor_id: Id, pub date: String, pub due_date: String, pub memo: String,
+    pub vendor_id: Id, pub date: String, pub due_date: String, pub terms: Option<String>, pub memo: String,
     pub reference: String, pub supersedes_id: Option<Id>, pub reentry_reason: String,
     pub refresh_vendor: bool, pub keep_archived: bool, pub lines: Vec<BillLineValues>,
 }

@@ -20,7 +20,7 @@ function watch({powerMonitor, window, remote, native, busy, lockNow, idleSeconds
   setTimer(safely(() => {
     if (window.isDestroyed() || powerMonitor.getSystemIdleTime() < idleSeconds) return;
     // Hosting records a lock without borrowing the books, even during a desktop operation.
-    if (remote.active() || native.hostingActive() || (!busy() && JSON.parse(native.appState()).open)) return lockNow('idle');
+    if (remote.active() || native.hostingActive() || busy() || JSON.parse(native.appState()).open) return lockNow('idle');
   }), 30_000).unref();
   remote.watch();
 }

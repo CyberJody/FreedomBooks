@@ -29,3 +29,20 @@ fn run_rejects_duplicate_scenario_keys() {
     assert_ne!(out.status.code(), Some(0));
     assert!(!dir.path().join("out.json").exists());
 }
+
+#[test]
+fn flags_and_extra_positionals_are_usage_errors_before_any_io() {
+    let dir = tempfile::tempdir().unwrap();
+    for args in [
+        vec!["run", "scenario.json", "--book", "book-dir"],
+        vec!["run", "scenario.json", "out.json", "--out"],
+        vec!["run", "scenario.json", "--book", "books", "--out", "out.json"],
+        vec!["compare", "--out", "actual.json"],
+        vec!["compare", "expected.json", "actual.json", "scenario.json", "extra"],
+    ] {
+        let out = Command::new(env!("CARGO_BIN_EXE_fb-harness")).current_dir(dir.path()).args(&args).output().unwrap();
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+        assert!(String::from_utf8_lossy(&out.stderr).contains("usage: fb-harness"));
+        assert_eq!(dir.path().read_dir().unwrap().count(), 0);
+    }
+}

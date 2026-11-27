@@ -195,7 +195,10 @@ module.exports = async () => {
     const host = crypto.createHash('sha256').update(fs.readFileSync('/etc/hostname', 'utf8').trim()).digest('hex').slice(0, 16);
     const crashed = path.join(books, 'restored-after-crash');
     fs.mkdirSync(path.join(crashed, 'receipts'), { recursive: true, mode: 0o700 });
-    fs.writeFileSync(path.join(crashed, `.fb-backup.${host}.4294967295.Kp3rash9.partial`), 'half a book');
+    const child = spawnSync(process.execPath, ['-e', '']);
+    assert.equal(child.status, 0, 'fixture child exited');
+    assert.throws(() => process.kill(child.pid, 0), {code: 'ESRCH'});
+    fs.writeFileSync(path.join(crashed, `.fb-backup.${host}.${child.pid}.Kp3rash9.partial`), 'half a book');
     fs.writeFileSync(path.join(crashed, 'receipts', 'half.bin'), 'r');
     const running = path.join(books, 'restored-still-running');
     fs.mkdirSync(running, { mode: 0o700 });

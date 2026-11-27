@@ -1,6 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const required = Object.freeze({
+  GrantFileProtocolExtraPrivileges: false,
   RunAsNode: false,
   EnableNodeCliInspectArguments: false,
   EnableNodeOptionsEnvironmentVariable: false,

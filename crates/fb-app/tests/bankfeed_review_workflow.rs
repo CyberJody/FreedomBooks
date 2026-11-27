@@ -539,17 +539,28 @@ fn rule_from_review_preselects_its_feed_and_stays_scoped_when_saved() {
     )).unwrap();
     assert_eq!(scope, feed);
     let edit = format!("/c/{}/bank-feeds/rules/{rule}/edit/", f.company);
-    assert!(screens::render(&mut f.app, &edit).unwrap().html.contains(&format!("value=\"{feed}\" selected")));
+    let editor = screens::render(&mut f.app, &edit).unwrap().html;
+    assert!(editor.contains(&format!("value=\"{feed}\" selected")));
+    let snapshot = editor.split_once(r#"name="expected_snapshot" value=""#).unwrap().1.split('"').next().unwrap();
     let token = f.app.tokens.mint(&edit);
     let result = f.app.run_renderer(Command::SubmitForm {
-        path: edit, token,
+        path: edit.clone(), token,
         fields: vec![
+            ("expected_snapshot".into(), snapshot.into()),
             ("name".into(), "Renamed checking rule".into()), ("match_text".into(), "OFFICE".into()),
             ("sign".into(), "ANY".into()), ("account".into(), f.expense.clone()),
             ("active".into(), "on".into()),
         ],
     }).unwrap();
     assert!(matches!(result, Outcome::Redirect { .. }));
+    for (feed_value, accepted) in [(&feed[..], true), ("", false)] {
+        let fields = [("expected_snapshot", snapshot), ("name", "Renamed checking rule"), ("match_text", "OFFICE"),
+            ("sign", "ANY"), ("account", &f.expense), ("feed_account", feed_value), ("active", "on")];
+        let token = f.app.tokens.mint(&edit);
+        let out = f.app.run_renderer(Command::SubmitForm {path:edit.clone(),token,fields:fields.into_iter().map(|(k,v)|(k.into(),v.into())).collect()}).unwrap();
+        if accepted { assert!(matches!(out, Outcome::Redirect {..})); }
+        else { assert!(matches!(out, Outcome::Invalid {html} if html.contains("rule changed"))); }
+    }
     assert_eq!(f.count(&format!("SELECT count(*) FROM bankfeeds_rule WHERE name='Renamed checking rule' AND feed_account_id='{feed}'")), 1);
 }
 

@@ -136,6 +136,15 @@ fn one_save_never_records_twice(f: &mut Fixture, route: &str, path: &str, kind: 
     let Outcome::Redirect { .. } = send(&mut f.app, path, &token, &p).unwrap() else { panic!("{route}: shows the recorded one") };
     assert_eq!(f.count(kind), before + 2, "{route}: never a second recording");
     assert!(f.app.messages.iter().any(|m| m.contains("was already saved as")), "{route}: {:?}", f.app.messages);
+    if kind == "RCP" {
+        let mut changed = p;
+        for (key, amount) in &mut changed {
+            if key == "allocations-0-amount" { *amount = "41.00".into(); }
+        }
+        let token = f.app.tokens.mint(path);
+        assert!(matches!(send(&mut f.app, path, &token, &changed).unwrap(), Outcome::Page {status:409, html} if html.contains("different payment details, amount or allocation")));
+        assert_eq!(f.count(kind), before + 2);
+    }
 }
 
 #[test]

@@ -380,18 +380,18 @@ fn book_text_never_reaches_the_log_through_any_route() {
     let joined = BOOK_TEXT.join(" | ");
     {
         let mut app = app().unwrap();
-        let string = within("render", Class::Read, &mut app, |_| -> Result<()> { panic!("row for {joined} has no id") }).unwrap_err();
+        let string = within("render", Class::Read, &mut *app, |_| -> Result<()> { panic!("row for {joined} has no id") }).unwrap_err();
         assert_eq!(panic_detail(&string)["closed"], false);
-        let static_str = within("render", Class::Read, &mut app, |_| -> Result<()> { std::panic::panic_any("Synthetic Carol Hardware owes 1234.56 hunter2-synthetic") }).unwrap_err();
+        let static_str = within("render", Class::Read, &mut *app, |_| -> Result<()> { std::panic::panic_any("Synthetic Carol Hardware owes 1234.56 hunter2-synthetic") }).unwrap_err();
         assert!(static_str.reason.starts_with("FB_PANIC "));
-        let other = within("render", Class::Read, &mut app, |_| -> Result<()> { std::panic::panic_any(BOOK_TEXT.iter().map(|s| s.to_string()).collect::<Vec<_>>()) }).unwrap_err();
+        let other = within("render", Class::Read, &mut *app, |_| -> Result<()> { std::panic::panic_any(BOOK_TEXT.iter().map(|s| s.to_string()).collect::<Vec<_>>()) }).unwrap_err();
         assert!(other.reason.starts_with("FB_PANIC "));
         let stored: std::result::Result<(), String> = Err(joined.clone());
-        assert!(within("render", Class::Read, &mut app, |_| -> Result<()> { stored.clone().expect("stored row shape"); Ok(()) }).is_err());
-        assert!(within("render", Class::Read, &mut app, |_| -> Result<()> { stored.clone().unwrap(); Ok(()) }).is_err());
+        assert!(within("render", Class::Read, &mut *app, |_| -> Result<()> { stored.clone().expect("stored row shape"); Ok(()) }).is_err());
+        assert!(within("render", Class::Read, &mut *app, |_| -> Result<()> { stored.clone().unwrap(); Ok(()) }).is_err());
         // Errors that are not panics: their text goes to the page, never to the log.
-        let _ = within("render", Class::Read, &mut app, |_| -> Result<()> { Err(app_error(AppError::Render(joined.clone()))) });
-        let _ = within("render", Class::Read, &mut app, |_| -> Result<()> { Err(app_error(AppError::Open(fb_app::opening::OpenError::Unavailable(joined.clone())))) });
+        let _ = within("render", Class::Read, &mut *app, |_| -> Result<()> { Err(app_error(AppError::Render(joined.clone()))) });
+        let _ = within("render", Class::Read, &mut *app, |_| -> Result<()> { Err(app_error(AppError::Open(fb_app::opening::OpenError::Unavailable(joined.clone())))) });
     }
     for event in [
         json!({"op": "sync-keys", "kind": "caught", "name": "TypeError", "code": "ERR_INVALID_ARG_TYPE", "message": joined,

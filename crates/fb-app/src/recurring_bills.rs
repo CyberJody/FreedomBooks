@@ -21,6 +21,13 @@ pub fn desktop_tick(app: &mut App) -> AppResult<()> {
         app.authorize(Some(c), Permission::Write)?;
         let o = app.open_mut()?;
         let result = recurring::generate_due(&mut o.book, actor, c, &today)?;
+        if let Some(bills) = result["created"].as_array() {
+            let closed = bills.iter().filter(|b| b["posting_error"].as_str().is_some_and(fb_core::periods::is_closed_message)).count();
+            if closed > 0 {
+                let posted = bills.iter().filter(|b| b["state"] == "OPEN").count();
+                app.messages.push(format!("Recurring bills: {posted} posted, {closed} saved as drafts due to the closing date."));
+            }
+        }
         for error in result["errors"]
             .as_array()
             .into_iter()

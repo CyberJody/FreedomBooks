@@ -61,8 +61,9 @@ module.exports = async ({app,page,company,invoiceId,shot,pass}) => {
     assert.equal(await page.textContent('#print-total'),'180.00');
     assert.equal(await page.textContent('#print-balance'),'180.00');
     await shot(page,'print-live-invoice');
-    assert.ok(await page.evaluate(()=>document.adoptedStyleSheets.some(s=>Array.from(s.cssRules).some(r=>r.cssText.startsWith('@page')))),'strict-CSP footer must be restored through CSSOM');
-    await save('invoice',['INV-000001','Total USD','Balance Due','180.00','Page 1 of 1'].map(s=>new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))));
+    assert.equal((await page.locator('html').getAttribute('data-print-footer')).trim(),'Invoice INV-000001 · USD');
+    assert.equal(await page.evaluate(()=>document.adoptedStyleSheets.length),0,'print content must not inject a stylesheet');
+    await save('invoice',['INV-000001','Total USD','Balance Due','180.00','Invoice INV-000001 · USD','Page 1 of 1'].map(s=>new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))));
     // Reuse the button after cancellation and after printing: capabilities are single-use and renewed.
     const cancelled=path.join(output,'cancelled.pdf');fs.rmSync(cancelled,{force:true});
     await app.evaluate((_e,file)=>{globalThis.__printSmoke.cancel=true;globalThis.__printSmoke.file=file;},cancelled);

@@ -22,7 +22,7 @@ mod hosting_tests;
 #[cfg(all(test, feature = "panic-test"))]
 mod panic_tests;
 
-use boundary::{Class, free, guarded, within};
+use boundary::{Class, at_door, free, guarded, within};
 
 // The boundary needs unwinding: with `panic = "abort"` every panic would end the app again.
 #[cfg(panic = "abort")]
@@ -128,6 +128,20 @@ fn app_error(e: AppError) -> Error {
     }
 }
 
+fn open_error(env: Env, error: AppError) -> Error {
+    let code = match &error {
+        AppError::Open(fb_app::opening::OpenError::WrongKey) => "FB_BOOK_WRONG_KEY",
+        AppError::Open(fb_app::opening::OpenError::TooNew { .. }) => "FB_BOOK_TOO_NEW",
+        _ => return app_error(error),
+    };
+    boundary::note_error(&error);
+    let message = error.to_string();
+    match env.throw_error(&message, Some(code)) {
+        Ok(()) => Error::new(Status::PendingException, message),
+        Err(error) => error,
+    }
+}
+
 fn json(v: serde_json::Value) -> String {
     v.to_string()
 }
@@ -153,12 +167,12 @@ pub fn set_host(version: String, os: String) -> Result<()> {
 /// `{"open": bool}`.
 #[napi]
 pub fn app_state() -> Result<String> {
-    let hosting_now = hosting::active();
     guarded("app_state", Class::Read, |app| {
-    let signed_in = app.authenticated_session().is_ok();
-    let generation = app.session_generation();
-    let path = app.book_path().map(|p| p.display().to_string());
-    Ok(json(serde_json::json!({"open": app.is_open(), "signed_in":signed_in, "session_generation":generation, "path": path, "can_lock":app.can_lock(), "builtin":app.builtin(), "viewing_restored":app.backups.viewing_restored().is_some(), "hosting": hosting_now})))
+        let hosting_now = hosting::active();
+        let signed_in = app.authenticated_session().is_ok();
+        let generation = app.session_generation();
+        let path = app.book_path().map(|p| p.display().to_string());
+        Ok(json(serde_json::json!({"open": app.is_open(), "signed_in":signed_in, "session_generation":generation, "path": path, "can_lock":app.can_lock(), "builtin":app.builtin(), "viewing_restored":app.backups.viewing_restored().is_some(), "hosting": hosting_now})))
     })
 }
 
@@ -175,8 +189,8 @@ pub fn new_master_key() -> Result<String> {
 #[napi]
 pub fn create_book(path: String, key_hex: String, owner_name: String, company_name: String, starter_chart: Option<String>) -> Result<String> {
     let key_hex = Zeroizing::new(key_hex);
-    let chart = chart_choice(starter_chart)?;
     guarded("create_book", Class::Write, |app| {
+        let chart = chart_choice(starter_chart)?;
         let key = master(&key_hex)?;
         let created = app.create_book_with_chart(Path::new(&path), &key, &owner_name, &company_name, chart).map_err(app_error)?;
         let c = created.company_id.to_db();
@@ -203,12 +217,7 @@ pub fn open_book(env: Env, path: String, key_hex: String) -> Result<String> {
         let key = master(&key_hex)?;
         if let Err(error) = app.open_book(Path::new(&path), &key) {
             // A saved key that no longer fits (the book was rekeyed elsewhere) is a reason to ask, not damage.
-            if matches!(&error, AppError::Open(fb_app::opening::OpenError::WrongKey)) {
-                let message = error.to_string();
-                env.throw_error(&message, Some("FB_BOOK_WRONG_KEY"))?;
-                return Err(Error::new(Status::PendingException, message));
-            }
-            return Err(app_error(error));
+            return Err(open_error(env, error));
         }
         opened_location(app)
     })
@@ -216,7 +225,7 @@ pub fn open_book(env: Env, path: String, key_hex: String) -> Result<String> {
 
 /// Unlock with the app-lock password: the key is unwrapped here and never reaches JavaScript.
 #[napi]
-pub fn open_book_with_password(path: String, wrapped_json: String, password: String) -> Result<String> {
+pub fn open_book_with_password(env: Env, path: String, wrapped_json: String, password: String) -> Result<String> {
     let password = Zeroizing::new(password);
     let key = free("open_book_with_password", || {
         let blob: keys::WrappedKey = serde_json::from_str(&wrapped_json).map_err(|_| fail("The saved key is damaged."))?;
@@ -225,7 +234,7 @@ pub fn open_book_with_password(path: String, wrapped_json: String, password: Str
         keys::unwrap(&blob, &password).map_err(|e| fail(e.to_string()))
     })?;
     guarded("open_book_with_password", Class::Write, |app| {
-        app.open_book(Path::new(&path), &key).map_err(app_error)?;
+        app.open_book(Path::new(&path), &key).map_err(|e| open_error(env, e))?;
         app.adopt_legacy_keys(&password).map_err(app_error)?;
         opened_location(app)
     })
@@ -248,12 +257,8 @@ fn opened_location(app: &mut App) -> Result<String> {
 #[napi]
 pub fn lock() -> Result<()> {
     // Closing the books ends hosting first: connected people are told and signed out.
-    boundary::init();
-    {
-        let mut door = app()?;
-        hosting::end_from(&mut door, "The host closed these books.");
-    }
-    guarded("lock", Class::Write, |app| {
+    at_door("lock", Class::Write, app, |app| {
+        hosting::end_from(app, "The host closed these books.")?;
         app.lock();
         Ok(())
     })
@@ -265,15 +270,14 @@ pub fn lock() -> Result<()> {
 /// books stay open for the people connected.
 #[napi]
 pub fn sign_out() -> Result<()> {
-    boundary::init();
-    if hosting::request_local_lock() {
-        // The host person's Lock never waits for the books (a remote request may hold them): it is
-        // recorded at once, applied now if the books are free, and otherwise applied first at the
-        // next desktop call. The window shows the sign-in screen either way.
-        if let Ok(mut door) = app() {
-            let _ = within("sign_out", Class::Write, &mut door, |door| hosting::route(door, std::time::Duration::ZERO, |_| Ok(()), |_, _, _| Ok(())));
-        }
-        return Ok(());
+    if free("sign_out", || Ok(hosting::request_local_lock()))? {
+        // The lock request is already recorded even when the local session is busy.
+        return match at_door("sign_out", Class::Write, app, |door| {
+            hosting::route(door, std::time::Duration::ZERO, |_| Ok(()), |_, _, _| Ok(()))
+        }) {
+            Err(e) if e.reason == "BUSY" => Ok(()),
+            result => result,
+        };
     }
     desk("sign_out", Class::Write, |app| {
         app.sign_out();
@@ -284,9 +288,10 @@ pub fn sign_out() -> Result<()> {
 /// A desktop call that, while hosting, goes through the session layer's `dispatch` as the local
 /// session (`hosted`), and otherwise runs on the desktop's own app inside the panic boundary.
 fn desk<T>(op: &'static str, class: Class, alone: impl FnOnce(&mut App) -> Result<T>, hosted: impl FnOnce(&mut fb_app::multiuser::SessionHost, &fb_app::multiuser::SessionId, ()) -> Result<T>) -> Result<T> {
-    boundary::init();
-    let mut door = app()?;
-    hosting::route(&mut door, hosting::DOOR_WAIT, move |app: &mut App| within(op, class, app, alone), |host, local, _alone| hosted(host, local, ()))
+    at_door(op, class, app, |door| {
+        hosting::route(door, hosting::DOOR_WAIT, alone,
+            |host, local, _| within(op, class, host, |host| hosted(host, local, ())))
+    })
 }
 
 /// `books.run(command)`: one `fb_app::Command` as JSON. Returns the `Outcome` as JSON.
@@ -407,51 +412,23 @@ enum HostingAction {
 pub struct Work { generation: u64, action: Action }
 impl Work {
     fn new(action: Action) -> Result<AsyncTask<Self>> {
-        let generation = guarded("queue", Class::Read, |app| Ok(app.session_generation()))?;
-        Ok(AsyncTask::new(Self { generation, action }))
+        guarded("queue", Class::Read, |app| Ok(AsyncTask::new(Self { generation: app.session_generation(), action })))
     }
-    fn op(&self) -> (&'static str, Class) {
-        match self.action {
-            Action::InvoiceEmail(..) => ("invoice_email_finish", Class::Write),
-            Action::RecurringBills => ("recurring_bills", Class::Write),
-            Action::ScheduledBackup => ("scheduled_backup", Class::Write),
-            Action::StripeRefresh(_) => ("stripe_refresh", Class::Write),
-            Action::Render(_) => ("render_async", Class::Read),
-            Action::Run(_) => ("run_async", Class::Write),
-            Action::Dialog(..) => ("backup_dialog_async", Class::Write),
-            Action::Create { .. } => ("create_protected_book_async", Class::Write),
-            Action::Restore { .. } => ("restore_book_from_gate_async", Class::Write),
-            Action::RecoverySaved(_) => ("recovery_saved_async", Class::Write),
-            Action::Hosting(_) => ("hosting", Class::Read),
-        }
-    }
-}
-impl Task for Work {
-    type Output = (String,u64);
-    type JsValue = String;
-
-    fn compute(&mut self) -> Result<Self::Output> {
-        // A pool thread: a panic here would abort the process from libuv's worker, so it gets the
-        // same boundary as the main thread's calls.
-        // A background backup yields when another task already holds the books.
-        let mut app = if matches!(self.action, Action::ScheduledBackup) { app()? } else { app_blocking()? };
-        let (op, class) = self.op();
+    fn execute_action(&mut self, app: &mut App, op: &'static str, class: Class) -> Result<(String, u64)> {
         let generation = self.generation;
         let action = &mut self.action;
         if let Action::Hosting(h) = action {
             // The door itself: these move the books into or out of the host.
-            return within(op, class, &mut app, |door| hosting_in(door, h)).map(|out| (out, 0));
+            return hosting_in(app, h).map(|out| (out, 0));
         }
         if matches!(action, Action::ScheduledBackup) {
             if hosting::active() || generation != app.session_generation() {
                 return Ok((String::new(), generation));
             }
-            return within(op, class, &mut app, |app| {
-                fb_app::scheduled_backups::desktop_tick(app, generation).map_err(app_error)?;
-                Ok((String::new(), app.session_generation()))
-            });
+            fb_app::scheduled_backups::desktop_tick(app, generation).map_err(app_error)?;
+            return Ok((String::new(), app.session_generation()));
         }
-        hosting::with_desk(&mut app, hosting::TASK_WAIT, |app| within(op, class, app, |app| {
+        hosting::with_desk(app, hosting::TASK_WAIT, |app| within(op, class, app, |app| {
         if generation!=app.session_generation() { return Err(fail("The active user changed. Open the screen again.")); }
         let output=match action {
             Action::RecurringBills => {fb_app::recurring_bills::desktop_tick(app).map_err(app_error)?; Ok(String::new())},
@@ -473,6 +450,34 @@ impl Task for Work {
         }?;
         Ok((output,app.session_generation()))
         }))
+    }
+    fn op(&self) -> (&'static str, Class) {
+        match self.action {
+            Action::InvoiceEmail(..) => ("invoice_email_finish", Class::Write),
+            Action::RecurringBills => ("recurring_bills", Class::Write),
+            Action::ScheduledBackup => ("scheduled_backup", Class::Write),
+            Action::StripeRefresh(_) => ("stripe_refresh", Class::Write),
+            Action::Render(_) => ("render_async", Class::Read),
+            Action::Run(_) => ("run_async", Class::Write),
+            Action::Dialog(..) => ("backup_dialog_async", Class::Write),
+            Action::Create { .. } => ("create_protected_book_async", Class::Write),
+            Action::Restore { .. } => ("restore_book_from_gate_async", Class::Write),
+            Action::RecoverySaved(_) => ("recovery_saved_async", Class::Write),
+            Action::Hosting(_) => ("hosting", Class::Write),
+        }
+    }
+}
+impl Task for Work {
+    type Output = (String,u64);
+    type JsValue = String;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        // A pool thread: a panic here would abort the process from libuv's worker, so it gets the
+        // same boundary as the main thread's calls.
+        // A background backup yields when another task already holds the books.
+        let acquire = if matches!(self.action, Action::ScheduledBackup) { app } else { app_blocking };
+        let (op, class) = self.op();
+        at_door(op, class, acquire, |app| self.execute_action(app, op, class))
     }
     fn resolve(&mut self, _env: Env, (output,generation): Self::Output) -> Result<String> {
         if matches!(self.action, Action::Hosting(_) | Action::ScheduledBackup) {
@@ -501,7 +506,7 @@ fn hosting_in(door: &mut App, action: &HostingAction) -> Result<String> {
         HostingAction::On { bind, host_name } => hosting::turn_on(door, bind, host_name).and_then(|()| done()),
         HostingAction::Off { .. } => hosting::stop(door).and_then(|()| done()),
         HostingAction::End(reason) => {
-            hosting::end_from(door, reason);
+            hosting::end_from(door, reason)?;
             done()
         }
         HostingAction::Resume { host_name } => hosting::resume(door, host_name).map(|on| json(serde_json::json!({"ok": true, "running": on}))),
@@ -523,9 +528,7 @@ pub fn configure_remote(path: String) -> Result<()> {
 /// Trusted main process, after the books open: whether hosting was left on (see `hostingResumeAsync`).
 #[napi]
 pub fn hosting_wanted() -> Result<bool> {
-    boundary::init();
-    let mut door = app()?;
-    within("hosting_wanted", Class::Read, &mut door, |door| Ok(hosting::wanted(door)))
+    at_door("hosting_wanted", Class::Read, app, |door| Ok(hosting::wanted(door)))
 }
 
 /// Trusted main process: whether these books are being hosted. Never waits (Lock uses it).
@@ -544,15 +547,15 @@ pub fn hosting_status() -> Result<String> {
 /// What the Hosting screen shows (JSON; no secret). Administrators get the details.
 #[napi]
 pub fn hosting_state(skip_if_busy: Option<bool>) -> Result<String> {
-    boundary::init();
-    let mut door = app()?;
-    let wait = if skip_if_busy == Some(true) { std::time::Duration::ZERO } else { hosting::DOOR_WAIT };
-    let clear_restore = skip_if_busy != Some(true);
-    within("hosting_state", Class::Read, &mut door, |door| hosting::state(door, wait, clear_restore).map(json))
+    at_door("hosting_state", Class::Read, app, |door| {
+        let wait = if skip_if_busy == Some(true) { std::time::Duration::ZERO } else { hosting::DOOR_WAIT };
+        let clear_restore = skip_if_busy != Some(true);
+        hosting::state(door, wait, clear_restore).map(json)
+    })
 }
 
 fn hosting_task(action: HostingAction) -> Result<AsyncTask<Work>> {
-    Ok(AsyncTask::new(Work { generation: 0, action: Action::Hosting(action) }))
+    free("hosting_queue", || Ok(AsyncTask::new(Work { generation: 0, action: Action::Hosting(action) })))
 }
 
 /// Administrator: turn hosting on, listening on `bind` (one private address of this computer).
@@ -617,8 +620,10 @@ pub fn invoice_email_print(ticket:String)->Result<String> {
 }
 #[napi]
 pub fn invoice_email_finish_async(ticket:String,pdf:napi::bindgen_prelude::Buffer)->Result<AsyncTask<Work>> {
-    if pdf.len()>8*1024*1024 {return Err(fail("Invoice PDF is too large."));}
-    let pdf = free("invoice_email_finish_async", || Ok(Zeroizing::new(pdf.to_vec())))?;
+    let pdf = free("invoice_email_finish_async", || {
+        if pdf.len() > 8*1024*1024 { return Err(fail("Invoice PDF is too large.")); }
+        Ok(Zeroizing::new(pdf.to_vec()))
+    })?;
     Work::new(Action::InvoiceEmail(ticket,pdf))
 }
 
@@ -644,29 +649,31 @@ static NET_PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::
 /// `pluginsEnabled()`: whether this build shows the plugin surfaces (Cargo feature `plugins`). The
 /// main process reads it once; release builds are false and never start the network helper.
 #[napi]
-pub fn plugins_enabled() -> bool {
-    cfg!(feature = "plugins")
+pub fn plugins_enabled() -> Result<bool> {
+    free("plugins_enabled", || Ok(cfg!(feature = "plugins")))
 }
 
 #[napi]
-pub fn bankfeeds_enabled() -> bool {
-    cfg!(any(feature = "plugins", feature = "simplefin"))
+pub fn bankfeeds_enabled() -> Result<bool> {
+    free("bankfeeds_enabled", || Ok(cfg!(any(feature = "plugins", feature = "simplefin"))))
 }
 
 #[napi]
-pub fn invoice_delivery_enabled() -> bool { cfg!(feature="invoice-delivery") }
+pub fn invoice_delivery_enabled() -> Result<bool> {
+    free("invoice_delivery_enabled", || Ok(cfg!(feature = "invoice-delivery")))
+}
 
 #[napi]
 pub fn configure_network(path: String) -> Result<()> {
-    if !bankfeeds_enabled() && !invoice_delivery_enabled() {
-        return Err(fail("This build has no network helper."));
-    }
-    let path = std::path::PathBuf::from(path);
-    if !path.is_absolute() || !path.is_file() {
-        return Err(fail("The network helper was not found."));
-    }
-    NET_PATH.set(path.clone()).map_err(|_| fail("The network helper is already configured."))?;
     guarded("configure_network", Class::Read, |app| {
+        if !bankfeeds_enabled()? && !invoice_delivery_enabled()? {
+            return Err(fail("This build has no network helper."));
+        }
+        let path = std::path::PathBuf::from(path);
+        if !path.is_absolute() || !path.is_file() {
+            return Err(fail("The network helper was not found."));
+        }
+        NET_PATH.set(path.clone()).map_err(|_| fail("The network helper is already configured."))?;
         app.net = Some(Box::new(fb_app::net::ProcessNet::new(path)));
         Ok(())
     })
@@ -683,8 +690,8 @@ pub fn external_origins() -> Result<String> {
 fn external_origins_in() -> Result<String> {
     #[allow(unused_mut)]
     let mut origins = vec![];
-    if plugins_enabled() {origins.push("https://auth.openai.com".to_owned());}
-    if invoice_delivery_enabled() {origins.push("https://accounts.google.com".to_owned());}
+    if plugins_enabled()? {origins.push("https://auth.openai.com".to_owned());}
+    if invoice_delivery_enabled()? {origins.push("https://accounts.google.com".to_owned());}
     #[cfg(feature = "fake-network")]
     if let Ok(fake) = std::env::var("FB_NET_FAKE_OPENAI") {
         let fake = fake.trim_end_matches('/');
@@ -748,12 +755,13 @@ pub fn has_credentials() -> Result<bool> {
 #[napi]
 pub fn configure_keys(device_hex: String, state: String, os_store_usable: bool, alternates_json: Option<String>) -> Result<()> {
     let device = Zeroizing::new(device_hex);
-    // Superseded connection keys kept aside on this computer: read with, never written with.
-    let alternates: Vec<Zeroizing<String>> = match alternates_json.map(Zeroizing::new) {
-        Some(raw) if !raw.is_empty() => serde_json::from_str::<Vec<String>>(&raw).map_err(|_| fail("Invalid connection keys."))?.into_iter().map(Zeroizing::new).collect(),
-        _ => vec![],
-    };
+    let alternates_json = alternates_json.map(Zeroizing::new);
     guarded("configure_keys", Class::Write, |app| {
+        // Superseded connection keys kept aside on this computer: read with, never written with.
+        let alternates: Vec<Zeroizing<String>> = match alternates_json {
+            Some(raw) if !raw.is_empty() => serde_json::from_str::<Vec<String>>(&raw).map_err(|_| fail("Invalid connection keys."))?.into_iter().map(Zeroizing::new).collect(),
+            _ => vec![],
+        };
         let state = fb_app::ConnectionKeys::parse(&state).ok_or_else(|| fail("Unknown connection key state."))?;
         let key = match state {
             fb_app::ConnectionKeys::Unavailable => None,
@@ -842,8 +850,8 @@ pub fn recover_key_change(path: String) -> Result<bool> {
 #[napi]
 pub fn create_protected_book(path: String, owner_name: String, company_name: String, password: String, protect: bool, starter_chart: Option<String>) -> Result<String> {
     let password = Zeroizing::new(password);
-    let chart = chart_choice(starter_chart)?;
     guarded("create_protected_book", Class::Write, |app| {
+        let chart = chart_choice(starter_chart)?;
         app.create_protected_book_with_chart(Path::new(&path), &owner_name, &company_name, protect.then_some(password.as_str()), chart).map_err(app_error)?;
         opened_location(app)
     })
@@ -856,12 +864,7 @@ pub fn open_protected_book(env: Env, path: String, secret: String) -> Result<Str
         if let Err(error) = app.open_with_secret(Path::new(&path), &secret) {
             // Only authentication refusal permits the trusted legacy saved-key fallback.
             // Keep the same plain message; never classify by parsing human-facing text.
-            if matches!(&error, AppError::Open(fb_app::opening::OpenError::WrongKey)) {
-                let message = error.to_string();
-                env.throw_error(&message, Some("FB_BOOK_WRONG_KEY"))?;
-                return Err(Error::new(Status::PendingException, message));
-            }
-            return Err(app_error(error));
+            return Err(open_error(env, error));
         }
         opened_location(app)
     })
@@ -926,7 +929,7 @@ pub fn restore_book_from_gate(file: String, name: String, secret: String) -> Res
 #[napi]
 pub fn create_protected_book_async(path: String, owner: String, company: String, password: String, protect: bool, starter_chart: Option<String>) -> Result<AsyncTask<Work>> {
     let password = Zeroizing::new(password);
-    let chart = chart_choice(starter_chart)?;
+    let chart = free("create_protected_book_async", || chart_choice(starter_chart))?;
     Work::new(Action::Create { path, owner, company, password, protect, chart })
 }
 
@@ -1023,7 +1026,8 @@ pub fn recurring_bills_async()->Result<AsyncTask<Work>> {Work::new(Action::Recur
 pub fn scheduled_backup_async() -> Result<AsyncTask<Work>> {
     // Capture the generation directly at the APP door. Hosted sessions never
     // admit this action, including while the hosted window is signed out.
-    let app = app()?;
-    if hosting::active() { return Err(fail("BUSY")); }
-    Ok(AsyncTask::new(Work { generation: app.session_generation(), action: Action::ScheduledBackup }))
+    at_door("scheduled_backup_async", Class::Read, app, |app| {
+        if hosting::active() { return Err(fail("BUSY")); }
+        Ok(AsyncTask::new(Work { generation: app.session_generation(), action: Action::ScheduledBackup }))
+    })
 }

@@ -28,6 +28,27 @@ struct Office {
     keeper: UserId,
 }
 
+/// Keep both hidden fields from the same render, including across a hosting restart.
+#[derive(Clone)]
+struct CustomerEdit {
+    path: String,
+    token: String,
+    snapshot: String,
+}
+
+impl CustomerEdit {
+    fn from_page(path: &str, html: &str) -> Self {
+        let field = |name: &str| html.split_once(&format!(r#"name="{name}" value=""#))
+            .unwrap_or_else(|| panic!("missing {name}")).1.split('"').next().unwrap().to_owned();
+        Self { path: path.to_owned(), token: field("fb_command_token"), snapshot: field("expected_snapshot") }
+    }
+
+    fn rename(self, name: &str) -> Command {
+        Command::SubmitForm { path: self.path, token: self.token,
+            fields: vec![("display_name".into(), name.into()), ("expected_snapshot".into(), self.snapshot)] }
+    }
+}
+
 fn office() -> Office {
     office_with(Policy::default())
 }
@@ -73,6 +94,14 @@ impl Office {
     }
     fn post_with(&mut self, id: &SessionId, path: &str, token: String, fields: &[(&str, &str)]) -> Result<(Outcome, bool), HostError> {
         let command = Command::SubmitForm { path: path.into(), token, fields: fields.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect() };
+        self.run(id, command)
+    }
+    fn customer_edit(&mut self, id: &SessionId, path: &str) -> CustomerEdit {
+        let (html, status) = self.render(id, path).unwrap();
+        assert_eq!(status, 200);
+        CustomerEdit::from_page(path, &html)
+    }
+    fn run(&mut self, id: &SessionId, command: Command) -> Result<(Outcome, bool), HostError> {
         match self.host.dispatch(id, Request::Run { command })? {
             Response::Outcome { outcome, replayed } => Ok((outcome, replayed)),
             other => panic!("not an outcome: {other:?}"),
@@ -215,41 +244,47 @@ fn concurrent_edits_of_one_record_refuse_the_stale_one() {
     let location = o.new_customer(&a, o.first, "Original name").unwrap();
     let edit = format!("{location}edit/");
     // Both open the edit form; A saves first.
-    let a_token = o.form(&a, &edit);
-    let b_token = o.form(&b, &edit);
-    let (saved, _) = o.post_with(&a, &edit, a_token, &[("display_name", "Owner's change")]).unwrap();
+    let a_token = o.customer_edit(&a, &edit);
+    let b_token = o.customer_edit(&b, &edit);
+    let (saved, _) = o.run(&a, a_token.rename("Owner's change")).unwrap();
     assert!(matches!(saved, Outcome::Redirect { .. }), "{saved:?}");
     let audits: i64 = o.sql("SELECT count(*) FROM ledger_auditevent", &[]);
-    let (stale, replayed) = o.post_with(&b, &edit, b_token.clone(), &[("display_name", "Bookkeeper's change")]).unwrap();
+    let (stale, replayed) = o.run(&b, b_token.clone().rename("Bookkeeper's change")).unwrap();
     assert!(!replayed);
     let Outcome::Retry { message, token: None } = stale else { panic!("stale edit was not refused: {stale:?}") };
     assert!(message.contains(OWNER) && message.contains("nothing was saved"), "{message}");
     assert_eq!(o.customer_name(&location), "Owner's change");
     assert_eq!(o.sql::<i64>("SELECT count(*) FROM ledger_auditevent", &[]), audits);
     // The refused form cannot be sent again; reopening shows the change and then saves.
-    assert!(o.post_with(&b, &edit, b_token, &[("display_name", "Bookkeeper's change")]).is_err());
-    let early = o.form(&a, &edit);
-    let fresh = o.form(&b, &edit);
-    let (saved, _) = o.post_with(&b, &edit, fresh, &[("display_name", "Bookkeeper's change")]).unwrap();
+    assert!(o.run(&b, b_token.rename("Bookkeeper's change")).is_err());
+    let early = o.customer_edit(&a, &edit);
+    let fresh = o.customer_edit(&b, &edit);
+    let (saved, _) = o.run(&b, fresh.rename("Bookkeeper's change")).unwrap();
     assert!(matches!(saved, Outcome::Redirect { .. }), "{saved:?}");
     assert_eq!(o.customer_name(&location), "Bookkeeper's change");
     // A's form opened before B's save is stale too.
-    let (stale, _) = o.post_with(&a, &edit, early, &[("display_name", "Owner, stale")]).unwrap();
+    let (stale, _) = o.run(&a, early.rename("Owner, stale")).unwrap();
     assert!(matches!(stale, Outcome::Retry { token: None, .. }), "{stale:?}");
     assert_eq!(o.customer_name(&location), "Bookkeeper's change");
-    // A person's own earlier forms are never stale because of their own saves.
-    let one = o.form(&a, &edit);
-    let two = o.form(&a, &edit);
-    assert!(matches!(o.post_with(&a, &edit, one, &[("display_name", "Owner once")]).unwrap().0, Outcome::Redirect { .. }));
-    assert!(matches!(o.post_with(&a, &edit, two, &[("display_name", "Owner twice")]).unwrap().0, Outcome::Redirect { .. }));
+    // Hosting does not report a conflict with the same actor. The directory Writer
+    // still checks the snapshot and refuses a second form that would overwrite a change.
+    let one = o.customer_edit(&a, &edit);
+    let repeat = o.customer_edit(&a, &edit);
+    let two = o.customer_edit(&a, &edit);
+    assert!(matches!(o.run(&a, one.rename("Owner once")).unwrap().0, Outcome::Redirect { .. }));
+    assert!(matches!(o.run(&a, repeat.rename("Owner once")).unwrap().0, Outcome::Redirect { .. }));
+    assert!(matches!(o.run(&a, two.rename("Owner twice")).unwrap().0, Outcome::Invalid { html } if html.contains("changed since you opened the form")));
+    assert_eq!(o.customer_name(&location), "Owner once");
+    let reopened = o.customer_edit(&a, &edit);
+    assert!(matches!(o.run(&a, reopened.rename("Owner twice")).unwrap().0, Outcome::Redirect { .. }));
     assert_eq!(o.customer_name(&location), "Owner twice");
     // Different records do not interfere.
     let other = o.new_customer(&b, o.first, "Another record").unwrap();
     let other_edit = format!("{other}edit/");
-    let b_other = o.form(&b, &other_edit);
-    let a_edit = o.form(&a, &edit);
-    assert!(matches!(o.post_with(&a, &edit, a_edit, &[("display_name", "Owner thrice")]).unwrap().0, Outcome::Redirect { .. }));
-    assert!(matches!(o.post_with(&b, &other_edit, b_other, &[("display_name", "Other renamed")]).unwrap().0, Outcome::Redirect { .. }));
+    let b_other = o.customer_edit(&b, &other_edit);
+    let a_edit = o.customer_edit(&a, &edit);
+    assert!(matches!(o.run(&a, a_edit.rename("Owner thrice")).unwrap().0, Outcome::Redirect { .. }));
+    assert!(matches!(o.run(&b, b_other.rename("Other renamed")).unwrap().0, Outcome::Redirect { .. }));
 }
 
 #[test]
@@ -741,8 +776,9 @@ fn forms_kept_through_stopping_and_starting_hosting_still_detect_newer_edits() {
     let mut local = o.signed_in(OWNER, true);
     let location = o.new_customer(&local, o.first, "Original").unwrap();
     let edit = format!("{location}edit/");
-    o.post(&local, &edit, &[("display_name", "First epoch")]).unwrap();
-    let stale = o.form(&local, &edit);
+    let fresh_edit = o.customer_edit(&local, &edit);
+    assert!(matches!(o.run(&local, fresh_edit.rename("First epoch")).unwrap().0, Outcome::Redirect { .. }));
+    let stale = o.customer_edit(&local, &edit);
     for round in 0..2 {
         let app = std::mem::replace(&mut o.host, SessionHost::new(App::new(), Policy::default())).into_app(&local);
         let (host, id) = SessionHost::host_with_local(app, Policy::default(), &format!("Host again {round}"));
@@ -750,15 +786,17 @@ fn forms_kept_through_stopping_and_starting_hosting_still_detect_newer_edits() {
         local = id;
     }
     let remote = o.signed_in(KEEPER, false);
-    assert!(matches!(o.post(&remote, &edit, &[("display_name", "Remote's fresh edit")]).unwrap(), Outcome::Redirect { .. }));
+    let fresh_edit = o.customer_edit(&remote, &edit);
+    assert!(matches!(o.run(&remote, fresh_edit.rename("Remote's fresh edit")).unwrap().0, Outcome::Redirect { .. }));
     // The record form did not survive the hosting change at all (re-review R2): it must be reopened.
-    let result = o.post_with(&local, &edit, stale, &[("display_name", "Local's stale overwrite")]);
+    let result = o.run(&local, stale.rename("Local's stale overwrite"));
     assert!(matches!(&result, Err(HostError::App(e)) if e.to_string().contains("Hosting changed")), "{result:?}");
     assert_eq!(o.customer_name(&location), "Remote's fresh edit");
     // A form opened after the change is compared with later writes as usual.
-    let fresh = o.form(&local, &edit);
-    assert!(matches!(o.post(&remote, &edit, &[("display_name", "Remote again")]).unwrap(), Outcome::Redirect { .. }));
-    let (result, _) = o.post_with(&local, &edit, fresh, &[("display_name", "Local's stale overwrite")]).unwrap();
+    let fresh = o.customer_edit(&local, &edit);
+    let fresh_edit = o.customer_edit(&remote, &edit);
+    assert!(matches!(o.run(&remote, fresh_edit.rename("Remote again")).unwrap().0, Outcome::Redirect { .. }));
+    let (result, _) = o.run(&local, fresh.rename("Local's stale overwrite")).unwrap();
     assert!(matches!(&result, Outcome::Retry { token: None, message } if message.contains(KEEPER)), "{result:?}");
     assert_eq!(o.customer_name(&location), "Remote again");
 }
@@ -1032,12 +1070,13 @@ fn a_conflict_recorded_before_stopping_hosting_still_refuses_the_stale_form() {
     let remote = o.signed_in(KEEPER, false);
     let location = o.new_customer(&local, o.first, "Original").unwrap();
     let edit = format!("{location}edit/");
-    let stale = o.form(&local, &edit);
-    o.post(&remote, &edit, &[("display_name", "Remote's committed edit")]).unwrap();
+    let stale = o.customer_edit(&local, &edit);
+    let fresh_edit = o.customer_edit(&remote, &edit);
+    assert!(matches!(o.run(&remote, fresh_edit.rename("Remote's committed edit")).unwrap().0, Outcome::Redirect { .. }));
     let app = std::mem::replace(&mut o.host, SessionHost::new(App::new(), Policy::default())).into_app(&local);
     let (host, local) = SessionHost::host_with_local(app, Policy::default(), "Restart after remote save");
     o.host = host;
-    let result = o.post_with(&local, &edit, stale, &[("display_name", "Local stale overwrite")]);
+    let result = o.run(&local, stale.rename("Local stale overwrite"));
     assert!(matches!(&result, Err(HostError::App(e)) if e.to_string().contains("Hosting changed")), "{result:?}");
     assert_eq!(o.customer_name(&location), "Remote's committed edit");
     // Forms that do not edit an existing record are kept.
@@ -1057,17 +1096,17 @@ fn a_stale_record_form_is_refused_right_after_stopping_hosting() {
     let remote = o.signed_in(KEEPER, false);
     let location = o.new_customer(&local, o.first, "Original").unwrap();
     let edit = format!("{location}edit/");
-    let stale = o.form(&local, &edit);
-    o.post(&remote, &edit, &[("display_name", "Remote's committed edit")]).unwrap();
+    let stale = o.customer_edit(&local, &edit);
+    let fresh_edit = o.customer_edit(&remote, &edit);
+    assert!(matches!(o.run(&remote, fresh_edit.rename("Remote's committed edit")).unwrap().0, Outcome::Redirect { .. }));
     let mut app = std::mem::replace(&mut o.host, SessionHost::new(App::new(), Policy::default())).into_app(&local);
-    let command = Command::SubmitForm { path: edit.clone(), token: stale, fields: vec![("display_name".into(), "Local stale overwrite".into())] };
-    let result = app.run_desktop(command);
+    let result = app.run_desktop(stale.rename("Local stale overwrite"));
     assert!(matches!(&result, Err(e) if e.to_string().contains("Hosting changed")), "{result:?}");
     let id = location.trim_end_matches('/').rsplit('/').next().unwrap().to_owned();
     let name: String = app.open_mut().unwrap().book.read(|q| q.query_row("SELECT display_name FROM directory_customer WHERE id=?1", [id], |r| r.get(0))).unwrap();
     assert_eq!(name, "Remote's committed edit");
     // Reopened, the record saves normally on the desktop.
-    let token = app.tokens.mint(&edit);
-    let command = Command::SubmitForm { path: edit, token, fields: vec![("display_name".into(), "Local after reopening".into())] };
-    assert!(matches!(app.run_desktop(command).unwrap(), Outcome::Redirect { .. }));
+    let html = fb_app::screens::render(&mut app, &edit).unwrap().html;
+    let fresh = CustomerEdit::from_page(&edit, &html);
+    assert!(matches!(app.run_desktop(fresh.rename("Local after reopening")).unwrap(), Outcome::Redirect { .. }));
 }

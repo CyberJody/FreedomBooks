@@ -681,7 +681,7 @@ fn visa_payments_in_bank_review_match_both_sides_of_three_exact_transfers() {
         fb_core::transfers::posted_balance(&mut o.book, o.owner, co, id.parse().unwrap()).unwrap()
     };
     assert_eq!(balance(o, &bank), "4543.71");
-    assert_eq!(balance(o, &visa), "-576.25");
+    assert_eq!(balance(o, &visa), "576.25");
     assert!(o.book.check().unwrap().is_empty());
 }
 

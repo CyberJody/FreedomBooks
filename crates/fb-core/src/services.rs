@@ -429,6 +429,22 @@ pub fn money_json(value: &Value) -> FbResult<Money> {
     fb_money::money(&amount_input(value)).map_err(|e| FbError::validation(e.to_string()))
 }
 
+/// Compare the original editable record inside the transaction that saves its replacement.
+pub fn snapshot_token(record: &Value) -> String {
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(py::py_json_dumps_sorted(record).as_bytes()))
+}
+
+pub fn journal_amount(value: &Value) -> FbResult<Money> {
+    if let Some(text) = value.as_str()
+        && let Some(fb_money::Parsed::Finite(amount)) = fb_money::parse_python_decimal(text)
+        && amount.exponent < -2
+    {
+        return Err(FbError::validation("Enter journal amounts with at most two decimal places."));
+    }
+    money_json(value)
+}
+
 pub fn amount_input(value: &Value) -> AmountInput {
     match value {
         Value::String(s) => AmountInput::Text(s.clone()),
@@ -608,8 +624,9 @@ fn normalize_lines(lines: &[Value], manual: bool) -> FbResult<Vec<LineRow>> {
         }
         .ok_or_else(|| FbError::validation("Choose an active posting account in this company."))?;
         let zero = Value::String("0".into());
-        let debit = money_json(map.get("debit").unwrap_or(&zero))?;
-        let credit = money_json(map.get("credit").unwrap_or(&zero))?;
+        let amount = if manual { journal_amount } else { money_json };
+        let debit = amount(map.get("debit").unwrap_or(&zero))?;
+        let credit = amount(map.get("credit").unwrap_or(&zero))?;
         let description = short_text(map.get("description"), 160, "line description")?;
         let name = short_text(map.get("name"), NAME_MAX, "name")?;
         rows.push(LineRow { account, debit, credit, description, name });

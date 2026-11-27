@@ -326,21 +326,30 @@ pub struct RestoreResult {
 }
 
 fn hash_file(path: &Path) -> Result<(u64, String)> {
-    hash_open_file(paths::regular(path)?)
+    hash_open_file(&mut paths::regular(path)?)
 }
-pub(super) fn hash_open_file(mut f: File) -> Result<(u64, String)> {
+pub(super) fn hash_open_file(f: &mut File) -> Result<(u64, String)> {
+    copy_and_hash(f, &mut std::io::sink(), u64::MAX)
+}
+
+fn copy_and_hash(mut source: impl Read, dest: &mut impl Write, limit: u64) -> Result<(u64, String)> {
     let mut sha = Sha256::new();
     let mut bytes = 0u64;
     let mut buf = [0; 65536];
     loop {
-        let n = f.read(&mut buf)?;
+        let n = match source.read(&mut buf) {
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            result => result?,
+        };
         if n == 0 {
             break;
         }
-        sha.update(&buf[..n]);
         bytes = bytes
             .checked_add(n as u64)
-            .ok_or_else(|| BackupError::refused("File too large."))?;
+            .filter(|&n| n <= limit)
+            .ok_or_else(|| BackupError::refused("Backup size exceeds the restore limit."))?;
+        dest.write_all(&buf[..n])?;
+        sha.update(&buf[..n]);
     }
     Ok((bytes, format!("{:x}", sha.finalize())))
 }
@@ -571,22 +580,20 @@ fn payload(path: &Path, work: &Path, data: &Manifest) -> Result<()> {
     Ok(())
 }
 fn publish(source: &Path, target: &Path) -> Result<()> {
-    // Same-folder hard link is atomic and never clobbers. Fail closed on a
-    // filesystem without hard links; a check-then-rename can overwrite.
-    fs::hard_link(source, target).map_err(|e| {
-        BackupError::refused(format!(
-            "Refusing to overwrite or non-atomic backup placement: {e}"
-        ))
-    })?;
-    if let Err(e) = paths::sync_dir(
-        target
-            .parent()
-            .ok_or_else(|| BackupError::refused("Missing parent."))?,
-    ) {
-        let _ = fs::remove_file(target);
-        return Err(e);
-    }
-    Ok(())
+    let (parent, name) = paths::parent_name(target)?;
+    let dir = Directory::open(parent)?;
+    dir.link_new(source, name)?;
+    dir.sync()?;
+    dir.confirm(parent)
+}
+
+fn receipt_cipher_bytes(plain: u64) -> Result<u64> {
+    plain.checked_add(16 * plain.div_ceil(crypto::CHUNK as u64))
+        .ok_or_else(|| BackupError::refused("Receipt size overflow."))
+}
+
+fn backup_space(book: u64, receipts: u64, copies: u64) -> u64 {
+    book.saturating_add(receipts).saturating_mul(copies).saturating_add(1024 * 1024)
 }
 
 /// Copy one stored file into the work folder and authenticate it for every row that refers to it.
@@ -608,10 +615,7 @@ fn stage_receipt(root: Option<&Path>, rows: &[ReceiptRef], staged: &Path, verifi
         Ok(m) if !m.file_type().is_file() => return Ok(Some(DAMAGED)),
         Ok(_) => {}
     }
-    let expected = row
-        .plain_bytes
-        .checked_add(16 * row.plain_bytes.div_ceil(crypto::CHUNK as u64))
-        .ok_or_else(|| BackupError::refused("Receipt size overflow."))?;
+    let expected = receipt_cipher_bytes(row.plain_bytes)?;
     // Never follow a link put in the file's place after the check above.
     let mut options = fs::OpenOptions::new();
     options.read(true);
@@ -746,13 +750,17 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     let lock_path = parent.join(".fb-backup.lock");
     paths::resolve(&lock_path)?;
     let lock = paths::lock_file(&lock_path)?;
-    fs2::FileExt::try_lock_exclusive(&lock).map_err(|_| {
-        BackupError::refused("Another backup is running right now; try again when it finishes.")
-    })?;
-    let estimate = book
-        .snapshot_size()?
-        .saturating_mul(4)
-        .saturating_add(1024 * 1024);
+    match lock.try_lock() {
+        Ok(()) => {}
+        Err(fs::TryLockError::WouldBlock) => {
+            return Err(BackupError::refused(
+                "Another backup is running right now; try again when it finishes.",
+            ));
+        }
+        Err(fs::TryLockError::Error(e)) => return Err(e.into()),
+    }
+    let snapshot_size = book.snapshot_size()?;
+    let estimate = backup_space(snapshot_size, 0, 4);
     paths::require_space(work.path(), estimate)?;
     paths::require_space(parent, estimate)?;
     let snap = work.path().join("book.fbbook");
@@ -776,6 +784,15 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
             validate_ref(&row)?;
             files.entry(row.stored_name.clone()).or_default().push(row);
         }
+        // The authenticated snapshot is the first consistent inventory of receipt files.
+        // Shared files are staged once. Allow for staging, encryption and final publication.
+        let receipt_bytes = files.values().try_fold(0u64, |n, rows| {
+            n.checked_add(receipt_cipher_bytes(rows[0].plain_bytes)?)
+                .ok_or_else(|| BackupError::refused("Receipt size overflow."))
+        })?;
+        let estimate = backup_space(snapshot_size, receipt_bytes, 4);
+        paths::require_space(work.path(), estimate)?;
+        paths::require_space(parent, estimate)?;
         for (stored, rows) in files {
             let entry = format!("receipts/{stored}");
             let staged = work.path().join(&entry);
@@ -807,7 +824,7 @@ fn create_with_keys(book: &dyn fb_db::SnapshotSource, key: &Key, options: &Backu
     let (book_bytes, book_sha256) = hash_file(&snap)?;
     paths::require_space(
         parent,
-        book_bytes.saturating_mul(3).saturating_add(1024 * 1024),
+        backup_space(book_bytes, receipts.values().map(|r| r.bytes).fold(0, u64::saturating_add), 3),
     )?;
     let version = if envelope.is_some() { FORMAT_VERSION } else { 3 };
     let data = Manifest { format: FORMAT.into(), format_version: version, created_at: options.created_at.into(), app_version: options.app_version.into(),
@@ -906,6 +923,9 @@ fn extract(archive: &Path, work: &Path, outer: bool, data: Option<&Manifest>) ->
         return Err(BackupError::refused("Backup size exceeds the restore limit."));
     }
     let mut tar = tar::Archive::new(file);
+    let budget = data.map(restore_limits::budget).transpose()?;
+    let sizes: BTreeMap<_, _> = data.into_iter().flat_map(|m| &m.attachments)
+        .map(|r| (r.entry.as_str(), r.bytes)).collect();
     let mut total = 0u64;
     let mut seen = BTreeSet::new();
     for item in tar.entries_with_seek().map_err(archive_io)?.raw(true) {
@@ -943,10 +963,10 @@ fn extract(archive: &Path, work: &Path, outer: bool, data: Option<&Manifest>) ->
             .ok_or_else(|| BackupError::refused("Backup size exceeds the restore limit."))?;
         let metadata = matches!(name.as_str(), "header.json" | "manifest.json" | "manifest.enc");
         if let Some(data) = data {
-            if total > restore_limits::budget(data)? { return Err(BackupError::refused("Backup size exceeds the restore limit.")); }
+            if budget.is_some_and(|cap| total > cap) { return Err(BackupError::refused("Backup size exceeds the restore limit.")); }
             if metadata { continue; }
             let expected = if name == "book.fbbook" { Some(data.book_bytes) }
-                else { data.attachments.iter().find(|r| r.entry == name).map(|r| r.bytes) };
+                else { sizes.get(name.as_str()).copied() };
             if expected != Some(size) { return Err(BackupError::refused("Backup entry size does not match its manifest.")); }
         } else if !metadata { continue; }
         paths::require_space(work, size.saturating_add(1024 * 1024))?;
@@ -1081,7 +1101,6 @@ fn unpack(
     if !(header.get("incomplete").is_none() && data.complete() || header["incomplete"] == true && !data.complete()) {
         return Err(BackupError::refused("The backup's incomplete flag does not match its manifest."));
     }
-    restore_limits::budget(&data)?;
     let inner_path = work.join("payload.tar");
     extract(if encrypted { &inner_path } else { path }, work, !encrypted, Some(&data))?;
     let expected: BTreeSet<String> = ["manifest.json".to_string(), "book.fbbook".into()]
@@ -1228,6 +1247,10 @@ pub fn restore_backup(
     drop(restored);
     let mut receipts_created = false;
     let mut receipts_written = Vec::new();
+    let mut receipts_dir = None;
+    let pinned = Directory::open(parent)?;
+    let staged = paths::regular(&partial)?;
+    let reservation = fb_db::RestoreTarget::reserve(&target, staged)?;
     let mut target_created = false;
     let result = (|| {
         if let Some(folder) = options.receipts_target {
@@ -1243,50 +1266,82 @@ pub fn restore_backup(
                 builder.create(folder)?;
                 receipts_created = true;
             }
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                fs::set_permissions(folder, fs::Permissions::from_mode(0o700))?;
-            }
+            let dir = receipts_dir.insert(Directory::open(folder)?);
+            dir.make_private()?;
             for r in &data.attachments {
-                let stored = r
-                    .entry
-                    .strip_prefix("receipts/")
+                let stored = r.entry.strip_prefix("receipts/")
                     .ok_or_else(|| BackupError::refused("Invalid receipt entry."))?;
-                let dest = folder.join(stored);
-                let mut dst = paths::new_file(&dest)?;
-                receipts_written.push(dest.clone());
-                let mut src = File::open(work.path().join(&r.entry))?;
-                std::io::copy(&mut src, &mut dst)?;
-                dst.sync_all()?;
-                if hash_file(&dest)? != (r.bytes, r.sha256.clone()) {
+                let mut src = paths::regular(&work.path().join(&r.entry))?;
+                let meta = dir.write_private(stored.as_ref(), true, |dst| {
+                    let (bytes, digest) = copy_and_hash(&mut src, dst, r.bytes)?;
+                    if bytes != r.bytes || digest != r.sha256 {
+                        return Err(BackupError::refused("Attachment did not copy correctly."));
+                    }
+                    Ok(dst.metadata()?)
+                })?;
+                receipts_written.push((stored, meta, r));
+                let mut published = dir.read_file(stored)?.ok_or_else(|| BackupError::refused("The copied attachment disappeared."))?;
+                if hash_open_file(&mut published)? != (r.bytes, r.sha256.clone()) {
                     return Err(BackupError::refused("Attachment did not copy correctly."));
                 }
             }
-            paths::sync_dir(folder)?;
+            dir.confirm(folder)?;
         }
-        publish(partial.path(), &target)?;
+        pinned.confirm(parent)?;
+        // Windows may defer deleting a hard link while the reservation holds the file.
+        // Publish with a same-directory, no-replace move so check() sees exactly one link.
+        #[cfg(windows)]
+        partial.persist_noclobber(&target).map_err(|e| BackupError::refused(
+            format!("Refusing to overwrite or non-atomic backup placement: {}", e.error),
+        ))?;
+        #[cfg(not(windows))]
+        pinned.link_new(&partial, paths::parent_name(&target)?.1)?;
         target_created = true;
+        pinned.sync()?;
         // Publication must not retain a second filename while the book is admitted:
         // recovery journals belong to one pathname. The target is already durably linked,
         // so retire only this operation's staging name before the normal open checks.
+        #[cfg(not(windows))]
         partial.close()?;
-        paths::sync_dir(parent)?;
-        let reopened = Book::open(&target, key)?;
-        drop(reopened);
-        paths::sync_dir(parent)?;
+        pinned.confirm(parent)?;
+        reservation.check(key)?;
+        pinned.sync()?;
+        pinned.confirm(parent)?;
         Ok(())
     })();
     if let Err(e) = result {
-        if target_created {
-            let _ = fs::remove_file(&target);
+        let rollback = (|| -> Result<()> {
+            reservation.rollback(target_created)?;
+            if let (Some(dir), Some(folder)) = (receipts_dir, options.receipts_target) {
+                dir.confirm(folder)?;
+                for (stored, owned, receipt) in receipts_written {
+                    let Some(mut current) = dir.read_file(stored)? else { continue };
+                    let meta = current.metadata()?;
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::MetadataExt;
+                        if (meta.dev(), meta.ino()) != (owned.dev(), owned.ino()) {
+                            return Err(BackupError::retryable("A restored receipt was replaced. It was kept for recovery."));
+                        }
+                    }
+                    if meta.modified()? != owned.modified()? || meta.len() != receipt.bytes ||
+                        hash_open_file(&mut current)?.1 != receipt.sha256 {
+                        return Err(BackupError::retryable("A restored receipt changed. It was kept for recovery."));
+                    }
+                    dir.unlink_file(stored)?;
+                }
+                dir.sync()?;
+                if receipts_created {
+                    dir.confirm(folder)?;
+                    fs::remove_dir(folder)?;
+                }
+            }
+            Ok(())
+        })();
+        if let Err(cleanup) = rollback {
+            return Err(BackupError::retryable(format!("{e}. Restore cleanup needs attention: {cleanup}")));
         }
-        for path in receipts_written {
-            let _ = fs::remove_file(path);
-        }
-        if receipts_created && let Some(folder) = options.receipts_target {
-            let _ = fs::remove_dir(folder);
-        }
+        pinned.sync()?;
         return Err(e);
     }
     Ok(RestoreResult {
@@ -1359,12 +1414,15 @@ fn check_backup(
     // exact bytes, even if another process replaces the original during verify.
     let input = work.path().join("input.fbbackup");
     let mut source = paths::regular(path)?;
-    paths::require_space(work.path(), source.metadata()?.len().saturating_mul(3))?;
+    let size = source.metadata()?.len();
+    if size > restore_limits::ABSOLUTE {
+        return Err(BackupError::refused("Backup size exceeds the restore limit."));
+    }
+    paths::require_space(work.path(), size.saturating_mul(3))?;
     let mut copy = paths::new_file(&input)?;
-    std::io::copy(&mut source, &mut copy)?;
+    let fingerprint = copy_and_hash(&mut source, &mut copy, restore_limits::ABSOLUTE)?;
     copy.sync_all()?;
     drop(copy);
-    let fingerprint = hash_file(&input)?;
     let data = unpack(
         &input,
         work.path(),
@@ -1412,18 +1470,17 @@ fn check_backup(
     Ok(CheckedBackup { manifest: data, fingerprint, summary })
 }
 
-fn restore_partial(book: &Book, key: &Key, parent: &Path) -> Result<tempfile::NamedTempFile> {
+fn restore_partial(book: &Book, key: &Key, parent: &Path) -> Result<tempfile::TempPath> {
     let partial = tempfile::Builder::new()
         .prefix(&cleanup::prefix())
         .suffix(".partial")
-        .tempfile_in(parent)?;
-    // snapshot requires an exclusive NEW destination. Keep the tempfile guard
-    // while it writes so every failure still removes this operation's file.
-    fs::remove_file(partial.path())?;
-    book.snapshot(partial.path(), key)?;
-    paths::refuse_sidecars(partial.path())?;
-    // The original tempfile descriptor referred to the unlinked empty file;
-    // snapshot fsyncs the replacement itself before returning.
+        .tempfile_in(parent)?
+        .into_temp_path();
+    // Snapshot needs a NEW destination. Close the empty file before unlinking so
+    // Windows can reuse its name immediately. TempPath still cleans up the copy.
+    fs::remove_file(&partial)?;
+    book.snapshot(&partial, key)?;
+    paths::refuse_sidecars(&partial)?;
     Ok(partial)
 }
 
@@ -1431,12 +1488,70 @@ fn restore_partial(book: &Book, key: &Key, parent: &Path) -> Result<tempfile::Na
 mod review_publication_tests {
     use super::*;
     #[test]
-    fn restore_partial_uses_cleanup_name_and_dead_pid_copy_is_removed() {
+    fn verification_refuses_an_oversized_descriptor_and_caps_a_growing_stream() {
+        let d = tempfile::tempdir().unwrap();
+        let archive = d.path().join("oversized.fbbackup");
+        File::create(&archive).unwrap().set_len(restore_limits::ABSOLUTE + 1).unwrap();
+        let work = d.path().join("work");
+        let error = verify_backup(&archive, &[0; 32], &work, None, true).unwrap_err();
+        assert!(error.to_string().contains("exceeds the restore limit"));
+        assert_eq!(fs::read_dir(&work).unwrap().count(), 0);
+        assert!(!retention::sidecar(&archive).exists());
+        let data = vec![17; 65537];
+        let mut out = Vec::new();
+        assert!(copy_and_hash(&data[..], &mut out, 65536).is_err());
+        assert_eq!(out, data[..65536]);
+        out.clear();
+        let (bytes, digest) = copy_and_hash(&data[..], &mut out, data.len() as u64).unwrap();
+        assert_eq!(out, data);
+        assert_eq!(bytes, out.len() as u64);
+        assert_eq!(digest, format!("{:x}", Sha256::digest(out)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_sync_refuses_symlinks_and_publication_stays_with_its_pinned_parent() {
+        use std::os::unix::fs::symlink;
+        let d = tempfile::tempdir().unwrap();
+        let folder = d.path().join("chosen");
+        let moved = d.path().join("moved");
+        fs::create_dir(&folder).unwrap();
+        let pinned = Directory::open(&folder).unwrap();
+        fs::rename(&folder, &moved).unwrap();
+        symlink(&moved, &folder).unwrap();
+        assert!(paths::sync_dir(&folder).is_err());
+        fs::remove_file(&folder).unwrap();
+        fs::create_dir(&folder).unwrap();
+        fs::write(folder.join("target"), b"other").unwrap();
+        let source = d.path().join("source");
+        fs::write(&source, b"owned").unwrap();
+        pinned.link_new(&source, "target".as_ref()).unwrap();
+        pinned.sync().unwrap();
+        assert!(pinned.confirm(&folder).is_err());
+        assert_eq!(fs::read(folder.join("target")).unwrap(), b"other");
+        assert_eq!(fs::read(moved.join("target")).unwrap(), b"owned");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restore_key_record_cleanup_preserves_a_replacement() {
+        let d = tempfile::tempdir().unwrap();
+        let dir = Directory::open(d.path()).unwrap();
+        let owned = dir.create_private_file("book.keys.json", b"synthetic key record").unwrap();
+        let path = d.path().join("book.keys.json");
+        fs::rename(&path, d.path().join("original")).unwrap();
+        fs::write(&path, b"replacement").unwrap();
+        assert!(dir.remove_created_file("book.keys.json", owned).is_err());
+        assert_eq!(fs::read(path).unwrap(), b"replacement");
+    }
+
+    #[test]
+    fn restore_partial_uses_cleanup_name_and_only_confirmed_dead_copies_are_removed() {
         let d = tempfile::tempdir().unwrap();
         let src = d.path().join("source.fbbook");
         let book = Book::create(&src, &[42; 32]).unwrap();
         let partial = restore_partial(&book, &[42; 32], d.path()).unwrap();
-        let name = partial.path().file_name().unwrap().to_str().unwrap();
+        let name = partial.file_name().unwrap().to_str().unwrap();
         assert!(
             name.starts_with(&cleanup::prefix()) && name.ends_with(".partial"),
             "{name}"
@@ -1447,13 +1562,18 @@ mod review_publication_tests {
             &format!(".{}.", i32::MAX),
             1,
         ));
-        fs::copy(partial.path(), &dead).unwrap();
-        assert_eq!(
-            cleanup::cleanup_stale(d.path()).unwrap(),
-            vec![dead.clone()]
-        );
-        assert!(!dead.exists());
-        assert!(partial.path().exists());
+        fs::copy(&partial, &dead).unwrap();
+        let removed = cleanup::cleanup_stale(d.path()).unwrap();
+        #[cfg(unix)] {
+            assert_eq!(removed.as_slice(), std::slice::from_ref(&dead));
+            assert!(!dead.exists());
+        }
+        #[cfg(not(unix))] {
+            // Without a host/PID liveness probe, cleanup must leave the partial alone.
+            assert!(removed.is_empty());
+            assert!(dead.exists());
+        }
+        assert!(partial.exists());
     }
     #[test]
     fn restore_publication_includes_committed_wal_and_is_self_contained() {
@@ -1465,8 +1585,8 @@ mod review_publication_tests {
             .unwrap();
         crate::users::create_user(&mut book, "In WAL", true).unwrap();
         let partial = restore_partial(&book, &[42; 32], d.path()).unwrap();
-        paths::refuse_sidecars(partial.path()).unwrap();
-        let restored = Book::open(partial.path(), &[42; 32]).unwrap();
+        paths::refuse_sidecars(&partial).unwrap();
+        let restored = Book::open(&partial, &[42; 32]).unwrap();
         let n: i64 = restored
             .connection()
             .query_row(

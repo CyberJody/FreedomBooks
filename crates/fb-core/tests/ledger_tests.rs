@@ -23,10 +23,21 @@ fn company_chart_and_normal_balances() {
 }
 
 #[test]
-fn draft_then_atomic_balanced_post_with_half_up_and_audit() {
+fn draft_then_atomic_balanced_post_with_exact_cents_and_audit() {
     let mut fx = Fx::new("post");
     let (company, cash, equity) = fx.chart();
-    let journal = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let rejected = services::save_draft(
+        &mut fx.book,
+        fx.user,
+        company,
+        DraftInput::new(
+            "2026-01-01",
+            "Fractional cents",
+            vec![line(cash).debit("125.005").credit("0").build(), line(equity).debit("0").credit("125.005").build()],
+        ),
+    );
+    assert_eq!(err_text(rejected), "Enter journal amounts with at most two decimal places.");
+    let journal = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     assert_eq!(journal.status, Status::Draft);
     assert_eq!(fx.line_amounts(journal.id, cash).0, "125.01");
     let journal = fx.post(company, journal.id);
@@ -47,7 +58,7 @@ fn draft_then_atomic_balanced_post_with_half_up_and_audit() {
 fn draft_rejects_invalid_accounts_and_rolls_back_edits() {
     let mut fx = Fx::new("invalid");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     let other = fx.company("Other synthetic");
     let foreign = fx.account(other, "1", "Foreign", "ASSET");
     let inactive = services::save_account(&mut fx.book, fx.user, company, AccountInput::new("2", "Inactive").kind("ASSET").active(false)).unwrap().id;
@@ -86,7 +97,7 @@ fn unbalanced_and_missing_lines_never_partially_post() {
 fn post_revalidates_account_status() {
     let mut fx = Fx::new("revalidate");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     // `cash.active = False; cash.save()` (a direct model save, no service).
     fx.book.connection().execute("UPDATE ledger_account SET active = 0 WHERE id = ?1", [cash.to_db()]).unwrap();
     let message = err_text(services::post_journal(&mut fx.book, fx.user, company, draft.id, None));
@@ -132,7 +143,7 @@ fn line_requires_exactly_one_positive_side() {
 fn posted_history_protected_through_every_raw_path() {
     let mut fx = Fx::new("history");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     let journal = fx.post(company, draft.id);
     let j = journal.id.to_db();
     let line_id: String = fx.book.connection().query_row("SELECT id FROM ledger_journalline WHERE journal_id = ?1 ORDER BY position LIMIT 1", [&j], |r| r.get(0)).unwrap();
@@ -163,7 +174,7 @@ fn posted_history_protected_through_every_raw_path() {
 fn database_rejects_cross_company_line_and_unbalanced_direct_post() {
     let mut fx = Fx::new("crossco");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     let other = fx.company("Other");
     let foreign = fx.account(other, "f", "Foreign", "ASSET");
     let d = draft.id.to_db();
@@ -180,7 +191,7 @@ fn database_rejects_cross_company_line_and_unbalanced_direct_post() {
 fn reversal_is_linked_exact_compensation_preserving_original_and_audit() {
     let mut fx = Fx::new("reversal");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     let original = fx.post(company, draft.id);
     let reversal = services::reverse_journal(&mut fx.book, fx.user, company, original.id, "2026-02-01", "Synthetic correction").unwrap();
     assert_eq!(reversal.reversal_of_id, Some(original.id));
@@ -206,7 +217,7 @@ fn reversal_is_linked_exact_compensation_preserving_original_and_audit() {
 fn reversal_rejects_drafts_earlier_dates_and_empty_reason() {
     let mut fx = Fx::new("reversal-bad");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     assert_eq!(
         err_text(services::reverse_journal(&mut fx.book, fx.user, company, draft.id, "2026-01-02", "Draft")),
         "Only an unreversed original posted journal can be reversed."
@@ -347,7 +358,7 @@ fn post_rolls_back_if_audit_write_fails_after_status_update() {
     // made to fail at the database: a temporary trigger refuses journal.posted events on this connection.
     let mut fx = Fx::new("audit-fail");
     let (company, cash, equity) = fx.chart();
-    let draft = fx.draft(company, cash, equity, "125.005", "2026-01-01");
+    let draft = fx.draft(company, cash, equity, "125.01", "2026-01-01");
     fx.book
         .connection()
         .execute_batch("CREATE TEMP TRIGGER fail_audit BEFORE INSERT ON main.ledger_auditevent WHEN NEW.action = 'journal.posted' BEGIN SELECT RAISE(ABORT, 'injected: audit failure'); END;")

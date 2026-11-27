@@ -8,6 +8,15 @@ pub enum NewAccountKind {
     CreditCard,
 }
 
+impl NewAccountKind {
+    fn detail(self) -> &'static str {
+        match self { Self::Checking | Self::Savings => "BANK", Self::CreditCard => "CREDIT_CARD" }
+    }
+    fn description(self) -> &'static str {
+        match self { Self::Checking => "Checking account", Self::Savings => "Savings account", Self::CreditCard => "Credit card account" }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum MappingTarget {
     Existing(Option<AccountId>),
@@ -45,6 +54,15 @@ pub fn save_mappings_and_import_settings(
     settings: &[ImportSettings],
     secrets: &SecretSet,
 ) -> FbResult<()> {
+    save_mapping_form(book, actor, co, connection_id, mappings, settings, &Default::default(), secrets)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn save_mapping_form(
+    book: &mut Book, actor: UserId, co: CompanyId, connection_id: &str,
+    mappings: &[(String, MappingTarget)], settings: &[ImportSettings],
+    expected: &std::collections::HashMap<String, String>, secrets: &SecretSet,
+) -> FbResult<()> {
     command(book, secrets, |w| {
         let user = services::access(w.tx, actor, co)?;
         let connection = connection_row(w.tx, co, connection_id)?;
@@ -59,10 +77,13 @@ pub fn save_mappings_and_import_settings(
             if !configured.insert(&change.feed_account_id) {
                 return Err(err("Choose each downloaded account only once."));
             }
+            let date = staging::opt_date(&change.import_from_date)?;
+            if expected.contains_key(&f.id) && matches!(f.import_state.as_str(), "READY" | "ACTIVE") && f.import_from_date == date {
+                continue;
+            }
             if f.import_state != change.expected_state || f.import_from_date != change.expected_date {
                 return Err(err("The import settings changed. Reload Bank feed accounts and try again."));
             }
-            let date = staging::opt_date(&change.import_from_date)?;
             if f.import_state == "ACTIVE" {
                 if f.import_from_date != date {
                     return Err(err("The import start is fixed after the first completed transaction import."));
@@ -93,13 +114,26 @@ pub fn save_mappings_and_import_settings(
             if !seen.insert(feed_id) {
                 return Err(err("Choose each downloaded account only once."));
             }
+            if let Some(prior) = expected.get(feed_id)
+                && f.ledger_account_id.as_deref().unwrap_or("") != prior {
+                let matches_target = match target {
+                    MappingTarget::Existing(id) => f.ledger_account_id == id.map(|a| a.to_db()),
+                    MappingTarget::New { name, kind } => {
+                        let account = f.ledger_account_id.as_deref().and_then(AccountId::parse)
+                            .map(|id| store::account(w.tx, id)).transpose()?.flatten();
+                        account.is_some_and(|a| a.name == w.text(py::py_strip(name))
+                            && a.description == kind.description() && a.detail_type.as_str() == kind.detail())
+                    }
+                };
+                if matches_target { continue; }
+                return Err(err("A bank account mapping changed since you opened the form. Reload Bank feed accounts before saving."));
+            }
             let wanted = match target {
                 MappingTarget::Existing(id) => id.map(|id| id.to_db()),
                 MappingTarget::New { name, kind } => {
-                    let (start, detail, description) = match kind {
-                        NewAccountKind::Checking => (1000, "BANK", "Checking account"),
-                        NewAccountKind::Savings => (1100, "BANK", "Savings account"),
-                        NewAccountKind::CreditCard => (2100, "CREDIT_CARD", "Credit card account"),
+                    let (detail, description) = (kind.detail(), kind.description());
+                    let start = match kind {
+                        NewAccountKind::Checking => 1000, NewAccountKind::Savings => 1100, NewAccountKind::CreditCard => 2100,
                     };
                     // Pigeonhole bound: N existing codes cannot occupy N+1 candidates.
                     let codes: HashSet<String> = store::accounts(w.tx, co)?

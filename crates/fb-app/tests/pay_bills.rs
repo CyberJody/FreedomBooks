@@ -285,6 +285,16 @@ fn pay_bills_pays_several_vendors_with_partial_amounts_in_one_run() {
     let done = screens::render(&mut f.app, &format!("{path}{}", &location[location.find('?').unwrap()..])).unwrap().html;
     assert!(done.contains("Paid 4 bills with 2 payments, total 350.00"), "{done}");
     // Sending the same page again pays nothing more.
+    let mut changed = confirmed.clone();
+    changed.iter_mut().find(|(key, _)| key == &format!("amount-{a2}")).unwrap().1 = "21.00".into();
+    let (conflict, status) = html_of(&submit(&mut f.app, &path, changed));
+    assert_eq!(status, 409);
+    assert!(conflict.contains("different payment details or allocations"));
+    for (field, value) in [("bank", ""), ("method", "CASH"), ("date", "2026-11-11"), ("reference", "0999"), ("memo", "Changed run")] {
+        let mut changed = confirmed.clone();
+        changed.iter_mut().find(|(key, _)| key == field).unwrap().1 = value.into();
+        assert_eq!(html_of(&submit(&mut f.app, &path, changed)).1, 409, "{field}");
+    }
     let again = submit(&mut f.app, &path, confirmed);
     assert!(matches!(again, Outcome::Redirect { ref location } if location.contains("?paid=")), "{again:?}");
     assert_eq!(count(&mut f.app, "SELECT count(*) FROM payables_billpayment"), 2);

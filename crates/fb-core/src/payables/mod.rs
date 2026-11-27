@@ -411,7 +411,15 @@ fn save_bill_inner(tx: &Writer<'_>, actor: UserId, co: CompanyId, p: &Value) -> 
         None,
         false,
     )?;
-    let intent = json!({"vendor_id":vendor_id,"date":dt,"due_date":due,"memo":memo,"lines":normalized,"reference":reference,"supersedes_id":sup,"reentry_reason":reentry,"refresh_vendor":refresh,"keep_archived":keep});
+    let mut intent = json!({"vendor_id":vendor_id,"date":dt,"due_date":due,"memo":memo,"lines":normalized,"reference":reference,"supersedes_id":sup,"reentry_reason":reentry,"refresh_vendor":refresh,"keep_archived":keep});
+    let terms = match p.get("terms") {
+        None | Some(Value::Null) => None,
+        Some(v) if matches!(v.as_str(), Some("0" | "15" | "30" | "60")) => Some(v),
+        Some(_) => return Err(err("Choose valid bill payment terms.")),
+    };
+    if let Some(terms) = terms {
+        intent["terms"] = terms.clone();
+    }
     let creation = digest(&intent);
     let expected = p
         .get("expected_revision")
@@ -547,7 +555,14 @@ fn save_bill_inner(tx: &Writer<'_>, actor: UserId, co: CompanyId, p: &Value) -> 
         }
         prepared.push(v);
     }
-    let r = json!({"vendor_id":vendor_id,"vendor_snapshot":if let Some(o)=old.as_ref().filter(|o|o["vendor_id"]==vendor_id&&!refresh){o["vendor_snapshot"].clone()}else{party(&vendor)},"company_snapshot":if let Some(o)=&old{o["company_snapshot"].clone()}else{company_snap(tx,co)?},"date":dt,"due_date":due,"memo":memo,"state":"DRAFT","action":if old.is_some(){"revised"}else{"created"},"reason":if refresh||normalized.iter().any(|r|r["refresh_item"]==true){"Explicit snapshot refresh"}else{""},"reference":reference,"supersedes_id":sup,"reentry_reason":reentry,"total":cents(&calc["total"])?,"journal_id":null,"reversal_id":null,"review_digest":""});
+    let mut r = json!({"vendor_id":vendor_id,"vendor_snapshot":if let Some(o)=old.as_ref().filter(|o|o["vendor_id"]==vendor_id&&!refresh){o["vendor_snapshot"].clone()}else{party(&vendor)},"company_snapshot":if let Some(o)=&old{o["company_snapshot"].clone()}else{company_snap(tx,co)?},"date":dt,"due_date":due,"memo":memo,"state":"DRAFT","action":if old.is_some(){"revised"}else{"created"},"reason":if refresh||normalized.iter().any(|r|r["refresh_item"]==true){"Explicit snapshot refresh"}else{""},"reference":reference,"supersedes_id":sup,"reentry_reason":reentry,"total":cents(&calc["total"])?,"journal_id":null,"reversal_id":null,"review_digest":""});
+    // The bill revision freezes its selected terms with the vendor details. Legacy
+    // revisions have only an explicit due date, which remains manual on reopen.
+    if let Some(terms) = terms {
+        r["vendor_snapshot"]["bill_terms"] = terms.clone();
+    } else {
+        object_mut(&mut r["vendor_snapshot"])?.remove("bill_terms");
+    }
     b["vendor_id"] = json!(vendor_id);
     b["reference_key"] = json!(key);
     if old.is_none() {

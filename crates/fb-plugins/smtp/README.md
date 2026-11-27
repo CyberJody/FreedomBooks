@@ -6,15 +6,16 @@ optional attachments using a user's SMTP account. It does not render PDFs,
 read mail, access a database, or post accounting entries. This is a new plugin;
 there was no Python document-email implementation to translate.
 
-The mail library is pinned to **lettre =0.11.23**, confirmed on crates.io on 2026-10-30:
+The mail library is pinned to **lettre =0.11.24**, confirmed on crates.io on 2026-11-27
+(upgraded from 0.11.23 for RUSTSEC-2026-0560..0565):
 <https://crates.io/crates/lettre>. It uses Rustls, Ring and WebPKI roots rather
 than a system OpenSSL dependency. The production dependency on `fb-plugin-api`
 has default features disabled: SMTP does not need an HTTP client.
 
 `src/transport/connection.rs` owns the bounded reply-reading loop and submission
 sequence, using lettre's MIME, command/AUTH, response parsing and TCP/Rustls
-helpers. It does **not** use lettre's `AsyncSmtpConnection::read_response`: in
-0.11.23 that method checks size only after an unbounded `read_line` finishes.
+helpers. It does **not** use lettre's `AsyncSmtpConnection::read_response` (which
+in 0.11.23 checked size only after an unbounded `read_line` finished).
 A wrapper below TLS would not protect decrypted replies. The lower-level
 `AsyncNetworkStream` API is deprecated upstream, isolated to this module and
 version-pinned; re-review it and rerun the full transport tests before upgrading.

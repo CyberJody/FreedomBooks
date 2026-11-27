@@ -450,9 +450,19 @@ fn receive_payment_to_a_bank_with_a_fee_pays_the_invoice_in_full_and_the_bank_ge
     assert!(receipt_ids(&mut app).is_empty());
     // Straight to 1000 with the fee: saved, and said.
     let (path, p) = payment_form(&mut app, &c, &old_mill, &invoice, "850.00", "2026-08-12", Some(&bank), &[(&fees_account, "-24.95")]);
-    let location = redirect(submit_page(&mut app, &path, p));
+    let location = redirect(submit_page(&mut app, &path, p.clone()));
     let shown = page(&mut app, &location);
     assert!(shown.contains("Saved RCP-000001: 850.00 applied to the invoices. Deposited to 1000 · Checking as DEP-000001: 825.05 (850.00 with fees and adjustments of -24.95)."), "{shown}");
+    assert_eq!(redirect(submit_page(&mut app, &path, p.clone())), location);
+    for (field, value) in [("customer", ""), ("date", "2026-08-13"), ("method", "CHECK"), ("destination", "UNDEPOSITED"),
+        ("bank", ""), ("reference", "Another batch"), ("memo", "Changed memo")] {
+        let mut changed = p.clone();
+        changed.retain(|(name, _)| name != field);
+        changed.push((field.into(), value.into()));
+        assert!(matches!(submit_page(&mut app, &path, changed), Outcome::Page { status: 409, .. }), "{field}");
+    }
+    assert_eq!(receipt_ids(&mut app).len(), 1);
+    assert_eq!(deposits(&mut app).len(), 1);
     let co = fb_core::CompanyId::parse(&c).unwrap();
     let balances = { let o = app.open_mut().unwrap(); fb_core::sales::invoice_balances(&mut o.book, o.owner, co).unwrap() };
     let paid = balances.iter().find(|b| b["invoice_id"] == invoice.as_str()).unwrap();
@@ -659,7 +669,7 @@ fn a_payment_received_net_of_its_fee_is_what_the_payout_row_matches() {
     assert_eq!(f.journals(), before, "a match posts nothing");
 }
 
-// --- review fixes (internal test notes) ----------------------------------------
+// --- review fixes (internal test notes) --------------------------------------------------------------
 
 /// Record deposit as the form posts it: Review deposit, then Record deposit with that review's token and,
 /// when the review carried one, its `fee_ok`. Returns the review page and the recorded deposit's address.

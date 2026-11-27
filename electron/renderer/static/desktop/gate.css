@@ -1,4 +1,5 @@
 /* The unlock and first-run screens: no sidebar, one centred card. */
+body.gate-page .titlebar .brand small { color: #fff; opacity: 1; }
 body.gate-page { display: flex; flex-direction: column; min-height: 100vh; }
 body.gate-page main.gate { flex: 1; display: flex; justify-content: center; padding: 40px 16px 56px; max-width: none; }
 .gate-card { width: 100%; max-width: 560px; background: #fff; border: 1px solid #ded8df; border-radius: 12px; padding: 32px 36px; box-shadow: 0 1px 3px rgba(53, 37, 62, .06); }

@@ -70,7 +70,7 @@ fn count(app: &mut App, table: &str) -> i64 {
 }
 
 #[test]
-fn journal_added_line_field_errors_rounding_and_optimistic_edits() {
+fn journal_added_line_precision_errors_and_optimistic_edits() {
     let (mut app, c) = fixture();
     let expense = acct(&mut app, &c, "5000", "EXPENSE");
     let income = acct(&mut app, &c, "4000", "INCOME");
@@ -109,8 +109,14 @@ fn journal_added_line_field_errors_rounding_and_optimistic_edits() {
     );
     assert_eq!(count(&mut app, "ledger_journal"), 0);
     assert_eq!(count(&mut app, "ledger_auditevent"), before);
+    let Outcome::Invalid { html } = post(&mut app, &path, &values) else {
+        panic!("fractional cent accepted")
+    };
+    assert!(html.contains("two decimal places"));
+    assert_eq!(count(&mut app, "ledger_auditevent"), before);
+    values.iter_mut().find(|(k, _)| k == "lines-0-debit").unwrap().1 = "12.35".into();
     let Outcome::Redirect { location } = post(&mut app, &path, &values) else {
-        panic!("draft did not save")
+        panic!("corrected draft did not save")
     };
     assert_eq!(
         count(&mut app, "ledger_journalline"),

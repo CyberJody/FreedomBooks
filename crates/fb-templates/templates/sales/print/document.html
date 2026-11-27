@@ -1,8 +1,8 @@
 {% if doc.kind == 'invoice' %}{% include 'sales/print/invoice.html' %}{% else %}<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
+<html lang="en" data-print-footer="{% if stamp %}{{ stamp }} · {% endif %}{{ doc.number }} · revision {{ doc.revision_number }} of {{ doc.revision_total }} · printed {{ doc.printed_at|date('Y-m-d H:i') }} UTC · not a bill, offer or receipt&#10;"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <title>{{ doc.number }} · {{ doc.title|title }} · {{ doc.company.name }}</title>
 <link rel="stylesheet" href="{{ static('sales/print.css') }}">
-<style>@page { @bottom-center { content: "{% if stamp %}{{ stamp|css_string }} · {% endif %}{{ doc.number|css_string }} · revision {{ doc.revision_number }} of {{ doc.revision_total }} · printed {{ doc.printed_at|date('Y-m-d H:i') }} UTC · not a bill, offer or receipt\A Page " counter(page) " of " counter(pages); white-space: pre; text-align: center; font: 8pt system-ui, sans-serif; color: #444; } }</style></head>
+</head>
 <body class="print-body{% if doc.mark %} marked{% endif %}">
 <div class="print-toolbar" role="toolbar" aria-label="Print actions">{% with audience='customer' %}{% include 'ledger/includes/print_toolbar_note.html' %}{% endwith %}
 <span class="print-toolbar-actions"><button type="button" id="print-now">Print / Save as PDF</button> <a href="{% if doc.kind == 'estimate' %}{{ url('sales:detail', company.pk, root.pk) }}{% else %}{{ url('invoices:detail', company.pk, root.pk) }}{% endif %}">Back to {{ doc.kind }}</a></span></div>

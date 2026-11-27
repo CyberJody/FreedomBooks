@@ -59,6 +59,7 @@ pub(crate) fn run_d3_command(app: &mut App, cmd: Command) -> AppResult<Outcome> 
     let c = |s: &str| crate::session::company(s);
     let data = match cmd {
         Command::SaveDirectoryRecord {
+            expected_snapshot,
             company_id,
             record_id,
             values,
@@ -104,7 +105,9 @@ pub(crate) fn run_d3_command(app: &mut App, cmd: Command) -> AppResult<Outcome> 
                     map.remove("default_terms");
                 }
             }
-            directory::save_record(book, actor, c(&company_id)?, m, &data, record_id.as_deref())?
+            directory::save_record_checked(
+                book, actor, c(&company_id)?, m, &data, record_id.as_deref(), expected_snapshot.as_deref(),
+            )?
         }
         Command::SetDirectoryActive {
             company_id,
@@ -728,6 +731,10 @@ fn form(
             };
         }
     }
+    if m != Model::Item && let Some(record) = &r {
+        fs.push(Field::new("expected_snapshot", "", Widget::Hidden)
+            .value_opt(data_value(posted, "expected_snapshot", Some(fb_core::services::snapshot_token(record)))));
+    }
     put(&mut vm, "stale", stale);
     put(&mut vm, "csrf_token", token(app, path));
     put(&mut vm, "then", back_to(m, route, Some(params)).or_else(|| back_to(m, route, posted)).map(|(then, _, _)| then));
@@ -906,6 +913,7 @@ fn submit_record(app: &mut App, route: &Route, path: &str, p: Posted<'_>) -> App
         },
     };
     match app.run(Command::SaveDirectoryRecord {
+        expected_snapshot: (m != Model::Item && route.args.contains_key("record_id")).then(|| get(p, "expected_snapshot").unwrap_or("").to_owned()),
         company_id: c.to_db(),
         record_id: route.args.get("record_id").cloned(),
         values,

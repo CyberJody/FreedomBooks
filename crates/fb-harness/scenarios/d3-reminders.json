@@ -341,7 +341,9 @@
       "values": {
         "display_name": "Twin buyer"
       },
-      "expect_error": false
+      "expect_error": true,
+      "expect_kind": "ValidationError",
+      "expect_message": "A customer named “Twin buyer” already exists. Choose a different name."
     },
     {
       "op": "banking_begin",

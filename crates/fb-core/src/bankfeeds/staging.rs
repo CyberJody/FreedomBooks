@@ -1069,6 +1069,7 @@ fn store_pull_mode(
         let mut awaiting_complete = 0i64;
         let mut activated = 0i64;
         let mut imported_feeds: Vec<String> = Vec::new();
+        let mut seen_by_feed = std::collections::BTreeMap::<String, std::collections::HashSet<&str>>::new();
         let initial_state = if mode == PullMode::Adapter { "ACTIVE" } else { "PENDING" };
         let window_at = window.as_deref().map(parse_now).transpose()?;
         let mut floor_gap = None;
@@ -1173,6 +1174,11 @@ fn store_pull_mode(
                     auto_post_candidates.push(id);
                 }
             }
+            if complete {
+                seen_by_feed.entry(feed_id).or_default().extend(keys.transactions.iter().map(String::as_str));
+            }
+        }
+        for (feed_id, seen) in seen_by_feed {
             let mut st = tx.prepare("SELECT id,remote_id,first_seen_at,remote_identity FROM bankfeeds_transaction WHERE feed_account_id=?1 AND pending=1 AND status='NEW' ORDER BY ordinal")?;
             let stale = st
                 .query_map([&feed_id], |r| {
@@ -1188,7 +1194,7 @@ fn store_pull_mode(
                 if window
                     .as_ref()
                     .is_some_and(|w| first_seen.as_str() < w.as_str())
-                    || keys.transactions.contains(&identity)
+                    || seen.contains(identity.as_str())
                 {
                     continue;
                 }

@@ -229,7 +229,7 @@ fn fix8_every_write_goes_through_the_choke_point() {
     write_paths.sort();
     let expected = [
         "accept", "auto_post", "connect", "forget", "ignore", "import_rules", "keep_recorded", "link_existing", "map_account", "move_rule", "record_discovery_failure", "record_sync_failure", "return_to_review", "review_sync_gap",
-        "save_mappings_and_import_settings", "save_rule", "set_rule_active", "stage_bank_transactions", "store_pull_for_desktop", "turn_off_imported_auto_post", "undo_accept",
+        "save_mapping_form", "save_rule", "set_rule_active", "stage_bank_transactions", "store_pull_for_desktop", "turn_off_imported_auto_post", "undo_accept",
     ];
     assert_eq!(write_paths, expected, "the write paths changed: drive the new one in fix8_split_secrets_every_write_path_and_audit_action and list it here");
     assert_eq!(credential_paths, ["restore_connection_credentials", "flag_unreadable_credential"], "credential load paths changed: add public-admission, quarantine and later-writer regressions");

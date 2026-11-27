@@ -34,7 +34,7 @@ fn desktop() -> (tempfile::TempDir, String) {
     configure();
     let dir = tempfile::tempdir().unwrap();
     let mut door = app().unwrap();
-    hosting::end_from(&mut door, "test reset");
+    hosting::end_from(&mut door, "test reset").unwrap();
     door.lock();
     door.backups.configure(dir.path()).unwrap();
     door.device_key = Some(MasterKey::new([44; 32]));
@@ -173,7 +173,7 @@ fn the_desktop_hosts_a_second_computer_and_both_work_on_one_book() {
     // Restarting keeps the identity and refuses the revoked laptop in the handshake.
     on().unwrap();
     assert!(Client::new(state()["addr"].as_str().unwrap(), &laptop.identity, laptop.host_pin, Box::new(|_| {})).unwrap().hello().is_err());
-    hosting::end_from(&mut app().unwrap(), "test end");
+    hosting::end_from(&mut app().unwrap(), "test end").unwrap();
     assert!(app().unwrap().host_record().unwrap().unwrap().enabled, "quitting keeps the setting on");
 }
 
@@ -251,7 +251,7 @@ fn only_an_administrator_controls_hosting_and_a_copy_is_never_hosted() {
     assert!(hosting::pair(&mut app().unwrap()).is_err());
     assert!(hosting::revoke(&mut app().unwrap(), &"0".repeat(32)).is_err());
     assert!(hosting::stop(&mut app().unwrap()).is_err());
-    hosting::end_from(&mut app().unwrap(), "test end");
+    hosting::end_from(&mut app().unwrap(), "test end").unwrap();
 }
 
 /// Section 10 item 9: restoring a backup brings back an older sealed record (fewer revoked ids, a
@@ -345,7 +345,7 @@ fn the_hosts_lock_never_waits_for_the_books_and_always_signs_out() {
     assert!(signed_in());
     let t = hold_books(Duration::from_secs(2));
     crate::sign_out().unwrap();
-    hosting::end_from(&mut app().unwrap(), "test end");
+    hosting::end_from(&mut app().unwrap(), "test end").unwrap();
     t.join().unwrap();
     assert!(!hosting::active());
     assert!(app().unwrap().authenticated_session().is_err(), "signed out on the standalone desktop too");
@@ -363,7 +363,7 @@ fn resumed_hosting_reports_its_address_with_nobody_signed_in() {
     on().unwrap();
     let bind = hosting::status()["bind"].as_str().unwrap().to_owned();
     assert!(bind.starts_with("127.0.0.1:"), "{bind}");
-    hosting::end_from(&mut app().unwrap(), "the app quit");
+    hosting::end_from(&mut app().unwrap(), "the app quit").unwrap();
     assert_eq!(hosting::status()["running"], false);
     {
         let mut door = app().unwrap();
@@ -377,7 +377,7 @@ fn resumed_hosting_reports_its_address_with_nobody_signed_in() {
     assert_eq!(s["running"], true);
     assert_eq!(s["connected"], 0);
     assert!(!s["bind"].as_str().unwrap().is_empty() && s.to_string().len() < 120, "the address only: {s}");
-    hosting::end_from(&mut app().unwrap(), "test end");
+    hosting::end_from(&mut app().unwrap(), "test end").unwrap();
 }
 
 /// Review S3, the reviewer's scenario: a computer revoked while hosting is off, then a backup made
@@ -463,5 +463,40 @@ fn stop_and_close_do_not_wait_five_seconds_for_a_silent_computer() {
         // Allow for gateway process teardown after the 1.5-second notice window.
         assert!(started.elapsed() < Duration::from_millis(2500), "{:?}", started.elapsed());
         silent.close();
+    }
+}
+
+#[test]
+fn a_stuck_lease_times_out_and_a_later_lock_recovers_the_same_book() {
+    let _turn = turn();
+    let (_dir, _) = desktop();
+    on().unwrap();
+    let shared = hosting::test_shared().unwrap();
+    let lease = shared.lease_within("synthetic busy request", Duration::ZERO, &mut |_| {}).unwrap();
+    let started = std::time::Instant::now();
+    let error = crate::lock().unwrap_err();
+    assert!(error.reason.contains("busy"), "{error}");
+    assert!(started.elapsed() < Duration::from_secs(10));
+    assert!(crate::scheduled_backup_async().is_err());
+    drop(lease);
+    hosting::end_from(&mut app().unwrap(), "retry").unwrap();
+    assert!(app().unwrap().is_open());
+    assert!(!hosting::active());
+    crate::lock().unwrap();
+}
+
+#[test]
+fn a_hosted_desk_panic_uses_the_actual_books_for_read_and_write_recovery() {
+    let _turn = turn();
+    let (_dir, _) = desktop();
+    on().unwrap();
+    for class in [crate::Class::Read, crate::Class::Write] {
+        let error = crate::desk("hosted_panic", class, |_| Ok(()),
+            |_, _, ()| panic!("synthetic hosted panic")).unwrap_err();
+        assert!(error.reason.starts_with(crate::boundary::PANIC), "{error}");
+        let state: serde_json::Value = serde_json::from_str(error.reason.split_once(' ').unwrap().1).unwrap();
+        assert_eq!(state["was_open"], true);
+        assert_eq!(state["closed"], class == crate::Class::Write);
+        assert_eq!(hosting::active(), class == crate::Class::Read);
     }
 }

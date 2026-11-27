@@ -300,15 +300,54 @@ fn pay_bills_page(app: &mut App, r: &Route, path: &str, query: Posted<'_>, poste
     }
     draw(app, "payables/payments/form.html", &vm)
 }
-/// Whether any payment was recorded under this run's key (for any vendor).
-fn already_paid(app: &mut App, c: CompanyId, run: &str) -> AppResult<bool> {
+#[derive(Default)]
+struct RecordedRun {
+    allocations: HashMap<String, (i64, i64)>,
+    // Posting order determines which vendor received each check number, even after a rename.
+    payments: std::collections::BTreeMap<i64, Value>,
+}
+
+impl RecordedRun {
+    fn matches(&self, run: &Run, date: &str, reference: &str, memo: &str) -> bool {
+        let Ok(references) = references_for(&run.method, reference, self.payments.len()) else { return false };
+        self.payments.values().zip(references).all(|(payment, reference)| {
+            payment["reference"] == reference && payment["bank_id"] == run.bank
+                && payment["method"] == run.method && payment["date"] == date && payment["memo"] == memo
+        }) && run.ticked.len() == self.allocations.len() && self.allocations.iter().all(|(id, &(paid, open_before))| {
+            run.ticked.contains(id) && match run.amounts.get(id).map(|s| py::py_strip(s)) {
+                None | Some("") => paid == open_before,
+                Some(text) => typed_cents(text) == Some(paid),
+            }
+        })
+    }
+}
+/// Each recorded bill allocation in this run, paired with its original open balance.
+/// Blank amounts mean the whole balance seen before this payment. Reconstruct that
+/// balance in posting order so later payments and reversals cannot change a retry.
+fn recorded_run(app: &mut App, c: CompanyId, run: &str) -> AppResult<RecordedRun> {
+    let mut found = RecordedRun::default();
     for v in scoped_rows(app, c, "SELECT id FROM directory_vendor WHERE company_id=?", &[&c.to_db()])? {
-        let k = vendor_key(run, s(&v, "id"));
-        if !scoped_rows(app, c, "SELECT p.id FROM payables_billpayment p JOIN documents_documentidentity i ON i.id=p.identity_id WHERE p.company_id=? AND i.request_key=?", &[&c.to_db(), &k])?.is_empty() {
-            return Ok(true);
+        let key = vendor_key(run, s(&v, "id"));
+        let rows = scoped_rows(app, c, "SELECT p.date, p.bank_id, p.method, p.memo, p.reference, j.number,
+            a.bill_id, a.amount, r.total - COALESCE((
+            SELECT sum(earlier.amount) FROM payables_paymentallocation earlier
+            JOIN payables_billpayment p0 ON p0.id=earlier.payment_id
+            JOIN ledger_journal j0 ON j0.id=p0.journal_id
+            WHERE earlier.bill_id=a.bill_id AND j0.number<j.number AND NOT EXISTS (
+                SELECT 1 FROM ledger_journal z WHERE z.reversal_of_id=j0.id AND z.number<j.number)
+            ),0) AS open_before
+            FROM documents_documentidentity i JOIN payables_billpayment p ON p.identity_id=i.id
+            JOIN payables_paymentallocation a ON a.payment_id=p.id
+            JOIN payables_billrevision r ON r.id=a.bill_revision_id JOIN ledger_journal j ON j.id=p.journal_id
+            WHERE p.company_id=? AND i.request_key=?", &[&c.to_db(), &key])?;
+        if let Some(payment) = rows.first() {
+            found.payments.insert(payment["number"].as_i64().unwrap(), payment.clone());
+        }
+        for row in rows {
+            found.allocations.insert(s(&row, "bill_id").to_owned(), (row["amount"].as_i64().unwrap(), row["open_before"].as_i64().unwrap()));
         }
     }
-    Ok(false)
+    Ok(found)
 }
 fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult<Outcome> {
     let c = arg_company(r)?;
@@ -337,7 +376,11 @@ fn pay_bills_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppR
     }
     // Sent twice: the first send already recorded this run's payments, so show them instead of
     // paying again (or reporting their bills as no longer open).
-    if !key.is_empty() && already_paid(app, c, &key)? {
+    if !key.is_empty() && let recorded = recorded_run(app, c, &key)? && !recorded.payments.is_empty() {
+        if !recorded.matches(&run, &date, &reference, &memo) {
+            page.errors.push("This request key was already used for different payment details or allocations.".into());
+            return Ok(Outcome::Page { status: 409, html: pay_bills_page(app, r, path, &[], Some(&run), &page)? });
+        }
         return Ok(Outcome::Redirect { location: format!("{}?paid={key}", url("payments:new", &[&c.to_db()])) });
     }
     // The ticked bills, as the page showed them.

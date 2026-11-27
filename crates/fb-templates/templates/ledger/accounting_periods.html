@@ -1,6 +1,7 @@
 {% extends 'ledger/base.html' %}
 {% block content %}
 <div class="heading"><h1>Accounting periods</h1></div>
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
 <dl>
   <dt>Fiscal year starts in</dt><dd>{{ month_name }}</dd>
   <dt>Closed through</dt><dd>{{ closing_date or 'All dates open' }}</dd>

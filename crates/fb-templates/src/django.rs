@@ -101,7 +101,7 @@ pub fn default_datetime(stamp: &str) -> String {
 
 /// Frozen ledger.print_banners.toolbar_note. The print wave shares this D2 include.
 pub fn print_toolbar_note(audience: &str, local_preview: bool) -> String {
-    let hint="Printing uses your browser's print dialog (choose \"Save as PDF\" there).";
+    let hint="Choose Save as PDF… to save a file or Print… to select a printer.";
     if local_preview {format!("LOCAL TEST-ONLY PREVIEW · Synthetic data only · {hint}")}
     else if audience=="internal" {format!("{} · {hint}",crate::vm::ALPHA_BANNER)}
     else {String::new()}

@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FreedomBooks · {% if mode == 'error' %}Books can’t be opened{% elif mode == 'setup' %}Set up your books{% elif mode == 'choose' %}Choose your books{% else %}Books locked{% endif %}</title><link rel="stylesheet" href="{{ static('ledger/app.css') }}"><link rel="stylesheet" href="{{ static('ledger/hybrid.css') }}"><link rel="stylesheet" href="{{ static('desktop/gate.css') }}"><script src="{{ static('ledger/shell.js') }}" defer></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FreedomBooks · {% if reason == 'newer' %}Update FreedomBooks{% elif mode == 'error' %}Books can’t be opened{% elif mode == 'setup' %}Set up your books{% elif mode == 'choose' %}Choose your books{% else %}Books locked{% endif %}</title><link rel="stylesheet" href="{{ static('ledger/app.css') }}"><link rel="stylesheet" href="{{ static('ledger/hybrid.css') }}"><link rel="stylesheet" href="{{ static('desktop/gate.css') }}"><script src="{{ static('ledger/shell.js') }}" defer></script></head>
 <body class="shell gate-page"><a class="skip-link" href="#main">Skip to content</a>
-<header class="titlebar"><span class="brand">FreedomBooks <small>{{ version }}</small></span><div class="operator">{% if mode == 'error' %}Books can’t be opened{% elif mode == 'setup' %}First-time setup{% elif mode == 'choose' %}Choose your books{% else %}Books locked{% endif %}</div></header>
+<header class="titlebar"><span class="brand">FreedomBooks <small>{{ version }}</small></span><div class="operator">{% if reason == 'newer' %}Update FreedomBooks{% elif mode == 'error' %}Books can’t be opened{% elif mode == 'setup' %}First-time setup{% elif mode == 'choose' %}Choose your books{% else %}Books locked{% endif %}</div></header>
 <main id="main" class="gate"><div class="gate-card">
 {% if mode == 'error' %}
 <h1>FreedomBooks can’t open your books right now</h1>
@@ -9,6 +9,10 @@
 {% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
 <p>Your books may well be on this computer, so FreedomBooks won’t open any book on a guess and won’t offer to set up new books. Quit, fix what is described above if you can, and start FreedomBooks again.</p>
 <p>If this keeps happening, <a href="{{ issue_url }}">report a problem</a> and describe what happened.</p>
+{% elif reason == 'newer' %}
+<h1>These books need a newer version of FreedomBooks</h1>
+<p>You’re running FreedomBooks {{ version }}. Install the latest version, then reopen these books.</p>
+{% if errors %}<section class="errorlist" role="alert">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</section>{% endif %}
 {% elif mode == 'setup' %}
 <ol class="gate-steps" aria-label="Setting up"><li aria-current="step"><span aria-hidden="true">1</span> Your books</li><li><span aria-hidden="true">2</span> Your sign-in</li><li id="recovery-step" hidden><span aria-hidden="true">3</span> Recovery key</li></ol>
 <p class="gate-step-label">Step 1 of <span id="setup-step-count">2</span></p>

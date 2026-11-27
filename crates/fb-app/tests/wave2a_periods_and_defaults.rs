@@ -45,7 +45,9 @@ fn periods_settings_are_scoped_and_confirm_reopening_by_date() {
         redirect(post_renderer(&mut app, &path, &values).unwrap()),
         path
     );
-    assert!(page(&mut app, &path).contains("2028-02-29"));
+    let saved = page(&mut app, &path);
+    assert!(saved.contains("2028-02-29") && saved.contains("Accounting periods saved."));
+    assert!(!page(&mut app, &path).contains("Accounting periods saved."));
     assert!(
         invalid(post_renderer(&mut app, &path, &values).unwrap())
             .contains("Accounting periods changed.")
@@ -78,6 +80,28 @@ fn periods_settings_are_scoped_and_confirm_reopening_by_date() {
     let html = page(&mut app, &report);
     assert!(html.contains("2027-11-01") && html.contains("2028-10-31"));
     assert!(page(&mut app, &format!("{report}&output=csv")).contains("2027-11-01"));
+    let bank = account(&mut app, &co, "1000");
+    let equity = account(&mut app, &co, "3000");
+    for date in ["2028-10-31", "2028-11-01", "2029-02-28", "2029-10-31", "2029-11-01"] {
+        let o = app.open_mut().unwrap();
+        let company = co.parse().unwrap();
+        let lines = vec![fb_core::services::line(bank.parse().unwrap()).debit("1").build(),
+            fb_core::services::line(equity.parse().unwrap()).credit("1").build()];
+        let draft = fb_core::services::save_draft(&mut o.book, o.owner, company, fb_core::services::DraftInput::new(date, "Fiscal register", lines)).unwrap();
+        fb_core::services::post_journal(&mut o.book, o.owner, company, draft.id, Some(1)).unwrap();
+    }
+    app.today = || chrono::NaiveDate::from_ymd_opt(2029, 2, 28).unwrap();
+    for (preset, end, count) in [("this_year", "2029-10-31", 3), ("year_to_date", "2029-02-28", 2)] {
+        let path = format!("/c/{co}/accounts/{bank}/register/?preset={preset}");
+        for output in ["", "&output=print"] {
+            let html = page(&mut app, &format!("{path}{output}"));
+            assert!(html.contains("2028-11-01") && html.contains(end));
+        }
+        let o = app.open_mut().unwrap();
+        let register = fb_core::banking::build_on(&mut o.book, o.owner, co.parse().unwrap(), &bank,
+            &json!({"preset":preset}), 1, 25, "2029-02-28").unwrap();
+        assert_eq!(register["total"], count);
+    }
     let audit = app.open_mut().unwrap().owner;
     let password = "Synthetic operator password";
     for (name, role) in [
@@ -101,6 +125,9 @@ fn periods_settings_are_scoped_and_confirm_reopening_by_date() {
         .unwrap();
         app.sign_out();
         app.sign_in(name, password).unwrap();
+        let denied = fb_app::screens::render(&mut app, &format!("/c/{co}/backups/")).unwrap();
+        assert_eq!(denied.status, 403);
+        assert!(denied.html.contains("Permission denied") && denied.html.contains("administrator"));
         let html = page(&mut app, &path);
         assert!(html.contains("2028-02-27") && !html.contains("name=\"closing_date\""));
         assert!(post_renderer(&mut app, &path, &reopen).is_err());
@@ -143,10 +170,12 @@ fn fresh_sales_forms_prefill_customer_terms_and_tax_and_preserve_explicit_values
     let customer = person.trim_end_matches('/').rsplit('/').next().unwrap();
     assert!(page(&mut app, &person).contains("Net 15"));
     let edit = format!("{person}edit/");
+    let edit_html = page(&mut app, &edit);
+    let snapshot = edit_html.split_once(r#"name="expected_snapshot" value=""#).unwrap().1.split('"').next().unwrap();
     redirect(submit(
         &mut app,
         &edit,
-        &[("display_name", "Local library")],
+        &[("display_name", "Local library"), ("expected_snapshot", snapshot)],
     ));
     assert!(page(&mut app, &person).contains("Net 15"));
     let _ = tax_on(&mut app, &co);
@@ -227,10 +256,12 @@ fn fresh_sales_forms_prefill_customer_terms_and_tax_and_preserve_explicit_values
     let custom = redirect(submit(&mut app, &invoice, &values));
     let html = page(&mut app, &format!("{custom}edit/"));
     assert!(selected(&html, "terms", "") && html.contains("2028-03-17"));
+    let edit_html = page(&mut app, &edit);
+    let snapshot = edit_html.split_once(r#"name="expected_snapshot" value=""#).unwrap().1.split('"').next().unwrap();
     redirect(submit(
         &mut app,
         &edit,
-        &[("display_name", "Local library"), ("default_terms", "")],
+        &[("display_name", "Local library"), ("default_terms", ""), ("expected_snapshot", snapshot)],
     ));
     assert!(selected(
         &page(&mut app, &format!("{invoice}?customer={customer}")),

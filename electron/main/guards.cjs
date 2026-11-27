@@ -84,6 +84,7 @@ COMMANDS.add('UndoReconciliation');
 COMMANDS.add('ExportBankRegister');
 COMMANDS.add('ExportReconciliation');
 COMMANDS.add('ExportBackup');
+COMMANDS.add('ExportAttachment');
 
 function command(payload) {
   plain(payload, 'command');
@@ -260,7 +261,7 @@ module.exports = { restoreBook, chooseBook, CSP, staticFile, csvExportFilename, 
 
 
 // SEC-FIX1: COMMANDS above is the historical app vocabulary, not IPC authorization.
-const RENDERER_COMMANDS = new Set(['SubmitForm', 'ExportHistory', 'ExportReport', 'ExportBackup']);
+const RENDERER_COMMANDS = new Set(['SubmitForm', 'ExportHistory', 'ExportReport', 'ExportBackup', 'ExportAttachment']);
 const validateCommand = command;
 module.exports.command = (payload, capabilities = {}) => {
   plain(payload, 'command');

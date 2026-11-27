@@ -4,7 +4,17 @@
    "Page X of Y" from plain CSS page counters, test-only footer and watermark on every page. */
 
 @page { size: Letter portrait; margin: 0.7in 0.6in 0.95in 0.6in }
-/* The @bottom-center margin box (document id, test-only line, "Page X of Y") is set inline by the template. */
+/* attr() supplies a string, including any document text, without interpreting it as CSS. */
+html[data-print-footer] { --fb-print-footer: attr(data-print-footer) }
+@page {
+  @bottom-center {
+    content: var(--fb-print-footer, "") "Page " counter(page) " of " counter(pages);
+    white-space: pre;
+    text-align: center;
+    font: 8pt system-ui, sans-serif;
+    color: #444;
+  }
+}
 
 * { box-sizing: border-box }
 html { background: #f4f2ef }

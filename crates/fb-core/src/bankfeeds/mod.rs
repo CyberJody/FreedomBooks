@@ -12,7 +12,7 @@ mod accept;
 mod mapping;
 mod review;
 pub use review::{ReviewAccount, ReviewCandidates, ReviewDecision, ReviewRow, journal_receipt_ids, review_accounts, review_decision, review_page, review_snapshot};
-pub use mapping::{ImportSettings, MappingTarget, NewAccountKind, save_mappings, save_mappings_and_import_settings};
+pub use mapping::{ImportSettings, MappingTarget, NewAccountKind, save_mapping_form, save_mappings, save_mappings_and_import_settings};
 mod rules;
 pub mod qbo;
 mod automatic;

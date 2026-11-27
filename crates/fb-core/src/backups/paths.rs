@@ -59,9 +59,9 @@ pub fn private_dir(path: &Path) -> Result<PathBuf> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::{MetadataExt, PermissionsExt};
-        // Metadata from a newly created private file is an unprivileged uid oracle.
-        let probe = tempfile::NamedTempFile::new_in(&path)?;
-        if meta.uid() != probe.as_file().metadata()?.uid() {
+        let dir = directory_handle(&path)?;
+        let meta = dir.metadata()?;
+        if meta.uid() != rustix::process::getuid().as_raw() {
             return Err(BackupError::refused("Work folder belongs to another user."));
         }
         if meta.mode() & 0o022 != 0 {
@@ -69,7 +69,7 @@ pub fn private_dir(path: &Path) -> Result<PathBuf> {
                 "A shared folder cannot hold private work files.",
             ));
         }
-        fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
+        dir.set_permissions(fs::Permissions::from_mode(0o700))?;
     }
     Ok(path)
 }
@@ -87,7 +87,7 @@ pub fn new_file(path: &Path) -> Result<File> {
 #[cfg(unix)]
 fn directory_handle(path: &Path) -> Result<File> {
     use rustix::fs::{Mode, OFlags, open, openat};
-    let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+    let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC;
     let mut dir = File::from(open("/", flags, Mode::empty())?);
     for component in path.components() {
         if let Component::Normal(part) = component {
@@ -161,7 +161,10 @@ impl Directory {
     }
 
     pub fn read_file(&self, name: &str) -> Result<Option<File>> {
-        let name = Self::filename(name)?;
+        self.read_named(Self::filename(name)?)
+    }
+
+    pub(super) fn read_named(&self, name: &std::ffi::OsStr) -> Result<Option<File>> {
         #[cfg(unix)]
         let file = open_read_at(&self.fd, name);
         #[cfg(not(unix))]
@@ -179,55 +182,102 @@ impl Directory {
             Ok(f) if f.metadata()?.is_file() => Ok(Some(f)),
             Ok(_) => Err(BackupError::refused("Expected a regular file.")),
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+            #[cfg(unix)]
+            Err(e) if e.raw_os_error() == Some(rustix::io::Errno::LOOP.raw_os_error()) =>
+                Err(BackupError::refused("Symbolic links are refused.")),
             Err(e) => Err(e.into()),
         }
     }
 
     pub fn replace_private_file(&self, name: &str, bytes: &[u8]) -> Result<()> {
-        let name = Self::filename(name)?;
+        self.write_private(Self::filename(name)?, false, |file| Ok(file.write_all(bytes)?))
+    }
+
+    pub(super) fn write_private<T>(&self, name: &std::ffi::OsStr, noclobber: bool,
+        write: impl FnOnce(&mut File) -> Result<T>) -> Result<T> {
         #[cfg(unix)]
         {
-            use rustix::fs::{AtFlags, FileType, Mode, OFlags, openat, renameat, statat, unlinkat};
-            match statat(&self.fd, name, AtFlags::SYMLINK_NOFOLLOW) {
-                Ok(stat) if FileType::from_raw_mode(stat.st_mode) == FileType::RegularFile => (),
-                Ok(_) => return Err(BackupError::refused("Expected a regular file.")),
-                Err(rustix::io::Errno::NOENT) => (),
-                Err(e) => return Err(e.into()),
+            use rustix::fs::{AtFlags, FileType, Mode, OFlags, linkat, openat, renameat, statat, unlinkat};
+            if !noclobber {
+                match statat(&self.fd, name, AtFlags::SYMLINK_NOFOLLOW) {
+                    Ok(stat) if FileType::from_raw_mode(stat.st_mode) == FileType::RegularFile => (),
+                    Ok(_) => return Err(BackupError::refused("Expected a regular file.")),
+                    Err(rustix::io::Errno::NOENT) => (),
+                    Err(e) => return Err(e.into()),
+                }
             }
-            let temp = format!(".tmp-{}", fb_ids::new_v7());
-            let mut file = File::from(openat(
-                &self.fd,
-                temp.as_str(),
+            let temp = format!("{}{}.partial", super::cleanup::prefix(), fb_ids::new_v7().simple());
+            let mut file = File::from(openat(&self.fd, temp.as_str(),
                 OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::CLOEXEC,
-                Mode::from_bits_truncate(0o600),
-            )?);
+                Mode::from_bits_truncate(0o600))?);
             let result = (|| {
-                file.write_all(bytes)?;
+                let value = write(&mut file)?;
                 file.sync_all()?;
-                renameat(&self.fd, temp.as_str(), &self.fd, name)?;
-                self.fd.sync_all()?;
-                Ok(())
+                if noclobber {
+                    linkat(&self.fd, temp.as_str(), &self.fd, name, AtFlags::empty())
+                        .map_err(io::Error::from).map_err(placement_error)?;
+                    unlinkat(&self.fd, temp.as_str(), AtFlags::empty())?;
+                } else {
+                    renameat(&self.fd, temp.as_str(), &self.fd, name)?;
+                }
+                self.sync()?;
+                Ok(value)
             })();
             if result.is_err() {
-                let _ = unlinkat(&self.fd, temp.as_str(), AtFlags::empty());
+                match unlinkat(&self.fd, temp.as_str(), AtFlags::empty()) {
+                    Ok(()) | Err(rustix::io::Errno::NOENT) => (),
+                    Err(e) => return Err(e.into()),
+                }
             }
             result
         }
         #[cfg(not(unix))]
         {
-            let path = resolve(&self.path.join(name))?;
-            match fs::symlink_metadata(&path) {
-                Ok(meta) if meta.is_file() => (),
-                Ok(_) => return Err(BackupError::refused("Expected a regular file.")),
-                Err(e) if e.kind() == io::ErrorKind::NotFound => (),
-                Err(e) => return Err(e.into()),
+            let path = self.path.join(name);
+            if !noclobber {
+                resolve(&path)?;
+                match fs::symlink_metadata(&path) {
+                    Ok(meta) if meta.is_file() => (),
+                    Ok(_) => return Err(BackupError::refused("Expected a regular file.")),
+                    Err(e) if e.kind() == io::ErrorKind::NotFound => (),
+                    Err(e) => return Err(e.into()),
+                }
             }
             let mut temp = tempfile::NamedTempFile::new_in(&self.path)?;
-            temp.write_all(bytes)?;
+            let value = write(temp.as_file_mut())?;
             temp.as_file().sync_all()?;
-            temp.persist(path).map_err(|e| e.error)?;
-            Ok(())
+            if noclobber { temp.persist_noclobber(path) } else { temp.persist(path) }
+                .map_err(|e| placement_error(e.error))?;
+            self.sync()?;
+            Ok(value)
         }
+    }
+
+    /// Create a key record for a new book and retain its identity for rollback.
+    pub fn create_private_file(&self, name: &str, bytes: &[u8]) -> Result<File> {
+        self.write_private(Self::filename(name)?, true, |file| {
+            file.write_all(bytes)?;
+            Ok(file.try_clone()?)
+        })
+    }
+
+    pub fn remove_created_file(&self, name: &str, owned: File) -> Result<()> {
+        let Some(current) = self.read_file(name)? else { return Ok(()) };
+        if same_file::Handle::from_file(owned)? != same_file::Handle::from_file(current)? {
+            return Err(BackupError::retryable("The file changed during restore. It was kept for recovery."));
+        }
+        self.unlink_file(name)?;
+        self.sync()
+    }
+
+    /// Publish a streamed export without exposing partial bytes at the selected name.
+    pub fn copy_new(source: &mut impl io::Read, path: &Path) -> Result<u64> {
+        let path = resolve(path)?;
+        let (parent, name) = parent_name(&path)?;
+        let dir = Self::open(parent)?;
+        let bytes = dir.write_private(name, true, |out| Ok(io::copy(source, out)?))?;
+        dir.confirm(parent)?;
+        Ok(bytes)
     }
 
     pub(super) fn create_private_subdir(&self, prefix: &str) -> Result<(String, Self)> {
@@ -240,7 +290,7 @@ impl Directory {
             let fd = openat(
                 &self.fd,
                 file,
-                OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+                OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
                 Mode::empty(),
             )?;
             self.sync()?;
@@ -281,6 +331,21 @@ impl Directory {
         }
     }
 
+    /// Recover a quarantined entry without overwriting a name another process has reused.
+    pub(super) fn restore_to(&self, name: &str, dest: &Self) -> io::Result<()> {
+        #[cfg(target_os = "linux")]
+        {
+            use rustix::fs::{RenameFlags, renameat_with};
+            match renameat_with(&self.fd, name, &dest.fd, name, RenameFlags::NOREPLACE) {
+                Ok(()) => return Ok(()),
+                Err(rustix::io::Errno::NOSYS | rustix::io::Errno::INVAL | rustix::io::Errno::OPNOTSUPP) => (),
+                Err(e) => return Err(e.into()),
+            }
+        }
+        self.link_to(name, dest, name)?;
+        self.unlink_file(name)
+    }
+
     pub(super) fn unlink_file(&self, name: &str) -> io::Result<()> {
         let name = Self::filename(name).map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
         #[cfg(unix)]
@@ -299,18 +364,27 @@ impl Directory {
         {
             match rustix::fs::unlinkat(&self.fd, name, rustix::fs::AtFlags::REMOVEDIR) {
                 Ok(()) => Ok(()),
-                Err(rustix::io::Errno::NOTEMPTY | rustix::io::Errno::EXIST | rustix::io::Errno::NOENT) => Ok(()),
+                Err(rustix::io::Errno::NOENT) => Ok(()),
                 Err(e) => Err(e.into()),
             }
         }
         #[cfg(not(unix))]
         {
-            let path = self.path.join(name);
-            if fs::read_dir(&path)?.next().is_none() {
-                fs::remove_dir(&path)?;
+            match fs::remove_dir(self.path.join(name)) {
+                Ok(()) => Ok(()),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(()),
+                Err(e) => Err(e.into()),
             }
-            Ok(())
         }
+    }
+
+    pub(super) fn make_private(&self) -> Result<()> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            self.fd.set_permissions(fs::Permissions::from_mode(0o700))?;
+        }
+        Ok(())
     }
 
     pub(super) fn sync(&self) -> Result<()> {
@@ -321,31 +395,67 @@ impl Directory {
         Ok(())
     }
 }
-pub fn lock_file(path: &Path) -> Result<File> {
-    resolve(path)?;
-    #[cfg(unix)]
-    let f = File::from(rustix::fs::open(
-        path,
-        rustix::fs::OFlags::RDWR
-            | rustix::fs::OFlags::CREATE
-            | rustix::fs::OFlags::NOFOLLOW
-            | rustix::fs::OFlags::NONBLOCK
-            | rustix::fs::OFlags::CLOEXEC,
-        rustix::fs::Mode::from_bits_truncate(0o600),
-    )?);
-    #[cfg(not(unix))]
-    let f = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .open(path)?;
-    if !f.metadata()?.is_file() {
-        return Err(BackupError::refused(
-            "The backup lock is not a regular file.",
-        ));
+impl Directory {
+    pub(super) fn lock_file(&self, name: &std::ffi::OsStr) -> Result<File> {
+        #[cfg(unix)]
+        let f = {
+            use rustix::fs::{Mode, OFlags, openat};
+            File::from(openat(&self.fd, name, OFlags::RDWR | OFlags::CREATE | OFlags::NOFOLLOW
+                | OFlags::NONBLOCK | OFlags::CLOEXEC, Mode::from_bits_truncate(0o600))?)
+        };
+        #[cfg(not(unix))]
+        let f = OpenOptions::new().read(true).write(true).create(true).truncate(false)
+            .open(resolve(&self.path.join(name))?)?;
+        if !f.metadata()?.is_file() {
+            return Err(BackupError::refused("The backup lock is not a regular file."));
+        }
+        Ok(f)
     }
-    Ok(f)
+
+    pub fn confirm(&self, path: &Path) -> Result<()> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            let current = Self::open(path)?.fd.metadata()?;
+            let pinned = self.fd.metadata()?;
+            if (current.dev(), current.ino()) != (pinned.dev(), pinned.ino()) {
+                return Err(BackupError::retryable("The backup folder changed during the operation."));
+            }
+        }
+        #[cfg(not(unix))]
+        { resolve(path)?; }
+        Ok(())
+    }
+
+    /// Link into the pinned destination without overwriting. The caller syncs this descriptor.
+    pub(super) fn link_new(&self, source: &Path, name: &std::ffi::OsStr) -> Result<()> {
+        #[cfg(unix)]
+        let linked = {
+            let source = resolve(source)?;
+            let (parent, file) = parent_name(&source)?;
+            let source_dir = Self::open(parent)?;
+            rustix::fs::linkat(&source_dir.fd, file, &self.fd, name, rustix::fs::AtFlags::empty())
+                .map_err(io::Error::from)
+        };
+        #[cfg(not(unix))]
+        let linked = fs::hard_link(resolve(source)?, resolve(&self.path.join(name))?);
+        linked.map_err(|e| BackupError::refused(format!("Refusing to overwrite or non-atomic backup placement: {e}")))?;
+        Ok(())
+    }
+}
+
+fn placement_error(e: io::Error) -> BackupError {
+    if e.kind() == io::ErrorKind::AlreadyExists {
+        BackupError::conflict("A file with that name already exists there. Choose a new name.")
+    } else { e.into() }
+}
+pub(super) fn parent_name(path: &Path) -> Result<(&Path, &std::ffi::OsStr)> {
+    path.parent().zip(path.file_name()).ok_or_else(|| BackupError::refused("Missing file name."))
+}
+pub fn lock_file(path: &Path) -> Result<File> {
+    let path = resolve(path)?;
+    let (parent, name) = parent_name(&path)?;
+    Directory::open(parent)?.lock_file(name)
 }
 pub(super) fn temp_directory(root: &Path, prefix: &str) -> Result<tempfile::TempDir> {
     let mut builder = tempfile::Builder::new();
@@ -359,16 +469,11 @@ pub(super) fn temp_directory(root: &Path, prefix: &str) -> Result<tempfile::Temp
 }
 
 pub fn sync_dir(path: &Path) -> Result<()> {
-    #[cfg(unix)]
-    {
-        File::open(path)?.sync_all()?;
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-    }
-    Ok(())
+    Directory::open(path)?.sync()
 }
+#[cfg(test)]
+thread_local! { pub(super) static TEST_SPACE: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) }; }
+
 pub fn require_space(path: &Path, bytes: u64) -> Result<()> {
     let mut parent = resolve(path)?;
     while !parent.exists() {
@@ -379,7 +484,10 @@ pub fn require_space(path: &Path, bytes: u64) -> Result<()> {
     if !parent.is_dir() {
         parent.pop();
     }
-    if fs2::available_space(&parent)? < bytes {
+    let available = fs2::available_space(&parent)?;
+    #[cfg(test)]
+    let available = TEST_SPACE.get().unwrap_or(available);
+    if available < bytes {
         return Err(BackupError::retryable(
             "Not enough free space to safely complete this operation.",
         ));

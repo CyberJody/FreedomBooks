@@ -16,8 +16,15 @@ fn read_json(path: &str) -> serde_json::Value {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    match args.get(1).map(String::as_str) {
-        Some("run") if args.len() >= 4 => {
+    let usage = || {
+        eprintln!("usage: fb-harness run <scenario.json> <out.json> [book-dir] | compare <expected.json> <actual.json> [scenario.json]");
+        std::process::exit(2);
+    };
+    if !(4..=5).contains(&args.len()) || args[1..].iter().any(|arg| arg.starts_with("--")) {
+        usage();
+    }
+    match args[1].as_str() {
+        "run" => {
             let scenario = read_json(&args[2]);
             let dir = args.get(4).map(PathBuf::from).unwrap_or_else(std::env::temp_dir);
             std::fs::create_dir_all(&dir).unwrap();
@@ -32,7 +39,7 @@ fn main() {
                 let _ = std::fs::remove_file(format!("{}{suffix}", book.display()));
             }
         }
-        Some("compare") if args.len() >= 4 => {
+        "compare" => {
             let scenario = args.get(4).map(|p| read_json(p));
             let report = fb_harness::compare_scenario(scenario.as_ref(), &read_json(&args[2]), &read_json(&args[3]));
             for w in &report.warnings {
@@ -52,9 +59,6 @@ fn main() {
             );
             std::process::exit(if report.ok() { 0 } else { 1 });
         }
-        _ => {
-            eprintln!("usage: fb-harness run <scenario.json> <out.json> [book-dir] | compare <expected.json> <actual.json> [scenario.json]");
-            std::process::exit(2);
-        }
+        _ => usage(),
     }
 }

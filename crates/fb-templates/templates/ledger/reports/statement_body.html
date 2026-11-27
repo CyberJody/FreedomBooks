@@ -6,7 +6,7 @@
 {% if table.title %}<h3 class="statement-section">{{ table.title }}</h3>{% endif %}
 <div class="gl-scroll{% if landscape %} report-comparison{% endif %}">
 <table class="fin-report statement-table">
-<thead><tr>{% for heading in table.headings %}<th scope="col">{{ heading }}</th>{% endfor %}</tr></thead>
+<thead><tr>{% for heading in table.headings %}<th scope="col"{% if heading.number %} class="amount"{% endif %}>{{ heading.label }}</th>{% endfor %}</tr></thead>
 <tbody>
 {% for row in table.rows %}
 <tr class="fin-{{ row.kind }}">

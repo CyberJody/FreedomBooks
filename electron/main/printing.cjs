@@ -2,11 +2,11 @@
 // Only the main process prints, renders PDF bytes, or asks for an output filename.
 const {dialog, Menu} = require('electron');
 const saves = require('./save-file.cjs');
-const {PAGE_KEY} = require('./remote-mode.cjs');
+const {PAGE_KEY, pageTarget} = require('./remote-mode.cjs');
 const printerLookupError = 'Could not find a printer on this computer. Check your printers or choose Save as PDF.';
-let busy = false;
 
 function controller(native, output = saves.create({bookPath:()=>JSON.parse(native.appState()).path}), exclusive = async work=>work(), remote = null) {
+  let busy = false;
   const generation = () => remote?.active() ? remote.printMarker() : JSON.parse(native.appState()).session_generation;
   const canPrint = () => remote?.active() ? !!remote.printMarker() : JSON.parse(native.appState()).open;
   async function printable(target, accepted) {
@@ -15,10 +15,9 @@ function controller(native, output = saves.create({bookPath:()=>JSON.parse(nativ
     return rendered?.status === 200 && rendered.html.includes('id="print-now"');
   }
   function targetOf(url, accepted) {
-    if (!url.searchParams.has(PAGE_KEY)) return url.pathname + url.search;
-    if (!remote?.active() || url.searchParams.get(PAGE_KEY) !== accepted) throw new Error('The print view changed. Open it again and retry.');
-    const query = url.search.slice(1).split('&').filter(part => !new URLSearchParams(part).has(PAGE_KEY)).join('&');
-    return url.pathname + (query ? '?' + query : '');
+    const {target, marker} = pageTarget(url);
+    if (marker !== null && (!remote?.active() || !marker || marker !== accepted)) throw new Error('The print view changed. Open it again and retry.');
+    return target;
   }
   function requireSession(accepted) {
     if (accepted !== generation()) throw new Error('The active user changed. Open the print view again.');
@@ -56,7 +55,7 @@ function controller(native, output = saves.create({bookPath:()=>JSON.parse(nativ
       throw new Error('Open a printable document or report first.');
     }
     if (url.searchParams.has(PAGE_KEY)) {
-      if (!remote?.active() || url.searchParams.getAll(PAGE_KEY).some(marker => marker !== accepted)) {
+      if (!remote?.active() || pageTarget(url).marker !== accepted) {
         throw new Error('Open a printable document or report first.');
       }
       return new URL(targetOf(url, accepted), page);

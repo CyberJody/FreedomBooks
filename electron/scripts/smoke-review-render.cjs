@@ -157,7 +157,7 @@ if (process.versions.electron && !process.env.ELECTRON_RUN_AS_NODE) {
       const failed = page.locator('.row-error');
       assert.equal(await failed.locator('input[name=sel]').isChecked(),true);
       assert.equal(await failed.evaluate(el => el === document.activeElement),true);
-      assert.match(await failed.locator('.row-error-text').textContent(), /Map /);
+      assert.match(await failed.getByRole('alert').textContent(), /Map /);
       assert.equal(await field('OFFICE card charge','payee').inputValue(),'Edited OFFICE card charge');
       assert.equal(await page.inputValue('#id_q'),'OFFICE');
       page.once('dialog', dialog => dialog.dismiss());

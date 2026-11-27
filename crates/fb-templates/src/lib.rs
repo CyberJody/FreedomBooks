@@ -115,6 +115,7 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("ledger/reports/balance_sheet_body.html", include_str!("../templates/ledger/reports/balance_sheet_body.html")),
     ("ledger/reports/general_ledger.html", include_str!("../templates/ledger/reports/general_ledger.html")),
     ("ledger/reports/general_ledger_body.html", include_str!("../templates/ledger/reports/general_ledger_body.html")),
+    ("backups/denied.html", include_str!("../templates/backups/denied.html")),
     // D9 bank feeds.
     ("bankfeeds/list.html", include_str!("../templates/bankfeeds/list.html")),
     ("bankfeeds/connect.html", include_str!("../templates/bankfeeds/connect.html")),

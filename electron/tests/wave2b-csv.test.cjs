@@ -72,6 +72,7 @@ const company = '11111111-1111-4111-8111-111111111111';
 const body = '\uFEFFReport,Example\r\n';
 const commands = [], dialogs = [];
 let connected = false;
+let hostUser = 'User A';
 
 function render(target) {
   const url = new URL(target, 'fb://app');
@@ -81,6 +82,11 @@ function render(target) {
   const output = url.searchParams.getAll('output').at(-1);
   const filters = report?.[2] ? '&amp;' + new URLSearchParams([report[2]]) : '';
   let html = '<head><title>Synthetic report</title></head><body>';
+  if (connected && hostUser) html += '<p id="signed-in-user">' + hostUser + '</p>';
+  if (['/desktop/session/', '/desktop/sign-in/'].includes(url.pathname)) {
+    const action = url.pathname === '/desktop/session/' ? 'signout' : 'signin';
+    html += '<form method="post"><input name="fb_command_token" value="test"><button name="action" value="' + action + '">' + action + '</button></form>';
+  }
   if (output === 'csv') return {status: 200, route, html: body};
   if (output === 'print') html += '<p id="print-view">Print view</p>';
   if (report && !output) {
@@ -98,6 +104,11 @@ function render(target) {
 
 function run(mode, json) {
   const command = JSON.parse(json);
+  if (command.type === 'SubmitForm') {
+    assert.equal(mode, 'host');
+    hostUser = command.path === '/desktop/session/' ? null : 'User B';
+    return JSON.stringify({outcome:'redirect', location: hostUser ? '/' : '/desktop/sign-in/'});
+  }
   commands.push({mode, command});
   const [, slug] = reports.find(([name]) => command.report === 'reports:' + name);
   return JSON.stringify({outcome: 'export', filename: slug + '.csv', contents: body});
@@ -186,11 +197,32 @@ app.whenReady().then(async () => {
     }
   }
   assert.equal(dialogs.length, reports.length * 4);
+  // Switch users through the actual preload/main handlers on this still-connected window.
+  const history = win.webContents.navigationHistory;
+  const a = win.webContents.getURL();
+  assert.match(a, /assets=/);
+  assert.ok(new URL(a).searchParams.get('__fb_remote_page'));
+  assert.equal(await js('document.getElementById("signed-in-user").textContent'), 'User A');
+  assert.ok(history.canGoBack());
+  await win.loadURL('fb://app/desktop/session/');
+  await js('document.querySelector("form button").click()');
+  await until(() => win.webContents.getURL() === 'fb://app/desktop/sign-in/', 'Sign-out did not complete');
+  assert.equal(history.canGoBack(), false);
+  await js('document.querySelector("form button").click()');
+  await until(() => win.webContents.getURL() === 'fb://app/', 'Second sign-in did not complete');
+  assert.equal(history.canGoBack(), false);
+  assert.equal(history.canGoForward(), false);
+  assert.equal(await js('document.getElementById("signed-in-user").textContent'), 'User B');
+  assert.ok(history.getAllEntries().every(entry => !entry.url.includes('assets=')));
+  const b = await js('document.querySelector(\'meta[name="fb-remote-page"]\').content');
+  assert.notEqual(b, new URL(a).searchParams.get('__fb_remote_page'));
+  await win.loadURL(a);
+  assert.equal(win.webContents.getURL(), 'fb://app/', 'a saved marker cannot reopen the earlier worksheet');
   process.stdout.write('Wave 2b CSV clicks passed\n', () => app.exit(0));
 }).catch(fail);
 `;
 
-test('Download CSV opens the desktop Save dialog for all six reports locally and on a connected host', {timeout: 60000}, async () => {
+test('CSV opens Save for all six reports locally and remotely, and a host user switch clears the previous worksheet history', {timeout: 60000}, async () => {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-wave2b-csv-'));
   try {
     const script = path.join(scratch, 'desktop.cjs');

@@ -43,6 +43,23 @@ pub(crate) fn panel(app: &mut App, c: CompanyId, identity: &str, vm: &mut Value)
     panel_for(app, c, &a::Owner::Document(identity.to_owned()), add_url, vm)
 }
 
+/// Main-process export. Only active attachments belonging to the authorized company can be saved.
+pub(crate) fn export_attachment(app: &mut App, company: CompanyId, id: &str) -> AppResult<Outcome> {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    let receipt_key = app.receipt_key()?;
+    let store = a::storage::Store::for_book(app.book_path().ok_or(AppError::Locked)?, &receipt_key)?
+        .with_legacy(app.master_key()?)?;
+    let open = app.open_mut()?;
+    let row = open.book.read(|tx| a::get(tx, company, id))?;
+    if row["deleted"] != false {
+        return Err(AppError::NotFound("Attachment".into()));
+    }
+    let bytes = a::download(&mut open.book, &store, open.owner, company, id)?;
+    Ok(Outcome::Done { data: json!({
+        "filename": row["original_name"], "mime": row["content_type"], "base64": STANDARD.encode(bytes)
+    }) })
+}
+
 /// The panel for a manual journal entry (`ledger/journal.html` includes it as `attachments_panel`).
 pub(crate) fn journal_panel(app: &mut App, c: CompanyId, journal: fb_core::JournalId, company: &Value) -> AppResult<String> {
     let add_url = fb_templates::django::reverse("attachments:add_journal", &[c.to_db(), journal.to_db()]).map_err(AppError::Render)?;

@@ -43,6 +43,7 @@ pub(crate) const DOOR_WAIT: Duration = Duration::from_secs(2);
 pub(crate) const TASK_WAIT: Duration = Duration::from_secs(60);
 /// While hosting stops, connected computers are told why for up to this long.
 // The connected client probes every second; a vanished client cannot extend this wait.
+const STOP_WAIT: Duration = Duration::from_secs(5);
 const STOP_GRACE: Duration = Duration::from_millis(1500);
 pub(crate) const STOPPED: &str = "The host stopped sharing these books.";
 const AUDIT_FILE: &str = "remote-audit.jsonl";
@@ -91,8 +92,14 @@ pub(crate) struct Hosted {
     link: Option<HostLink<SessionBackend>>,
     runtime: Arc<Runtime>,
     flusher: Option<JoinHandle<()>>,
+    shutdown: Option<Shutdown>,
     book_path: PathBuf,
     bind: String,
+}
+
+struct Shutdown {
+    done: std::sync::mpsc::Receiver<()>,
+    reason: String,
 }
 
 /// What the link's threads, the audit sink and the record writer share.
@@ -361,6 +368,10 @@ fn book_changed(host: &SessionHost, book: &Path) -> Option<&'static str> {
 /// closed or replaced the books.
 pub(crate) fn route<T, F: FnOnce(&mut App) -> Result<T>>(door: &mut App, wait: Duration, alone: F, hosted: impl FnOnce(&mut SessionHost, &SessionId, F) -> Result<T>) -> Result<T> {
     let mut slot = lock(&HOSTED);
+    if slot.as_ref().is_some_and(|h| h.shutdown.is_some()) {
+        if wait.is_zero() { return Err(fail("BUSY")); }
+        end(door, &mut slot, "Hosting stopped.")?;
+    }
     let Some(h) = slot.as_mut() else {
         drop(slot);
         settle(door);
@@ -373,7 +384,7 @@ pub(crate) fn route<T, F: FnOnce(&mut App) -> Result<T>>(door: &mut App, wait: D
         (result, book_changed(&lease, &h.book_path))
     };
     if let Some(reason) = ended {
-        end(door, &mut slot, reason);
+        end(door, &mut slot, reason)?;
     }
     result
 }
@@ -391,24 +402,42 @@ pub(crate) fn dispatch(host: &mut SessionHost, local: &SessionId, request: Reque
 /// Stop hosting (whatever the reason): connected computers are told, every remote session ends,
 /// the record is brought up to date, and the app comes back to the door with the local person's
 /// state in it.
-fn end(door: &mut App, slot: &mut Option<Hosted>, reason: &str) {
-    let Some(mut h) = slot.take() else { return };
-    ACTIVE.store(false, Ordering::SeqCst);
-    *lock(&STATUS) = None;
-    if let Some(link) = h.link.take() {
-        link.stop_with(reason, STOP_GRACE);
+fn end(door: &mut App, slot: &mut Option<Hosted>, reason: &str) -> Result<()> {
+    let Some(h) = slot.as_mut() else { return Ok(()) };
+    let deadline = Instant::now() + STOP_WAIT;
+    let busy = || fail("Hosting is stopping. The books are still busy. Try again.");
+    // Gateway shutdown joins its reader, and the record writer may itself be waiting
+    // for the book. Both joins must share the desktop door's finite wait budget.
+    if h.shutdown.is_none() {
+        let link = h.link.take();
+        let flusher = h.flusher.take();
+        let runtime = h.runtime.clone();
+        let reason = reason.to_owned();
+        let (done, stopping) = std::sync::mpsc::channel();
+        h.shutdown = Some(Shutdown { done: stopping, reason: reason.clone() });
+        *lock(&STATUS) = None;
+        std::thread::spawn(move || {
+            let _ = crate::free("hosting_shutdown", || {
+                if let Some(link) = link { link.stop_with(&reason, STOP_GRACE); }
+                Ok(())
+            });
+            runtime.stopping.store(true, Ordering::SeqCst);
+            runtime.wake.notify_all();
+            if let Some(t) = flusher { let _ = t.join(); }
+            let _ = done.send(());
+        });
     }
-    h.runtime.stopping.store(true, Ordering::SeqCst);
-    h.runtime.wake.notify_all();
-    if let Some(t) = h.flusher.take() {
-        let _ = t.join();
-    }
-    let mut host = loop {
-        // Nothing else holds the books now (the listener is gone); this does not wait in practice.
-        if let Ok(mut lease) = h.shared.lease_within("hosting: stop", Duration::from_secs(120), &mut |_| {}) {
-            break std::mem::replace(&mut *lease, SessionHost::new(App::new(), Policy::default()));
+    if let Some(shutdown) = &h.shutdown {
+        match shutdown.done.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => return Err(busy()),
+            // A previous attempt can have consumed the completion and timed out on the lease.
+            Ok(()) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => (),
         }
-    };
+    }
+    let mut lease = h.shared.lease_within("hosting: stop",
+        deadline.saturating_duration_since(Instant::now()), &mut |_| {}).map_err(|_| busy())?;
+    let mut host = std::mem::replace(&mut *lease, SessionHost::new(App::new(), Policy::default()));
+    drop(lease);
     let pending = std::mem::take(&mut *lock(&h.runtime.pending));
     if !pending.is_empty() && host.app().is_open() {
         let _ = write_pending(host.host_app(), &pending);
@@ -416,13 +445,16 @@ fn end(door: &mut App, slot: &mut Option<Hosted>, reason: &str) {
     *door = host.into_app(&h.local);
     // A Lock recorded while the books were busy: the person it was for does not come back signed in.
     settle(door);
-    lock(&LAST).stopped = Some(reason.to_owned());
+    lock(&LAST).stopped = h.shutdown.take().map(|s| s.reason);
+    *slot = None;
+    ACTIVE.store(false, Ordering::SeqCst);
+    Ok(())
 }
 
 /// Stop hosting from the door (quit, lock that closes the books, network change). No-op if off.
-pub(crate) fn end_from(door: &mut App, reason: &str) {
+pub(crate) fn end_from(door: &mut App, reason: &str) -> Result<()> {
     let mut slot = lock(&HOSTED);
-    end(door, &mut slot, reason);
+    end(door, &mut slot, reason)
 }
 
 // ---- Hosting controls ----
@@ -591,13 +623,13 @@ pub(crate) fn start(door: &mut App, bind: &str, host_name: &str, by: Option<&str
             on_registry: Some(Box::new(hook)),
         },
     );
-    let mut hosted = Hosted { shared, local, link: None, runtime: runtime.clone(), flusher: None, book_path, bind: addr.to_string() };
+    let mut hosted = Hosted { shared, local, link: None, runtime: runtime.clone(), flusher: None, shutdown: None, book_path, bind: addr.to_string() };
     let link = match started {
         Ok(link) => link,
         Err(e) => {
             // Give the app back exactly as it was.
             *slot = Some(hosted);
-            end(door, &mut slot, "Hosting could not start.");
+            end(door, &mut slot, "Hosting could not start.")?;
             lock(&LAST).stopped = None;
             return Err(fail(e.to_string()));
         }
@@ -626,7 +658,7 @@ pub(crate) fn start(door: &mut App, bind: &str, host_name: &str, by: Option<&str
     *slot = Some(hosted);
     ACTIVE.store(true, Ordering::SeqCst);
     if let Err(e) = saved {
-        end(door, &mut slot, "Hosting could not record its identity in the books.");
+        end(door, &mut slot, "Hosting could not record its identity in the books.")?;
         return Err(e);
     }
     lock(&LAST).stopped = None;
@@ -638,7 +670,7 @@ pub(crate) fn start(door: &mut App, bind: &str, host_name: &str, by: Option<&str
 pub(crate) fn stop(door: &mut App) -> Result<()> {
     let mut slot = lock(&HOSTED);
     administrator(door, &mut slot)?;
-    end(door, &mut slot, STOPPED);
+    end(door, &mut slot, STOPPED)?;
     let saved = (|| {
         if let Some(mut r) = door.host_record()? {
             r.enabled = false;
@@ -662,7 +694,7 @@ pub(crate) fn restart(door: &mut App, host_name: &str) -> Result<()> {
         if bind.is_empty() {
             return Err(fail("Hosting is not set up."));
         }
-        end(door, &mut slot, "The host restarted hosting.");
+        end(door, &mut slot, "The host restarted hosting.")?;
         (by, bind)
     };
     start(door, &bind, host_name, Some(&by))

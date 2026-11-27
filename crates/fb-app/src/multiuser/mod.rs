@@ -717,7 +717,7 @@ impl SessionHost {
         state::swap_in(&mut self.app, &mut slot.state);
         self.app.tokens.stamp = WRITE_SEQ.load(Ordering::SeqCst);
         self.app.remote_session = !slot.client.local;
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(&mut self.app)));
+        let result = fb_diag::catch(|| f(&mut self.app));
         self.app.remote_session = false;
         let failed = result.is_err();
         // Near the end of its generation block the session is ended here, in this one request
@@ -745,7 +745,10 @@ impl SessionHost {
         self.drop_orphan_signin_jobs();
         match result {
             Ok(r) => Ok(r),
-            Err(_) => {
+            Err(caught) => {
+                fb_diag::record(fb_diag::Entry { op: "hosted_session".into(), kind: "panic".into(),
+                    detail: Some(caught.category), location: Some(caught.location), backtrace: caught.backtrace,
+                    outcome: vec!["session signed out"], ..Default::default() });
                 let idle = self.app.open.as_ref().map(|o| o.book.idle_after_unwind().is_ok());
                 if idle == Some(false) {
                     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.app.lock()));

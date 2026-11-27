@@ -515,6 +515,14 @@ fn worksheets_preserve_inputs_across_screen_print_csv_and_typed_download() {
     let j = services::post_journal(book, actor, company, draft.id, Some(1))
         .unwrap()
         .id;
+    let returned = services::save_draft(book, actor, company, services::DraftInput::new(
+        "2028-02-02", "Returned equipment", vec![
+            services::line(asset).debit("20.00").build(),
+            services::line(bank).credit("20.00").build(),
+        ],
+    )).unwrap();
+    services::post_journal(book, actor, company, returned.id, Some(1)).unwrap();
+    services::reverse_journal(book, actor, company, returned.id, "2028-02-03", "Equipment returned").unwrap();
     let cases = [
         (
             "schedule-c",
@@ -588,6 +596,17 @@ fn worksheets_preserve_inputs_across_screen_print_csv_and_typed_download() {
         assert!(print.html.contains(&format!("{key}=")));
         let label_html = label.replace('&', "&amp;");
         assert!(screen.html.contains(&label_html) && print.html.contains(&label_html));
+        if key == "assets" {
+            for html in [&screen.html, &print.html] {
+                assert!(html.contains(r#"<th scope="col">In service</th>"#));
+                assert!(html.contains(r#"<th scope="col" class="amount">Original cost</th>"#));
+                let table = html.split_once("Ledger Rollforward · Fixed-asset cost").unwrap().1.split_once("</table>").unwrap().0;
+                assert!(table.contains(r#"<th scope="col" class="amount">Reversals</th><th scope="col" class="amount">Closing cost</th>"#));
+                let row = table.split_once("Total fixed-asset cost</th>").unwrap().1.split_once("</tr>").unwrap().0;
+                let cells = row.split(r#"<td class="amount">"#).skip(1).map(|s| s.split('<').next().unwrap()).collect::<Vec<_>>();
+                assert_eq!(cells, ["0.00", "120.00", "0.00", "-20.00", "100.00", "100.00"]);
+            }
+        }
         let token = print
             .html
             .split_once("name=\"fb_command_token\" value=\"")
@@ -609,6 +628,10 @@ fn worksheets_preserve_inputs_across_screen_print_csv_and_typed_download() {
             "{}",
             csv.html
         );
+        if key == "assets" {
+            assert!(csv.html.contains("Disposals / adjustments,Reversals,Closing cost,Book value contribution\r\n"));
+            assert!(csv.html.contains("Total fixed-asset cost,0.00,120.00,0.00,-20.00,100.00,100.00\r\n"));
+        }
         assert!(!csv.html.contains("9000.00") && !csv.html.contains("Other company"));
         let export = f
             .app
@@ -648,6 +671,13 @@ fn worksheets_reject_cross_company_and_oversize_inputs_before_export() {
     )
     .unwrap()
     .id;
+    for (slug, unknown) in [("schedule-c", "mapping"), ("schedule-c", "assets"), ("asset-depreciation", "mappings"), ("asset-depreciation", "customer")] {
+        let url = format!("/c/{}/reports/{slug}/?output=csv&__fb_remote_page=test", f.company);
+        assert_eq!(screens::render(&mut f.app, &url).unwrap().status, 200);
+        let bad = screens::render(&mut f.app, &format!("{url}&{unknown}=1")).unwrap();
+        assert_eq!(bad.status, 400);
+        assert!(bad.html.contains("Unknown worksheet parameter"));
+    }
     for (slug, key, input, expected) in [
         (
             "schedule-c",

@@ -840,7 +840,7 @@
     },
     {
      "account": "r3.a10",
-     "debit": "279.606"
+     "debit": "279.61"
     },
     {
      "account": "r3.a4",
@@ -902,7 +902,7 @@
     },
     {
      "account": "r3.a12",
-     "debit": "554.380"
+     "debit": "554.38"
     }
    ],
    "expect_error": false
@@ -926,7 +926,7 @@
     },
     {
      "account": "r1.a20",
-     "debit": "646.254",
+     "debit": "646.25",
      "description": "Refund"
     },
     {
@@ -960,13 +960,13 @@
     },
     {
      "account": "r3.a11",
-     "debit": "71.955",
+     "debit": "71.96",
      "description": "Mulch",
      "name": "Hudson Valley Plants"
     },
     {
      "account": "r3.a0",
-     "debit": "313.085"
+     "debit": "313.09"
     },
     {
      "account": "r3.a9",
@@ -1034,7 +1034,7 @@
     },
     {
      "account": "r2.a14",
-     "debit": "294.696",
+     "debit": "294.70",
      "name": "Hudson Valley Plants"
     }
    ],
@@ -1081,7 +1081,7 @@
    "lines": [
     {
      "account": "r1.a4",
-     "debit": "4.627",
+     "debit": "4.63",
      "description": "Mulch"
     },
     {
@@ -1295,7 +1295,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "758.582"
+     "debit": "758.58"
     },
     {
      "account": "r3.a22",
@@ -1369,7 +1369,7 @@
     },
     {
      "account": "r2.a21",
-     "debit": "548.576",
+     "debit": "548.58",
      "name": "Ada Voss"
     },
     {
@@ -1512,7 +1512,7 @@
    "lines": [
     {
      "account": "r1.a9",
-     "debit": "790.681"
+     "debit": "790.68"
     },
     {
      "account": "r1.a8",
@@ -1538,7 +1538,7 @@
     },
     {
      "account": "r3.a5",
-     "debit": "142.130"
+     "debit": "142.13"
     },
     {
      "account": "r3.a4",
@@ -1730,7 +1730,7 @@
    "lines": [
     {
      "account": "r2.a2",
-     "debit": "244.243"
+     "debit": "244.24"
     },
     {
      "account": "r2.a4",
@@ -1858,7 +1858,7 @@
     },
     {
      "account": "r3.a21",
-     "debit": "522.948",
+     "debit": "522.95",
      "description": "Refund"
     },
     {
@@ -1958,7 +1958,7 @@
     },
     {
      "account": "r2.a23",
-     "debit": "127.543",
+     "debit": "127.54",
      "description": "Fuel"
     },
     {
@@ -2025,7 +2025,7 @@
     },
     {
      "account": "r3.a15",
-     "debit": "282.929"
+     "debit": "282.93"
     },
     {
      "account": "r3.a5",
@@ -2033,7 +2033,7 @@
     },
     {
      "account": "r3.a6",
-     "debit": "942.911"
+     "debit": "942.91"
     }
    ],
    "expect_error": false
@@ -2309,12 +2309,12 @@
     },
     {
      "account": "r2.a19",
-     "debit": "964.485",
+     "debit": "964.49",
      "description": "Fuel"
     },
     {
      "account": "r2.a14",
-     "debit": "418.665"
+     "debit": "418.67"
     },
     {
      "account": "r2.a7",
@@ -2491,7 +2491,7 @@
    "lines": [
     {
      "account": "r2.a5",
-     "debit": "594.329",
+     "debit": "594.33",
      "name": "Sparrow Hardware"
     },
     {
@@ -2706,7 +2706,7 @@
     },
     {
      "account": "r2.a20",
-     "debit": "613.450"
+     "debit": "613.45"
     },
     {
      "account": "r2.a0",
@@ -2769,7 +2769,7 @@
    "lines": [
     {
      "account": "r3.a18",
-     "debit": "203.003",
+     "debit": "203.00",
      "description": "Mulch"
     },
     {
@@ -2931,7 +2931,7 @@
     },
     {
      "account": "r1.a22",
-     "debit": "397.916",
+     "debit": "397.92",
      "description": "Rent share"
     }
    ],
@@ -3028,7 +3028,7 @@
     },
     {
      "account": "r2.a23",
-     "debit": "811.362"
+     "debit": "811.36"
     }
    ],
    "expect_error": false
@@ -3079,7 +3079,7 @@
    "lines": [
     {
      "account": "r3.a15",
-     "debit": "691.345",
+     "debit": "691.35",
      "description": "Mulch"
     },
     {
@@ -3294,7 +3294,7 @@
     },
     {
      "account": "r3.a14",
-     "debit": "342.592",
+     "debit": "342.59",
      "name": "Hudson Valley Plants"
     },
     {
@@ -3321,7 +3321,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "544.170",
+     "debit": "544.17",
      "description": "Rent share"
     }
    ],
@@ -3554,7 +3554,7 @@
     },
     {
      "account": "r1.a7",
-     "debit": "661.499"
+     "debit": "661.50"
     }
    ],
    "expect_error": false
@@ -3603,7 +3603,7 @@
     },
     {
      "account": "r3.a19",
-     "debit": "602.138",
+     "debit": "602.14",
      "description": "Mulch"
     },
     {
@@ -3783,7 +3783,7 @@
     },
     {
      "account": "r2.a8",
-     "debit": "166.516"
+     "debit": "166.52"
     }
    ],
    "request_key": "9fcd7bbd-4cd3-e4d8-f9ba-2e2c1601a7e5",
@@ -4004,7 +4004,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "934.439"
+     "debit": "934.44"
     }
    ],
    "expect_error": false
@@ -4274,7 +4274,7 @@
     },
     {
      "account": "r1.a1",
-     "debit": "471.575",
+     "debit": "471.58",
      "name": "Ada Voss"
     }
    ],
@@ -4636,7 +4636,7 @@
     },
     {
      "account": "r1.a3",
-     "debit": "433.502"
+     "debit": "433.50"
     },
     {
      "account": "r1.a17",
@@ -4814,7 +4814,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "176.039",
+     "debit": "176.04",
      "name": "Hudson Valley Plants"
     }
    ],
@@ -4869,7 +4869,7 @@
     },
     {
      "account": "r1.a18",
-     "debit": "995.739",
+     "debit": "995.74",
      "description": "Mulch"
     },
     {
@@ -4906,7 +4906,7 @@
     },
     {
      "account": "r2.a6",
-     "debit": "432.387"
+     "debit": "432.39"
     },
     {
      "account": "r2.a15",
@@ -4938,7 +4938,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "368.037"
+     "debit": "368.04"
     },
     {
      "account": "r2.a5",
@@ -5003,7 +5003,7 @@
     },
     {
      "account": "r3.a17",
-     "debit": "347.944"
+     "debit": "347.94"
     },
     {
      "account": "r3.a2",
@@ -5031,7 +5031,7 @@
     },
     {
      "account": "r1.a10",
-     "debit": "242.192"
+     "debit": "242.19"
     }
    ],
    "entry_number": "00119",
@@ -5136,7 +5136,7 @@
    "lines": [
     {
      "account": "r2.a4",
-     "debit": "507.016",
+     "debit": "507.02",
      "description": "Fuel"
     },
     {
@@ -5169,7 +5169,7 @@
     },
     {
      "account": "r2.a3",
-     "debit": "121.196",
+     "debit": "121.20",
      "description": "Café supplies ☕"
     },
     {
@@ -5237,7 +5237,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "462.079"
+     "debit": "462.08"
     },
     {
      "account": "r2.a21",
@@ -5359,7 +5359,7 @@
     },
     {
      "account": "r3.a22",
-     "debit": "139.115",
+     "debit": "139.12",
      "name": "Ada Voss"
     }
    ],
@@ -5459,7 +5459,7 @@
    "lines": [
     {
      "account": "r1.a20",
-     "debit": "725.281",
+     "debit": "725.28",
      "name": "Hudson Valley Plants"
     },
     {
@@ -5468,7 +5468,7 @@
     },
     {
      "account": "r1.a16",
-     "debit": "562.523"
+     "debit": "562.52"
     },
     {
      "account": "r1.a23",
@@ -5542,7 +5542,7 @@
     },
     {
      "account": "r1.a8",
-     "debit": "985.514",
+     "debit": "985.51",
      "description": "Mulch",
      "name": "Sparrow Hardware"
     }
@@ -5668,7 +5668,7 @@
    "lines": [
     {
      "account": "r1.a19",
-     "debit": "58.400"
+     "debit": "58.40"
     },
     {
      "account": "r1.a8",
@@ -5728,7 +5728,7 @@
    "lines": [
     {
      "account": "r3.a14",
-     "debit": "278.018"
+     "debit": "278.02"
     },
     {
      "account": "r3.a23",
@@ -5798,7 +5798,7 @@
     },
     {
      "account": "r3.a20",
-     "debit": "178.534",
+     "debit": "178.53",
      "description": "Mulch"
     }
    ],
@@ -5869,7 +5869,7 @@
    "lines": [
     {
      "account": "r3.a1",
-     "debit": "590.964"
+     "debit": "590.96"
     },
     {
      "account": "r3.a2",
@@ -6024,7 +6024,7 @@
     },
     {
      "account": "r3.a22",
-     "debit": "617.798",
+     "debit": "617.80",
      "name": "Sparrow Hardware"
     }
    ],
@@ -6080,7 +6080,7 @@
    "lines": [
     {
      "account": "r3.a8",
-     "debit": "685.638",
+     "debit": "685.64",
      "description": "Mulch"
     },
     {
@@ -6246,7 +6246,7 @@
     },
     {
      "account": "r2.a18",
-     "debit": "337.219"
+     "debit": "337.22"
     },
     {
      "account": "r2.a2",
@@ -6280,7 +6280,7 @@
     },
     {
      "account": "r2.a19",
-     "debit": "490.916"
+     "debit": "490.92"
     }
    ],
    "expect_error": false
@@ -6474,7 +6474,7 @@
    "lines": [
     {
      "account": "r1.a9",
-     "debit": "102.134"
+     "debit": "102.13"
     },
     {
      "account": "r1.a4",
@@ -6638,7 +6638,7 @@
    "lines": [
     {
      "account": "r1.a10",
-     "debit": "279.168",
+     "debit": "279.17",
      "name": "Hudson Valley Plants"
     },
     {
@@ -6781,7 +6781,7 @@
     },
     {
      "account": "r3.a20",
-     "debit": "336.445",
+     "debit": "336.45",
      "description": "Rent share"
     }
    ],
@@ -6807,7 +6807,7 @@
     },
     {
      "account": "r1.a8",
-     "debit": "42.491"
+     "debit": "42.49"
     },
     {
      "account": "r1.a4",
@@ -6815,7 +6815,7 @@
     },
     {
      "account": "r1.a10",
-     "debit": "48.571"
+     "debit": "48.57"
     }
    ],
    "expect_error": false
@@ -6870,7 +6870,7 @@
     },
     {
      "account": "r3.a6",
-     "debit": "392.687"
+     "debit": "392.69"
     },
     {
      "account": "r3.a2",
@@ -6948,7 +6948,7 @@
     },
     {
      "account": "r2.a13",
-     "debit": "96.169"
+     "debit": "96.17"
     },
     {
      "account": "r2.a12",
@@ -7048,7 +7048,7 @@
     },
     {
      "account": "r3.a13",
-     "debit": "303.436"
+     "debit": "303.44"
     },
     {
      "account": "r3.a9",
@@ -7112,7 +7112,7 @@
     },
     {
      "account": "r2.a23",
-     "debit": "89.093"
+     "debit": "89.09"
     },
     {
      "account": "r2.a4",
@@ -7216,7 +7216,7 @@
     },
     {
      "account": "r2.a19",
-     "debit": "315.282"
+     "debit": "315.28"
     },
     {
      "account": "r2.a12",
@@ -7247,7 +7247,7 @@
     },
     {
      "account": "r1.a6",
-     "debit": "639.363"
+     "debit": "639.36"
     },
     {
      "account": "r1.a1",
@@ -7273,7 +7273,7 @@
    "lines": [
     {
      "account": "r2.a23",
-     "debit": "991.615"
+     "debit": "991.62"
     },
     {
      "account": "r2.a9",
@@ -7344,7 +7344,7 @@
     },
     {
      "account": "r3.a1",
-     "debit": "183.620"
+     "debit": "183.62"
     },
     {
      "account": "r3.a21",
@@ -7544,7 +7544,7 @@
    "lines": [
     {
      "account": "r2.a4",
-     "debit": "558.989"
+     "debit": "558.99"
     },
     {
      "account": "r2.a7",
@@ -7730,7 +7730,7 @@
     },
     {
      "account": "r2.a23",
-     "credit": "8139.790000000001"
+     "credit": "8139.79"
     },
     {
      "account": "r2.a23",
@@ -7756,7 +7756,7 @@
    "lines": [
     {
      "account": "r2.a18",
-     "debit": "12.726"
+     "debit": "12.73"
     },
     {
      "account": "r2.a2",
@@ -7792,7 +7792,7 @@
     },
     {
      "account": "r3.a14",
-     "debit": "621.670"
+     "debit": "621.67"
     },
     {
      "account": "r3.a5",
@@ -7933,7 +7933,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "885.486"
+     "debit": "885.49"
     },
     {
      "account": "r1.a5",
@@ -8232,7 +8232,7 @@
    "lines": [
     {
      "account": "r3.a10",
-     "debit": "93.206",
+     "debit": "93.21",
      "name": "Hudson Valley Plants"
     },
     {
@@ -8351,7 +8351,7 @@
     },
     {
      "account": "r2.a15",
-     "debit": "415.349",
+     "debit": "415.35",
      "description": "Fuel"
     },
     {
@@ -8378,7 +8378,7 @@
    "lines": [
     {
      "account": "r3.a14",
-     "debit": "127.798"
+     "debit": "127.80"
     },
     {
      "account": "r3.a3",
@@ -8483,7 +8483,7 @@
     },
     {
      "account": "r2.a6",
-     "debit": "765.912"
+     "debit": "765.91"
     }
    ],
    "actor": "stranger",
@@ -8599,7 +8599,7 @@
     },
     {
      "account": "r2.a10",
-     "debit": "970.422"
+     "debit": "970.42"
     },
     {
      "account": "r2.a4",
@@ -8653,7 +8653,7 @@
     },
     {
      "account": "r3.a2",
-     "debit": "644.291"
+     "debit": "644.29"
     },
     {
      "account": "r3.a2",
@@ -8806,7 +8806,7 @@
    "lines": [
     {
      "account": "r3.a20",
-     "debit": "354.859"
+     "debit": "354.86"
     },
     {
      "account": "r3.a4",
@@ -8819,7 +8819,7 @@
     },
     {
      "account": "r3.a7",
-     "debit": "564.284"
+     "debit": "564.28"
     }
    ],
    "request_key": "29e8e09a-2f83-50a6-d4ce-3cd5d5105340",
@@ -8840,7 +8840,7 @@
    "lines": [
     {
      "account": "r2.a12",
-     "debit": "136.196",
+     "debit": "136.20",
      "description": "Mulch"
     },
     {
@@ -8935,7 +8935,7 @@
     },
     {
      "account": "r3.a22",
-     "debit": "394.989",
+     "debit": "394.99",
      "description": "Mulch"
     }
    ],
@@ -9042,7 +9042,7 @@
     },
     {
      "account": "r2.a2",
-     "debit": "787.275"
+     "debit": "787.28"
     }
    ],
    "expect_error": false
@@ -9062,7 +9062,7 @@
    "lines": [
     {
      "account": "r3.a12",
-     "debit": "37.021"
+     "debit": "37.02"
     },
     {
      "account": "r3.a15",
@@ -9169,7 +9169,7 @@
    "lines": [
     {
      "account": "r3.a0",
-     "debit": "966.665"
+     "debit": "966.67"
     },
     {
      "account": "r3.a1",
@@ -9360,12 +9360,12 @@
    "lines": [
     {
      "account": "r2.a17",
-     "debit": "9.029",
+     "debit": "9.03",
      "name": "Sparrow Hardware"
     },
     {
      "account": "r2.a23",
-     "debit": "83.300",
+     "debit": "83.30",
      "name": "Sparrow Hardware"
     },
     {
@@ -9390,7 +9390,7 @@
    "lines": [
     {
      "account": "r3.a12",
-     "debit": "487.243"
+     "debit": "487.24"
     },
     {
      "account": "r3.a6",
@@ -9442,7 +9442,7 @@
    "lines": [
     {
      "account": "r1.a4",
-     "debit": "984.295"
+     "debit": "984.30"
     },
     {
      "account": "r1.a9",
@@ -9499,7 +9499,7 @@
    "lines": [
     {
      "account": "r1.a2",
-     "debit": "100.582"
+     "debit": "100.58"
     },
     {
      "account": "r1.a12",
@@ -9851,7 +9851,7 @@
    "lines": [
     {
      "account": "r3.a14",
-     "debit": "186.574"
+     "debit": "186.57"
     },
     {
      "account": "r3.a4",
@@ -10121,7 +10121,7 @@
     },
     {
      "account": "r3.a3",
-     "debit": "947.785",
+     "debit": "947.79",
      "description": "Refund"
     },
     {
@@ -10542,7 +10542,7 @@
     },
     {
      "account": "r2.a8",
-     "debit": "992.369"
+     "debit": "992.37"
     },
     {
      "account": "r2.a11",
@@ -10751,7 +10751,7 @@
    "lines": [
     {
      "account": "r1.a16",
-     "debit": "661.681"
+     "debit": "661.68"
     },
     {
      "account": "r1.a0",
@@ -10784,7 +10784,7 @@
    "lines": [
     {
      "account": "r1.a4",
-     "credit": "11426.960000000001"
+     "credit": "11426.96"
     },
     {
      "account": "r1.a13",
@@ -10846,7 +10846,7 @@
     },
     {
      "account": "r2.a13",
-     "debit": "591.257"
+     "debit": "591.26"
     },
     {
      "account": "r2.a5",
@@ -10940,7 +10940,7 @@
    "lines": [
     {
      "account": "r3.a5",
-     "debit": "408.888",
+     "debit": "408.89",
      "description": "Fuel"
     },
     {
@@ -11046,7 +11046,7 @@
     },
     {
      "account": "r3.a14",
-     "debit": "518.462",
+     "debit": "518.46",
      "description": "Mulch"
     },
     {
@@ -11077,7 +11077,7 @@
     },
     {
      "account": "r2.a11",
-     "debit": "33.937"
+     "debit": "33.94"
     }
    ],
    "expect_error": false
@@ -11205,7 +11205,7 @@
     },
     {
      "account": "r3.a12",
-     "debit": "294.053"
+     "debit": "294.05"
     },
     {
      "account": "r3.a6",
@@ -11230,7 +11230,7 @@
    "lines": [
     {
      "account": "r1.a0",
-     "debit": "339.555"
+     "debit": "339.56"
     },
     {
      "account": "r1.a2",
@@ -11282,7 +11282,7 @@
    "lines": [
     {
      "account": "r3.a4",
-     "debit": "843.533"
+     "debit": "843.53"
     },
     {
      "account": "r3.a16",
@@ -11370,7 +11370,7 @@
     },
     {
      "account": "r2.a3",
-     "debit": "632.033",
+     "debit": "632.03",
      "description": "Mulch"
     }
    ],
@@ -11447,7 +11447,7 @@
     },
     {
      "account": "r2.a10",
-     "debit": "959.299"
+     "debit": "959.30"
     }
    ],
    "expect_error": false
@@ -11476,7 +11476,7 @@
     },
     {
      "account": "r1.a9",
-     "debit": "108.120"
+     "debit": "108.12"
     },
     {
      "account": "r1.a19",
@@ -11581,7 +11581,7 @@
     },
     {
      "account": "r3.a3",
-     "credit": "5520.1900000000005"
+     "credit": "5520.19"
     },
     {
      "account": "r3.a13",
@@ -11665,7 +11665,7 @@
    "lines": [
     {
      "account": "r1.a13",
-     "debit": "636.630"
+     "debit": "636.63"
     },
     {
      "account": "r1.a7",
@@ -11727,7 +11727,7 @@
     },
     {
      "account": "r3.a3",
-     "debit": "554.556"
+     "debit": "554.56"
     },
     {
      "account": "r3.a23",
@@ -11749,7 +11749,7 @@
     },
     {
      "account": "r3.a1",
-     "debit": "260.331",
+     "debit": "260.33",
      "description": "Fuel"
     },
     {
@@ -11793,11 +11793,11 @@
     },
     {
      "account": "r1.a4",
-     "debit": "838.495"
+     "debit": "838.50"
     },
     {
      "account": "r1.a0",
-     "debit": "7.861"
+     "debit": "7.86"
     }
    ],
    "expect_error": false
@@ -11890,7 +11890,7 @@
     },
     {
      "account": "r1.a19",
-     "debit": "500.612"
+     "debit": "500.61"
     },
     {
      "account": "r1.a11",
@@ -12019,7 +12019,7 @@
     },
     {
      "account": "r2.a17",
-     "debit": "621.982",
+     "debit": "621.98",
      "name": "Hudson Valley Plants"
     }
    ],
@@ -12136,7 +12136,7 @@
    "lines": [
     {
      "account": "r3.a7",
-     "debit": "727.745",
+     "debit": "727.75",
      "description": "Café supplies ☕"
     },
     {
@@ -12145,7 +12145,7 @@
     },
     {
      "account": "r3.a5",
-     "debit": "172.549",
+     "debit": "172.55",
      "description": "Fuel"
     },
     {
@@ -12309,7 +12309,7 @@
     },
     {
      "account": "r3.a21",
-     "debit": "765.304"
+     "debit": "765.30"
     }
    ],
    "expect_error": false
@@ -12387,7 +12387,7 @@
     },
     {
      "account": "r2.a11",
-     "debit": "701.800",
+     "debit": "701.80",
      "name": "Hudson Valley Plants"
     },
     {
@@ -12426,7 +12426,7 @@
     },
     {
      "account": "r3.a13",
-     "debit": "434.501",
+     "debit": "434.50",
      "description": "Refund"
     }
    ],
@@ -12554,7 +12554,7 @@
     },
     {
      "account": "r2.a12",
-     "debit": "613.040"
+     "debit": "613.04"
     },
     {
      "account": "r2.a1",
@@ -12562,7 +12562,7 @@
     },
     {
      "account": "r2.a8",
-     "debit": "489.293"
+     "debit": "489.29"
     }
    ],
    "expect_error": false
@@ -12629,7 +12629,7 @@
     },
     {
      "account": "r1.a8",
-     "debit": "147.287"
+     "debit": "147.29"
     },
     {
      "account": "r1.a20",
@@ -12662,7 +12662,7 @@
    "lines": [
     {
      "account": "r1.a8",
-     "debit": "204.037"
+     "debit": "204.04"
     },
     {
      "account": "r1.a1",
@@ -12703,7 +12703,7 @@
     },
     {
      "account": "r3.a4",
-     "debit": "652.969"
+     "debit": "652.97"
     }
    ],
    "expect_error": false
@@ -12810,7 +12810,7 @@
     },
     {
      "account": "r3.a19",
-     "debit": "583.171",
+     "debit": "583.17",
      "description": "Rent share"
     },
     {
@@ -12819,7 +12819,7 @@
     },
     {
      "account": "r3.a16",
-     "debit": "685.792",
+     "debit": "685.79",
      "name": "Ada Voss"
     }
    ],
@@ -12845,7 +12845,7 @@
     },
     {
      "account": "r1.a1",
-     "debit": "633.807",
+     "debit": "633.81",
      "description": "Rent share"
     },
     {
@@ -12908,7 +12908,7 @@
     },
     {
      "account": "r3.a20",
-     "debit": "434.219"
+     "debit": "434.22"
     }
    ],
    "expect_error": false
@@ -13148,7 +13148,7 @@
    "lines": [
     {
      "account": "r3.a7",
-     "debit": "46.036",
+     "debit": "46.04",
      "name": "Ada Voss"
     },
     {
@@ -13179,7 +13179,7 @@
     },
     {
      "account": "r3.a21",
-     "debit": "912.329"
+     "debit": "912.33"
     }
    ],
    "expect_error": false
@@ -13308,7 +13308,7 @@
    "lines": [
     {
      "account": "r1.a7",
-     "debit": "592.058"
+     "debit": "592.06"
     },
     {
      "account": "r1.a2",
@@ -13374,7 +13374,7 @@
     },
     {
      "account": "r1.a0",
-     "debit": "559.953"
+     "debit": "559.95"
     },
     {
      "account": "r1.a1",
@@ -13622,7 +13622,7 @@
    "lines": [
     {
      "account": "r3.a9",
-     "debit": "449.081",
+     "debit": "449.08",
      "description": "Mulch",
      "name": "Sparrow Hardware"
     },
@@ -13673,7 +13673,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "930.633"
+     "debit": "930.63"
     }
    ],
    "expect_error": false
@@ -13715,12 +13715,12 @@
    "lines": [
     {
      "account": "r2.a12",
-     "debit": "369.670",
+     "debit": "369.67",
      "description": "Mulch"
     },
     {
      "account": "r2.a3",
-     "debit": "395.065"
+     "debit": "395.07"
     },
     {
      "account": "r2.a10",
@@ -13909,7 +13909,7 @@
     },
     {
      "account": "r3.a13",
-     "debit": "807.904"
+     "debit": "807.90"
     }
    ],
    "adjusting": true,
@@ -13960,7 +13960,7 @@
    "lines": [
     {
      "account": "r3.a14",
-     "debit": "742.583"
+     "debit": "742.58"
     },
     {
      "account": "r3.a13",
@@ -14031,7 +14031,7 @@
     },
     {
      "account": "r2.a9",
-     "debit": "808.272"
+     "debit": "808.27"
     }
    ],
    "adjusting": true,
@@ -14374,7 +14374,7 @@
    "lines": [
     {
      "account": "r3.a13",
-     "debit": "834.953"
+     "debit": "834.95"
     },
     {
      "account": "r3.a14",
@@ -14425,7 +14425,7 @@
     },
     {
      "account": "r3.a17",
-     "debit": "277.055"
+     "debit": "277.06"
     }
    ],
    "expect_error": false
@@ -14689,7 +14689,7 @@
    "lines": [
     {
      "account": "r1.a6",
-     "credit": "6620.150000000001"
+     "credit": "6620.15"
     },
     {
      "account": "r1.a16",
@@ -14927,7 +14927,7 @@
     },
     {
      "account": "r1.a0",
-     "debit": "792.799"
+     "debit": "792.80"
     }
    ],
    "expect_error": false
@@ -15389,7 +15389,7 @@
     },
     {
      "account": "r2.a18",
-     "debit": "969.700",
+     "debit": "969.70",
      "description": "Fuel"
     },
     {
@@ -15416,7 +15416,7 @@
     },
     {
      "account": "r2.a5",
-     "debit": "376.808",
+     "debit": "376.81",
      "description": "Refund"
     },
     {
@@ -15626,7 +15626,7 @@
     },
     {
      "account": "r1.a11",
-     "debit": "484.358"
+     "debit": "484.36"
     },
     {
      "account": "r1.a6",
@@ -15785,7 +15785,7 @@
     },
     {
      "account": "r3.a12",
-     "debit": "428.360"
+     "debit": "428.36"
     }
    ],
    "expect_error": false
@@ -15900,7 +15900,7 @@
    "lines": [
     {
      "account": "r2.a16",
-     "debit": "323.847",
+     "debit": "323.85",
      "description": "Mulch"
     },
     {
@@ -16028,7 +16028,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "15.492"
+     "debit": "15.49"
     },
     {
      "account": "r3.a20",
@@ -16133,7 +16133,7 @@
    "lines": [
     {
      "account": "r1.a13",
-     "debit": "952.541"
+     "debit": "952.54"
     },
     {
      "account": "r1.a16",
@@ -16161,7 +16161,7 @@
    "lines": [
     {
      "account": "r3.a15",
-     "debit": "667.420"
+     "debit": "667.42"
     },
     {
      "account": "r3.a15",
@@ -16264,7 +16264,7 @@
     },
     {
      "account": "r2.a23",
-     "debit": "290.343"
+     "debit": "290.34"
     },
     {
      "account": "r2.a8",
@@ -16296,7 +16296,7 @@
     },
     {
      "account": "r1.a1",
-     "debit": "594.658",
+     "debit": "594.66",
      "description": "Rent share",
      "name": "Sparrow Hardware"
     },
@@ -16352,7 +16352,7 @@
     },
     {
      "account": "r1.a15",
-     "debit": "784.698"
+     "debit": "784.70"
     }
    ],
    "expect_error": false
@@ -16372,7 +16372,7 @@
    "lines": [
     {
      "account": "r1.a17",
-     "debit": "40.986"
+     "debit": "40.99"
     },
     {
      "account": "r1.a5",
@@ -16404,7 +16404,7 @@
     },
     {
      "account": "r1.a4",
-     "debit": "113.854"
+     "debit": "113.85"
     },
     {
      "account": "r1.a4",
@@ -16444,7 +16444,7 @@
    "lines": [
     {
      "account": "r1.a5",
-     "debit": "590.840"
+     "debit": "590.84"
     },
     {
      "account": "r1.a5",
@@ -16525,7 +16525,7 @@
    "lines": [
     {
      "account": "r3.a21",
-     "debit": "450.613",
+     "debit": "450.61",
      "description": "Fuel"
     },
     {
@@ -16962,7 +16962,7 @@
    "lines": [
     {
      "account": "r1.a19",
-     "debit": "295.917"
+     "debit": "295.92"
     },
     {
      "account": "r1.a15",
@@ -17032,7 +17032,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "227.598"
+     "debit": "227.60"
     },
     {
      "account": "r2.a21",
@@ -17139,7 +17139,7 @@
    "lines": [
     {
      "account": "r2.a3",
-     "debit": "297.595"
+     "debit": "297.60"
     },
     {
      "account": "r2.a15",
@@ -17147,7 +17147,7 @@
     },
     {
      "account": "r2.a12",
-     "debit": "540.893"
+     "debit": "540.89"
     },
     {
      "account": "r2.a21",
@@ -17443,7 +17443,7 @@
     },
     {
      "account": "r2.a10",
-     "debit": "165.434",
+     "debit": "165.43",
      "description": "Mulch"
     }
    ],
@@ -17647,7 +17647,7 @@
     },
     {
      "account": "r1.a19",
-     "debit": "999.148",
+     "debit": "999.15",
      "description": "Rent share"
     }
    ],
@@ -17774,7 +17774,7 @@
     },
     {
      "account": "r3.a10",
-     "debit": "78.819"
+     "debit": "78.82"
     },
     {
      "account": "r3.a16",
@@ -17802,7 +17802,7 @@
     },
     {
      "account": "r2.a0",
-     "debit": "721.183"
+     "debit": "721.18"
     },
     {
      "account": "r2.a2",
@@ -17864,7 +17864,7 @@
    "lines": [
     {
      "account": "r3.a17",
-     "debit": "784.639",
+     "debit": "784.64",
      "description": "Refund"
     },
     {
@@ -17994,7 +17994,7 @@
     },
     {
      "account": "r3.a9",
-     "debit": "450.909",
+     "debit": "450.91",
      "description": "Rent share"
     },
     {
@@ -18129,7 +18129,7 @@
     },
     {
      "account": "r2.a0",
-     "debit": "86.784"
+     "debit": "86.78"
     }
    ],
    "expect_error": false
@@ -18147,7 +18147,7 @@
     },
     {
      "account": "r1.a10",
-     "debit": "132.962"
+     "debit": "132.96"
     },
     {
      "account": "r1.a21",
@@ -18343,7 +18343,7 @@
     },
     {
      "account": "r2.a13",
-     "debit": "930.674",
+     "debit": "930.67",
      "description": "Refund"
     },
     {
@@ -18362,7 +18362,7 @@
    "lines": [
     {
      "account": "r2.a21",
-     "debit": "703.378"
+     "debit": "703.38"
     },
     {
      "account": "r2.a23",
@@ -18570,7 +18570,7 @@
     },
     {
      "account": "r2.a13",
-     "debit": "731.018",
+     "debit": "731.02",
      "description": "Café supplies ☕"
     }
    ],
@@ -18916,7 +18916,7 @@
    "lines": [
     {
      "account": "r1.a7",
-     "debit": "834.984"
+     "debit": "834.98"
     },
     {
      "account": "r1.a7",
@@ -18958,7 +18958,7 @@
     },
     {
      "account": "r2.a19",
-     "debit": "898.829"
+     "debit": "898.83"
     },
     {
      "account": "r2.a7",
@@ -19305,7 +19305,7 @@
    "lines": [
     {
      "account": "r3.a20",
-     "debit": "799.957"
+     "debit": "799.96"
     },
     {
      "account": "r3.a11",
@@ -19337,7 +19337,7 @@
    "lines": [
     {
      "account": "r3.a4",
-     "debit": "332.999"
+     "debit": "333.00"
     },
     {
      "account": "r3.a1",
@@ -19408,7 +19408,7 @@
     },
     {
      "account": "r3.a23",
-     "debit": "203.173"
+     "debit": "203.17"
     }
    ],
    "expect_error": false
@@ -19474,7 +19474,7 @@
    "lines": [
     {
      "account": "r3.a10",
-     "debit": "964.253"
+     "debit": "964.25"
     },
     {
      "account": "r3.a11",
@@ -19574,7 +19574,7 @@
     },
     {
      "account": "r2.a19",
-     "debit": "511.481"
+     "debit": "511.48"
     }
    ],
    "expect_error": false
@@ -19904,7 +19904,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "189.382",
+     "debit": "189.38",
      "description": "Rent share"
     }
    ],
@@ -19920,7 +19920,7 @@
    "lines": [
     {
      "account": "r3.a2",
-     "debit": "460.640"
+     "debit": "460.64"
     },
     {
      "account": "r3.a12",
@@ -20169,7 +20169,7 @@
    "lines": [
     {
      "account": "r2.a17",
-     "debit": "242.664"
+     "debit": "242.66"
     },
     {
      "account": "r2.a10",
@@ -20182,7 +20182,7 @@
     },
     {
      "account": "r2.a4",
-     "debit": "253.401"
+     "debit": "253.40"
     },
     {
      "account": "r2.a5",
@@ -20234,7 +20234,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "89.712"
+     "debit": "89.71"
     },
     {
      "account": "r1.a4",
@@ -20579,7 +20579,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "521.668"
+     "debit": "521.67"
     },
     {
      "account": "r3.a1",
@@ -20607,7 +20607,7 @@
    "lines": [
     {
      "account": "r1.a2",
-     "debit": "694.945"
+     "debit": "694.95"
     },
     {
      "account": "r1.a13",
@@ -20727,7 +20727,7 @@
     },
     {
      "account": "r3.a14",
-     "debit": "359.187"
+     "debit": "359.19"
     },
     {
      "account": "r3.a7",
@@ -20788,7 +20788,7 @@
     },
     {
      "account": "r1.a23",
-     "debit": "430.601",
+     "debit": "430.60",
      "description": "Refund"
     },
     {
@@ -20798,7 +20798,7 @@
     },
     {
      "account": "r1.a13",
-     "debit": "455.426"
+     "debit": "455.43"
     },
     {
      "account": "r1.a8",
@@ -20822,7 +20822,7 @@
    "lines": [
     {
      "account": "r2.a16",
-     "debit": "231.808"
+     "debit": "231.81"
     },
     {
      "account": "r2.a9",
@@ -20876,7 +20876,7 @@
     },
     {
      "account": "r3.a12",
-     "debit": "51.235",
+     "debit": "51.24",
      "description": "Rent share"
     },
     {
@@ -21015,7 +21015,7 @@
     },
     {
      "account": "r2.a13",
-     "debit": "976.891"
+     "debit": "976.89"
     },
     {
      "account": "r2.a13",
@@ -21136,7 +21136,7 @@
     },
     {
      "account": "r1.a22",
-     "debit": "525.716"
+     "debit": "525.72"
     }
    ],
    "expect_error": false
@@ -21244,7 +21244,7 @@
     },
     {
      "account": "r3.a23",
-     "debit": "551.865"
+     "debit": "551.87"
     }
    ],
    "expect_error": false
@@ -21341,7 +21341,7 @@
    "lines": [
     {
      "account": "r2.a20",
-     "debit": "91.845"
+     "debit": "91.85"
     },
     {
      "account": "r2.a23",
@@ -21538,7 +21538,7 @@
    "lines": [
     {
      "account": "r1.a17",
-     "debit": "222.785",
+     "debit": "222.79",
      "description": "Refund"
     },
     {
@@ -21677,7 +21677,7 @@
     },
     {
      "account": "r3.a4",
-     "debit": "940.711"
+     "debit": "940.71"
     },
     {
      "account": "r3.a23",
@@ -21706,7 +21706,7 @@
     },
     {
      "account": "r1.a0",
-     "debit": "892.080"
+     "debit": "892.08"
     },
     {
      "account": "r1.a13",
@@ -22256,7 +22256,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "665.171"
+     "debit": "665.17"
     },
     {
      "account": "r2.a23",
@@ -22377,7 +22377,7 @@
     },
     {
      "account": "r1.a1",
-     "debit": "719.581",
+     "debit": "719.58",
      "description": "Fuel"
     },
     {
@@ -22422,7 +22422,7 @@
     },
     {
      "account": "r3.a5",
-     "debit": "84.840"
+     "debit": "84.84"
     }
    ],
    "expect_error": false
@@ -22519,7 +22519,7 @@
    "lines": [
     {
      "account": "r2.a14",
-     "debit": "659.834"
+     "debit": "659.83"
     },
     {
      "account": "r2.a3",
@@ -22618,7 +22618,7 @@
    "lines": [
     {
      "account": "r1.a14",
-     "debit": "653.513"
+     "debit": "653.51"
     },
     {
      "account": "r1.a22",
@@ -22663,7 +22663,7 @@
     },
     {
      "account": "r1.a9",
-     "debit": "476.722",
+     "debit": "476.72",
      "description": "Fuel"
     }
    ],
@@ -22781,7 +22781,7 @@
     },
     {
      "account": "r3.a8",
-     "debit": "326.943"
+     "debit": "326.94"
     },
     {
      "account": "r3.a13",
@@ -22816,7 +22816,7 @@
     },
     {
      "account": "r2.a16",
-     "debit": "687.268"
+     "debit": "687.27"
     },
     {
      "account": "r2.a2",
@@ -22867,7 +22867,7 @@
     },
     {
      "account": "r3.a17",
-     "debit": "914.767"
+     "debit": "914.77"
     },
     {
      "account": "r3.a15",
@@ -22918,7 +22918,7 @@
     },
     {
      "account": "r3.a5",
-     "debit": "887.114"
+     "debit": "887.11"
     },
     {
      "account": "r3.a19",
@@ -22956,7 +22956,7 @@
     },
     {
      "account": "r2.a9",
-     "debit": "238.414"
+     "debit": "238.41"
     },
     {
      "account": "r2.a0",
@@ -23032,7 +23032,7 @@
     },
     {
      "account": "r3.a23",
-     "debit": "468.413"
+     "debit": "468.41"
     },
     {
      "account": "r3.a6",
@@ -23095,7 +23095,7 @@
     },
     {
      "account": "r3.a20",
-     "debit": "553.027"
+     "debit": "553.03"
     },
     {
      "account": "r3.a9",
@@ -23123,7 +23123,7 @@
     },
     {
      "account": "r1.a15",
-     "debit": "805.324"
+     "debit": "805.32"
     },
     {
      "account": "r1.a6",
@@ -23234,7 +23234,7 @@
     },
     {
      "account": "r2.a23",
-     "debit": "763.985",
+     "debit": "763.99",
      "description": "Café supplies ☕"
     }
    ],
@@ -23285,7 +23285,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "19.444"
+     "debit": "19.44"
     }
    ],
    "expect_error": false
@@ -23367,7 +23367,7 @@
     },
     {
      "account": "r3.a22",
-     "debit": "62.483",
+     "debit": "62.48",
      "description": "Mulch"
     },
     {
@@ -23555,7 +23555,7 @@
    "lines": [
     {
      "account": "r2.a2",
-     "credit": "450.29999999999995"
+     "credit": "450.30"
     },
     {
      "account": "r2.a11",
@@ -23582,7 +23582,7 @@
    "lines": [
     {
      "account": "r1.a22",
-     "debit": "207.026"
+     "debit": "207.03"
     },
     {
      "account": "r1.a6",
@@ -23759,7 +23759,7 @@
     },
     {
      "account": "r1.a22",
-     "debit": "729.262",
+     "debit": "729.26",
      "description": "Refund"
     }
    ],
@@ -24015,7 +24015,7 @@
     },
     {
      "account": "r2.a15",
-     "debit": "286.967"
+     "debit": "286.97"
     },
     {
      "account": "r2.a12",
@@ -24101,7 +24101,7 @@
    "lines": [
     {
      "account": "r3.a3",
-     "debit": "867.357"
+     "debit": "867.36"
     },
     {
      "account": "r3.a1",
@@ -24137,7 +24137,7 @@
    "lines": [
     {
      "account": "r1.a8",
-     "debit": "32.006"
+     "debit": "32.01"
     },
     {
      "account": "r1.a10",
@@ -24145,7 +24145,7 @@
     },
     {
      "account": "r1.a14",
-     "debit": "752.636"
+     "debit": "752.64"
     },
     {
      "account": "r1.a1",
@@ -24286,7 +24286,7 @@
     },
     {
      "account": "r1.a1",
-     "debit": "686.400"
+     "debit": "686.40"
     },
     {
      "account": "r1.a8",
@@ -24849,7 +24849,7 @@
     },
     {
      "account": "r1.a15",
-     "debit": "737.471",
+     "debit": "737.47",
      "description": "Mulch"
     },
     {
@@ -25240,7 +25240,7 @@
     },
     {
      "account": "r2.a3",
-     "debit": "77.333"
+     "debit": "77.33"
     }
    ],
    "expect_error": false
@@ -25305,7 +25305,7 @@
     },
     {
      "account": "r2.a2",
-     "debit": "596.266",
+     "debit": "596.27",
      "name": "Sparrow Hardware"
     },
     {
@@ -25335,7 +25335,7 @@
     },
     {
      "account": "r3.a16",
-     "debit": "874.217"
+     "debit": "874.22"
     },
     {
      "account": "r3.a17",
@@ -25364,7 +25364,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "517.897"
+     "debit": "517.90"
     },
     {
      "account": "r1.a16",
@@ -25434,7 +25434,7 @@
     },
     {
      "account": "r3.a10",
-     "debit": "712.893"
+     "debit": "712.89"
     }
    ],
    "request_key": "ec18bc4e-51d0-6c01-e15f-31b02d01062f",
@@ -25488,7 +25488,7 @@
     },
     {
      "account": "r1.a6",
-     "debit": "929.017",
+     "debit": "929.02",
      "description": "Refund"
     },
     {
@@ -25549,7 +25549,7 @@
     },
     {
      "account": "r1.a13",
-     "debit": "147.129"
+     "debit": "147.13"
     },
     {
      "account": "r1.a0",
@@ -25644,7 +25644,7 @@
     },
     {
      "account": "r1.a7",
-     "debit": "929.408"
+     "debit": "929.41"
     },
     {
      "account": "r1.a17",
@@ -25827,7 +25827,7 @@
     },
     {
      "account": "r1.a16",
-     "debit": "82.966"
+     "debit": "82.97"
     }
    ],
    "expect_error": false
@@ -25914,7 +25914,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "507.570"
+     "debit": "507.57"
     },
     {
      "account": "r3.a8",
@@ -26093,7 +26093,7 @@
     },
     {
      "account": "r1.a22",
-     "debit": "268.900",
+     "debit": "268.90",
      "description": "Rent share"
     }
    ],
@@ -26178,12 +26178,12 @@
     },
     {
      "account": "r1.a2",
-     "debit": "3.892",
+     "debit": "3.89",
      "description": "Mulch"
     },
     {
      "account": "r1.a14",
-     "debit": "176.835"
+     "debit": "176.84"
     },
     {
      "account": "r1.a9",
@@ -26494,7 +26494,7 @@
     },
     {
      "account": "r2.a18",
-     "debit": "190.685",
+     "debit": "190.69",
      "description": "Refund"
     },
     {
@@ -26816,7 +26816,7 @@
     },
     {
      "account": "r3.a20",
-     "debit": "953.616"
+     "debit": "953.62"
     }
    ],
    "expect_error": false
@@ -27015,7 +27015,7 @@
     },
     {
      "account": "r2.a5",
-     "debit": "266.393"
+     "debit": "266.39"
     },
     {
      "account": "r2.a13",
@@ -27076,7 +27076,7 @@
    "lines": [
     {
      "account": "r2.a4",
-     "debit": "326.911"
+     "debit": "326.91"
     },
     {
      "account": "r2.a16",
@@ -27084,7 +27084,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "746.801",
+     "debit": "746.80",
      "name": "Hudson Valley Plants"
     }
    ],
@@ -27105,7 +27105,7 @@
    "lines": [
     {
      "account": "r2.a10",
-     "debit": "799.563"
+     "debit": "799.56"
     },
     {
      "account": "r2.a11",
@@ -27139,7 +27139,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "592.009"
+     "debit": "592.01"
     }
    ],
    "expect_error": false
@@ -27236,7 +27236,7 @@
     },
     {
      "account": "r2.a15",
-     "debit": "224.312"
+     "debit": "224.31"
     }
    ],
    "expect_error": false
@@ -27488,7 +27488,7 @@
     },
     {
      "account": "r1.a21",
-     "debit": "710.320"
+     "debit": "710.32"
     }
    ],
    "expect_error": false
@@ -27621,7 +27621,7 @@
     },
     {
      "account": "r2.a20",
-     "debit": "362.896"
+     "debit": "362.90"
     },
     {
      "account": "r2.a1",
@@ -27718,7 +27718,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "282.353"
+     "debit": "282.35"
     }
    ],
    "expect_error": false
@@ -27764,7 +27764,7 @@
    "lines": [
     {
      "account": "r2.a5",
-     "debit": "241.166"
+     "debit": "241.17"
     },
     {
      "account": "r2.a4",
@@ -27772,11 +27772,11 @@
     },
     {
      "account": "r2.a17",
-     "debit": "45.009"
+     "debit": "45.01"
     },
     {
      "account": "r2.a19",
-     "debit": "152.473"
+     "debit": "152.47"
     }
    ],
    "expect_error": false
@@ -27890,7 +27890,7 @@
    "lines": [
     {
      "account": "r1.a14",
-     "debit": "497.490"
+     "debit": "497.49"
     },
     {
      "account": "r1.a16",
@@ -28018,7 +28018,7 @@
     },
     {
      "account": "r2.a12",
-     "debit": "872.271"
+     "debit": "872.27"
     },
     {
      "account": "r2.a23",
@@ -28085,7 +28085,7 @@
     },
     {
      "account": "r3.a10",
-     "debit": "118.793"
+     "debit": "118.79"
     },
     {
      "account": "r3.a2",
@@ -28365,7 +28365,7 @@
     },
     {
      "account": "r3.a5",
-     "debit": "188.192"
+     "debit": "188.19"
     }
    ],
    "expect_error": false
@@ -28572,7 +28572,7 @@
     },
     {
      "account": "r1.a10",
-     "debit": "511.674"
+     "debit": "511.67"
     },
     {
      "account": "r1.a13",
@@ -28644,7 +28644,7 @@
     },
     {
      "account": "r3.a14",
-     "debit": "756.986",
+     "debit": "756.99",
      "description": "Fuel"
     },
     {
@@ -28669,7 +28669,7 @@
    "lines": [
     {
      "account": "r3.a13",
-     "debit": "350.698"
+     "debit": "350.70"
     },
     {
      "account": "r3.a15",
@@ -28820,7 +28820,7 @@
     },
     {
      "account": "r2.a16",
-     "debit": "74.626"
+     "debit": "74.63"
     },
     {
      "account": "r2.a12",
@@ -29052,7 +29052,7 @@
     },
     {
      "account": "r1.a4",
-     "debit": "315.351"
+     "debit": "315.35"
     }
    ],
    "expect_error": false
@@ -29072,7 +29072,7 @@
    "lines": [
     {
      "account": "r3.a7",
-     "debit": "500.058"
+     "debit": "500.06"
     },
     {
      "account": "r3.a14",
@@ -29114,7 +29114,7 @@
     },
     {
      "account": "r3.a1",
-     "debit": "953.421"
+     "debit": "953.42"
     },
     {
      "account": "r3.a16",
@@ -29176,7 +29176,7 @@
     },
     {
      "account": "r2.a5",
-     "debit": "710.549",
+     "debit": "710.55",
      "description": "Mulch"
     },
     {
@@ -29185,7 +29185,7 @@
     },
     {
      "account": "r2.a0",
-     "debit": "259.202"
+     "debit": "259.20"
     }
    ],
    "expect_error": false
@@ -29359,7 +29359,7 @@
     },
     {
      "account": "r1.a4",
-     "debit": "270.790"
+     "debit": "270.79"
     }
    ],
    "expect_error": false
@@ -29425,7 +29425,7 @@
     },
     {
      "account": "r2.a22",
-     "debit": "99.357"
+     "debit": "99.36"
     },
     {
      "account": "r2.a11",
@@ -29515,7 +29515,7 @@
    "lines": [
     {
      "account": "r3.a15",
-     "debit": "77.226",
+     "debit": "77.23",
      "name": "Sparrow Hardware"
     },
     {
@@ -29613,7 +29613,7 @@
     },
     {
      "account": "r3.a23",
-     "debit": "141.175"
+     "debit": "141.18"
     },
     {
      "account": "r3.a6",
@@ -29762,7 +29762,7 @@
     },
     {
      "account": "r2.a18",
-     "credit": "7552.070000000001"
+     "credit": "7552.07"
     },
     {
      "account": "r2.a9",
@@ -29972,7 +29972,7 @@
     },
     {
      "account": "r2.a10",
-     "debit": "893.373"
+     "debit": "893.37"
     },
     {
      "account": "r2.a20",
@@ -30006,7 +30006,7 @@
     },
     {
      "account": "r2.a2",
-     "debit": "588.352"
+     "debit": "588.35"
     },
     {
      "account": "r2.a17",
@@ -30058,7 +30058,7 @@
     },
     {
      "account": "r2.a8",
-     "debit": "671.531",
+     "debit": "671.53",
      "name": "Sparrow Hardware"
     },
     {
@@ -30267,7 +30267,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "446.403",
+     "debit": "446.40",
      "description": "Rent share"
     }
    ],
@@ -30640,7 +30640,7 @@
     },
     {
      "account": "r1.a23",
-     "debit": "910.745"
+     "debit": "910.75"
     }
    ],
    "request_key": "d1a6c89e-efe1-362d-c3f8-ae0e0ca60b92",
@@ -30655,7 +30655,7 @@
    "lines": [
     {
      "account": "r2.a8",
-     "debit": "818.447"
+     "debit": "818.45"
     },
     {
      "account": "r2.a22",
@@ -30766,7 +30766,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "384.337"
+     "debit": "384.34"
     }
    ],
    "expect_error": false
@@ -30795,7 +30795,7 @@
     },
     {
      "account": "r1.a13",
-     "debit": "162.894",
+     "debit": "162.89",
      "description": "Refund"
     },
     {
@@ -30998,7 +30998,7 @@
     },
     {
      "account": "r3.a13",
-     "debit": "302.164"
+     "debit": "302.16"
     }
    ],
    "expect_error": false
@@ -31157,7 +31157,7 @@
     },
     {
      "account": "r3.a0",
-     "debit": "317.280"
+     "debit": "317.28"
     },
     {
      "account": "r3.a15",
@@ -31267,7 +31267,7 @@
     },
     {
      "account": "r3.a0",
-     "debit": "798.480",
+     "debit": "798.48",
      "description": "Fuel"
     },
     {
@@ -31276,7 +31276,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "237.653"
+     "debit": "237.65"
     }
    ],
    "expect_error": false
@@ -31304,7 +31304,7 @@
     },
     {
      "account": "r3.a2",
-     "debit": "532.407",
+     "debit": "532.41",
      "name": "Hudson Valley Plants"
     }
    ],
@@ -31353,7 +31353,7 @@
    "lines": [
     {
      "account": "r1.a0",
-     "debit": "848.360"
+     "debit": "848.36"
     },
     {
      "account": "r1.a0",
@@ -31435,7 +31435,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "531.115"
+     "debit": "531.12"
     },
     {
      "account": "r3.a2",
@@ -31607,7 +31607,7 @@
     },
     {
      "account": "r1.a21",
-     "debit": "659.190"
+     "debit": "659.19"
     },
     {
      "account": "r1.a10",
@@ -31758,7 +31758,7 @@
     },
     {
      "account": "r1.a8",
-     "debit": "97.552"
+     "debit": "97.55"
     },
     {
      "account": "r1.a15",
@@ -31865,7 +31865,7 @@
    "lines": [
     {
      "account": "r2.a0",
-     "debit": "632.030"
+     "debit": "632.03"
     },
     {
      "account": "r2.a10",
@@ -31964,7 +31964,7 @@
     },
     {
      "account": "r2.a8",
-     "debit": "341.395"
+     "debit": "341.40"
     },
     {
      "account": "r2.a2",
@@ -32073,7 +32073,7 @@
     },
     {
      "account": "r2.a21",
-     "debit": "625.522"
+     "debit": "625.52"
     }
    ],
    "expect_error": false
@@ -32093,7 +32093,7 @@
    "lines": [
     {
      "account": "r3.a23",
-     "debit": "697.251",
+     "debit": "697.25",
      "name": "Sparrow Hardware"
     },
     {
@@ -32106,7 +32106,7 @@
     },
     {
      "account": "r3.a0",
-     "debit": "691.810",
+     "debit": "691.81",
      "name": "Ada Voss"
     },
     {
@@ -32180,7 +32180,7 @@
     },
     {
      "account": "r1.a16",
-     "debit": "555.180"
+     "debit": "555.18"
     }
    ],
    "expect_error": false
@@ -32602,7 +32602,7 @@
     },
     {
      "account": "r1.a1",
-     "debit": "290.904",
+     "debit": "290.90",
      "description": "Rent share"
     }
    ],
@@ -32749,7 +32749,7 @@
     },
     {
      "account": "r1.a20",
-     "debit": "699.575",
+     "debit": "699.58",
      "description": "Mulch"
     },
     {
@@ -32855,7 +32855,7 @@
     },
     {
      "account": "r1.a16",
-     "debit": "793.817"
+     "debit": "793.82"
     },
     {
      "account": "r1.a23",
@@ -32948,7 +32948,7 @@
     },
     {
      "account": "r2.a22",
-     "debit": "73.469"
+     "debit": "73.47"
     },
     {
      "account": "r2.a3",
@@ -32991,7 +32991,7 @@
     },
     {
      "account": "r1.a5",
-     "debit": "71.652"
+     "debit": "71.65"
     }
    ],
    "entry_number": "Q4-904",
@@ -33010,7 +33010,7 @@
     },
     {
      "account": "r1.a12",
-     "debit": "105.494"
+     "debit": "105.49"
     },
     {
      "account": "r1.a9",
@@ -33105,11 +33105,11 @@
     },
     {
      "account": "r3.a11",
-     "debit": "90.105"
+     "debit": "90.11"
     },
     {
      "account": "r3.a14",
-     "debit": "933.496",
+     "debit": "933.50",
      "description": "Fuel"
     },
     {
@@ -33214,7 +33214,7 @@
     },
     {
      "account": "r3.a12",
-     "debit": "108.296"
+     "debit": "108.30"
     }
    ],
    "expect_error": false
@@ -33228,7 +33228,7 @@
    "lines": [
     {
      "account": "r3.a5",
-     "debit": "125.658"
+     "debit": "125.66"
     },
     {
      "account": "r3.a9",
@@ -33352,7 +33352,7 @@
     },
     {
      "account": "r2.a3",
-     "debit": "214.343",
+     "debit": "214.34",
      "description": "Mulch"
     },
     {
@@ -33741,7 +33741,7 @@
    "lines": [
     {
      "account": "r2.a8",
-     "debit": "827.068"
+     "debit": "827.07"
     },
     {
      "account": "r2.a7",
@@ -33813,7 +33813,7 @@
     },
     {
      "account": "r2.a9",
-     "debit": "994.231",
+     "debit": "994.23",
      "name": "Sparrow Hardware"
     },
     {
@@ -33850,7 +33850,7 @@
     },
     {
      "account": "r3.a20",
-     "debit": "978.555"
+     "debit": "978.56"
     }
    ],
    "expect_error": false
@@ -33903,7 +33903,7 @@
     },
     {
      "account": "r2.a8",
-     "debit": "276.204"
+     "debit": "276.20"
     },
     {
      "account": "r2.a14",
@@ -33935,7 +33935,7 @@
     },
     {
      "account": "r1.a4",
-     "debit": "103.311"
+     "debit": "103.31"
     }
    ],
    "expect_error": false
@@ -34164,7 +34164,7 @@
    "lines": [
     {
      "account": "r3.a9",
-     "debit": "225.772"
+     "debit": "225.77"
     },
     {
      "account": "r3.a23",
@@ -34229,7 +34229,7 @@
     },
     {
      "account": "r2.a5",
-     "debit": "679.434"
+     "debit": "679.43"
     },
     {
      "account": "r2.a8",
@@ -34388,7 +34388,7 @@
     },
     {
      "account": "r2.a15",
-     "debit": "199.070",
+     "debit": "199.07",
      "description": "Rent share"
     },
     {
@@ -34563,7 +34563,7 @@
     },
     {
      "account": "r3.a11",
-     "debit": "861.714"
+     "debit": "861.71"
     }
    ],
    "expect_error": false
@@ -34665,7 +34665,7 @@
     },
     {
      "account": "r3.a12",
-     "debit": "794.389"
+     "debit": "794.39"
     },
     {
      "account": "r3.a16",
@@ -34735,7 +34735,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "570.929"
+     "debit": "570.93"
     },
     {
      "account": "r1.a6",
@@ -34876,7 +34876,7 @@
    "lines": [
     {
      "account": "r2.a21",
-     "debit": "493.256"
+     "debit": "493.26"
     },
     {
      "account": "r2.a17",
@@ -35011,11 +35011,11 @@
     },
     {
      "account": "r3.a20",
-     "debit": "835.489"
+     "debit": "835.49"
     },
     {
      "account": "r3.a8",
-     "debit": "284.915"
+     "debit": "284.92"
     }
    ],
    "expect_error": false
@@ -35068,7 +35068,7 @@
     },
     {
      "account": "r2.a2",
-     "debit": "998.580"
+     "debit": "998.58"
     },
     {
      "account": "r2.a19",
@@ -35154,11 +35154,11 @@
     },
     {
      "account": "r1.a5",
-     "debit": "417.396"
+     "debit": "417.40"
     },
     {
      "account": "r1.a15",
-     "debit": "844.943",
+     "debit": "844.94",
      "name": "Hudson Valley Plants"
     },
     {
@@ -35205,7 +35205,7 @@
     },
     {
      "account": "r2.a9",
-     "debit": "550.681"
+     "debit": "550.68"
     }
    ],
    "expect_error": false
@@ -35251,7 +35251,7 @@
    "lines": [
     {
      "account": "r2.a8",
-     "debit": "897.320"
+     "debit": "897.32"
     },
     {
      "account": "r2.a8",
@@ -35291,7 +35291,7 @@
     },
     {
      "account": "r2.a20",
-     "debit": "887.368"
+     "debit": "887.37"
     }
    ],
    "expect_error": false
@@ -35319,7 +35319,7 @@
     },
     {
      "account": "r2.a7",
-     "debit": "63.727",
+     "debit": "63.73",
      "description": "Rent share"
     },
     {
@@ -35354,7 +35354,7 @@
     },
     {
      "account": "r3.a7",
-     "debit": "365.959"
+     "debit": "365.96"
     },
     {
      "account": "r3.a12",
@@ -35412,7 +35412,7 @@
     },
     {
      "account": "r3.a15",
-     "debit": "166.163",
+     "debit": "166.16",
      "description": "Rent share"
     }
    ],
@@ -35686,7 +35686,7 @@
     },
     {
      "account": "r1.a23",
-     "debit": "315.425"
+     "debit": "315.43"
     }
    ],
    "expect_error": false
@@ -35715,7 +35715,7 @@
    "lines": [
     {
      "account": "r1.a7",
-     "debit": "294.486"
+     "debit": "294.49"
     },
     {
      "account": "r1.a4",
@@ -35771,7 +35771,7 @@
    "lines": [
     {
      "account": "r3.a22",
-     "debit": "681.334",
+     "debit": "681.33",
      "name": "Hudson Valley Plants"
     },
     {
@@ -35818,7 +35818,7 @@
     },
     {
      "account": "r2.a17",
-     "debit": "55.639"
+     "debit": "55.64"
     }
    ],
    "request_key": "5bd46f29-bd5b-6a80-fa83-4af05cbbca36",
@@ -35877,7 +35877,7 @@
     },
     {
      "account": "r2.a1",
-     "debit": "367.314",
+     "debit": "367.31",
      "description": "Mulch"
     }
    ],
@@ -36048,7 +36048,7 @@
    "lines": [
     {
      "account": "r2.a4",
-     "debit": "159.919"
+     "debit": "159.92"
     },
     {
      "account": "r2.a18",
@@ -36070,7 +36070,7 @@
     },
     {
      "account": "r2.a12",
-     "debit": "29.727"
+     "debit": "29.73"
     },
     {
      "account": "r2.a21",
@@ -36148,7 +36148,7 @@
     },
     {
      "account": "r1.a2",
-     "debit": "720.554"
+     "debit": "720.55"
     },
     {
      "account": "r1.a17",
@@ -36184,7 +36184,7 @@
     },
     {
      "account": "r3.a15",
-     "debit": "480.975"
+     "debit": "480.98"
     }
    ],
    "expect_error": false
@@ -36202,7 +36202,7 @@
     },
     {
      "account": "r2.a21",
-     "debit": "782.597"
+     "debit": "782.60"
     },
     {
      "account": "r2.a23",
@@ -36235,7 +36235,7 @@
     },
     {
      "account": "r3.a5",
-     "debit": "893.063"
+     "debit": "893.06"
     },
     {
      "account": "r3.a17",

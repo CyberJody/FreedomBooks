@@ -267,7 +267,7 @@ fn unclassified_screens_and_host_only_actions_never_reach_the_book() {
         open.book.read(|q| q.query_row("SELECT count(*) FROM ledger_auditevent", [], |r| r.get::<_, i64>(0))).unwrap()
     };
     let before = events();
-    for target in [format!("/c/{first}/no-such-screen/"), format!("/c/{first}/backups/"), format!("/c/{first}/attachments/{first}/download/"), "/help/report/x/".into()] {
+    for target in [format!("/c/{first}/no-such-screen/"), format!("/c/{first}/backups/"), format!("/c/{first}/attachments/{first}/download/"), "/help/report/x/".into(), "/help/report/".into()] {
         assert!(matches!(render(&c, &target), HostResponse::Refused { code: RefusalCode::HostOnly, .. }), "{target}");
     }
     let invoice = "0195b4a4-55af-719e-96cb-a2f946b067bf";

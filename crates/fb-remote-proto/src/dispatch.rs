@@ -78,6 +78,25 @@ pub struct Dispatcher<B: Backend> {
     ending: Mutex<Option<String>>,
 }
 
+/// Reservations last through backend calls and are released even when a worker unwinds.
+struct IdentityChange<'a, B: Backend> {
+    dispatcher: &'a Dispatcher<B>,
+    token: &'a str,
+    signing_in: Option<&'a str>,
+}
+
+impl<B: Backend> Drop for IdentityChange<'_, B> {
+    fn drop(&mut self) {
+        let mut state = self.dispatcher.state();
+        if let Some(device) = self.signing_in {
+            state.signing_in.remove(device);
+        }
+        if let Some(s) = state.sessions.get_mut(self.token) {
+            s.identity_changes -= 1;
+        }
+    }
+}
+
 /// How long a closed connection's number is remembered (longer than the gateway waits for an answer).
 const CLOSED_MEMORY: Duration = Duration::from_secs(10 * 60);
 const EXPIRED: &str = "Your session on the host ended. Sign in again.";
@@ -310,27 +329,24 @@ impl<B: Backend> Dispatcher<B> {
         Ok((token, session.backend))
     }
 
-    fn begin_identity_change(&self, token: &str) {
+    fn begin_identity_change<'a>(&'a self, token: &'a str, signing_in: Option<&'a str>) -> IdentityChange<'a, B> {
         if let Some(s) = self.state().sessions.get_mut(token) {
             s.identity_changes += 1;
             s.identity_revision += 1;
             s.signed_out = false;
         }
+        IdentityChange { dispatcher: self, token, signing_in }
     }
 
     fn observed_sign_in(&self, token: &str, session: SessionRef, finishing_change: bool) -> Result<SignInState, BackendError> {
         let expected_changes = usize::from(finishing_change);
         let revision = self.state().sessions.get(token).filter(|s| s.identity_changes == expected_changes).map(|s| s.identity_revision);
         let observed = self.backend.sign_in_state(session);
-        if let Some(s) = self.state().sessions.get_mut(token) {
-            if revision == Some(s.identity_revision) && s.identity_changes == expected_changes
-                && let Ok(identity) = &observed
-            {
-                s.signed_out = matches!(identity, SignInState::SignedOut);
-            }
-            if finishing_change {
-                s.identity_changes -= 1;
-            }
+        if let Some(s) = self.state().sessions.get_mut(token)
+            && revision == Some(s.identity_revision) && s.identity_changes == expected_changes
+            && let Ok(identity) = &observed
+        {
+            s.signed_out = matches!(identity, SignInState::SignedOut);
         }
         observed
     }
@@ -387,14 +403,11 @@ impl<B: Backend> Dispatcher<B> {
             }
         }
         let changes_identity = info.sign_in || info.path.as_deref() == Some(policy::SESSION);
-        if changes_identity {
-            self.begin_identity_change(token);
-        }
+        let _change = changes_identity.then(|| self.begin_identity_change(token, info.sign_in.then_some(device.id.as_str())));
         let response = self.run_once(token, session, device, peer, request_id, command, &info, user.map(|u| u.user_id.as_str()), user.map(|u| u.user.as_str()));
         let after = changes_identity.then(|| self.observed_sign_in(token, session, true));
         if info.sign_in {
             self.after_sign_in(token, device, peer, request_id, &before, after.and_then(Result::ok).unwrap_or(SignInState::SignedOut));
-            self.state().signing_in.remove(&device.id);
         }
         response
     }
@@ -420,7 +433,8 @@ impl<B: Backend> Dispatcher<B> {
         // A sign-in is fingerprinted as sent (nobody signed in yet), so its retry after it
         // succeeded is answered; the change of user keeps only this entry (`after_sign_in`).
         let fingerprint_user = if info.sign_in { "" } else { user_id.unwrap_or("") };
-        match self.dedupe.begin(&device.id, token, request_id, fingerprint(token, fingerprint_user, command), self.config.retry_wait) {
+        let fingerprint = fingerprint(token, fingerprint_user, command);
+        match self.dedupe.begin(&device.id, token, request_id, fingerprint, self.config.retry_wait) {
             Begin::Run => {}
             Begin::Done(response) => {
                 self.event("request.replayed", device, peer, user, request_id);
@@ -429,9 +443,7 @@ impl<B: Backend> Dispatcher<B> {
             Begin::Conflict => return HostResponse::refused(RefusalCode::Conflict, "This request was already sent for something else. Open this page again and check before trying again."),
             Begin::StillRunning => return HostResponse::refused(RefusalCode::Busy, "The host is still working on this request. Wait a moment; it will not be done twice."),
         }
-        let response = execute();
-        self.dedupe.finish(&device.id, request_id, response.clone());
-        response
+        self.dedupe.complete(&device.id, request_id, fingerprint, execute)
     }
 
     fn after_sign_in(&self, token: &str, device: &DeviceRef, peer: &str, request_id: &str, before: &SignInState, after: SignInState) {
@@ -475,11 +487,13 @@ impl<B: Backend> Dispatcher<B> {
     }
 
     fn sign_out(&self, token: &str, session: SessionRef, device: &DeviceRef, peer: &str) -> HostResponse {
-        self.begin_identity_change(token);
+        let _change = self.begin_identity_change(token, None);
         let user = self.state().sessions.get_mut(token).and_then(|s| s.user.take());
         // Whatever happens next, nothing this session's user was answered can be replayed.
         self.dedupe.forget_session(&device.id, token, None);
-        match self.backend.sign_out(session) {
+        let signed_out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.backend.sign_out(session)))
+            .unwrap_or_else(|_| Err(BackendError::Refused("Sign-out interrupted.".into())));
+        match signed_out {
             Ok(()) => {
                 let _ = self.observed_sign_in(token, session, true);
                 self.event("sign_out", device, peer, user.as_deref(), "");
@@ -644,6 +658,7 @@ mod tests {
         runs: AtomicU64,
         status_reads: AtomicU64,
         slow_sign_in: AtomicBool,
+        interrupt_run: AtomicBool,
         busy_sign_out: AtomicBool,
     }
 
@@ -672,6 +687,7 @@ mod tests {
         }
         fn run(&self, s: SessionRef, command: &str) -> Result<String, BackendError> {
             self.runs.fetch_add(1, Ordering::SeqCst);
+            assert!(!self.interrupt_run.swap(false, Ordering::SeqCst), "synthetic interrupted command");
             let v: serde_json::Value = serde_json::from_str(command).unwrap();
             let field = |n: &str| v["fields"].as_array().into_iter().flatten().find(|f| f[0] == n).and_then(|f| f[1].as_str()).map(str::to_owned);
             if v["path"] == "/desktop/sign-in/" {
@@ -740,6 +756,21 @@ mod tests {
 
     fn sign_in(d: &Dispatcher<Arc<Fake>>, dev: &DeviceRef, user: &str) -> HostResponse {
         run(d, dev, &uuid(), &post("/desktop/sign-in/", &[("action", "signin"), ("username", user), ("password", "right")]))
+    }
+
+    #[test]
+    fn interrupted_sign_in_releases_slots_and_retains_the_uncertain_outcome_for_retries() {
+        let (backend, d, dev, _) = setup();
+        let (token, _) = hello(&d, &dev, 1, None);
+        backend.interrupt_run.store(true, Ordering::SeqCst);
+        let command = post(policy::SIGN_IN, &[("action", "signin"), ("username", "admin"), ("password", "right")]);
+        let answer = run(&d, &dev, ID, &command);
+        assert_eq!(answer, crate::dedupe::interrupted());
+        assert_eq!(run(&d, &dev, ID, &command), answer);
+        assert_eq!(backend.runs.load(Ordering::SeqCst), 1);
+        assert_eq!(d.state().sessions[&token].identity_changes, 0);
+        assert!(d.state().signing_in.is_empty());
+        assert!(matches!(sign_in(&d, &dev, "admin"), HostResponse::Outcome { .. }));
     }
 
     fn uuid() -> String {

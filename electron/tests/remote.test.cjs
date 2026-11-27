@@ -186,6 +186,51 @@ test('an unanswered command keeps its request id for an identical resubmission o
   for (const c of client.calls) assert.match(c.request_id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 });
 
+test('switching users expires worksheet URLs, old pages and pending exports on the same connection', async () => {
+  let choose;
+  const saving = new Promise(resolve => { choose = resolve; });
+  let writes = 0;
+  const {m, marker} = mode([
+    outcome({outcome:'export', filename:'a.csv', contents:'user A'}),
+    redirect(SIGN_IN), redirect(HOME), fixturePage,
+  ], {dialog:{showSaveDialog: () => saving}, output:{write: () => writes++}});
+  await m.connectSaved();
+  const a = await marker();
+  const pendingSave = m.run({type:'ExportReport'}, a);
+  const worksheet = '/c/x/reports/schedule-c/?mappings=private-A';
+  await m.run(form('/desktop/session/', [['action','signout']]), a);
+  assert.equal(m.signedIn(), false);
+  const signInPage = await marker();
+  assert.notEqual(signInPage, a);
+  await m.run(form(SIGN_IN, [['action','signin']]), signInPage);
+  assert.equal(m.signedIn(), true);
+  assert.notEqual(m.printMarker(), signInPage);
+  assert.deepEqual(await m.render(worksheet, a), {redirect:'/'});
+  assert.deepEqual(await m.run(form(HOME), a), {outcome:'redirect', location:'/'});
+  choose({filePath:'/chosen/a.csv'});
+  await assert.rejects(pendingSave, /session changed/);
+  assert.equal(writes, 0);
+  assert.equal((await m.render(HOME, m.printMarker())).status, 200);
+});
+
+test('a sign-out with a lost reply invalidates the previous marker before reconnecting', async () => {
+  const timeout = Object.assign(new Error('No reply'), {code:'timeout'});
+  const {m, marker} = mode([timeout]);
+  await m.connectSaved();
+  const previous = await marker();
+  const result = await m.run(form('/desktop/session/', [['action','signout']]), previous);
+  assert.equal(result.location, remoteMode.LOCKED);
+  assert.equal(m.signedIn(), false);
+  assert.equal(m.accepts(previous), false);
+});
+
+test('host marker stamping canonicalizes repeated markers and preserves query encoding', () => {
+  const key = remoteMode.PAGE_KEY;
+  const url = new URL('fb://app/r/?a=~%2A&' + key + '=old&' + key + '=new');
+  assert.deepEqual(remoteMode.pageTarget(url), {target:'/r/?a=~%2A', marker:''});
+  assert.match(remoteMode.decorate('<HTML><HEAD></HEAD><BODY></BODY></HTML>', 'host', 'connected', 'm'), /remote\.css"><\/head>/);
+});
+
 test('host answers are checked: addresses stay local, host-only work is refused, forms re-render once', async () => {
   const {m, marker} = mode([
     {type: 'Outcome', outcome: JSON.stringify({outcome: 'redirect', location: 'https://evil.example/'})},
@@ -352,7 +397,7 @@ test('lock clears an MFA challenge but leaves a completed manual sign-out alone'
   assert.deepEqual(shown, [remoteMode.LOCKED, SIGN_IN], 'the password-verified challenge is signed out');
   const page = await marker();
   await m.run(form(SIGN_IN, [['action', 'signin']]), page);
-  await m.run(form('/desktop/session/', [['action', 'signout']]), page);
+  await m.run(form('/desktop/session/', [['action', 'signout']]), await marker());
   await m.lock();
   assert.equal(client.calls.filter(r => r.type === 'SignOut').length, 1);
   assert.deepEqual(shown, [remoteMode.LOCKED, SIGN_IN]);
@@ -657,13 +702,16 @@ test('the idle timer locks while hosting without entering the books, and survive
   assert.equal(locks, 1);
   assert.equal(stateReads, 0);
   hosting = false;
+  tick();
+  assert.equal(locks, 2, 'a busy local worker must defer the lock');
+  assert.equal(stateReads, 0);
   busy = false;
   assert.doesNotThrow(tick);
   assert.equal(stateReads, 1);
   hosting = true;
   tick();
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(locks, 2);
+  assert.equal(locks, 3);
 });
 
 // S6: the host never chooses where an export is saved.

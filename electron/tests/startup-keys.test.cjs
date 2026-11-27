@@ -704,6 +704,20 @@ test('Disconnect reopens built-in-key books to sign-in and asks for a protected 
   }
 }));
 
+test('a built-in book from a newer app reaches the version refusal on startup and reload', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  const f = fakeNative(root, {builtin:true});
+  f.native.openProtectedBook = () => { throw Object.assign(new Error('This book requires a newer version.'), {code:'FB_BOOK_TOO_NEW'}); };
+  const main = launch(root, storage, f.native);
+  await tick();
+  for (let i = 0; i < 2; i++) {
+    await main.handle({url:'fb://app/', method:'GET'});
+    assert.equal(names(f.calls, 'renderGate').at(-1)[2], 'newer');
+  }
+  assert.equal(f.state.open, false);
+}));
+
 test('a failed built-in key offers backup recovery even after choosing books from a locked screen', () => fixture(async root => {
   const k = keyring(), book = oldComputer(root, k);
   const copy = copyWithSavedKey(root, k);
@@ -828,6 +842,7 @@ test('automatic backup is single flight and applies idle lock when finished', ()
   pending[0]('');
   await tick();
   assert.equal(f.state.open, false);
+  assert.equal(main.status().gateReason, 'idle');
   timer.fn();
   await tick();
   assert.equal(pending.length, 1);
@@ -857,4 +872,61 @@ test('an automatic backup wake during recurring bills runs once after the lease 
   await tick();
   await tick();
   assert.equal(runs, 1);
+}));
+
+test('recurring bills and Stripe yield to an idle lock, a connected host and a closed window', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  const f = fakeNative(root, {invoicing: true});
+  const main = launch(root, storage, f.native);
+  await tick();
+  f.state.signedIn = true;
+  const win = main.windows[0];
+  const recurring = main.timers.find(t => t.fn.toString().includes('recurringBillsAsync'));
+  const stripe = main.timers.find(t => t.fn.toString().includes('stripeRefreshAsync'));
+  let runs = 0;
+  f.native.recurringBillsAsync = f.native.stripeRefreshAsync = async () => { runs++; };
+  const both = async () => { await recurring.fn(); await stripe.fn(); };
+  win.url = 'fb://app/c/11111111-1111-4111-8111-111111111111/home/';
+  main.power.idle = 900;
+  await both();
+  main.power.idle = 0;
+  main.remote.active = () => true;
+  await both();
+  main.remote.active = () => false;
+  win.isDestroyed = () => true;
+  await both();
+  assert.equal(runs, 0);
+  win.isDestroyed = () => false;
+  await both();
+  assert.equal(runs, 2);
+  win.webContents.getURL = () => '';
+  await stripe.fn();
+  assert.equal(runs, 2);
+}));
+
+test('an idle lock covers an in-flight worker and finishes before deferred backup', () => fixture(async root => {
+  const storage = keyring();
+  oldComputer(root, storage);
+  const f = fakeNative(root);
+  let finish;
+  let backups = 0;
+  f.native.recurringBillsAsync = () => new Promise(resolve => { finish = resolve; });
+  f.native.scheduledBackupAsync = async () => { backups++; };
+  const main = launch(root, storage, f.native);
+  await tick();
+  f.state.signedIn = true;
+  const work = main.timers.find(t => t.fn.toString().includes('recurringBillsAsync')).fn();
+  await tick();
+  main.timers.find(t => t.fn.name === 'wakeScheduledBackup').fn();
+  main.power.emit('lock-screen');
+  const cover = main.windows[0].url;
+  assert.equal(cover, 'fb://app/desktop/locking/');
+  assert.match(await (await main.handle({url:cover, method:'GET'})).text(), /Locking your books/);
+  finish();
+  await work;
+  await tick();
+  assert.equal(main.status().gateReason, 'idle');
+  assert.equal(f.state.open, false);
+  assert.equal(backups, 0);
 }));

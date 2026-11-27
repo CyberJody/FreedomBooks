@@ -9,9 +9,10 @@ const refuse = () => { throw new Error(MESSAGE); };
 
 // The document supplies a suggested basename. The dialog chooses the destination.
 function exportName(name, format = 'csv') {
-  const suffix = format === 'pdf' ? '.pdf' : '.csv';
+  const suffix = '.' + (['pdf', 'png', 'jpg', 'webp'].includes(format) ? format : 'csv');
   let base = String(name || '').split(/[\\/]/).pop().normalize('NFC');
-  if (base.toLowerCase().endsWith(suffix)) base = base.slice(0, -suffix.length);
+  if (suffix === '.jpg') base = base.replace(/\.jpe?g$/i, '');
+  else if (base.toLowerCase().endsWith(suffix)) base = base.slice(0, -suffix.length);
   base = base.replace(/[^\p{L}\p{N} ._()-]/gu, '_').replace(/^[\s._-]+/, '');
   base = Array.from(base).slice(0, 100).join('').replace(/[\s.]+$/, '');
   const stem = base.split('.')[0].trimEnd();
@@ -88,7 +89,7 @@ function create({dataDir, bookPath = () => null} = {}) {
       // wx is O_CREAT|O_EXCL: even a dangling link at the temporary name is refused.
       fd = fs.openSync(temporary, 'wx', 0o600);
       created = true;
-      fs.writeFileSync(fd, contents, {encoding:'utf8'});
+      fs.writeFileSync(fd, contents);
       fs.fsyncSync(fd);
       fs.closeSync(fd);
       fd = undefined;

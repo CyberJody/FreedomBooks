@@ -477,7 +477,13 @@ fn bankfeed_fetch(app: &mut App, co: CompanyId, connection_id: &str, discovery: 
                         }
                         Ok(Ok(format!("{}; {posted} automatically posted by rules{}. Review downloaded transactions for any held items.",result["summary"].as_str().unwrap_or(""),if failed>0 {format!("; {failed} automatic attempts could not complete")}else{String::new()})))
                     },
-                    Err(e) => Ok(Err(refusal(e)?)),
+                    Err(e) => {
+                        // A failed staging transaction rolls back. Record the attempt separately,
+                        // using a fixed summary even when the original error contains provider text.
+                        let _ = bankfeeds::record_sync_failure(&mut open.book, owner, co, connection_id,
+                            &now, "The downloaded bank feed could not be staged in these books.", false, &secrets);
+                        Ok(Err(refusal(e)?))
+                    }
                 };
                 }
             }
@@ -711,5 +717,55 @@ mod signin_job_tests {
             app.identity = crate::identity::Identity::starting_at(1 << 40);
             assert_eq!(net_call(&mut app, &op(&format!("{provider}_poll"))).unwrap(), json!({"none": true}));
         }
+    }
+}
+
+#[cfg(test)]
+mod staging_status_tests {
+    use super::*;
+    struct RejectedPull;
+    impl NetHost for RejectedPull {
+        fn call(&mut self, req: &Value) -> Result<Value, String> {
+            match req["op"].as_str() {
+                Some("simplefin_claim") => Ok(json!({
+                    "ok":true, "host":"synthetic.invalid",
+                    "record":json!({"access_url":"https://synthetic-user:synthetic-password@synthetic.invalid/"}).to_string()
+                })),
+                Some("simplefin_fetch") => Ok(json!({"ok":true,"pull":{"accounts":[
+                    {"conn_key":"a","remote_id":"one","name":"First","org_name":"Bank","currency":"USD","transactions":[]},
+                    {"conn_key":"a","remote_id":"two","name":"","org_name":"Bank","currency":"USD","transactions":[]}
+                ]}})),
+                _ => panic!("unexpected request"),
+            }
+        }
+    }
+
+    #[test]
+    fn local_staging_refusal_updates_sync_status_and_survives_status_write_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new();
+        app.os_store_usable = true;
+        app.net = Some(Box::new(RejectedPull));
+        let co = app.create_book(&dir.path().join("book"), &crate::keys::MasterKey::new([3;32]),
+            "Owner", "Synthetic").unwrap().company_id;
+        let password = "Synthetic local owner password";
+        app.enroll_owner(password).unwrap();
+        let conn = bankfeed_connect(&mut app, co, "synthetic-token", "Test").unwrap().unwrap();
+        let result = bankfeed_sync(&mut app, co, &conn).unwrap().unwrap_err();
+        assert!(result.contains("blank"), "{result}");
+        let db = app.open_mut().unwrap().book.connection();
+        let (ok, count, summary): (bool, i64, String) = db.query_row(
+            "SELECT last_sync_ok,sync_count,last_sync_summary FROM bankfeeds_connection WHERE id=?", [&conn],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))).unwrap();
+        assert!(!ok);
+        assert_eq!(count, 1);
+        assert!(summary.contains("could not be staged") && !summary.contains("synthetic-password"));
+        for table in ["bankfeeds_account", "bankfeeds_transaction"] {
+            let count: i64 = db.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+            assert_eq!(count, 0);
+        }
+        db.execute_batch("CREATE TEMP TRIGGER refuse_status BEFORE UPDATE ON main.bankfeeds_connection
+            BEGIN SELECT RAISE(ABORT, 'status unavailable'); END").unwrap();
+        assert_eq!(bankfeed_sync(&mut app, co, &conn).unwrap().unwrap_err(), result);
     }
 }

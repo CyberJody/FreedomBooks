@@ -250,17 +250,6 @@ fn private_dir(p: &Path) -> std::io::Result<()> {
     builder.create(p)
 }
 
-fn new_private_file(p: &Path) -> std::io::Result<std::fs::File> {
-    // Owner-only before any byte is written (create_new never opens an existing file or link).
-    let file = std::fs::File::create_new(p)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
-    }
-    Ok(file)
-}
-
 fn mode_of(meta: &std::fs::Metadata) -> Option<u32> {
     #[cfg(unix)]
     {
@@ -398,6 +387,13 @@ fn status(host: &Host) -> AppResult<Value> {
 }
 
 pub(super) fn render(app: &mut App, route: &Route, params: &[(String, String)], path: &str) -> AppResult<(String, u16)> {
+    if route.name == "backups:page" && app.authenticated_session()?.role != crate::identity::Role::Administrator {
+        let c = arg_company(route)?;
+        app.authorize(Some(c), crate::identity::Permission::Read)?;
+        let vm = serde_json::to_value(shell(app, Some(c), &Current { route: &route.name, kind: None })?)
+            .map_err(|e| AppError::Invalid(e.to_string()))?;
+        return Ok((draw(app, "backups/denied.html", &vm)?, 403));
+    }
     let c = company(app, route)?;
     if route.name != "backups:page" {
         // GET of create (405 in Django) or a download link opened directly: the page handles both.
@@ -918,12 +914,7 @@ fn save_copy(file: &Path, dest: &Path) -> Result<u64, String> {
         return Err("a file with that name already exists there; choose a new name (existing files are never replaced).".into());
     }
     let mut src = core::open_backup(file).map_err(|e| e.to_string())?;
-    let mut out = new_private_file(dest).map_err(|e| e.to_string())?;
-    let copied = std::io::copy(&mut src, &mut out).and_then(|n| out.sync_all().map(|()| n));
-    copied.map_err(|e| {
-        let _ = std::fs::remove_file(dest);
-        e.to_string()
-    })
+    core::Directory::copy_new(&mut src, dest).map_err(|e| e.to_string())
 }
 
 /// The core's refusal in plain words. Refusals that already say what to do keep their text; anything else
@@ -1079,20 +1070,38 @@ fn restore_into_with_record(file: &Path, key: &MasterKey, receipts: &MasterKey, 
     if made {
         std::fs::create_dir(&dir).and_then(|()| private_dir(&dir)).map_err(|e| e.to_string())?;
     }
-    if let Some(record) = record { record.save(target).map_err(|e| e.to_string())?; }
+    let pinned = core::Directory::open(&dir).map_err(|e| e.to_string())?;
+    let record_path = crate::protection::record_path(target);
+    let record_name = record_path.file_name().and_then(|s| s.to_str())
+        .ok_or_else(|| "Invalid restored book name.".to_owned())?;
+    let created_record = record.map(|record| {
+        let bytes = serde_json::to_vec(record).map_err(|e| e.to_string())?;
+        pinned.create_private_file(record_name, &bytes).map_err(|e| e.to_string())
+    }).transpose()?;
     crate::protection::checkpoint("restore-record-saved");
     let result = core::restore_backup(file, key, &RestoreOptions {
         verify_receipt: Some(&verifier), target, receipts_target: Some(&dir.join("receipts")), work_root: work,
         protected, passphrase: None, require_encrypted: false,
     });
     match result {
-        Ok(done) => Ok(done.manifest.absent),
+        Ok(done) => {
+            pinned.confirm(&dir).map_err(|e| e.to_string())?;
+            Ok(done.manifest.absent)
+        }
         Err(e) => {
-            // The key record was written first; a folder made here goes with it, so the name is free again.
-            if made {
-                let _ = std::fs::remove_dir_all(&dir);
-            } else if record.is_some() {
-                let _ = std::fs::remove_file(crate::protection::record_path(target));
+            let cleanup = (|| -> core::Result<()> {
+                pinned.confirm(&dir)?;
+                // Preserve the key record if an unresolved rollback left a book to recover.
+                if !target.try_exists()? {
+                    if let Some(file) = created_record {
+                        pinned.remove_created_file(record_name, file)?;
+                    }
+                    if made { std::fs::remove_dir(&dir)?; }
+                }
+                Ok(())
+            })();
+            if let Err(cleanup) = cleanup {
+                return Err(format!("{e}. Restore cleanup needs attention: {cleanup}").into());
             }
             Err(plain(e))
         }
@@ -1217,6 +1226,23 @@ mod tests {
         assert_eq!(std::fs::read(&live).unwrap(), before, "the open book is untouched");
         let restored = fb_db::Book::open(&good, &key).unwrap();
         assert!(restored.check().unwrap().is_empty());
+    }
+
+    #[test]
+    fn failure_checking_the_published_restore_frees_the_name() {
+        let (d, app, _, key, file) = scratch();
+        let work = app.backups.work().unwrap();
+        let dir = d.path().join("books/restored-retry");
+        // The book, SQLite sidecars and key record fit in a 255-character filename.
+        // Only the .rekey.json lookup in RestoreTarget::check exceeds the limit.
+        let target = dir.join("x".repeat(245));
+        let record = crate::protection::Record::new(core::portable::KeyEnvelope::new(&core::portable::BUILTIN_KEY, &[3; 32], None).unwrap());
+        let err = restore_into_with_record(&file, &key, &key, &work, &target, &[], Some(&record)).unwrap_err();
+        assert!(!err.text.contains("Restore cleanup needs attention"), "{err}");
+        assert!(err.detail.as_deref().is_some_and(|detail| detail.to_lowercase().contains("too long")), "{err:?}");
+        assert!(!dir.exists());
+        name_free(&dir, "Retry").unwrap();
+        restore_into(&file, &key, &work, &dir.join("restored-retry.fbbook"), &[]).unwrap();
     }
 
     #[test]
@@ -1388,3 +1414,46 @@ mod tests {
 }
 
 
+
+#[cfg(test)]
+mod save_copy_tests {
+    use super::*;
+    #[test]
+    fn export_refuses_existing_names_and_never_shows_a_partial_final_copy() {
+        use std::io::{self, Read};
+        struct Interrupted<'a>(&'a Path, bool);
+        impl Read for Interrupted<'_> {
+            fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+                assert!(!self.0.exists());
+                if self.1 { return Err(io::Error::other("interrupted export")); }
+                self.1 = true;
+                buf[..4].copy_from_slice(b"part");
+                Ok(4)
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("source.fbbackup");
+        let target = dir.path().join("copy.fbbackup");
+        std::fs::write(&source, b"original").unwrap();
+        let error = core::Directory::copy_new(&mut Interrupted(&target, false), &target).unwrap_err();
+        assert!(error.to_string().contains("interrupted export"));
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+        struct Occupy<'a>(&'a Path);
+        impl Read for Occupy<'_> {
+            fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+                std::fs::write(self.0, b"appeared during export")?;
+                Ok(0)
+            }
+        }
+        assert!(core::Directory::copy_new(&mut Occupy(&target), &target).is_err());
+        assert_eq!(std::fs::read(&target).unwrap(), b"appeared during export");
+        std::fs::remove_file(&target).unwrap();
+        assert_eq!(save_copy(&source, &target).unwrap(), 8);
+        assert_eq!(std::fs::read(&target).unwrap(), b"original");
+        std::fs::write(&target, b"existing").unwrap();
+        assert!(save_copy(&source, &target).is_err());
+        assert!(save_copy(&source, &source).is_err());
+        assert_eq!(std::fs::read(&target).unwrap(), b"existing");
+        assert_eq!(std::fs::read(&source).unwrap(), b"original");
+    }
+}

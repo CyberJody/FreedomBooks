@@ -67,7 +67,7 @@ fn prepare(tx: &Writer<'_>, actor: UserId, co: CompanyId, d: &Value) -> FbResult
     let digest = digest(
         &json!({"company":co.to_db(),"intent":d,"mapping":display,"entries":entries,"company_snapshot":company}),
     );
-    let balances = json!({"from":balance(tx,from.id)?,"to":balance(tx,to.id)?});
+    let balances = json!({"from":balance(tx,&from)?,"to":balance(tx,&to)?});
     Ok(Plan {
         mapping,
         entries: entries.clone(),
@@ -94,10 +94,10 @@ pub fn eligible_account_ids(q: &(impl Query + ?Sized), co: CompanyId) -> FbResul
     Ok(st.query_map([co.to_db()], |r| r.get(0))?.collect::<Result<_, _>>()?)
 }
 
-fn balance(c: &(impl Query + ?Sized), aid: AccountId) -> FbResult<String> {
+fn balance(c: &(impl Query + ?Sized), account: &Account) -> FbResult<String> {
     let mut n = 0i128;
     let mut st=c.prepare("SELECT l.debit,l.credit FROM ledger_journalline l JOIN ledger_journal j ON j.id=l.journal_id WHERE l.account_id=? AND j.status='POSTED'")?;
-    for row in st.query_map([aid.to_db()], |r| {
+    for row in st.query_map([account.id.to_db()], |r| {
         Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
     })? {
         let (d, c) = row?;
@@ -105,6 +105,7 @@ fn balance(c: &(impl Query + ?Sized), aid: AccountId) -> FbResult<String> {
             .checked_add(d as i128 - c as i128)
             .ok_or_else(|| err("Balance exceeds supported bounds."))?;
     }
+    let n = if account.section_balance() == crate::model::Side::Debit { n } else { -n };
     Ok(format!(
         "{}{}.{:02}",
         if n < 0 { "-" } else { "" },
@@ -120,8 +121,7 @@ pub fn posted_balance(
 ) -> FbResult<String> {
     book.read(|c| {
         services::access(c, actor, co)?;
-        account(c, co, &aid.to_db())?;
-        balance(c, aid)
+        balance(c, &account(c, co, &aid.to_db())?)
     })
 }
 pub fn review_transfer(

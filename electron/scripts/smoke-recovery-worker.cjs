@@ -7,6 +7,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const password='Synthetic recovery worker password';
+const {submitSignIn}=require('./smoke-identity.cjs');
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
 async function main(){
@@ -33,6 +34,7 @@ async function main(){
       await page.check('#id_protect');
       await page.fill('#id_lock_password',password);await page.fill('#id_lock_password2',password);
       await page.getByRole('button',{name:'Create books',exact:true}).click();
+      await submitSignIn(page, 'Synthetic recovery owner password');
       await page.waitForURL(/\/settings\/recovery-key\/$/);
       await app.evaluate(({dialog},{output,stale})=>{
         global.recoveryTicks=0;global.recoveryTimer=setInterval(()=>global.recoveryTicks++,10);

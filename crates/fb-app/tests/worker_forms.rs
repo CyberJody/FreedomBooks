@@ -82,6 +82,12 @@ fn a_bill_with_no_due_date_is_due_on_its_date() {
     assert!(page(&mut app, &location).contains("Due date set to 2026-03-04, the bill date, because no terms were chosen."));
     // Review N1: with terms and a blank due date, it is the bill date plus the terms, and the bill's page
     // says so once.
+    for term in ["0", "15", "30", "60"] {
+        let (_, location) = save(&mut app, term);
+        let edit = page(&mut app, &format!("{location}edit/"));
+        let options = edit.split_once(r#"name="terms""#).unwrap().1.split("</select>").next().unwrap();
+        assert!(options.contains(&format!(r#"value="{term}" selected"#)), "{options}");
+    }
     let (due, location) = save(&mut app, "30");
     assert_eq!(due, "2026-04-03");
     let html = page(&mut app, &location);

@@ -7,7 +7,7 @@ use fb_db::Book;
 use serde_json::{Value, json};
 use std::{
     fs,
-    io::{self, Read},
+    io::{self, Read, Seek},
     path::{Path, PathBuf},
 };
 
@@ -229,6 +229,17 @@ pub fn published(root: &Path, slot: &Slot) -> Result<bool> {
     }
 }
 
+fn schedule_lock(dir: &paths::Directory) -> Result<fs::File> {
+    let lock = dir.lock_file(std::ffi::OsStr::new(".fb-backup.lock"))?;
+    match lock.try_lock() {
+        Ok(()) => Ok(lock),
+        Err(fs::TryLockError::WouldBlock) => {
+            Err(BackupError::retryable("Another automatic backup is already running."))
+        }
+        Err(fs::TryLockError::Error(e)) => Err(e.into()),
+    }
+}
+
 impl Worker<'_> {
     pub fn run(
         &self,
@@ -265,9 +276,8 @@ impl Worker<'_> {
         if let Some(parent) = root.parent() {
             paths::sync_dir(parent)?;
         }
-        let lock = paths::lock_file(&dir.join(".fb-backup.lock"))?;
-        fs2::FileExt::try_lock_exclusive(&lock)
-            .map_err(|_| BackupError::refused("Another automatic backup is already running."))?;
+        let pinned = paths::Directory::open(&dir)?;
+        let _lock = schedule_lock(&pinned)?;
         if !super::cleanup::cleanup_stale(&dir)?.is_empty() {
             paths::sync_dir(&dir)?;
         }
@@ -285,10 +295,11 @@ impl Worker<'_> {
                 slot,
                 captured_at,
                 &companies,
-                &path,
+                (&path, &pinned),
                 existing.as_ref(),
             )?,
         };
+        pinned.confirm(&dir)?;
         audit::record_scheduled(book, actor, company, &evidence)?;
         Ok(Verified {
             path,
@@ -303,9 +314,12 @@ impl Worker<'_> {
         slot: &Slot,
         captured_at: DateTime<Utc>,
         companies: &[String],
-        path: &Path,
+        destination: (&Path, &paths::Directory),
         prior: Option<&Evidence>,
     ) -> Result<(Evidence, String)> {
+        let (path, dir) = destination;
+        let (parent, name) = paths::parent_name(path)?;
+        dir.confirm(parent)?;
         let already_published = match fs::symlink_metadata(path) {
             Ok(meta) if meta.is_file() => true,
             Ok(_) => {
@@ -368,19 +382,16 @@ impl Worker<'_> {
                 ));
             }
             if !already_published {
-                super::publish(&archive, path)?;
-            } else {
-                paths::sync_dir(
-                    path.parent()
-                        .ok_or_else(|| BackupError::refused("Missing backup folder."))?,
-                )?;
+                dir.link_new(&archive, name)?;
             }
+            dir.sync()?;
+            dir.confirm(parent)?;
             let mut note = summary
                 .ok_or_else(|| BackupError::refused("Missing automatic backup verification."))?;
             note["scheduled"] = slot.identity();
             note["book_sha256"] = json!(evidence.book_sha256);
             let verified_at = note["verified_at"].as_str().unwrap_or_default().to_owned();
-            retention::record_verified_noclobber(path, &fingerprint, note)?;
+            retention::record_verified_noclobber(dir, path, &fingerprint, note)?;
             Ok((evidence, verified_at))
         })();
         // Only this operation's staging directory is removed. On interruption
@@ -414,85 +425,35 @@ fn checked_note<'a>(note: &'a Value, evidence: &Evidence, basename: &str) -> Opt
 }
 
 fn verify_evidence(path: &Path, evidence: &Evidence) -> Result<Option<String>> {
-    let metadata = |path: &Path| match fs::symlink_metadata(path) {
-        Ok(meta) if meta.is_file() => Ok(Some(meta)),
-        Ok(_) => Ok(None),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(BackupError::from(e)),
-    };
-    let Some(meta) = metadata(path)? else {
-        return Ok(None);
-    };
-    if metadata(&retention::sidecar(path))?.is_none() {
-        return Ok(None);
-    }
-    let result = (|| {
-        let note = retention::read_note(path)?;
-        let Some(time) = checked_note(&note, evidence, &evidence.slot.basename()?) else {
-            return Ok(None);
-        };
-        let (bytes, sha) = super::hash_file(path)?;
-        if !retention::note_matches(&note, &meta, bytes, &sha)?
-            || !checked_header(path, &evidence.slot)?
-        {
-            return Ok(None);
-        }
-        Ok(Some(time.to_owned()))
-    })();
-    match result {
-        Err(BackupError {
-            failure: super::Failure::Validation,
-            ..
-        }) => Ok(None),
-        other => other,
-    }
-}
-
-fn checked_header_file(file: fs::File, slot: &Slot) -> Result<bool> {
-    let header = super::read_header_file(file)?;
-    Ok(header.get("incomplete").is_none() && header["scheduled"] == slot.identity())
+    let (parent, name) = paths::parent_name(path)?;
+    let name = name.to_str().ok_or_else(|| BackupError::refused("Invalid automatic backup name."))?;
+    verify_evidence_in_dir(&paths::Directory::open(parent)?, name, &format!("{name}.verified.json"), evidence)
 }
 
 fn verify_evidence_in_dir(
-    dir: &paths::Directory,
-    archive_name: &str,
-    note_name: &str,
-    evidence: &Evidence,
+    dir: &paths::Directory, archive_name: &str, note_name: &str, evidence: &Evidence,
 ) -> Result<Option<String>> {
     let result = (|| {
-        let Some(note_file) = dir.read_file(note_name)? else {
-            return Ok(None);
-        };
+        let Some(note_file) = dir.read_file(note_name)? else { return Ok(None) };
         let note = retention::read_note_file(note_file)?;
-        let Some(time) = checked_note(&note, evidence, &evidence.slot.basename()?) else {
-            return Ok(None);
-        };
-        let Some(archive_file) = dir.read_file(archive_name)? else {
-            return Ok(None);
-        };
-        let meta = archive_file.metadata()?;
-        let (bytes, sha) = super::hash_open_file(archive_file)?;
-        if !retention::note_matches(&note, &meta, bytes, &sha)? {
-            return Ok(None);
-        }
-        let Some(header_file) = dir.read_file(archive_name)? else {
-            return Ok(None);
-        };
-        let header_meta = header_file.metadata()?;
-        if !retention::note_matches(&note, &header_meta, bytes, &sha)?
-            || !checked_header_file(header_file, &evidence.slot)?
-        {
-            return Ok(None);
-        }
-        Ok(Some(time.to_owned()))
+        let Some(time) = checked_note(&note, evidence, archive_name) else { return Ok(None) };
+        let Some(archive) = dir.read_file(archive_name)? else { return Ok(None) };
+        if evidence_matches(archive, &note, evidence)? { Ok(Some(time.to_owned())) } else { Ok(None) }
     })();
     match result {
-        Err(BackupError {
-            failure: super::Failure::Validation,
-            ..
-        }) => Ok(None),
+        Err(BackupError { failure: super::Failure::Validation, .. }) => Ok(None),
         other => other,
     }
+}
+
+fn evidence_matches(mut archive: fs::File, note: &Value, evidence: &Evidence) -> Result<bool> {
+    let meta = archive.metadata()?;
+    if meta.len() != evidence.bytes { return Ok(false); }
+    let (bytes, sha) = super::hash_open_file(&mut archive)?;
+    if !retention::note_matches(note, &meta, bytes, &sha)? { return Ok(false); }
+    archive.rewind()?;
+    let header = super::read_header_file(archive)?;
+    Ok(header.get("incomplete").is_none() && header["scheduled"] == evidence.slot.identity())
 }
 
 fn verified(path: &Path, evidence: &Evidence) -> Option<String> {
@@ -553,48 +514,51 @@ pub fn prune(book: &mut Book, root: &Path, completed: &Slot, keep: usize) -> Res
     }
     let dir = schedule_dir(root, id)?;
     if !check_private_dir(&root.join("automatic"))? || !check_private_dir(&dir)? {
-        return Ok(Vec::new());
+        return Err(BackupError::retryable("The automatic backup folder is missing."));
     }
     let pinned = paths::Directory::open(&dir)?;
+    let _lock = schedule_lock(&pinned)?;
+    // A prior interruption may have left one or both names in quarantine.
+    // Keep them and continue reporting the location until recovery is complete.
+    for entry in fs::read_dir(&dir)? {
+        let name = entry?.file_name();
+        if name.to_string_lossy().starts_with(".fb-retention-") {
+            return Err(BackupError::retryable(format!("Check {} for files retained during interrupted retention.", dir.join(name).display())));
+        }
+    }
+    pinned.confirm(&dir)?;
     let evidence = audit::scheduled_evidence(book, Some(id), None)?;
     let completed_name = completed.basename()?;
-    let completed_note = format!("{completed_name}.verified.json");
-    if !evidence.get(completed).is_some_and(|row| {
-        verify_evidence_in_dir(&pinned, &completed_name, &completed_note, row)
-            .ok()
-            .flatten()
-            .is_some()
-    }) {
-        return Err(BackupError::refused(
-            "The just-completed automatic backup could not be confirmed for retention.",
-        ));
+    let confirmed = match evidence.get(completed) {
+        Some(row) => verify_evidence_in_dir(&pinned, &completed_name, &format!("{completed_name}.verified.json"), row)?.is_some(),
+        None => false,
+    };
+    if !confirmed {
+        return Err(BackupError::refused("The just-completed automatic backup could not be confirmed for retention."));
     }
-    let mut rows: Vec<&Evidence> = evidence.values().collect();
-    rows.sort_unstable_by(|a, b| b.slot.at.cmp(&a.slot.at).then_with(|| b.slot.cmp(&a.slot)));
-    let candidates = rows.into_iter().filter_map(|row| {
-        let name = row.slot.basename().ok()?;
-        let note_name = format!("{name}.verified.json");
-        verify_evidence_in_dir(&pinned, &name, &note_name, row)
-            .ok()
-            .flatten()?;
-        Some((name, row))
-    });
+    // One schedule's audit map is ordered by slot time. Keep the newest verified
+    // slots, plus the completed slot if clock rollback puts it outside that window.
+    let mut kept = 0;
     let mut removed = Vec::new();
-    for (name, row) in candidates.skip(keep) {
-        if prune_candidate(&pinned, &name, row)? {
+    for row in evidence.values().rev() {
+        let name = row.slot.basename()?;
+        if &row.slot != completed && verify_evidence_in_dir(&pinned, &name, &format!("{name}.verified.json"), row)?.is_none() {
+            continue;
+        }
+        if kept < keep {
+            kept += 1;
+        } else if &row.slot != completed && prune_candidate(&pinned, &name, row)? {
             removed.push(dir.join(&name));
         }
     }
+    pinned.confirm(&dir)?;
     pinned.sync()?;
     Ok(removed)
 }
 
 fn prune_candidate(dir: &paths::Directory, archive_name: &str, row: &Evidence) -> Result<bool> {
     retention::quarantine_remove(dir, archive_name, |q_dir, archive_name, note_name| {
-        verify_evidence_in_dir(q_dir, archive_name, note_name, row)
-            .ok()
-            .flatten()
-            .is_some()
+        Ok(verify_evidence_in_dir(q_dir, archive_name, note_name, row)?.is_some())
     })
 }
 
@@ -773,7 +737,7 @@ mod tests {
                         &slot,
                         time(day, 3),
                         &[f.company.to_db()],
-                        &path,
+                        (&path, &paths::Directory::open(path.parent().unwrap()).unwrap()),
                         None
                     )
                     .is_ok()
@@ -900,6 +864,67 @@ mod tests {
     }
 
     #[test]
+    fn retention_protects_the_completed_slot_after_clock_rollback_and_obeys_the_worker_lock() {
+        let mut f = Fixture::new();
+        let newer = Slot::new(SCHEDULE, time(15, 2)).unwrap();
+        let completed = Slot::new(SCHEDULE, time(14, 2)).unwrap();
+        let newest = f.run(&newer, time(15, 3)).unwrap().path;
+        let prior = f.run(&completed, time(14, 3)).unwrap().path;
+        let pinned = paths::Directory::open(prior.parent().unwrap()).unwrap();
+        let lock = schedule_lock(&pinned).unwrap();
+        assert!(prune(&mut f.book, &f.root, &completed, 1).unwrap_err().to_string().contains("already running"));
+        drop(lock);
+        assert!(prune(&mut f.book, &f.root, &completed, 1).unwrap().is_empty());
+        assert!(retention::verified_note(&prior) && retention::verified_note(&newest));
+
+        #[cfg(unix)]
+        if rustix::process::getuid().as_raw() != 0 {
+            use std::os::unix::fs::PermissionsExt;
+            let note = retention::sidecar(&newest);
+            let mode = fs::metadata(&note).unwrap().permissions();
+            fs::set_permissions(&note, fs::Permissions::from_mode(0o000)).unwrap();
+            assert!(prune(&mut f.book, &f.root, &completed, 1).is_err());
+            fs::set_permissions(&note, mode).unwrap();
+            assert!(newest.exists() && prior.exists());
+        }
+
+        let (q_name, q) = pinned.create_private_subdir(".fb-retention-").unwrap();
+        let name = newer.basename().unwrap();
+        pinned.rename_to(&name, &q, &name).unwrap(); // interruption between moves
+        let error = prune(&mut f.book, &f.root, &completed, 1).unwrap_err();
+        assert!(error.to_string().contains(&q_name));
+        assert!(q.read_file(&name).unwrap().is_some());
+    }
+
+    #[test]
+    fn receipt_bytes_take_part_in_preflight_before_verification_or_publication() {
+        let mut f = Fixture::new();
+        f.add_receipt();
+        let slot = Slot::new(SCHEDULE, time(12, 2)).unwrap();
+        let book_only = super::super::backup_space(f.book.snapshot_size().unwrap(), 0, 4);
+        paths::TEST_SPACE.set(Some(book_only));
+        let result = f.run(&slot, time(12, 4));
+        paths::TEST_SPACE.set(None);
+        assert!(result.err().unwrap().to_string().contains("Not enough free space"));
+        assert!(!f.archive(&slot).exists());
+        assert_eq!(f.audit_count(), 0);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn evidence_checks_the_open_archive_even_if_its_name_changes() {
+        let mut f = Fixture::new();
+        let slot = Slot::new(SCHEDULE, time(12, 2)).unwrap();
+        let verified = f.run(&slot, time(12, 4)).unwrap();
+        let path = &verified.path;
+        let note = retention::read_note(path).unwrap();
+        let archive = paths::regular(path).unwrap();
+        replace_with_same_metadata(path, &fs::read(path).unwrap());
+        assert!(evidence_matches(archive, &note, &verified.evidence).unwrap());
+        assert!(!evidence_matches(paths::regular(path).unwrap(), &note, &verified.evidence).unwrap());
+    }
+
+    #[test]
     fn a_staged_archive_is_bound_to_its_audited_bytes_after_lookup() {
         let mut f = Fixture::new();
         let slot = Slot::new(SCHEDULE, time(12, 2)).unwrap();
@@ -997,7 +1022,7 @@ mod tests {
         let target = f.archive(&slot);
         let dir = paths::private_dir(target.parent().unwrap()).unwrap();
         let other = paths::lock_file(&dir.join(".fb-backup.lock")).unwrap();
-        fs2::FileExt::try_lock_exclusive(&other).unwrap();
+        other.try_lock().unwrap();
         let error = f.run(&slot, time(14, 3)).err().unwrap();
         assert!(error.to_string().contains("already running"));
         assert!(!error.is_conflict());
@@ -1048,7 +1073,7 @@ mod tests {
                 &due,
                 time(14, 3),
                 &[f.company.to_db()],
-                &target,
+                (&target, &paths::Directory::open(target.parent().unwrap()).unwrap()),
                 None,
             )
             .unwrap_err();

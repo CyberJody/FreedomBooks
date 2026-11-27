@@ -59,6 +59,16 @@ function request(payload) {
  */
 function controller({ native, window, menu = () => null, origin = ORIGIN }) {
   let key = null;
+  let clearOnCommit = false;
+  function reset() {
+    const wc = contents();
+    if (!wc) return;
+    wc.navigationHistory.clear();
+    // Chromium retains the current entry on clear. Drop it when the replacement page commits.
+    clearOnCommit = true;
+    key = null;
+    publish(wc);
+  }
   // The book's state, or null while a long operation (a backup, an AI request) holds the books: the
   // native call answers BUSY then. Nothing moves or is cleared on a state that could not be read.
   const state = () => {
@@ -91,7 +101,7 @@ function controller({ native, window, menu = () => null, origin = ORIGIN }) {
   }
   function step(direction) {
     const wc = contents();
-    if (!wc || !guard(wc)) return false;
+    if (!wc || clearOnCommit || !guard(wc)) return false;
     const h = wc.navigationHistory;
     // Only a signed-in session walks its own history; the unlock and sign-in screens have none.
     if (!key.startsWith('1:1:')) { publish(wc); return false; }
@@ -129,7 +139,11 @@ function controller({ native, window, menu = () => null, origin = ORIGIN }) {
   function attach(win) {
     const wc = win.webContents;
     const navigated = () => { if (guard(wc)) publish(wc); };
-    wc.on('did-navigate', navigated);
+    wc.on('did-navigate', () => {
+      if (clearOnCommit) wc.navigationHistory.clear();
+      clearOnCommit = false;
+      navigated();
+    });
     wc.on('did-navigate-in-page', navigated);
     wc.on('dom-ready', navigated);
     // Calling preventDefault keeps the key from the page and from menu accelerators: one path only.
@@ -158,7 +172,7 @@ function controller({ native, window, menu = () => null, origin = ORIGIN }) {
       { label: 'Companies…', click: () => actions.companies() },
     ],
   };
-  return { attach, actions, go, navigate: payload => ({ moved: actions[request(payload)]() }) };
+  return { attach, reset, actions, go, navigate: payload => ({ moved: actions[request(payload)]() }) };
 }
 
 /** The Help menu: Report a problem (the app's own page) and About, with this build's version. */

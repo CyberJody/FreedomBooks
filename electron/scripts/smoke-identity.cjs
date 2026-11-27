@@ -1,7 +1,7 @@
 'use strict';
 // The desktop's owner password is separate from the book password. Exercise
 // enrollment on first run and normal sign-in after every lock/unlock.
-async function signIn(page, password) {
+async function submitSignIn(page, password) {
   await page.waitForURL(/\/desktop\/sign-in\/$/);
   await page.fill('#id_password', password);
   const enrolling = await page.locator('#id_password_repeat').count();
@@ -13,6 +13,10 @@ async function signIn(page, password) {
     page.waitForURL(/\/(?:home|settings\/recovery-key)\/$/),
     page.getByRole('button', {name: enrolling ? 'Set password and continue' : 'Sign in', exact: true}).click(),
   ]);
+}
+
+async function signIn(page, password) {
+  await submitSignIn(page, password);
   if (page.url().endsWith('/settings/recovery-key/')) {
     const later = page.getByRole('button', {name: 'Remind me later', exact: true});
     if (await later.count()) {
@@ -23,4 +27,4 @@ async function signIn(page, password) {
   }
 }
 
-module.exports = {signIn};
+module.exports = {signIn, submitSignIn};

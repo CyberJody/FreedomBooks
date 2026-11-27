@@ -42,3 +42,22 @@ fn a_journal_page_shows_its_date_and_a_draft_can_be_deleted() {
     };
     assert!(html.contains("Only a draft journal entry can be deleted. Correct a posted entry by reversing it."), "{html}");
 }
+
+#[test]
+fn manual_journal_rejects_fractional_cents_on_both_entry_points() {
+    let (mut app, c) = fixture(StarterChart::Standard);
+    let bank = account(&mut app, &c, "1000");
+    let income = account(&mut app, &c, "4000");
+    let input = json!({"type":"SaveJournal","company_id":c,"journal_id":null,"date":"2026-01-01","memo":"Fraction",
+        "adjusting":false,"entry_number":"","request_key":null,"expected_revision":null,"lines":[
+        {"account":bank,"debit":"1.005","credit":"0","description":"","name":""},
+        {"account":income,"debit":"0","credit":"1.005","description":"","name":""}]});
+    let command = fb_app::commands::parse_command(&input.to_string()).unwrap();
+    assert!(app.run(command).unwrap_err().to_string().contains("two decimal places"));
+    let out = submit(&mut app, &format!("/c/{c}/journals/new/"), &[("request_key", &key()), ("date", "2026-01-01"), ("memo", "Fraction"),
+        ("lines-TOTAL_FORMS","2"), ("lines-INITIAL_FORMS","0"), ("lines-0-account", &bank), ("lines-0-debit","1.005"),
+        ("lines-1-account",&income), ("lines-1-credit","1.005")]);
+    assert!(matches!(out, Outcome::Invalid {html} if html.matches("two decimal places").count() >= 2));
+    let count: i64 = app.open_mut().unwrap().book.read(|q| q.query_row("SELECT count(*) FROM ledger_journal", [], |r| r.get(0))).unwrap();
+    assert_eq!(count, 0);
+}

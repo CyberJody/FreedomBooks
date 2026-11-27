@@ -3,7 +3,7 @@ use super::d2::{clean_date, clean_text, draw, error, token};
 use super::d6::{ctx, s, scoped_rows};
 use super::*;
 use crate::{Command, commands::BeginReconciliationValues};
-use chrono::{Datelike, Duration, Months, NaiveDate};
+use chrono::NaiveDate;
 use fb_core::{
     banking::{self as reconcile, self},
     py,
@@ -962,7 +962,7 @@ fn filter_amount(raw: &str) -> Result<String, &'static str> {
         .ok_or(invalid)?;
     Ok(cash(n))
 }
-fn filter_data(p: Posted<'_>, today: NaiveDate) -> (Value, Vec<String>) {
+fn filter_data(p: Posted<'_>, today: NaiveDate, fiscal_month: u32) -> (Value, Vec<String>) {
     let mut e = Errors::new();
     let preset = choice(p, "preset", PRESETS, &mut e);
     let start = clean_date(p, "start", false, &mut e);
@@ -1001,27 +1001,13 @@ fn filter_data(p: Posted<'_>, today: NaiveDate) -> (Value, Vec<String>) {
             data["preset"] = json!("custom");
         }
         if !preset.is_empty() && preset != "custom" {
-            let year = NaiveDate::from_ymd_opt(today.year(), 1, 1).unwrap();
-            let month = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap();
-            let last =
-                |a: NaiveDate, n| a.checked_add_months(Months::new(n)).unwrap() - Duration::days(1);
-            let (a, b) = match preset.as_str() {
-                "this_month" => (month, last(month, 1)),
-                "last_month" => {
-                    let b = month - Duration::days(1);
-                    (NaiveDate::from_ymd_opt(b.year(), b.month(), 1).unwrap(), b)
+            match fb_core::reports::params::preset_range(&preset, today, fiscal_month) {
+                Ok((start, end)) => {
+                    data["start"] = json!(start.to_string());
+                    data["end"] = json!(end.to_string());
                 }
-                "this_quarter" => {
-                    let a =
-                        NaiveDate::from_ymd_opt(today.year(), 3 * ((today.month() - 1) / 3) + 1, 1)
-                            .unwrap();
-                    (a, last(a, 3))
-                }
-                "this_year" => (year, NaiveDate::from_ymd_opt(today.year(), 12, 31).unwrap()),
-                _ => (year, today),
-            };
-            data["start"] = json!(a.to_string());
-            data["end"] = json!(b.to_string());
+                Err(err) => error(&mut e, "preset", err.message()),
+            }
         } else if !s(&data, "start").is_empty()
             && !s(&data, "end").is_empty()
             && s(&data, "start") > s(&data, "end")
@@ -1068,7 +1054,10 @@ pub(super) fn bank_register(
     let aid = &r.args["account_id"];
     let a = account(app, c, aid, true)?;
     let today = (app.today)();
-    let (data, errors) = filter_data(p, today);
+    let fiscal_month = if matches!(get(p, "preset"), Some("this_year" | "year_to_date")) {
+        super::d8::fiscal_start_month(app, c)?
+    } else { 1 };
+    let (data, errors) = filter_data(p, today, fiscal_month);
     let mut vm = ctx(app, r)?;
     let destinations = app.open_mut()?.book.read(|q| -> Result<Vec<String>, FbError> {
         let mut st = q.prepare("SELECT f.id FROM bankfeeds_account f JOIN bankfeeds_connection c ON c.id=f.connection_id WHERE c.company_id=?1 AND c.active=1 AND f.active=1 AND f.ledger_account_id=?2 ORDER BY f.id LIMIT 2")?;

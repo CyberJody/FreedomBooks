@@ -89,6 +89,9 @@ pub(super) fn prior_receipt(
   let mut st=tx.prepare("SELECT invoice_id FROM sales_receiptallocation WHERE receipt_id=?1 ORDER BY id")?;let invoices=st.query_map([id],|r|r.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?;
   let mut lines=vec![];let mut detail=Value::Null;
   if sale{let (sid,raw):(String,String)=tx.query_row("SELECT id,data FROM sales_salesreceipt WHERE receipt_id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?)))?;detail=fb_db::parse_unique_json_as(&raw).map_err(|_|FbError::validation("Invalid stored sale."))?;let mut st=tx.prepare("SELECT data FROM sales_salesreceiptline WHERE sale_id=?1 ORDER BY position")?;for row in st.query_map([sid],|r|r.get::<_,String>(0))?{lines.push(fb_db::parse_unique_json_as::<Value>(&row?).map_err(|_|FbError::validation("Invalid stored sale line."))?);}}
+  if !sale && v["destination"] == "UNDEPOSITED" {
+      v["net_bank_id"] = json!(fb_core::banking::net_receipt_bank(tx, c, id, &key)?);
+  }
   v["lines"]=json!(lines);v["sale"]=detail;v["invoice_ids"]=json!(invoices);Ok(Some(v))
  }).map_err(AppError::from)
 }

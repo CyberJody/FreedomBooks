@@ -2935,3 +2935,31 @@ fn fy2025_multi_entry_match_exact_total_exclusivity_return_and_stale() {
     assert_eq!(f.book.read(|q| item(q, f.c, &only_grp_id)).unwrap().status, "NEW");
     assert!(f.book.check().unwrap().is_empty());
 }
+
+#[test]
+fn pending_withdrawals_use_the_complete_pull_across_repeated_entries() {
+    let mut f = Fx::new();
+    let entry = |transactions| acct("checking", "Checking", transactions);
+    let mut pull = StagedPull {
+        accounts: vec![entry(vec![fix5_pending("first", -10)]), entry(vec![fix5_pending("second", -20)])],
+        ..Default::default()
+    };
+    assert_eq!(f.sync(&pull)["pending_dropped"], 0);
+    let count = |f: &mut Fx| f.count("SELECT count(*) FROM bankfeeds_transaction WHERE status='NEW' AND pending=1");
+    assert_eq!(count(&mut f), 2);
+    pull.accounts = vec![entry(vec![])];
+    pull.errors.push("Incomplete download".into());
+    assert_eq!(f.sync(&pull)["pending_dropped"], 0);
+    pull.errors.clear();
+    pull.accounts[0].skipped.push("Unreadable transaction".into());
+    assert_eq!(f.sync(&pull)["pending_dropped"], 0);
+    pull.accounts[0].skipped.clear();
+    pull.skipped.push("Unreadable account".into());
+    assert_eq!(f.sync(&pull)["pending_dropped"], 0);
+    assert_eq!(count(&mut f), 2);
+    pull.skipped.clear();
+    pull.accounts[0].transactions.push(fix5_pending("second", -20));
+    assert_eq!(f.sync(&pull)["pending_dropped"], 1);
+    assert_eq!(count(&mut f), 1);
+    assert!(f.item("second").pending);
+}

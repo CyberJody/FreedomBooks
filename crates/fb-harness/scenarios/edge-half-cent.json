@@ -122,7 +122,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h0",
+   "ref": "h0-subcent",
    "company": "c1",
    "date": "2026-01-01",
    "memo": "Half cent 0",
@@ -136,6 +136,26 @@
      "credit": "0.005"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h0",
+   "company": "c1",
+   "date": "2026-01-01",
+   "memo": "Exact cents for h0",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.01"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -146,7 +166,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h1",
+   "ref": "h1-subcent",
    "company": "c1",
    "date": "2026-01-02",
    "memo": "Half cent 1",
@@ -160,6 +180,26 @@
      "credit": "125.005"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h1",
+   "company": "c1",
+   "date": "2026-01-02",
+   "memo": "Exact cents for h1",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "125.01"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "125.01"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -170,7 +210,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h2",
+   "ref": "h2-subcent",
    "company": "c1",
    "date": "2026-01-03",
    "memo": "Half cent 2",
@@ -184,6 +224,26 @@
      "credit": "2.675"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h2",
+   "company": "c1",
+   "date": "2026-01-03",
+   "memo": "Exact cents for h2",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "2.68"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "2.68"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -194,7 +254,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h3",
+   "ref": "h3-subcent",
    "company": "c1",
    "date": "2026-01-04",
    "memo": "Half cent 3",
@@ -208,6 +268,26 @@
      "credit": "1.995"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h3",
+   "company": "c1",
+   "date": "2026-01-04",
+   "memo": "Exact cents for h3",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "2.00"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "2.00"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -218,7 +298,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h4",
+   "ref": "h4-subcent",
    "company": "c1",
    "date": "2026-01-05",
    "memo": "Half cent 4",
@@ -232,6 +312,26 @@
      "credit": "0.015"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h4",
+   "company": "c1",
+   "date": "2026-01-05",
+   "memo": "Exact cents for h4",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.02"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.02"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -242,7 +342,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h5",
+   "ref": "h5-subcent",
    "company": "c1",
    "date": "2026-01-06",
    "memo": "Half cent 5",
@@ -256,6 +356,26 @@
      "credit": "0.125"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h5",
+   "company": "c1",
+   "date": "2026-01-06",
+   "memo": "Exact cents for h5",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.13"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.13"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -266,7 +386,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h6",
+   "ref": "h6-subcent",
    "company": "c1",
    "date": "2026-01-07",
    "memo": "Half cent 6",
@@ -278,6 +398,26 @@
     {
      "account": "c1.bank",
      "credit": "1_000.004"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h6",
+   "company": "c1",
+   "date": "2026-01-07",
+   "memo": "Exact cents for h6",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "1000.00"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "1000.00"
     }
    ],
    "expect_error": false
@@ -354,7 +494,7 @@
    ],
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Constraint “one_positive_side” is violated."
+   "expect_message": "Enter journal amounts with at most two decimal places."
   },
   {
    "op": "save_draft",
@@ -382,7 +522,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "h11",
+   "ref": "h11-subcent",
    "company": "c1",
    "date": "2026-01-12",
    "memo": "Half cent 11",
@@ -394,6 +534,26 @@
     {
      "account": "c1.bank",
      "credit": "99999999999999.994"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "h11",
+   "company": "c1",
+   "date": "2026-01-12",
+   "memo": "Exact cents for h11",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "99999999999999.99"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "99999999999999.99"
     }
    ],
    "expect_error": false
@@ -422,7 +582,7 @@
    ],
    "expect_error": true,
    "expect_kind": "ValidationError",
-   "expect_message": "Constraint “one_positive_side” is violated."
+   "expect_message": "Enter journal amounts with at most two decimal places."
   },
   {
    "op": "save_draft",
@@ -626,7 +786,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "r1",
+   "ref": "r1-subcent",
    "company": "c1",
    "date": "2026-02-02",
    "memo": "Rounds to balance",
@@ -644,6 +804,30 @@
      "credit": "20.01"
     }
    ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "r1",
+   "company": "c1",
+   "date": "2026-02-02",
+   "memo": "Balanced at exact cents",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "10.00"
+    },
+    {
+     "account": "c1.cogs",
+     "debit": "10.01"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "20.01"
+    }
+   ],
    "expect_error": false
   },
   {
@@ -654,7 +838,7 @@
   },
   {
    "op": "save_draft",
-   "ref": "r2",
+   "ref": "r2-subcent",
    "company": "c1",
    "date": "2026-02-03",
    "memo": "Rounds out of balance",
@@ -666,6 +850,30 @@
     {
      "account": "c1.cogs",
      "debit": "0.005"
+    },
+    {
+     "account": "c1.bank",
+     "credit": "0.01"
+    }
+   ],
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "Enter journal amounts with at most two decimal places."
+  },
+  {
+   "op": "save_draft",
+   "ref": "r2",
+   "company": "c1",
+   "date": "2026-02-03",
+   "memo": "Unbalanced at exact cents",
+   "lines": [
+    {
+     "account": "c1.exp",
+     "debit": "0.01"
+    },
+    {
+     "account": "c1.cogs",
+     "debit": "0.01"
     },
     {
      "account": "c1.bank",

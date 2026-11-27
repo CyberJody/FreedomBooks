@@ -71,7 +71,7 @@ pub(super) fn build_selected(
     per_page: usize,
     selected: Option<&BTreeSet<String>>,
 ) -> FbResult<Value> {
-    let normalized = normalize_filters(f, chrono::Local::now().date_naive())?;
+    let normalized = normalize_filters(q, c, f, chrono::Local::now().date_naive())?;
     build_normalized(q, c, aid, &normalized, RegisterPage { number: page, size: per_page, period_totals: false }, selected)
 }
 fn build_normalized(
@@ -486,14 +486,13 @@ pub fn build_page_on(
     today: &str,
 ) -> FbResult<Value> {
     let today = py::model_date(today).map_err(FbError::validation)?;
-    let filters = normalize_filters(filters, today)?;
     book.read(|q| {
         services::access(q, actor, c)?;
+        let filters = normalize_filters(q, c, filters, today)?;
         build_normalized(q, c, aid, &filters, pagination, None)
     })
 }
-fn normalize_filters(f: &Value, today: chrono::NaiveDate) -> FbResult<Value> {
-    use chrono::{Datelike, Duration, Months, NaiveDate};
+fn normalize_filters(q: &(impl Query + ?Sized), company: CompanyId, f: &Value, today: chrono::NaiveDate) -> FbResult<Value> {
     let invalid = || FbError::validation("Invalid register filters.");
     if !f.is_object() {
         return Err(invalid());
@@ -564,34 +563,10 @@ fn normalize_filters(f: &Value, today: chrono::NaiveDate) -> FbResult<Value> {
     let mut start = parse_date("start")?;
     let mut end = parse_date("end")?;
     if !preset.is_empty() && preset != "custom" {
-        let date = |y, m, d| NaiveDate::from_ymd_opt(y, m, d).ok_or_else(invalid);
-        let month = date(today.year(), today.month(), 1)?;
-        let year = date(today.year(), 1, 1)?;
-        let month_end = |d: NaiveDate| {
-            d.checked_add_months(Months::new(1))
-                .and_then(|d| d.checked_sub_signed(Duration::days(1)))
-                .ok_or_else(invalid)
-        };
-        let (a, b) = match preset.as_str() {
-            "this_month" => (month, month_end(month)?),
-            "last_month" => {
-                let b = month
-                    .checked_sub_signed(Duration::days(1))
-                    .ok_or_else(invalid)?;
-                (date(b.year(), b.month(), 1)?, b)
-            }
-            "this_quarter" => {
-                let a = date(today.year(), 3 * ((today.month() - 1) / 3) + 1, 1)?;
-                let b = a
-                    .checked_add_months(Months::new(3))
-                    .and_then(|d| d.checked_sub_signed(Duration::days(1)))
-                    .ok_or_else(invalid)?;
-                (a, b)
-            }
-            "this_year" => (year, date(today.year(), 12, 31)?),
-            "year_to_date" => (year, today),
-            _ => return Err(invalid()),
-        };
+        let fiscal_month = if matches!(preset.as_str(), "this_year" | "year_to_date") {
+            crate::periods::policy(q, company)?.values.fiscal_year_start_month
+        } else { 1 };
+        let (a, b) = crate::reports::params::preset_range(&preset, today, fiscal_month)?;
         start = Some(a.to_string());
         end = Some(b.to_string());
     } else if start.as_ref().zip(end.as_ref()).is_some_and(|(a, b)| a > b) {

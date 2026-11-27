@@ -194,6 +194,7 @@ pub(in crate::screens::d6) fn render(
         ));
     }
     let mut vm = ctx(app, r)?;
+    put(&mut vm, "messages", std::mem::take(&mut app.messages));
     put(&mut vm, "today", (app.today)().to_string());
     put(
         &mut vm,

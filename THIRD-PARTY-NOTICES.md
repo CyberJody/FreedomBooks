@@ -107,7 +107,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [digest](https://github.com/RustCrypto/traits) | 0.10.7 | crate | linked | Copyright (c) 2017 Artyom Pavlov |
 | [displaydoc](https://github.com/yaahc/displaydoc) | 0.2.7 | crate | proc-macro | Copyright (c) Jane Lusby (from package authors; no copyright line in license files) |
 | [dyn-clone](https://github.com/dtolnay/dyn-clone) | 1.0.20 | crate | linked | Copyright (c) David Tolnay (from package authors; no copyright line in license files) |
-| [email-encoding](https://github.com/lettre/email-encoding) | 0.4.2 | crate | linked | Copyright (c) 2021-2024 Paolo Barbolini &lt;paolo@paolo565.org&gt; |
+| [email-encoding](https://github.com/lettre/email-encoding) | 0.4.3 | crate | linked | Copyright (c) 2021-2026 Paolo Barbolini &lt;paolo@paolobarbolini.it&gt; |
 | [equivalent](https://github.com/indexmap-rs/equivalent) | 1.0.3 | crate | linked | Copyright (c) 2016--2023 |
 | [errno](https://github.com/lambda-fairy/rust-errno) | 0.3.14 | crate | linked | Copyright (c) 2014 Chris Wong |
 | [fallible-iterator](https://github.com/sfackler/rust-fallible-iterator) | 0.3.0 | crate | linked | Copyright (c) 2015 The rust-openssl-verify Developers |
@@ -118,7 +118,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [find-msvc-tools](https://github.com/rust-lang/cc-rs) | 0.1.15 | crate | build-time | Copyright (c) 2014 Alex Crichton |
 | [flate2](https://github.com/rust-lang/flate2-rs) | 1.1.10 | crate | linked | Copyright (c) 2014-2026 Alex Crichton |
 | [fnv](https://github.com/servo/rust-fnv) | 1.0.7 | crate | linked | Copyright (c) 2017 Contributors |
-| [form_urlencoded](https://github.com/servo/rust-url) | 1.2.2 | crate | linked | Copyright (c) 2013-2016 The rust-url developers |
+| [form_urlencoded](https://github.com/servo/rust-url) | 1.2.3 | crate | linked | Copyright (c) 2013-2016 The rust-url developers |
 | [fs2](https://github.com/danburkert/fs2-rs) | 0.4.3 | crate | linked | Copyright (c) 2015 The Rust Project Developers |
 | [futures](https://github.com/rust-lang/futures-rs) | 0.3.34 | crate | linked | Copyright (c) 2016 Alex Crichton<br>Copyright (c) 2017 The Tokio Authors |
 | [futures-channel](https://github.com/rust-lang/futures-rs) | 0.3.34 | crate | linked | Copyright (c) 2016 Alex Crichton<br>Copyright (c) 2017 The Tokio Authors |
@@ -234,7 +234,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [typenum](https://github.com/paholg/typenum) | 1.20.1 | crate | linked | Copyright 2014 Paho Lurie-Gregg<br>Copyright (c) 2014 Paho Lurie-Gregg |
 | [unicode-segmentation](https://github.com/unicode-rs/unicode-segmentation) | 1.13.3 | crate | build-time | Copyright (c) 2015 The Rust Project Developers |
 | [universal-hash](https://github.com/RustCrypto/traits) | 0.5.1 | crate | linked | Copyright (c) 2019-2020 RustCrypto Developers |
-| [url](https://github.com/servo/rust-url) | 2.5.8 | crate | linked | Copyright (c) 2013-2025 The rust-url developers |
+| [url](https://github.com/servo/rust-url) | 2.5.9 | crate | linked | Copyright (c) 2013-2025 The rust-url developers |
 | [utf16_iter](https://github.com/hsivonen/utf16_iter) | 1.1.0 | crate | linked | Copyright (c) Henri Sivonen (from package authors; no copyright line in license files) |
 | [utf8_iter](https://github.com/hsivonen/utf8_iter) | 1.1.0 | crate | linked | Copyright (c) Henri Sivonen (from package authors; no copyright line in license files) |
 | [utf_types](https://github.com/hsivonen/utf_types) | 1.0.0 | crate | linked | Copyright (c) Henri Sivonen (from package authors; no copyright line in license files) |
@@ -291,8 +291,8 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [hyper](https://github.com/hyperium/hyper) | 1.12.0 | crate | linked | Copyright (c) 2014-2026 Sean McArthur |
 | [hyper-util](https://github.com/hyperium/hyper-util) | 0.1.21 | crate | linked | Copyright (c) 2023-2025 Sean McArthur |
 | [jsonwebtoken](https://github.com/Keats/jsonwebtoken) | 9.3.1 | crate | linked | Copyright (c) 2015 Vincent Prouillet |
-| [lettre](https://github.com/lettre/lettre) | 0.11.23 | crate | linked | Copyright (c) 2014-2024 Alexis Mousset &lt;contact@amousset.me&gt;<br>Copyright (c) 2019-2025 Paolo Barbolini &lt;paolo@paolo565.org&gt;<br>Copyright (c) 2018 K. &lt;kayo@illumium.org&gt; |
-| [libsqlite3-sys](https://github.com/rusqlite/rusqlite) | 0.39.1 | crate | linked | Copyright (c) 2014 The rusqlite developers |
+| [lettre](https://github.com/lettre/lettre) | 0.11.24 | crate | linked | Copyright (c) 2014-2024 Alexis Mousset &lt;contact@amousset.me&gt;<br>Copyright (c) 2019-2025 Paolo Barbolini &lt;paolo@paolo565.org&gt;<br>Copyright (c) 2018 K. &lt;kayo@illumium.org&gt; |
+| [libsqlite3-sys](https://github.com/rusqlite/rusqlite) | 0.40.0 | crate | linked | Copyright (c) 2014 The rusqlite developers |
 | [mio](https://github.com/tokio-rs/mio) | 1.2.4 | crate | linked | Copyright (c) 2014 Carl Lerche and other MIO contributors |
 | [napi](https://github.com/napi-rs/napi-rs) | 3.16.0 | crate | linked | Copyright (c) Nathan Sobo, Yinan Long (from package authors; no copyright line in license files) |
 | [napi-build](https://github.com/napi-rs/napi-rs) | 2.6.0 | crate | build-time | Copyright (c) LongYinan (from package authors; no copyright line in license files) |
@@ -308,13 +308,13 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 | [phf_shared](https://github.com/rust-phf/rust-phf) | 0.12.1 | crate | linked | Copyright (c) 2014-2022 Steven Fackler, Yuki Okushi |
 | [qrcodegen](https://github.com/nayuki/QR-Code-generator) | 1.8.0 | crate | linked | Copyright (c) Project Nayuki. (MIT License) |
 | [rsqlite-vfs](https://github.com/Spxg/sqlite-wasm-rs) | 0.2.0 | crate | linked | (no copyright line found; see the crate's license files) |
-| [rusqlite](https://github.com/rusqlite/rusqlite) | 0.41.1 | crate | linked | Copyright (c) 2014 The rusqlite developers |
+| [rusqlite](https://github.com/rusqlite/rusqlite) | 0.43.0 | crate | linked | Copyright (c) 2014 The rusqlite developers |
 | [rust_decimal](https://github.com/paupino/rust-decimal) | 1.43.0 | crate | linked | Copyright (c) 2016 Paul Mason |
 | [schemars](https://github.com/GREsau/schemars) | 1.2.3 | crate | linked | Copyright (c) 2019 Graham Esau |
 | [schemars_derive](https://github.com/GREsau/schemars) | 1.2.3 | crate | proc-macro | Copyright (c) 2019 Graham Esau |
 | [simd-adler32](https://github.com/mcountryman/simd-adler32) | 0.3.10 | crate | linked | Copyright (c) [2021] [Marvin Countryman] |
 | [slab](https://github.com/tokio-rs/slab) | 0.4.12 | crate | linked | Copyright (c) 2019 Carl Lerche |
-| [sqlite-wasm-rs](https://github.com/Spxg/sqlite-wasm-rs) | 0.6.2 | crate | linked | Copyright (c) 2024 Spxg |
+| [sqlite-wasm-rs](https://github.com/Spxg/sqlite-wasm-rs) | 0.6.3 | crate | linked | Copyright (c) 2024 Spxg |
 | [synstructure](https://github.com/mystor/synstructure) | 0.13.2 | crate | build-time | Copyright 2016 Nika Layzell |
 | [synstructure](https://github.com/mystor/synstructure) | 0.14.0 | crate | build-time | Copyright 2016 Nika Layzell |
 | [tokio](https://github.com/tokio-rs/tokio) | 1.54.1 | crate | linked | Copyright (c) Tokio Contributors |
@@ -494,7 +494,7 @@ OpenSSL 3 — into the binary); **proc-macro** = compile-time code generator.
 
 | Package | Version | Type | Usage | Copyright |
 |---|---|---|---|---|
-| [sqlcipher-src](https://github.com/LucaCappelletti94/sqlcipher-src) | 419.0.6+sqlcipher-4.19.0-sqlite-3.53.4-libtomcrypt-1.18.2 | crate | build-time; vendored C linked into binary | Copyright (c) 2026 Luca Cappelletti<br>Copyright (c) 2025, ZETETIC LLC<br>Copyright (C) 2004 Sam Hocevar &lt;sam@hocevar.net&gt; |
+| [sqlcipher-src](https://github.com/LucaCappelletti94/sqlcipher-src) | 420.0.0+sqlcipher-4.20.0-sqlite-3.54.1-libtomcrypt-1.18.2 | crate | build-time; vendored C linked into binary | Copyright (c) 2026 Luca Cappelletti<br>Copyright (c) 2025, ZETETIC LLC<br>Copyright (C) 2004 Sam Hocevar &lt;sam@hocevar.net&gt; |
 
 ## License texts
 
@@ -1252,7 +1252,7 @@ For more information, please refer to <http://unlicense.org/>
 ### WTFPL
 
 ```text
-(text as distributed with sqlcipher-src 419.0.6+sqlcipher-4.19.0-sqlite-3.53.4-libtomcrypt-1.18.2)
+(text as distributed with sqlcipher-src 420.0.0+sqlcipher-4.20.0-sqlite-3.54.1-libtomcrypt-1.18.2)
 
 LibTomCrypt is licensed under DUAL licensing terms.
 

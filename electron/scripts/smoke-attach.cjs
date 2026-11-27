@@ -62,12 +62,14 @@ module.exports = async () => {
     await require('./smoke-identity.cjs').signIn(page, 'Synthetic attachment owner42');
     const company = /\/c\/([0-9a-f-]{36})\//.exec(page.url())[1];
     const baseUrl = `fb://app/c/${company}`;
-    const income = await app.evaluate(({ app }, c) => {
+    const accounts = await app.evaluate(({ app }, c) => {
       const req = process.getBuiltinModule('module').createRequire(app.getAppPath() + '/package.json');
       const native = req(process.env.FB_NATIVE_MODULE || app.getAppPath() + '/native/fb-node.node');
-      return JSON.parse(native.query(JSON.stringify({type:'Accounts',company_id:c}))).find(r=>r.code==='4000').id;
+      return JSON.parse(native.query(JSON.stringify({type:'Accounts',company_id:c})));
     }, company);
-    await page.goto(`${baseUrl}/lists/customers/new/`);
+    const account = code => accounts.find(row => row.code === code).id;
+    const income = account('4000');
+    await page.goto('fb://app/c/' + company + '/lists/customers/new/');
     await page.fill('#id_display_name','Synthetic attachment customer');
     await Promise.all([page.waitForURL(/\/customers\/[0-9a-f-]{36}\/$/),page.getByRole('button',{name:'Save',exact:true}).click()]);
     const customer = /\/customers\/([0-9a-f-]{36})\//.exec(page.url())[1];
@@ -145,8 +147,82 @@ module.exports = async () => {
     assert.equal(await count(), before);
     assert.match(await panel().innerText(), /Removed inv1\.pdf\. It stays in the audit history and in backups\./);
     pass('removing the attached file works from the invoice page');
-    assert.deepEqual(errors, []);
+
+    await page.goto(baseUrl + '/lists/vendors/new/');
+    await page.fill('#id_display_name', 'Synthetic attachment vendor');
+    await Promise.all([page.waitForURL(/vendors\/[0-9a-f-]{36}\/$/), page.getByRole('button', {name:'Save', exact:true}).click()]);
+    const vendor = new URL(page.url()).pathname.split('/').at(-2);
+    await page.goto(baseUrl + '/bills/new/');
+    await page.selectOption('#id_vendor', vendor);
+    await page.fill('#id_date', '2026-11-06');
+    await page.fill('#id_due_date', '2026-12-06');
+    await page.selectOption('#id_lines-0-expense_account', account('6000'));
+    await page.fill('#id_lines-0-description', 'Synthetic parts');
+    await page.fill('#id_lines-0-rate', '10.00');
+    await Promise.all([page.waitForURL(/bills\/[0-9a-f-]{36}\/$/), page.getByRole('button', {name:'Save draft', exact:true}).click()]);
+    const bill = page.url();
+    await page.goto(baseUrl + '/journals/new/');
+    await page.fill('#id_date', '2026-11-06');
+    await page.fill('#id_memo', 'Synthetic manual journal');
+    await page.selectOption('#id_lines-0-account', account('6000'));
+    await page.fill('#id_lines-0-debit', '10.00');
+    await page.selectOption('#id_lines-1-account', account('1000'));
+    await page.fill('#id_lines-1-credit', '10.00');
+    await Promise.all([page.waitForURL(/journals\/[0-9a-f-]{36}\/$/), page.getByRole('button', {name:'Save draft', exact:true}).click()]);
+    await page.getByRole('button', {name:'Post journal', exact:true}).click();
+    await page.waitForSelector('h1:has-text("Posted")');
+    const journal = page.url();
+    const png = path.join(picked, 'scan.png');
+    fs.writeFileSync(png, Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c49444154789c6338b1a50200043c01f5201698a50000000049454e44ae426082', 'hex'));
+    for (const [kind, url] of Object.entries({invoice, bill, journal})) {
+      await page.goto(url);
+      for (const file of [pdf, png]) {
+        const name = path.basename(file);
+        await chooser({canceled:false, filePaths:[file]});
+        await Promise.all([page.waitForEvent('load'), page.click('#attachments label.attachments-file')]);
+        for (const label of [name, 'Download']) {
+          const out = path.join(picked, [kind, label, name].join('-'));
+          await app.evaluate(({dialog}, selected) => {
+            dialog.showSaveDialog = async (_window, options) => {
+              if (options.defaultPath !== selected.name) throw Error('Unexpected attachment filename');
+              return {canceled:false, filePath:selected.out};
+            };
+          }, {name, out});
+          const row = panel().locator('tbody tr').filter({has: page.getByRole('link', {name, exact:true})});
+          await row.getByRole('link', {name:label, exact:true}).click();
+          for (let i = 0; i < 100 && !fs.existsSync(out); i++) await new Promise(resolve => setTimeout(resolve, 50));
+          assert.deepEqual(fs.readFileSync(out), fs.readFileSync(file));
+        }
+      }
+      pass(kind + ' filename and Download each save the original PDF and PNG bytes');
+    }
     assert.deepEqual(alerts, []);
+    await page.goto('fb://app/companies/new/');
+    await page.fill('#id_name', 'Second synthetic company');
+    await Promise.all([page.waitForURL(/\/c\/[0-9a-f-]{36}\//), page.getByRole('button', {name:'Save', exact:true}).click()]);
+    const other = new URL(page.url()).pathname.split('/')[2];
+    assert.notEqual(other, company);
+    await page.goto(journal);
+    const link = panel().getByRole('link', {name:'scan.png', exact:true});
+    const href = await link.getAttribute('href');
+    const refusedFile = path.join(picked, 'refused.png');
+    await app.evaluate(({dialog}, filePath) => {
+      globalThis.refusedSaveDialogs = 0;
+      dialog.showSaveDialog = async () => {
+        globalThis.refusedSaveDialogs++;
+        return {canceled:false, filePath};
+      };
+    }, refusedFile);
+    for (const target of [href.replace(company, other), href.replace(/attachments\/[^/]+\//, 'attachments/invalid/')]) {
+      await link.evaluate((anchor, url) => anchor.href = url, target);
+      const [refusal] = await Promise.all([page.waitForEvent('dialog'), link.click()]);
+      assert.match(refusal.message(), /attachment.*not found|no such attachment|attachment.*does not exist/i);
+      assert.equal(page.url(), journal);
+    }
+    assert.equal(await app.evaluate(() => globalThis.refusedSaveDialogs), 0);
+    assert.equal(fs.existsSync(refusedFile), false);
+    pass('cross-company and invalid attachment IDs show a refusal without opening Save or writing a file');
+    assert.deepEqual(errors, []);
     assert.equal(chromiumChooser, 0);
   } finally {
     await app.close();

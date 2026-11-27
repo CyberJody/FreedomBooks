@@ -171,7 +171,8 @@ pub(super) fn render(
     let actor = open.owner;
     let mut csv = String::new();
     if output == "csv" {
-        csv = meta(&vm, title, None);
+        csv.push('\u{feff}');
+        csv.push_str(&meta(&vm, title, None));
         if let Some(start) = start {
             csv_row(&mut csv, ["From".into(), start.to_string()]);
             csv_row(&mut csv, ["Through".into(), end.to_string()]);

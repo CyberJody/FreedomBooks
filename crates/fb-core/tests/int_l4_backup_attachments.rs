@@ -73,6 +73,17 @@ fn attachments_survive_backup_verify_and_restore_and_tampering_is_refused() {
         passphrase: None,
         require_encrypted: false,
     };
+    // A marker from another operation refuses admission only after publication.
+    // The failed attempt owns the new book, lock and receipts, but never the marker.
+    let marker = target.with_extension("fbbook.rekey.json");
+    fs::write(&marker, b"other operation").unwrap();
+    assert!(backups::restore_backup(&archive, &KEY, &restore).is_err());
+    assert_eq!(fs::read(&marker).unwrap(), b"other operation");
+    assert!(!target.exists() && !receipts.exists());
+    for suffix in ["-wal", "-shm", "-journal", ".lock"] {
+        assert!(!restored_dir.join(format!("book.fbbook{suffix}")).exists());
+    }
+    fs::remove_file(marker).unwrap();
     backups::restore_backup(&archive, &KEY, &restore).unwrap();
     let mut restored = Book::open(&target, &KEY).unwrap();
     assert!(restored.check().unwrap().is_empty());

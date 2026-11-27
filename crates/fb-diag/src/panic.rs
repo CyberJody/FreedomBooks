@@ -71,7 +71,9 @@ impl Raw {
             let backtrace = match &self.backtrace {
                 Some(bt) => {
                     let _resolving = Resolving::enter();
-                    scrub::backtrace(&bt.to_string())
+                    // Preserve the crate directory even when the current directory is the crate
+                    // and the symbolizer gives only a function name. Scrub paths before logging.
+                    scrub::backtrace(&format!("{bt:#}"))
                 }
                 None => vec![],
             };

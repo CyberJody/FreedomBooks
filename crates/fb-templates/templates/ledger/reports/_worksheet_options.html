@@ -35,6 +35,7 @@
 <label for="report-worksheet">Asset entries</label>
 <p id="worksheet-help">Use <code>label|account ID|journal ID|line ID|in-service date|cost cents|salvage cents|method|life months|prior cents|disposal date</code>. The final date is optional. Leave cost blank to use a single posted cost debit from a linked journal or line. If the journal has multiple eligible cost debits, specify the posted line ID to derive cost. Use <code>straight_line</code> for the method and enter zero explicitly where it applies.</p>
 {% endif %}
-<textarea id="report-worksheet" name="{{ worksheet }}" rows="5" maxlength="{{ worksheet_limit }}" aria-describedby="worksheet-help" spellcheck="false">{{ worksheet_raw }}</textarea>
+<p id="worksheet-feedback" role="status" aria-live="polite"></p>
+<textarea id="report-worksheet" name="{{ worksheet }}" rows="5" maxlength="{{ worksheet_limit }}" aria-describedby="worksheet-help worksheet-feedback" spellcheck="false">{{ worksheet_raw }}</textarea>
 <p class="report-foot">Edit or remove entries above, then select Run report to apply them.</p>
 </details>

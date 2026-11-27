@@ -149,3 +149,10 @@ fn the_first_run_password_page_uses_its_own_messages() {
     let Outcome::Invalid { html } = out else { panic!("{out:?}") };
     assert!(html.contains("Use a user password of at least 8 characters"), "{html}");
 }
+
+#[test]
+fn newer_format_gate_explains_the_upgrade_without_an_unlock_form() {
+    let html = fb_app::screens::render_gate(&fb_app::App::new(), "unlock", false, "newer", &[]).unwrap();
+    assert!(html.contains("These books need a newer version of FreedomBooks"));
+    assert!(!html.contains("type=\"password\"") && !html.contains("data-gate=\"unlock\""));
+}

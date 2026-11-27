@@ -1,6 +1,7 @@
 //! Port of `ledger/reports.py` (the account register and the trial balance), with the financial reports of
 //! `ledger/financial.py` in [`financial`] and the report-control data logic of `ledger/report_views.py` in [`params`].
 
+pub(crate) mod apportionment;
 pub mod asset_depreciation_schedule;
 pub mod cash_flow;
 pub mod comparative_profit_and_loss;

@@ -138,30 +138,29 @@ pub(super) fn record_verified_matching(
     fingerprint: &(u64, String),
     note: serde_json::Value,
 ) -> Result<()> {
-    record_verified_inner(path, fingerprint, note, false)
+    let dir = paths::Directory::open(paths::parent_name(path)?.0)?;
+    record_verified_inner(&dir, path, fingerprint, note, false)
 }
 
 pub(super) fn record_verified_noclobber(
-    path: &Path,
-    fingerprint: &(u64, String),
-    note: serde_json::Value,
+    dir: &paths::Directory, path: &Path, fingerprint: &(u64, String), note: serde_json::Value,
 ) -> Result<()> {
-    record_verified_inner(path, fingerprint, note, true)
+    record_verified_inner(dir, path, fingerprint, note, true)
 }
 
 fn record_verified_inner(
-    path: &Path,
-    fingerprint: &(u64, String),
-    mut note: serde_json::Value,
-    noclobber: bool,
+    dir: &paths::Directory, path: &Path, fingerprint: &(u64, String),
+    mut note: serde_json::Value, noclobber: bool,
 ) -> Result<()> {
-    if &hash_file(path)? != fingerprint {
-        return Err(BackupError::conflict(
-            "The backup changed while verification ran; no verification was recorded.",
-        ));
+    let (parent, name) = paths::parent_name(path)?;
+    let changed = || BackupError::conflict("The backup changed while verification ran; no verification was recorded.");
+    let archive = dir.read_named(name)?.ok_or_else(changed)?;
+    let meta = archive.metadata()?;
+    if meta.len() != fingerprint.0
+        || &super::copy_and_hash((&archive).take(fingerprint.0.saturating_add(1)), &mut io::sink(), u64::MAX)? != fingerprint {
+        return Err(changed());
     }
     let (bytes, digest) = fingerprint;
-    let meta = fs::metadata(path)?;
     let mtime = meta
         .modified()?
         .duration_since(std::time::UNIX_EPOCH)
@@ -173,10 +172,6 @@ fn record_verified_inner(
     note["sha256"] = json!(digest);
     note["mtime_ns"] = json!(mtime);
     let target = sidecar(path);
-    let parent = path
-        .parent()
-        .ok_or_else(|| BackupError::refused("Missing backup folder."))?;
-    paths::resolve(parent)?;
     match fs::symlink_metadata(&target) {
         Ok(meta) if !meta.file_type().is_file() => {
             return Err(BackupError::conflict(
@@ -190,55 +185,31 @@ fn record_verified_inner(
     if !noclobber {
         paths::resolve(&target)?;
     }
-    let mut tmp = tempfile::Builder::new()
-        .prefix(&super::cleanup::prefix())
-        .suffix(".partial")
-        .tempfile_in(parent)?;
-    tmp.write_all(&serde_json::to_vec(&note)?)?;
-    tmp.as_file().sync_all()?;
-    if noclobber {
-        match tmp.persist_noclobber(&target) {
-            Ok(_) => (),
-            Err(e) if e.error.kind() == io::ErrorKind::AlreadyExists => {
-                if matching_note(path).is_some_and(|existing| {
-                    existing["complete"] == note["complete"]
-                        && existing["scheduled"] == note["scheduled"]
-                        && existing["file"] == note["file"]
-                        && existing["book_sha256"] == note["book_sha256"]
-                        && existing["bytes"] == note["bytes"]
-                        && existing["sha256"] == note["sha256"]
-                        && existing["verified_at"]
-                            .as_str()
-                            .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
-                            .is_some()
-                }) {
-                    return Ok(());
-                }
-                return Err(BackupError::conflict(
-                    "The backup verification file path is already occupied.",
-                ));
+    let bytes = serde_json::to_vec(&note)?;
+    let result = dir.write_private(paths::parent_name(&target)?.1, noclobber, |file| Ok(file.write_all(&bytes)?));
+    dir.confirm(parent)?;
+    match result {
+        Err(e) if noclobber && e.is_conflict() => {
+            if matching_note_in(dir, path)?.is_some_and(|existing| {
+                existing["complete"] == note["complete"]
+                    && existing["scheduled"] == note["scheduled"]
+                    && existing["file"] == note["file"]
+                    && existing["book_sha256"] == note["book_sha256"]
+                    && existing["bytes"] == note["bytes"]
+                    && existing["sha256"] == note["sha256"]
+                    && existing["verified_at"]
+                        .as_str()
+                        .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+                        .is_some()
+            }) {
+                return Ok(());
             }
-            Err(e) => {
-                return Err(BackupError::refused(format!(
-                    "Could not record verification: {}",
-                    e.error
-                )));
-            }
+            Err(BackupError::conflict("The backup verification file path is already occupied."))
         }
-    } else {
-        tmp.persist(&target).map_err(|e| {
-            if fs::symlink_metadata(&target).is_ok_and(|meta| !meta.file_type().is_file()) {
-                BackupError::conflict(
-                    "The backup verification file path is occupied by a non-regular entry.",
-                )
-            } else {
-                BackupError::refused(format!("Could not record verification: {}", e.error))
-            }
-        })?;
+        other => other,
     }
-    paths::sync_dir(parent)?;
-    Ok(())
 }
+
 pub fn verified_note(path: &Path) -> bool {
     matching_note(path).is_some()
 }
@@ -277,12 +248,24 @@ pub(super) fn note_matches(
 }
 
 pub(super) fn matching_note(path: &Path) -> Option<serde_json::Value> {
-    let note = read_note(path).ok()?;
-    let meta = fs::symlink_metadata(path).ok()?;
-    let (bytes, sha) = hash_file(path).ok()?;
-    note_matches(&note, &meta, bytes, &sha)
-        .ok()?
-        .then_some(note)
+    let dir = paths::Directory::open(paths::parent_name(path).ok()?.0).ok()?;
+    matching_note_in(&dir, path).ok().flatten()
+}
+
+fn matching_note_in(dir: &paths::Directory, path: &Path) -> Result<Option<serde_json::Value>> {
+    let result = (|| {
+        let Some(note) = dir.read_named(paths::parent_name(&sidecar(path))?.1)? else { return Ok(None) };
+        let note = read_note_file(note)?;
+        let Some(mut archive) = dir.read_named(paths::parent_name(path)?.1)? else { return Ok(None) };
+        let meta = archive.metadata()?;
+        if note["bytes"].as_u64() != Some(meta.len()) { return Ok(None); }
+        let (bytes, sha) = super::hash_open_file(&mut archive)?;
+        Ok(note_matches(&note, &meta, bytes, &sha)?.then_some(note))
+    })();
+    match result {
+        Err(BackupError { failure: super::Failure::Validation, .. }) => Ok(None),
+        other => other,
+    }
 }
 
 /// Quarantine both names relative to the pinned schedule directory handle before verifying.
@@ -291,7 +274,7 @@ pub(super) fn matching_note(path: &Path) -> Option<serde_json::Value> {
 pub(super) fn quarantine_remove(
     dir: &paths::Directory,
     archive_name: &str,
-    eligible: impl FnOnce(&paths::Directory, &str, &str) -> bool,
+    eligible: impl FnOnce(&paths::Directory, &str, &str) -> Result<bool>,
 ) -> Result<bool> {
     let note_name = format!("{archive_name}.verified.json");
     let (q_name, q_dir) = dir.create_private_subdir(".fb-retention-")?;
@@ -305,42 +288,32 @@ pub(super) fn quarantine_remove(
             return Err(e.into());
         }
     }
+    let restore = |name| q_dir.restore_to(name, dir).map_err(|e| {
+        BackupError::retryable(format!("Retention could not restore {name} from {q_name}: {e}"))
+    });
     let moved = match dir.rename_to(&note_name, &q_dir, &note_name) {
         Ok(()) => true,
         Err(e) if e.kind() == io::ErrorKind::NotFound => false,
         Err(e) => {
-            put_back_in(&q_dir, archive_name, dir, archive_name)?;
+            restore(archive_name)?;
             dir.remove_empty_subdir(&q_name)?;
+            dir.sync()?;
             return Err(e.into());
         }
     };
-    let remove = moved && eligible(&q_dir, archive_name, &note_name);
-    if remove {
+    let decision = if moved { eligible(&q_dir, archive_name, &note_name) } else { Ok(false) };
+    if matches!(decision, Ok(true)) {
         q_dir.unlink_file(archive_name)?;
         q_dir.unlink_file(&note_name)?;
-        q_dir.sync()?;
     } else {
-        put_back_in(&q_dir, archive_name, dir, archive_name)?;
-        if moved {
-            put_back_in(&q_dir, &note_name, dir, &note_name)?;
-        }
+        // On collision keep the remaining pair together for manual recovery.
+        restore(archive_name)?;
+        if moved { restore(&note_name)?; }
     }
-    // If a name was reused or cannot be restored, retain the quarantined copy.
+    q_dir.sync()?;
     dir.remove_empty_subdir(&q_name)?;
     dir.sync()?;
-    Ok(remove)
-}
-
-fn put_back_in(
-    from_dir: &paths::Directory,
-    from_name: &str,
-    to_dir: &paths::Directory,
-    to_name: &str,
-) -> Result<()> {
-    if from_dir.link_to(from_name, to_dir, to_name).is_ok() {
-        from_dir.unlink_file(from_name)?;
-    }
-    Ok(())
+    decision
 }
 
 fn same_file(a: &Path, b: &Path) -> bool {
@@ -377,7 +350,15 @@ pub fn prune(dir: &Path, label: &str, keep: usize, protect: Option<&Path>) -> Re
         return Err(BackupError::refused("--keep must be at least 1."));
     }
     let mine = backup_files(dir, Some(label))?;
-    let verified = mine.iter().find(|p| verified_note(p) && complete(p));
+    if mine.is_empty() { return Ok(Vec::new()); }
+    let pinned = paths::Directory::open(dir)?;
+    let mut verified = None;
+    for path in &mine {
+        if matching_note_in(&pinned, path)?.is_some() && complete(path) {
+            verified = Some(path);
+            break;
+        }
+    }
     remove_backups(mine.iter().skip(keep).filter(|path| {
         !protect.is_some_and(|p| same_file(path, p))
             && !verified.is_some_and(|p| same_file(path, p))
@@ -403,6 +384,43 @@ pub(super) fn remove_backups<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn quarantine_io_error_restores_the_pair_and_a_collision_names_the_retained_copy() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = paths::Directory::open(temp.path()).unwrap();
+        let file = temp.path().join("archive");
+        let note = sidecar(&file);
+        fs::write(&file, b"original").unwrap();
+        fs::write(&note, b"note").unwrap();
+        let error = quarantine_remove(&dir, "archive", |_, _, _| Err(io::Error::other("read failure").into())).unwrap_err();
+        assert!(error.to_string().contains("read failure"));
+        assert_eq!(fs::read(&file).unwrap(), b"original");
+        assert_eq!(fs::read(&note).unwrap(), b"note");
+
+        let error = quarantine_remove(&dir, "archive", |_, _, _| {
+            fs::write(&file, b"replacement")?;
+            Ok(false)
+        }).unwrap_err();
+        let quarantine = fs::read_dir(temp.path()).unwrap().map(|e| e.unwrap().path())
+            .find(|p| p.is_dir()).unwrap();
+        assert!(error.to_string().contains(quarantine.file_name().unwrap().to_str().unwrap()));
+        assert_eq!(fs::read(&file).unwrap(), b"replacement");
+        assert_eq!(fs::read(quarantine.join("archive")).unwrap(), b"original");
+        assert_eq!(fs::read(quarantine.join("archive.verified.json")).unwrap(), b"note");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn quarantine_can_restore_a_directory_without_hard_linking_it() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = paths::Directory::open(temp.path()).unwrap();
+        fs::create_dir(temp.path().join("archive")).unwrap();
+        fs::write(temp.path().join("archive/owned"), b"preserve").unwrap();
+        assert!(!quarantine_remove(&dir, "archive", |_, _, _| panic!("missing note")).unwrap());
+        assert_eq!(fs::read(temp.path().join("archive/owned")).unwrap(), b"preserve");
+        assert_eq!(fs::read_dir(temp.path()).unwrap().count(), 1);
+    }
+
     #[test]
     fn vanished_retention_candidate_and_sidecar_are_skipped() {
         let dir = tempfile::tempdir().unwrap();

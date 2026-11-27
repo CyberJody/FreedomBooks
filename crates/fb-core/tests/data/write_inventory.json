@@ -95,7 +95,8 @@
   "crates/fb-app/src/screens/d4/payments.rs": {
     "accounts:prepare": 1,
     "detail:prepare": 3,
-    "listing:prepare": 1
+    "listing:prepare": 1,
+    "receive_submit:prepare": 1
   },
   "crates/fb-app/src/screens/d5.rs": {
     "register_sources:prepare": 2
@@ -236,7 +237,7 @@
     "flag:execute": 1
   },
   "crates/fb-core/src/bankfeeds/mapping.rs": {
-    "save_mappings_and_import_settings:execute": 1
+    "save_mapping_form:execute": 1
   },
   "crates/fb-core/src/bankfeeds/mod.rs": {
     "already_recorded_count:prepare": 1,
@@ -393,8 +394,8 @@
     "list:prepare": 1,
     "name_taken:prepare": 1,
     "persist:execute": 1,
-    "save_record:write": 1,
-    "save_record_tx:atomic": 1,
+    "save_record_checked:write": 1,
+    "save_record_checked_tx:atomic": 1,
     "set_active:write": 1
   },
   "crates/fb-core/src/documents.rs": {

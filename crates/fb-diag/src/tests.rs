@@ -138,7 +138,7 @@ fn panics_keep_where_and_a_fixed_category_and_nothing_of_their_message() {
     assert_eq!(categories, ["panic with a message", "panic with a message", "panic with a message", "unwrap on Err", "panic with a non-text payload", "string index not on a character boundary"]);
     for c in &caught {
         assert!(c.location.starts_with("crates/fb-diag/src/tests.rs:") || c.location.starts_with("library/core/src/"), "{}", c.location);
-        assert!(c.backtrace.iter().any(|f| f.contains("fb_diag::tests")), "{:?}", c.backtrace);
+        assert!(c.backtrace.iter().any(|f| f.contains("panics_keep_where_and_a_fixed_category_and_nothing_of_their_message")), "{:?}", c.backtrace);
         assert!(!c.backtrace.iter().any(|f| f.contains("fb_diag::panic::") || f.contains("panic.rs")), "no hook frames: {:?}", c.backtrace);
         record(Entry { op: "render".into(), kind: "panic".into(), detail: Some(c.category), location: Some(c.location.clone()), backtrace: c.backtrace.clone(), ..Default::default() });
     }
@@ -268,7 +268,7 @@ fn the_hook_survives_closed_or_full_stderr_an_unwritable_folder_and_a_full_disk(
         let text = std::fs::read_dir(&logs).map(|_| all_text(&logs)).unwrap_or_default();
         match mode {
             "folder-unwritable" => assert_eq!(text, "", "{mode}: logged nothing"),
-            "disk-full" => assert!(text.len() <= 600, "{mode}: writes stop at the limit: {} bytes", text.len()),
+            "disk-full" => assert_eq!(std::fs::metadata(logs.join(log::FILE)).unwrap().len(), 0, "{mode}: even the header write must fail"),
             _ => {
                 assert_eq!(text.lines().filter(|l| l.contains("\"kind\":\"panic\"")).count(), 4, "{mode}: {text}");
                 assert!(text.lines().all(|l| l.starts_with('{')), "{mode}: nothing else wrote into the log: {text}");
@@ -293,11 +293,11 @@ fn child_process_under_test() {
             std::fs::set_permissions(&logs, std::fs::Permissions::from_mode(0o500)).unwrap();
         }
         "disk-full" => {
-            // Files may not grow past 512 bytes; the write fails with EFBIG instead of a signal.
+            // Refuse the very first byte, including the log header, even on a block-aligned filesystem.
             // SAFETY: plain libc calls with valid arguments.
             unsafe {
                 libc::signal(libc::SIGXFSZ, libc::SIG_IGN);
-                let limit = libc::rlimit { rlim_cur: 512, rlim_max: libc::RLIM_INFINITY };
+                let limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
                 assert_eq!(libc::setrlimit(libc::RLIMIT_FSIZE, &limit), 0);
             }
         }

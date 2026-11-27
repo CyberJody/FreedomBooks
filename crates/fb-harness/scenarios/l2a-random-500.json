@@ -819,7 +819,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "46"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -1035,7 +1037,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "61"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 15\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -1101,7 +1105,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "66"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -1162,7 +1168,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 69"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c46 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_settings",
@@ -1268,7 +1277,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "78"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 4\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -1408,7 +1419,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "89"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -1505,7 +1518,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "97"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -1565,7 +1580,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "99"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -1631,7 +1648,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 103"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c78 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_settings",
@@ -1655,7 +1675,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "105"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 8\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -1666,7 +1688,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 106"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c66 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -1747,7 +1772,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "113"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -1957,7 +1984,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 127"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c105 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_rate",
@@ -2024,7 +2054,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "133"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 11\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -2061,7 +2093,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "136"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -2125,7 +2159,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "140"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 18\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2170,7 +2206,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "144"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 0\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2182,7 +2220,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "145"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 18\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2194,7 +2234,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "146"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 5\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2206,7 +2248,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "147"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 1\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -2252,7 +2296,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "151"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 3\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2274,7 +2320,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 153"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c151 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -2307,7 +2356,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "156"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2319,7 +2370,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "157"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 18\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2331,7 +2384,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "158"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 4\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2604,7 +2659,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "176"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 0\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -2665,7 +2722,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "180"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 9\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2677,7 +2736,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "181"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2737,7 +2798,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "186"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -2780,7 +2843,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "189"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -2804,7 +2869,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "191"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -2865,7 +2932,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 196"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c78 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_active",
@@ -3063,7 +3133,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 207"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c189 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -3098,7 +3171,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "210"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3109,7 +3184,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 211"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c78 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -3121,7 +3199,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "212"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 5\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3144,7 +3224,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "214"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3155,7 +3237,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 215"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c186 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -3167,7 +3252,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "216"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 19\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3179,7 +3266,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "217"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3191,7 +3280,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "218"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -3401,7 +3492,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "228"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 11\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3467,7 +3560,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "233"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3640,7 +3735,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "244"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 3\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -3681,7 +3778,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "248"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 15\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -3736,7 +3835,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 251"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c99 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_totals",
@@ -3805,7 +3907,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "256"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 14\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3817,7 +3921,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "257"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3829,7 +3935,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "258"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3841,7 +3949,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "259"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -3908,7 +4018,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "265"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -3996,7 +4108,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "273"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 10\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4008,7 +4122,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "274"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 18\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -4064,7 +4180,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "279"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -4207,7 +4325,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 287"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c180 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_settings",
@@ -4278,7 +4399,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "293"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 13\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4314,7 +4437,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "296"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -4340,7 +4465,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "298"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 15\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4365,7 +4492,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "300"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 10\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -4427,7 +4556,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "303"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4439,7 +4570,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "304"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4475,7 +4608,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "307"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4487,7 +4622,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "308"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 14\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4510,7 +4647,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "310"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4522,7 +4661,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "311"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -4640,7 +4781,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "317"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 4\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -4651,7 +4794,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 318"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c317 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_active",
@@ -4713,7 +4859,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "323"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 18\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -4903,7 +5051,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "333"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -4957,7 +5107,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "336"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 11\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -5001,7 +5153,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "340"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 8\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -5073,7 +5227,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "346"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 4\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5085,7 +5241,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "347"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5177,7 +5335,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "354"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -5197,7 +5357,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "356"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -5221,7 +5383,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "358"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5232,7 +5396,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 359"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c140 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_settings",
@@ -5256,7 +5423,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "361"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 11\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -5351,7 +5520,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "369"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5390,7 +5561,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "372"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 4\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5402,7 +5575,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "373"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 14\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5496,7 +5671,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "378"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 3\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5547,7 +5724,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "382"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -5580,7 +5759,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "385"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 14\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5592,7 +5773,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "386"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 14\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -5731,7 +5914,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "392"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 6\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -5754,7 +5939,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "394"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -5778,7 +5965,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "396"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 3\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",
@@ -5798,7 +5987,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "398"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -5848,7 +6039,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "402"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 19\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -5935,7 +6128,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "406"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 0\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -5959,7 +6154,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "408"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 0\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -5983,7 +6180,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "410"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 5\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6021,7 +6220,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "413"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6046,7 +6247,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "415"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 5\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6057,7 +6260,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 416"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c136 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -6069,7 +6275,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "417"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 10\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6080,7 +6288,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 418"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c265 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -6091,7 +6302,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 419"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c258 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -6103,7 +6317,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "420"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 19\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6115,7 +6331,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "421"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -6155,7 +6373,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "424"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6191,7 +6411,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "427"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 6\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -6253,7 +6475,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 431"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c420 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -6264,7 +6489,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 432"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c293 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -6275,7 +6503,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 433"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c340 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_totals",
@@ -6305,7 +6536,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "435"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 7\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6317,7 +6550,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "436"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 5\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -6420,7 +6655,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "442"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 1\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -6508,7 +6745,10 @@
     "tax_status": "EXEMPT",
     "notes": "edit 447"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c259 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_active",
@@ -6528,7 +6768,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "449"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 15\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -6602,7 +6844,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "454"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 18\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6613,7 +6857,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 455"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c233 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_rate",
@@ -6653,7 +6900,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "458"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -6720,7 +6969,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 461"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c398 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -6732,7 +6984,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "462"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 19\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -6815,7 +7069,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "466"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 19\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6874,7 +7130,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "471"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 8\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -6885,7 +7143,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 472"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c157 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_totals",
@@ -6947,7 +7208,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "476"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 10\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_totals",
@@ -7009,7 +7272,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 480"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c392 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -7021,7 +7287,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "481"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 14\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -7033,7 +7301,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "482"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 17\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -7059,7 +7329,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "484"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 2\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_settings",
@@ -7083,7 +7355,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "486"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 10\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_rate",
@@ -7121,7 +7395,9 @@
     "tax_status": "TAXABLE",
     "exemption_number": "489"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 16\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -7132,7 +7408,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 490"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c421 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_save",
@@ -7207,7 +7486,10 @@
     "tax_status": "TAXABLE",
     "notes": "edit 494"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "DoesNotExist",
+   "expect_message": "Customer matching query does not exist.",
+   "intent": "Editing c217 must fail because its duplicate customer name prevented creation."
   },
   {
    "op": "l2_settings",
@@ -7231,7 +7513,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "496"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 12\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -7243,7 +7527,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "497"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 9\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_save",
@@ -7255,7 +7541,9 @@
     "tax_status": "EXEMPT",
     "exemption_number": "498"
    },
-   "expect_error": false
+   "expect_error": true,
+   "expect_kind": "ValidationError",
+   "expect_message": "A customer named \u201cCustomer 0\u201d already exists. Choose a different name."
   },
   {
    "op": "l2_active",

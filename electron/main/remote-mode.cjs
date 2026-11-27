@@ -43,10 +43,18 @@ function localPath(location) {
   return typeof location === 'string' && location.startsWith('/') && !location.startsWith('//') && !location.includes('\\') && location.length <= 4096;
 }
 
+// Preserve the original encoding of host query values: form tokens bind to the exact target.
+function pageTarget(url) {
+  const markers = url.searchParams.getAll(PAGE_KEY);
+  const query = url.search.slice(1).split('&').filter(part => !new URLSearchParams(part).has(PAGE_KEY)).join('&');
+  return {target: url.pathname + (query ? '?' + query : ''), marker: markers.length > 1 ? '' : markers[0] ?? null};
+}
+
 function stampTarget(target, marker) {
   const url = new URL(target, 'fb://app');
-  if (url.search) url.search += `&${PAGE_KEY}=${marker}`;
-  return url.pathname + url.search + url.hash;
+  const clean = pageTarget(url).target;
+  if (!url.search) return clean + url.hash;
+  return clean + (clean.includes('?') ? '&' : '?') + PAGE_KEY + '=' + marker + url.hash;
 }
 
 const guards = require('./guards.cjs');
@@ -61,7 +69,7 @@ function decorate(html, host, state, marker) {
   const stamp = `<meta name="fb-remote-page" content="${escape(marker)}">`;
   let out = /<head\b[^>]*>/i.test(html) ? html.replace(/<head\b[^>]*>/i, head => head + stamp) : stamp + html;
   out = out.replace(/ · Local ledger(?=<\/title>)/i, '').replace(/<\/title>/i, () => ` — connected to ${escape(host)}</title>`);
-  out = out.replace('</head>', `<link rel="stylesheet" href="${REMOTE_STYLE}"></head>`);
+  out = out.replace(/<\/head>/i, `<link rel="stylesheet" href="${REMOTE_STYLE}"></head>`);
   out = out.replace(/(\bsrc="\/c\/[0-9a-f-]{36}\/document-logo\/)(")/g, `$1?${PAGE_KEY}=${marker}$2`);
   const body = /<body[^>]*>/i.exec(out);
   out = body ? out.slice(0, body.index + body[0].length) + bar + out.slice(body.index + body[0].length) : bar + out;
@@ -121,7 +129,7 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
   let session = null;   // current access, null if locking or starting a fresh session
   let link = 'connected';
   let pending = null;   // one-shot re-rendered form, as main.cjs does locally
-  let last = null;      // the last command sent: {key, id, answered}
+  let last = null;      // the outstanding command and its retry id
   let flashed = [];     // errors for the next connect screen
   let locking = false;
   let locked = false;
@@ -299,11 +307,18 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
     return refreshing;
   }
 
+  function changeIdentity(signedIn, mfaPending = false) {
+    session = {...newSession(signedIn), mfaPending};
+    clearRequests();
+    scheduleRefresh();
+    onChange();
+  }
+
   function refusalLocation(r) {
     if (r.code === 'host_locked') return startRecovery(r.message);
     if (r.code === 'unauthenticated') return startRecovery();
     if (r.code === 'sign_in_required') {
-      session.signedIn = false;
+      if (session.signedIn || session.mfaPending) changeIdentity(false);
       return SIGN_IN;
     }
     return null;
@@ -315,6 +330,8 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
   }
 
   return {
+    sessionMarker: () => session?.marker ?? null,
+    signedIn: () => !!session?.signedIn,
     active: () => !!connected || !!transition,
     host: () => connected && connected.host_name,
     link: () => link,
@@ -402,8 +419,8 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
       if (r.type === 'Page') {
         if (r.status >= 300 && r.status < 400) {
           if (!localPath(r.html)) return {html: noticePage('The host refused this', 'The host answered with an invalid address.'), status: 502};
-          if (r.html === SIGN_IN && url.pathname !== SIGN_IN) current.signedIn = false;
-          return {redirect: stampTarget(r.html, current.marker), marker: current.marker};
+          if (r.html === SIGN_IN && url.pathname !== SIGN_IN && current.signedIn) changeIdentity(false);
+          return {redirect: stampTarget(r.html, session.marker), marker: session.marker};
         }
         const csv = csvPage(r.route, url, r.status, r.html);
         // Bind even a queryless print view to the session that supplied its visible contents.
@@ -428,22 +445,23 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
       const signIn = command.type === 'SubmitForm' && command.path === SIGN_IN;
       if (!current.signedIn && !signIn) return {outcome: 'redirect', location: SIGN_IN};
       if (signIn && current.signingIn) throw new Error('A sign-in is already being checked.');
-      const action = signIn && command.fields.find(([key]) => key === 'action')?.[1];
+      const action = command.type === 'SubmitForm' && command.fields.find(([key]) => key === 'action')?.[1];
+      const signOut = command.path === '/desktop/session/' && action === 'signout';
       const requireSession = () => {
         if (session !== current) throw new Error('The session changed. Open the page again.');
       };
       // An identical resubmission of a command that got no answer reuses its request id, so the
       // host answers it from the first attempt instead of doing it twice.
       const key = JSON.stringify(command);
-      const id = last && last.key === key && !last.answered ? last.id : randomUUID();
-      const sent = last = {key, id, answered: false};
+      const id = last && last.key === key ? last.id : randomUUID();
+      const sent = last = {key, id};
       let r;
       if (signIn) current.signingIn = true;
       try { r = await client.call({type: 'Run', request_id: id, command: JSON.stringify(command)}); }
       catch (e) {
         requireSession();
         if (Object.hasOwn(PAIRING_ERRORS, e.code)) return {outcome: 'redirect', location: pairingProblem(PAIRING_ERRORS[e.code])};
-        if (e.code === 'not_connected' || (signIn && ['lost', 'timeout'].includes(e.code))) {
+        if (e.code === 'not_connected' || ((signIn || signOut) && ['lost', 'timeout'].includes(e.code))) {
           return {outcome: 'redirect', location: startRecovery()};
         }
         if (e.code === 'lost' || e.code === 'timeout') throw new Error('The connection to the host was lost. Your last action may or may not have reached it. When the connection is back, submit the same form again: it will not be done twice.');
@@ -453,7 +471,7 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
       }
       requireSession();
       if (!current.signedIn && !signIn) return {outcome: 'redirect', location: SIGN_IN};
-      sent.answered = true;
+      if (last === sent) last = null;
       if (r.type === 'Refused') {
         const location = refusalLocation(r);
         if (location) return {outcome: 'redirect', location};
@@ -464,14 +482,13 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
       if (outcome.outcome === 'redirect') {
         if (!localPath(outcome.location)) throw new Error('The host answered with an invalid address.');
         if (signIn) {
-          current.signedIn = outcome.location !== SIGN_IN;
-          if (current.signedIn) locked = false;
-          // A password may have been accepted even though the second factor is still pending.
-          current.mfaPending = !current.signedIn && action === 'signin';
+          const signedIn = outcome.location !== SIGN_IN;
+          changeIdentity(signedIn, !signedIn && action === 'signin');
+          if (signedIn) locked = false;
         } else if (outcome.location === SIGN_IN) {
-          current.signedIn = false;
+          changeIdentity(false);
         }
-        return {...outcome, location: stampTarget(outcome.location, current.marker)};
+        return {...outcome, location: stampTarget(outcome.location, session.marker)};
       }
       if (['invalid', 'page'].includes(outcome.outcome) && command.type === 'SubmitForm') {
         pending = {path: command.path, html: outcome.html, status: outcome.status || 400};
@@ -549,8 +566,7 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
       if (connected !== host) return signedOut || ended;
       locking = false;
       if (signedOut) {
-        session = newSession(false);
-        scheduleRefresh();
+        changeIdentity(false);
         show(SIGN_IN);
       } else {
         show(LOCKED);
@@ -588,4 +604,4 @@ function create({client, store, window, output, dialog, choosePrint, onChange = 
   };
 }
 
-module.exports = {create, decorate, connectPage, noticePage, localPath, exportName, csvPage, CONNECT, CONNECTING, DISCONNECT, LOCKED, PAGE_KEY};
+module.exports = {create, decorate, connectPage, noticePage, localPath, exportName, csvPage, pageTarget, CONNECT, CONNECTING, DISCONNECT, LOCKED, PAGE_KEY};

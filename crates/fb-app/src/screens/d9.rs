@@ -279,8 +279,9 @@ fn accounts_page(app: &mut App, r: &Route, path: &str, posted: Option<Posted<'_>
             .errors(e.get(&import_key).cloned().unwrap_or_default());
         let configure = feed["active"] == true && conn["connected"] == true
             && conn["needs_reconnect"] != true && feed["import_state"] != "ACTIVE";
+        let expected_mapping = posted.and_then(|p| get(p, &format!("expected_map_{feed_id}"))).or(feed["ledger_account_id"].as_str()).unwrap_or("");
         pairs.push(json!([feed, forms::BoundField::from(&f), forms::BoundField::from(&new_name),
-            forms::BoundField::from(&new_type), creating, configure, forms::BoundField::from(&import_date)]));
+            forms::BoundField::from(&new_type), creating, configure, forms::BoundField::from(&import_date), expected_mapping]));
         fields.push(f);
     }
     let mut conn = conn;
@@ -304,6 +305,7 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
     let mut e = Errors::new();
     let mut wanted = vec![];
     let mut import_settings = vec![];
+    let mut expected = HashMap::new();
     for feed in &rows {
         let feed_id = feed["pk"].as_str().unwrap_or("");
         let name = format!("map_{feed_id}");
@@ -346,11 +348,12 @@ fn submit_accounts(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRe
             };
             bf::MappingTarget::Existing(id.as_deref().and_then(AccountId::parse))
         };
+        expected.insert(feed_id.to_owned(), get(p, &format!("expected_map_{feed_id}")).unwrap_or("").to_owned());
         wanted.push((feed_id.to_owned(), target));
     }
     let mut errors = vec![];
     if e.is_empty() {
-        match bf::save_mappings_and_import_settings(&mut app.open_mut()?.book, owner, c, &conn_id, &wanted, &import_settings, &bf::SecretSet::none()) {
+        match bf::save_mapping_form(&mut app.open_mut()?.book, owner, c, &conn_id, &wanted, &import_settings, &expected, &bf::SecretSet::none()) {
             Ok(()) => {
                 // A replacement connection's first download is staged before it is mapped: say now how many
                 // of its transactions are already in the books, so none is recorded twice.
@@ -561,6 +564,7 @@ fn rule_page(app: &mut App, r: &Route, path: &str, params: Posted<'_>, posted: O
     ];
     let mut vm = base(app, r, path)?;
     put(&mut vm, "form", forms::bind(&bind_errors(fields, e), &e.get("__all__").cloned().unwrap_or_default()));
+    put(&mut vm, "expected_snapshot", posted.and_then(|p| get(p, "expected_snapshot")).map(str::to_owned).or_else(|| rule.as_ref().map(bf::Rule::edit_snapshot)));
     put(&mut vm, "rule", rule.map(|x| json!({"pk": x.id})));
     draw(app, "bankfeeds/rule_form.html", &vm)
 }
@@ -594,7 +598,7 @@ fn submit_rule(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppResult
     let active = checked(p, "active");
     if e.is_empty() {
         let owner = actor(app)?;
-        let values = json!({"rule_id": rule.as_ref().map(|x| x.id.clone()), "name": name, "match_text": match_text, "sign": sign,
+        let values = json!({"expected_snapshot":rule.as_ref().map(|_|get(p, "expected_snapshot").unwrap_or("")), "rule_id": rule.as_ref().map(|x| x.id.clone()), "name": name, "match_text": match_text, "sign": sign,
             "amount_min": if amount_min.is_empty() { Value::Null } else { json!(amount_min) },
             "amount_max": if amount_max.is_empty() { Value::Null } else { json!(amount_max) },
             "account_id": account, "feed_account_id": feed, "payee_name": payee_name, "active": active});

@@ -21,9 +21,16 @@ const MARKER = '11111111-2222-4333-8444-555555555555';
 const page = marker => `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">
 ${marker ? `<meta name="fb-remote-page" content="${marker}">` : ''}
-</head><body>
+<style>@page { size: landscape; }</style>
+<style>@page { size: letter portrait; margin: .4in 12pt; margin-bottom: 1in; }</style>
+<style>@page { margin: 1cm; } p { color: blue; }</style>
+<style>@page { @bottom-center { content: "additional rule"; } }</style>
+<style>@page { margin: url(example); }</style>
+<style>@page { margin-left: 1cm 2cm; }</style>
+<style>@page cover { margin: 0; }</style>
+</head><body><button id="print-now">Print</button>
 <form method="get" id="cancelled"><input name="due" value="2026-11-30"><button type="submit">Filter</button></form>
-<form method="get" id="plain"><input name="q" value="1"><button type="submit">Go</button></form>
+<form method="get" id="plain"><input name="q" value="1">${marker ? '<input type="hidden" name="__fb_remote_page" value="old"><input type="hidden" name="__fb_remote_page" value="duplicate">' : ''}<button type="submit">Go</button></form>
 <form method="post" id="post" action="/c/x/save/"><input name="n" value="1"></form>
 <a id="static" href="?x=1">static</a>
 <a id="rewritten" href="?status=ALL">rewritten</a>
@@ -55,7 +62,7 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'fb', privileges: { standard: tr
 app.whenReady().then(async () => {
   protocol.handle('fb', request => {
     const name = path.basename(new URL(request.url).pathname);
-    if (!['marked.html', 'plain.html', 'page.js'].includes(name)) return new Response('', { status: 404 });
+    if (!['marked.html', 'duplicate.html', 'plain.html', 'page.js'].includes(name)) return new Response('', { status: 404 });
     return new Response(fs.readFileSync(path.join(dir, name)), { headers: { 'content-type': name.endsWith('.js') ? 'text/javascript' : 'text/html; charset=utf-8' } });
   });
   const win = new BrowserWindow({ show: false, webPreferences: { preload, sandbox: true, contextIsolation: true, nodeIntegration: false } });
@@ -76,6 +83,7 @@ app.whenReady().then(async () => {
     for (const name of ['marked', 'plain']) {
       const r = results[name] = {};
       await win.loadURL('fb://app/' + name + '.html');
+      r.styles = await js('document.adoptedStyleSheets.flatMap(s => Array.from(s.cssRules, rule => rule.cssText))');
       r.stamped = await js(\`({
         static: document.getElementById('static').getAttribute('href'),
         late: document.getElementById('late').getAttribute('href'),
@@ -91,6 +99,11 @@ app.whenReady().then(async () => {
       r.static = await act("document.getElementById('static').click()");
       r.form = await act("document.querySelector('#plain button').click()");
     }
+    results.rejectedMarkers = [];
+    for (const target of ['marked.html?__fb_remote_page=stale', 'marked.html?__fb_remote_page=stale&__fb_remote_page=stale', 'duplicate.html']) {
+      await win.loadURL('fb://app/' + target);
+      results.rejectedMarkers.push(await js("document.querySelector('#plain input[type=hidden]').value"));
+    }
     out({ results });
   } catch (e) { out({ error: String(e && e.stack || e), results }); }
 });
@@ -100,6 +113,7 @@ test('the preload carries the page marker without taking navigation away from th
   const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'fb-marker-'));
   try {
     fs.writeFileSync(path.join(dir, 'marked.html'), page(MARKER));
+    fs.writeFileSync(path.join(dir, 'duplicate.html'), page(MARKER).replace('</head>', '<meta content="stale" name="FB-REMOTE-PAGE"></head>'));
     fs.writeFileSync(path.join(dir, 'plain.html'), page(null));
     fs.writeFileSync(path.join(dir, 'page.js'), PAGE_JS);
     const main = path.join(dir, 'main.cjs');
@@ -121,7 +135,13 @@ test('the preload carries the page marker without taking navigation away from th
     assert.equal(error, undefined, error);
     const key = `__fb_remote_page=${MARKER}`;
     const { marked, plain } = results;
+    assert.deepEqual(results.rejectedMarkers, ['invalid-marker', 'invalid-marker', 'invalid-marker']);
 
+    for (const page of [marked, plain]) {
+      assert.equal(page.styles.length, 2);
+      assert.match(page.styles[0], /size: landscape/);
+      assert.match(page.styles[1], /margin:/);
+    }
     // The page's own decisions stand.
     assert.deepEqual([marked.cancelled.navigated, marked.cancelled.search, marked.cancelledCount], [false, '', 1], 'a submit the page cancelled is not sent');
     assert.deepEqual([marked.refused.navigated, marked.refused.search], [false, ''], 'a link the page cancelled is not followed');

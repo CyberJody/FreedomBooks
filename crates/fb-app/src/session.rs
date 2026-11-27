@@ -475,7 +475,7 @@ impl App {
     /// Renderer boundary. Every mutation is a path-bound, single-use SubmitForm.
     /// Typed commands remain available to trusted in-process screen dispatch and tooling.
     pub fn run_renderer(&mut self, command: Command) -> AppResult<Outcome> {
-        if !matches!(command, Command::SubmitForm { .. } | Command::ExportHistory { .. } | Command::ExportReport { .. } | Command::ExportBackup { .. }) {
+        if !matches!(command, Command::SubmitForm { .. } | Command::ExportHistory { .. } | Command::ExportReport { .. } | Command::ExportAttachment { .. } | Command::ExportBackup { .. }) {
             return Err(AppError::Invalid("Unknown command.".into()));
         }
         self.run(command)
@@ -545,6 +545,9 @@ impl App {
         }
         if let Command::ExportReport { company_id, report, filters } = command {
             return screens::export_report(self, company(&company_id)?, &report, &filters);
+        }
+        if let Command::ExportAttachment { company_id, attachment_id } = command {
+            return screens::export_attachment(self, company(&company_id)?, &attachment_id);
         }
         if let Command::ExportBackup { company_id, name } = command {
             return screens::backups::export(self, company(&company_id)?, &name);
@@ -686,7 +689,7 @@ impl App {
                     Some(&review),
                 )?
             }
-            Command::SubmitForm { .. } | Command::ExportReport { .. } | Command::ExportHistory { .. } | Command::ExportBackup { .. } => {
+            Command::SubmitForm { .. } | Command::ExportReport { .. } | Command::ExportHistory { .. } | Command::ExportAttachment { .. } | Command::ExportBackup { .. } => {
                 unreachable!("handled above")
             }
             _ => unreachable!("D3 commands handled above"),

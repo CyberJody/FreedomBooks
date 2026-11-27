@@ -277,7 +277,7 @@
       },
       "expect_error": true,
       "expect_kind": "ValidationError",
-      "expect_message": "Choose a designated bank account (Accounting setup) that is an active postable asset account."
+      "expect_message": "Choose an active bank account in this company."
     },
     {
       "op": "checks_save",

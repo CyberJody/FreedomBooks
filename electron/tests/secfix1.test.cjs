@@ -49,7 +49,7 @@ test('every historical mutation type is refused at the renderer guard', () => {
   for (const type of guards.appCommands) {
     if (!guards.rendererCommands.includes(type)) assert.throws(()=>guards.command({type}),/Unknown command/,type);
   }
-  assert.deepEqual(guards.rendererCommands,['SubmitForm','ExportHistory','ExportReport','ExportBackup']);
+  assert.deepEqual(guards.rendererCommands,['SubmitForm','ExportHistory','ExportReport','ExportBackup', 'ExportAttachment']);
   assert.equal(guards.command({type:'SubmitForm',path:'/a/',token:'t',fields:[]}).type,'SubmitForm');
   assert.doesNotMatch(fs.readFileSync(path.join(__dirname,'../preload/preload.cjs'),'utf8'),/exposeInMainWorld/);
 });

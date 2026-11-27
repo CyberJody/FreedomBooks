@@ -4,9 +4,9 @@
 //! one REPEATABLE READ, READ ONLY transaction). Every figure is recomputed from POSTED journal lines plus, for
 //! the cash basis, the settlement rows that already exist (receipt / bill-payment allocations, credit
 //! applications, refunds, deposit applications and their reversals). Money is integer cents; the cash-basis
-//! shares use exact integer fractions and Python's cent rule (see `share`).
+//! shares use integer-cent apportionment (see `share`).
 //!
-//! Cash basis (decision N19-D2), exactly as Python:
+//! Cash basis (decision N19-D2):
 //! - Journals of INV, BILL and CM documents (originals AND reversals) are left out entirely.
 //! - Their non-control lines are recognised when the document is settled, in proportion to the cumulative
 //!   settled amount: receipt (RCP) and bill-payment (BPAY) allocations on the payment journal date, credit
@@ -232,9 +232,9 @@ fn overflow() -> FbError {
 /// `share`: recognised per-account amounts for cumulative settled amount `settled` of a document with
 /// per-account nets `nets` (account order) and control amount `total` (> 0).
 ///
-/// Cent rule: s_a * C / T floored to the cent in the direction of the document total, with the leftover cents
-/// given one each to the largest fractional remainders (ties: lower account id). A fully settled document
-/// recognises exactly its posted lines.
+/// Each additional cent advances a Webster allocation, with ties resolved by account ID.
+/// A discount is recognized proportionally, then the gross side receives the settlement plus
+/// the recognized discount. Releasing a receipt retraces the same cumulative allocations.
 pub fn share<K: Ord + Clone>(nets: &[(K, Money)], total: Money, settled: Money) -> FbResult<BTreeMap<K, Money>> {
     if total.is_zero() || settled.is_zero() {
         return Ok(BTreeMap::new());
@@ -247,7 +247,52 @@ pub fn share<K: Ord + Clone>(nets: &[(K, Money)], total: Money, settled: Money) 
         .try_fold(0i128, |acc, (_, n)| acc.checked_add(n.cents()))
         .ok_or_else(overflow)?;
     let sigma = if sum >= 0 { 1 } else { -1 };
+    if total.cents() > 0 && sum.checked_abs() == Some(total.cents()) {
+        return allocate_lines(nets, total, settled, Money::from_cents(
+            settled.cents().checked_mul(sigma).ok_or_else(overflow)?,
+        ));
+    }
+    // Preserve the historical behavior of the low-level API for non-document ratios.
     round_shares(nets, total, settled, sigma, settled.cents())
+}
+
+// Split the already determined account (or document) share over positive and negative legs.
+// The smaller side follows the document fraction. The other side absorbs its exact offset.
+fn allocate_lines<K: Ord + Clone>(
+    lines: &[(K, Money)], total: Money, settled: Money, target: Money,
+) -> FbResult<BTreeMap<K, Money>> {
+    let mut ordered: Vec<_> = lines.iter().collect();
+    ordered.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut groups = [Vec::new(), Vec::new()];
+    let mut sums = [0_i128; 2];
+    for (id, net) in ordered {
+        let side = usize::from(net.cents() < 0);
+        let weight = net.cents().checked_abs().ok_or_else(overflow)?;
+        sums[side] = sums[side].checked_add(weight).ok_or_else(overflow)?;
+        groups[side].push((id, weight));
+    }
+    let minor = usize::from(sums[1] <= sums[0]);
+    let gross = settled.cents().checked_abs().ok_or_else(overflow)?;
+    let fraction = sums[minor].checked_mul(gross)
+        .and_then(|v| v.checked_add(total.cents() / 2)).ok_or_else(overflow)? / total.cents();
+    let mut targets = [0; 2];
+    targets[minor] = fraction * settled.cents().signum() * if minor == 1 { -1 } else { 1 };
+    targets[1 - minor] = target.cents().checked_sub(targets[minor]).ok_or_else(overflow)?;
+    let mut out = BTreeMap::new();
+    for (side, group) in groups.into_iter().enumerate() {
+        let weights: Vec<_> = group.iter().map(|(_, weight)| *weight).collect();
+        // Bound the Webster priority cross-products before entering the integer allocator.
+        let largest = weights.iter().copied().max().unwrap_or(0);
+        let bound = sums[side].max(targets[side].checked_abs().ok_or_else(overflow)?);
+        bound.checked_mul(2).and_then(|v| v.checked_add(1))
+            .and_then(|v| v.checked_mul(largest)).and_then(|v| v.checked_add(sums[side]))
+            .ok_or_else(overflow)?;
+        let parts = super::apportionment::monotonic_share(&weights, Money::from_cents(targets[side]));
+        for ((id, _), part) in group.into_iter().zip(parts) {
+            out.insert(id.clone(), part);
+        }
+    }
+    Ok(out)
 }
 
 fn round_shares<K: Ord + Clone>(
@@ -331,7 +376,6 @@ pub struct Document {
     pub total: Money,
     // Original posted line IDs and debit-credit amounts, grouped by account.
     posted_lines: LinesByAccount,
-    direction: i128,
 }
 
 impl Document {
@@ -347,15 +391,7 @@ impl Document {
         if settled == self.total {
             return Ok(lines.iter().cloned().collect());
         }
-        // Use the document's settlement fraction for signed lines. Round to the
-        // exact account share that the P&L already calculated for this event edge.
-        round_shares(
-            lines,
-            self.total,
-            settled,
-            self.direction,
-            self.direction * account_share.cents(),
-        )
+        allocate_lines(lines, self.total, settled, account_share)
     }
 }
 
@@ -574,7 +610,6 @@ fn documents(tx: &(impl Query + ?Sized), company: CompanyId, events: &[Event]) -
             .collect();
         let net = nets.iter().map(|(_, net)| *net).sum::<Money>().cents();
         let total = Money::from_cents(net.abs());
-        let direction = if net < 0 { -1 } else { 1 };
         let number = numbers.remove(&doc).unwrap_or_default();
         found.insert(
             doc.clone(),
@@ -584,7 +619,6 @@ fn documents(tx: &(impl Query + ?Sized), company: CompanyId, events: &[Event]) -
                 nets,
                 total,
                 posted_lines,
-                direction,
             },
         );
     }

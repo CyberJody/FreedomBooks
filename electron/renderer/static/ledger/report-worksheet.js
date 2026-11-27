@@ -31,10 +31,27 @@ function fits(value) {
   return target(value, true).length <= limit;
 }
 
+const feedback = document.getElementById('worksheet-feedback');
+let invalidField;
+function clearWarning() {
+  if (invalidField) {
+    invalidField.setCustomValidity('');
+    invalidField.removeAttribute('aria-invalid');
+    invalidField = null;
+  }
+  feedback.textContent = '';
+}
+form.addEventListener('input', clearWarning);
+form.addEventListener('change', clearWarning);
+
 function warn(input, message) {
+  clearWarning();
+  invalidField = input;
+  input.setAttribute('aria-invalid', 'true');
+  feedback.textContent = message;
+  input.focus();
   input.setCustomValidity(message);
   input.reportValidity();
-  input.setCustomValidity('');
 }
 
 if (scope) {
@@ -48,6 +65,7 @@ if (scope) {
 }
 
 builder.querySelector('[data-worksheet-append]').addEventListener('click', () => {
+  clearWarning();
   const inputs = Array.from(builder.querySelectorAll('[data-worksheet-field]:not(:disabled)'));
   const fields = inputs.map(input => input.value.trim());
   const invalid = fields.findIndex(value => value.includes('|'));
@@ -61,6 +79,10 @@ builder.querySelector('[data-worksheet-append]').addEventListener('click', () =>
     warn(inputs[missing], 'Enter a value for this field.');
     return;
   }
+  if (scope && !fields[3] && !['excluded / personal', 'unassigned'].includes(fields[2].toLowerCase())) {
+    warn(inputs[3], 'Choose a Schedule C category for this business activity.');
+    return;
+  }
   const row = fields.join('|');
   const next = worksheet.value.trim() ? worksheet.value.trimEnd() + '\n' + row : row;
   if (!fits(next)) {
@@ -68,6 +90,7 @@ builder.querySelector('[data-worksheet-append]').addEventListener('click', () =>
     return;
   }
   worksheet.value = next;
+  feedback.textContent = scope ? 'Mapping added.' : 'Asset added.';
   worksheet.focus();
   worksheet.setSelectionRange(next.length - row.length, next.length);
 });

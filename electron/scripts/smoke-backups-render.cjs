@@ -6,6 +6,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
+const {signIn} = require('./smoke-identity.cjs');
+const ownerPassword = 'Synthetic render owner password';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const password = 'Synthetic render test password';
 
@@ -26,7 +28,8 @@ async function main() {
     await page.fill('#id_company_name','Synthetic render books');
     await page.check('#id_protect');
     await page.fill('#id_lock_password',password);await page.fill('#id_lock_password2',password);
-    await Promise.all([page.waitForURL(/\/settings\/recovery-key\/$/),page.getByRole('button',{name:'Create books',exact:true}).click()]);
+    await page.getByRole('button',{name:'Create books',exact:true}).click();
+    await signIn(page, ownerPassword);
     const company = await app.evaluate(({app}) => {
       const req = process.getBuiltinModule('module').createRequire(app.getAppPath()+'/package.json');
       return JSON.parse(req(process.env.FB_NATIVE_MODULE).query('{"type":"Companies"}'))[0].id;
@@ -78,7 +81,8 @@ async function main() {
         assert.equal(await page.locator('.backup-files').count(),0,'locked render cannot return book data');
         await page.screenshot({path:path.join(process.env.FB_SMOKE_SHOTS,'locked.png')});
         await page.fill('#id_password',password);
-        await Promise.all([page.waitForURL(/\/home\/$/),page.getByRole('button',{name:'Unlock',exact:true}).click()]);
+        await page.getByRole('button',{name:'Unlock books',exact:true}).click();
+        await signIn(page, ownerPassword);
       }
       console.log(`PASS ordinary Backups GET ${mode}: main heartbeat advanced ${advanced} times during 300 ms held render`);
     }

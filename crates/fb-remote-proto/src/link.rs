@@ -167,7 +167,8 @@ impl<B: Backend> HostLink<B> {
                             let slot = WorkerSlot(workers.clone());
                             std::thread::spawn(move || {
                                 let _slot = slot;
-                                let response = dispatcher.handle(conn, &device, &peer, request);
+                                let response = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| dispatcher.handle(conn, &device, &peer, request)))
+                                    .unwrap_or_else(|_| crate::dedupe::interrupted());
                                 let _ = send(&writer, &ToGateway::Reply { conn, seq, response });
                             });
                         }

@@ -117,7 +117,7 @@ impl Field {
             let mut described=vec![];
             if !self.help_text.is_empty() && !matches!(self.widget, Widget::Radio{..}|Widget::Checkboxes{..}) {described.push(format!("{}_helptext",self.auto_id()));}
             if !self.errors.is_empty() {described.push(format!("{}_error",self.auto_id()));}
-            if !described.is_empty() {out.push_str(&format!(r#" aria-describedby="{}""#,described.join(" ")));}
+            if !described.is_empty() {out.push_str(&format!(r#" aria-describedby="{}""#,escape(&described.join(" "))));}
         }
         out.push_str(&format!(r#" id="{}""#, escape(&self.auto_id())));
         out
@@ -297,7 +297,7 @@ pub fn as_p(fields: &[Field], non_field_errors: &[String]) -> String {
         }
         out.push_str(&format!("\n    {}\n    ", f.widget_html()));
         if !f.help_text.is_empty() {
-            out.push_str(&format!(r#"<span class="helptext" id="{}_helptext">{}</span>"#,escape(&f.auto_id()),f.help_text));
+            out.push_str(&format!(r#"<span class="helptext" id="{}_helptext">{}</span>"#,escape(&f.auto_id()),escape(&f.help_text)));
         }
         out.push_str("\n    ");
         if i + 1 == visible.len() {
@@ -348,6 +348,14 @@ mod tests {
         let f = Field::new("date", "Date", Widget::Date).errors(vec!["Enter a valid date.".into()]);
         assert_eq!(f.errors_html(), r#"<ul class="errorlist" id="id_date_error"><li>Enter a valid date.</li></ul>"#);
         assert_eq!(error_list(&["<x>".into()], None), r#"<ul class="errorlist nonfield"><li>&lt;x&gt;</li></ul>"#);
+    }
+
+    #[test]
+    fn help_text_and_describedby_ids_escape_html() {
+        let field = Field::new("a\"<&", "Label", Widget::Text).help("<b>A & B</b>");
+        let html = as_p(&[field], &[]);
+        assert!(html.contains(r#"aria-describedby="id_a&quot;&lt;&amp;_helptext""#));
+        assert!(html.contains(r#"id="id_a&quot;&lt;&amp;_helptext">&lt;b&gt;A &amp; B&lt;/b&gt;"#));
     }
 
     #[test]

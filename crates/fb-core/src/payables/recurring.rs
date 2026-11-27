@@ -46,7 +46,7 @@ fn writable(q: &(impl Query + ?Sized), actor: UserId, co: CompanyId) -> FbResult
 fn get(q: &(impl Query + ?Sized), co: CompanyId, tid: &str) -> FbResult<Value> {
     let mut v = rows(
         q,
-        "SELECT * FROM payables_recurring WHERE company_id=? AND id=?",
+        "SELECT t.*,c.closing_date FROM payables_recurring t JOIN ledger_company c ON c.id=t.company_id WHERE t.company_id=? AND t.id=?",
         &[&co.to_db(), &tid],
     )?
     .pop()
@@ -83,7 +83,10 @@ fn pending_dates(t: &Value, through: &str, limit: usize) -> FbResult<(Vec<String
 }
 fn confirmation_preview(t: &Value, dates: Vec<String>, more: bool, source_warning: Value) -> Value {
     let auto_post = t["auto_post"] == 1 || t["auto_post"] == true;
-    let binding = json!({"identity":t["id"].as_str().or(t["request_key"].as_str()),"revision":t["revision"].as_i64().or(t["expected_revision"].as_i64()),"next_index":t["next_index"],"frequency":t["frequency"],"start_date":t["start_date"],"end_date":t["end_date"],"occurrence_limit":t["occurrence_limit"],"source_date":t["source_date"],"auto_post":auto_post,"dates":dates,"more":more,"source_warning":source_warning});
+    let closed = if auto_post {
+        dates.iter().filter(|date| t["closing_date"].as_str().is_some_and(|close| date.as_str() <= close)).count()
+    } else { 0 };
+    let binding = json!({"identity":t["id"].as_str().or(t["request_key"].as_str()),"revision":t["revision"].as_i64().or(t["expected_revision"].as_i64()),"next_index":t["next_index"],"frequency":t["frequency"],"start_date":t["start_date"],"end_date":t["end_date"],"occurrence_limit":t["occurrence_limit"],"source_date":t["source_date"],"auto_post":auto_post,"closed":closed,"dates":dates,"more":more,"source_warning":source_warning});
     let token = format!("{:x}", Sha256::digest(binding.to_string().as_bytes()));
     let display_dates = if dates.len() > 12 {
         dates[..6]
@@ -93,7 +96,7 @@ fn confirmation_preview(t: &Value, dates: Vec<String>, more: bool, source_warnin
     } else {
         dates.iter().collect()
     };
-    json!({"token":token,"count":dates.len(),"first_date":dates.first(),"last_date":dates.last(),"display_dates":display_dates,"omitted_count":dates.len().saturating_sub(12),"dates":dates,"more":more,"auto_post":auto_post,"source_warning":source_warning})
+    json!({"token":token,"count":dates.len(),"first_date":dates.first(),"last_date":dates.last(),"display_dates":display_dates,"omitted_count":dates.len().saturating_sub(12),"dates":dates,"more":more,"auto_post":auto_post,"closed_drafts":closed,"open_count":dates.len()-closed,"source_warning":source_warning})
 }
 /// The resume decision. With `MAX_OCCURRENCES_PER_RUN` or fewer missed dates it lists them all for
 /// skip or create. With more, `more` is true and it lists only the excess that must be skipped
@@ -210,6 +213,7 @@ pub fn save_confirmation(
     book.read(|q| {
         writable(q, actor, co)?;
         let mut t = normalized_schedule(p)?;
+        t["closing_date"] = json!(crate::periods::policy(q, co)?.values.closing_date);
         let old = p["id"].as_str().map(|tid| get(q, co, tid)).transpose()?;
         t["next_index"] = if let Some(old) = &old {
             old["next_index"].clone()
@@ -374,6 +378,7 @@ pub fn save(
                 "Use Pause or Resume on the template to change its active state.",
             ));
         }
+        probe["closing_date"] = json!(crate::periods::policy(tx, co)?.values.closing_date);
         probe["next_index"] = json!(n);
         probe["source_date"] = json!(source_date);
         let preview = save_preview(&probe, old.as_ref().map(|old| s(old, "start_date")), through)?;

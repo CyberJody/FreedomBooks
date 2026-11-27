@@ -199,6 +199,8 @@ pub(super) fn schedule_c_tables(report: sc::ScheduleCActivity, vm: &mut Value) -
             "Activity",
             "Schedule C category",
             "Mapping target",
+        ],
+        &[
             "Gross income",
             "Total expenses",
             "Net profit / loss",
@@ -252,8 +254,8 @@ pub(super) fn schedule_c_tables(report: sc::ScheduleCActivity, vm: &mut Value) -
     );
     let mut reconciliation = Table::titled(
         "Reconciliation to Book P&L",
+        &["Source"],
         &[
-            "Source",
             "Gross income",
             "Total expenses",
             "Net profit / loss",
@@ -327,11 +329,12 @@ pub(super) fn asset_tables(
     };
     let mut costs = Table::titled(
         "Ledger Rollforward · Fixed-asset cost",
+        &["Fixed-asset account"],
         &[
-            "Fixed-asset account",
             "Opening cost",
             "Additions",
             "Disposals / adjustments",
+            "Reversals",
             "Closing cost",
             "Book value contribution",
         ],
@@ -357,8 +360,8 @@ pub(super) fn asset_tables(
 
     let mut accumulated = Table::titled(
         "Ledger Rollforward · Accumulated depreciation",
+        &["Contra fixed-asset account"],
         &[
-            "Contra fixed-asset account",
             "Opening accumulated",
             "Booked depreciation, net",
             "Other credits",
@@ -399,7 +402,7 @@ pub(super) fn asset_tables(
 
     let mut expenses = Table::titled(
         "Ledger Rollforward · Booked depreciation expense",
-        &["Expense account", "Period expense"],
+        &["Expense account"], &["Period expense"],
     );
     for (a, amount) in &report.expense_accounts {
         expenses.push("detail", [account(a), Cell::money(*amount)]);
@@ -427,6 +430,8 @@ pub(super) fn asset_tables(
             "In service",
             "Disposal date",
             "Method / life",
+        ],
+        &[
             "Original cost",
             "Salvage",
             "Prior accumulated",
@@ -434,9 +439,9 @@ pub(super) fn asset_tables(
             "Closing cost",
             "Closing accumulated",
             "Closing net book value",
-            "Status / evidence",
         ],
     );
+    worksheet.text_heading("Status / evidence");
     for a in &report.assets {
         let option_money = |amount: Option<fb_core::Money>| {
             amount.map(Cell::money).unwrap_or_else(|| Cell::text(""))
@@ -516,8 +521,8 @@ pub(super) fn asset_tables(
 
     let mut reconciliation = Table::titled(
         "Ledger Reconciliation",
+        &["Source"],
         &[
-            "Source",
             "Closing cost",
             "Period depreciation",
             "Closing accumulated",

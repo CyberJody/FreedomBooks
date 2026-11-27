@@ -251,7 +251,7 @@
       "expect_error": false,
       "expect_result": {
         "empty": false,
-        "revision": 2,
+        "revision": 1,
         "chosen": {
           "payables": "ap",
           "undeposited": "uf",

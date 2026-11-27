@@ -24,6 +24,7 @@ pub const HOST_ONLY: &[&str] = &[
     "assistant:read_attachment",
     "assistant:read_attachments",
     "assistant:read_upload",
+    "report_problem",
     "attachments:add_document",
     "attachments:add_journal",
     "attachments:download",
@@ -61,7 +62,7 @@ pub const ALLOWED: &[&str] = &[
     "receipts:detail", "receipts:list", "receipts:new", "receipts:reverse",
     "reconcile:begin", "reconcile:history", "reconcile:list", "reconcile:report", "reconcile:screen", "reconcile:undo",
     "recurring:detail", "recurring:edit", "recurring:list", "recurring:new",
-    "register", "registers:cleared", "registers:list", "reminders:page", "reminders:settings", "report_problem", "reports",
+    "register", "registers:cleared", "registers:list", "reminders:page", "reminders:settings", "reports",
     "sales:detail", "sales:edit", "sales:list", "sales:new", "sales:print", "sales:print_revision", "sales:revision", "sales:state",
     "sales_receipts:detail", "sales_receipts:list", "sales_receipts:new", "sales_receipts:print", "sales_receipts:void",
     "salestax:bulk_step", "salestax:group_edit", "salestax:group_new", "salestax:list", "salestax:rate_edit", "salestax:rate_new", "salestax:record_payment", "salestax:settings", "salestax:setup", "salestax:status", "salestax:tax_payment", "salestax:void_payment", "salestax:what_you_owe",
@@ -146,6 +147,7 @@ mod tests {
         assert_eq!(classify(&format!("{c}/backups/")), Some(HostOnly));
         assert_eq!(classify(&format!("{c}/ai/")), Some(HostOnly));
         assert_eq!(classify("/auth/openai/start"), Some(HostOnly));
+        assert_eq!(classify("/help/report/"), Some(HostOnly));
         assert_eq!(classify("/desktop/sign-in/"), Some(Allowed));
         assert_eq!(classify("/settings/book-protection/"), Some(HostOnly));
         assert_eq!(classify(&format!("{c}/no-such-screen/")), None);

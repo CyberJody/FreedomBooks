@@ -2,7 +2,7 @@ use super::*;
 use serde_json::{Value, json};
 
 #[test]
-fn company_document_empty_fields_are_byte_identical_to_the_prior_print_template() {
+fn empty_company_fields_preserve_the_prior_print_document_body() {
     let mut screens = Screens::new();
     screens
         .env
@@ -23,7 +23,7 @@ fn company_document_empty_fields_are_byte_identical_to_the_prior_print_template(
                 "payment_instructions":""
             });
             let after = screens.render("sales/print/document.html", &vm).unwrap();
-            assert_eq!(before, after, "empty details changed {kind} / {mark}");
+            assert_eq!(before.split_once("<body").unwrap().1, after.split_once("<body").unwrap().1, "empty details changed {kind} / {mark}");
         }
     }
 }
@@ -41,6 +41,18 @@ fn company_document_filled_fields_escape_plain_text_and_omit_blank_labels() {
     assert!(html.contains("Pay &lt;check&gt;<br>Thank you &amp; co."));
     assert_eq!(html.matches("class=\"business-contact\"").count(), 2);
     assert!(!html.contains("<check>"));
+}
+
+#[test]
+fn invoice_tax_legend_belongs_to_the_totals_for_marked_lines() {
+    let screens = Screens::new();
+    let mut vm = fixture();
+    let render = |vm: &Value| screens.render("sales/print/invoice.html", vm).unwrap();
+    assert!(!render(&vm).contains("T = taxable item."));
+    vm["doc"]["lines"][0]["taxable"] = json!(true);
+    let html = render(&vm);
+    let totals = html.split_once(r#"<table class="totals">"#).unwrap().1.split_once("</table>").unwrap().0;
+    assert!(totals.contains("T = taxable item."));
 }
 
 fn fixture() -> Value {

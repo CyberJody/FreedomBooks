@@ -3,7 +3,12 @@
 // event handlers turn POST forms into path-bound commands and handle CSV exports.
 const { ipcRenderer } = require('electron');
 const PAGE_KEY = '__fb_remote_page';
-const pageMarker = () => document.querySelector('meta[name="fb-remote-page"]')?.content ?? null;
+function pageMarker() {
+  const tags = Array.from(document.querySelectorAll('meta[name="fb-remote-page" i]'), tag => tag.content);
+  const params = new URL(window.location.href).searchParams.getAll(PAGE_KEY);
+  if (params.length > 1 || tags.length > 1 || (params.length && tags.length && params[0] !== tags[0])) return 'invalid-marker';
+  return params[0] ?? tags[0] ?? null;
+}
 const pageURL = value => new URL(value, window.location.href);
 const hostFields = url => Array.from(url.searchParams).filter(([key]) => key !== PAGE_KEY);
 
@@ -14,7 +19,9 @@ const hostFields = url => Array.from(url.searchParams).filter(([key]) => key !==
 const sameOrigin = value => { try { return pageURL(value).origin === window.location.origin; } catch { return false; } };
 function stampForm(form, marker, action = form.getAttribute('action')) {
   if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
-  let field = Array.from(form.querySelectorAll('input[type=hidden]')).find(input => input.name === PAGE_KEY && input.form === form);
+  const fields = Array.from(form.querySelectorAll('input[type=hidden]')).filter(input => input.name === PAGE_KEY && input.form === form);
+  let [field] = fields;
+  for (const duplicate of fields.slice(1)) duplicate.remove();
   if (!sameOrigin(action || window.location.href)) { field?.remove(); return; }
   if (!field) {
     field = document.createElement('input');
@@ -27,7 +34,7 @@ function stampForm(form, marker, action = form.getAttribute('action')) {
 function stampLink(anchor, marker) {
   if (!sameOrigin(anchor.href)) return;
   const target = pageURL(anchor.href);
-  if (!target.search || target.searchParams.get(PAGE_KEY) === marker) return;
+  if (!target.search || (target.searchParams.getAll(PAGE_KEY).length === 1 && target.searchParams.get(PAGE_KEY) === marker)) return;
   // Append the marker without re-encoding existing query values (e.g. %2A / ~ from Rust urlencode).
   const parts = target.search.slice(1).split('&').filter(part => !new URLSearchParams(part).has(PAGE_KEY));
   parts.push(`${PAGE_KEY}=${encodeURIComponent(marker)}`);
@@ -90,7 +97,7 @@ document.addEventListener('click', async (event) => {
   if (!anchor || event.defaultPrevented || event.button !== 0) return;
   const url = new URL(anchor.href, window.location.href);
   const match = /^\/c\/([0-9a-f-]{36})\/history\/$/.exec(url.pathname);
-  if (url.origin !== window.location.origin || !match || url.searchParams.get('format') !== 'csv') return;
+  if (url.origin !== window.location.origin || !match || url.searchParams.getAll('format').at(-1) !== 'csv') return;
   event.preventDefault();
   try {
     follow(await call('books.run', { type: 'ExportHistory', company_id: match[1], filters: hostFields(url) }));
@@ -589,6 +596,19 @@ document.addEventListener('click', async event => {
   } catch (error) { window.alert(String(error.message || error)); }
 }, true);
 
+// Attachment links on every document use the native Save dialog.
+document.addEventListener('click', async event => {
+  const anchor = event.target.closest?.('a[download]');
+  if (!anchor || event.defaultPrevented || event.button !== 0) return;
+  const target = pageURL(anchor.href);
+  const match = /^\/c\/([^/]+)\/attachments\/([^/]+)\/download\/$/.exec(target.pathname);
+  if (target.origin !== window.location.origin || !match) return;
+  event.preventDefault();
+  try {
+    follow(await call('books.run', {type: 'ExportAttachment', company_id: match[1], attachment_id: match[2]}));
+  } catch (error) { window.alert(String(error.message || error)); }
+}, true);
+
 // DESKTOP-BACKUPS: the Backups page keeps Django's Download links; a native Save dialog replaces the
 // browser download, and Rust copies the file (typed read-only export, like the CSV links above).
 document.addEventListener('click', async event => {
@@ -627,11 +647,16 @@ document.addEventListener('click', async event => {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!document.getElementById('print-now')) return;
-  // The frozen document's @page margin boxes are inline and CSP blocks their style element.
-  // Apply only that trusted template-generated rule through the CSSOM (as with the page icon).
+  // Accept one anonymous page rule containing only page dimensions and margins.
+  const length = String.raw`(?:0|(?:\d+(?:\.\d+)?|\.\d+)(?:in|cm|mm|pt|pc|px))`;
+  const margin = `margin\\s*:\\s*${length}(?:\\s+${length}){0,3}`;
+  const side = `margin-(?:top|right|bottom|left)\\s*:\\s*${length}`;
+  const size = 'size\\s*:\\s*(?:(?:letter|legal|a[345])(?:\\s+(?:portrait|landscape))?|portrait|landscape)';
+  const declaration = `(?:${size}|${margin}|${side})`;
+  const safePage = new RegExp(`^@page\\s*\\{\\s*${declaration}(?:\\s*;\\s*${declaration})*\\s*;?\\s*\\}$`, 'i');
   for (const style of document.head.querySelectorAll('style')) {
     const source = style.textContent.trim();
-    if (!source.startsWith('@page {') || !source.endsWith('}')) continue;
+    if (source.length > 512 || !safePage.test(source)) continue;
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(source);
     document.adoptedStyleSheets = [...document.adoptedStyleSheets,sheet];

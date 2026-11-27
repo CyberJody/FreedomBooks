@@ -44,6 +44,9 @@ body.invoice-print { font-family: Arial, Helvetica, sans-serif; font-size: 11px;
   /* Normal block/table pagination keeps totals after the last row across pages. */
   .invoice-print .sheet { width: auto; min-height: 9.6in; padding: 0; display: block }
   .invoice-print .revision-line { display: none }
+  .invoice-print .lines td { padding-block: 2px }
+  .invoice-print .totals { break-inside: avoid }
+  .invoice-footer:empty { display: none }
   .invoice-print .seller { break-inside: avoid }
 }
 @media screen and (max-width: 9in) {

@@ -813,6 +813,20 @@ fn cents_of(text: &str) -> Option<i128> {
     let d = fb_core::calculations::unit_rate(&json!(text)).ok()?;
     fb_money::Money::from_decimal_exact(d).map(|m| m.cents())
 }
+fn same_receipt_header(p: Posted<'_>, prior: &Value) -> bool {
+    let bank = if prior["destination"] == "BANK" {
+        prior["destination_account_id"].as_str()
+    } else {
+        prior["net_bank_id"].as_str()
+    };
+    let destination = if bank.is_some() { "BANK" } else { "UNDEPOSITED" };
+    get(p, "customer") == prior["customer_id"].as_str()
+        && clean_date(p, "date", true, &mut Errors::new()).as_deref() == prior["date"].as_str()
+        && get(p, "method") == prior["method"].as_str()
+        && get(p, "destination") == Some(destination)
+        && get(p, "bank").filter(|s| !s.is_empty()) == bank
+        && ["reference", "memo"].iter().all(|field| prior[field].as_str() == Some(fb_core::py::py_strip(get(p, field).unwrap_or(""))))
+}
 /// Receive payment's one Save. The page proposes allocations; the core validates the same plan in
 /// a review and records it with that review in this one request, so what is recorded is exactly
 /// what passed review. Anything refused comes back on the form with the entered values.
@@ -822,6 +836,19 @@ fn receive_submit(app: &mut App, r: &Route, path: &str, p: Posted<'_>) -> AppRes
     // payment instead of recording anything new.
     if let Some(prior) = choices::prior_receipt(app, c, false, Some(p))? {
         let id = prior["id"].as_str().unwrap_or_default().to_owned();
+        let stored = app.open_mut()?.book.read(|tx| {
+            tx.prepare("SELECT invoice_id,amount FROM sales_receiptallocation WHERE receipt_id=?1 ORDER BY invoice_id")?
+                .query_map([&id], |r| Ok((r.get::<_, String>(0)?, Some(i128::from(r.get::<_, i64>(1)?)))))?
+                .collect::<Result<Vec<_>, _>>()
+        })?;
+        let mut submitted = posted_rows(p).into_iter().filter(|(_, pay, amount, _)| *pay || !amount.is_empty())
+            .map(|(id, _, amount, _)| (id, cents_of(&amount))).collect::<Vec<_>>();
+        submitted.sort();
+        if !same_receipt_header(p, &prior) || submitted != stored || get(p, "amount").and_then(cents_of) != prior["amount"].as_str().and_then(cents_of)
+            || get(p, "allocations-TOTAL_FORMS").and_then(clean_integer).is_none_or(|n| n > MAX_ROWS) {
+            let errors = ["This request key was already used for different payment details, amount or allocation.".into()];
+            return Ok(Outcome::Page { status: 409, html: receive_page(app, r, path, &[], Some(p), &Errors::new(), &errors, None, None)?.0 });
+        }
         let number = app.open_mut()?.book.read(|tx| {
             tx.query_row("SELECT d.number FROM sales_receipt r JOIN documents_displayidentity d ON d.id=r.identity_id WHERE r.id=?1", [&id], |r| r.get::<_, String>(0))
         })?;

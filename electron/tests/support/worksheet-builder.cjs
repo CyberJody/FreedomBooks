@@ -39,6 +39,7 @@ app.whenReady().then(async () => {
   await win.loadURL(origin + fixtures.mappings);
   const mappings = await js(`(() => {
     const builder = document.querySelector('[data-worksheet-add]');
+    builder.closest('details').open = true;
     const scope = builder.querySelector('[data-worksheet-scope]');
     const [activity, category] = [...builder.querySelectorAll('input, select')].slice(3);
     const account = builder.querySelector('[data-worksheet-account-id]');
@@ -46,7 +47,11 @@ app.whenReady().then(async () => {
     const append = builder.querySelector('[data-worksheet-append]');
     account.selectedIndex = 1;
     activity.value = 'Consulting';
+    append.click();
+    const missingCategory = category.getAttribute('aria-invalid') === 'true' && !category.validity.valid
+      && document.activeElement === category && document.getElementById('worksheet-feedback').textContent.includes('category');
     category.value = 'gross_receipts';
+    category.dispatchEvent(new Event('change', {bubbles:true}));
     append.click();
     for (const scopeName of ['journal', 'line']) {
       scope.value = scopeName;
@@ -54,9 +59,10 @@ app.whenReady().then(async () => {
       posted.value = '11111111-1111-4111-8111-111111111111';
       append.click();
     }
-    return {account: account.value, rows: document.querySelector('textarea').value.split('\\n')};
+    return {missingCategory, account: account.value, rows: document.querySelector('textarea').value.split('\\n')};
   })()`);
   assert.ok(mappings.account);
+  assert.ok(mappings.missingCategory);
   assert.deepEqual(mappings.rows, [
     'account|' + mappings.account + '|Consulting|gross_receipts|1w',
     'journal|11111111-1111-4111-8111-111111111111|Consulting|gross_receipts|1w',
@@ -89,6 +95,7 @@ app.whenReady().then(async () => {
     worksheet.value = ${JSON.stringify(fixtures.overRows)};
     worksheet.form.requestSubmit();
     worksheet.value = rows;
+    worksheet.dispatchEvent(new Event("input", {bubbles:true}));
     return {refused, accepted, submitRefused: warnings === 2, disposal: fields[10].value};
   })()`);
   assert.deepEqual(flags, {refused: true, accepted: true, submitRefused: true, disposal: '2028-02-10'});

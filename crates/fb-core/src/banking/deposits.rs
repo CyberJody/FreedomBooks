@@ -303,6 +303,21 @@ pub fn review_deposit_tx(tx: &Writer<'_>, actor: UserId, c: CompanyId, input: &V
         })
     })
 }
+fn receipt_deposit_key(receipt_key: &str) -> String {
+    let namespace = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, b"https://freedombooks.invalid/receipt-fees");
+    uuid::Uuid::new_v5(&namespace, receipt_key.as_bytes()).to_string()
+}
+
+/// Bank chosen when Receive payment recorded its fee deposit in the same transaction.
+/// An ordinary deposit made later does not change the original form's destination.
+pub fn net_receipt_bank(q: &(impl Query + ?Sized), company: CompanyId, receipt: &str, receipt_key: &str) -> FbResult<Option<String>> {
+    Ok(q.query_row("SELECT d.bank_id FROM banking_deposit d
+        JOIN documents_documentidentity i ON i.id=d.identity_id
+        JOIN banking_depositline l ON l.deposit_id=d.id
+        WHERE d.company_id=?1 AND i.request_key=?2 AND l.receipt_id=?3",
+        params![company.to_db(), receipt_deposit_key(receipt_key), receipt], |r| r.get(0)).optional()?)
+}
+
 /// Worker item 47: Receive payment straight to a bank, with fee and adjustment lines (a card-processor payout
 /// that arrives net of its fee). In one writer the payment is recorded into Undeposited Funds, so its invoices
 /// are paid in full, and deposited to `bank_id` at once with the adjustment lines: the bank gets the net and
@@ -329,8 +344,7 @@ pub fn record_receipt_net(book: &mut Book, actor: UserId, c: CompanyId, input: &
         let review = sales::review_receipt_tx(tx, actor, c, &held, false)?;
         let receipt = sales::record_receipt_tx(tx, actor, c, &held, Some(&review), false, false)?;
         let number: String = tx.query_row("SELECT number FROM documents_documentidentity WHERE id=?1", [s(&receipt, "identity_id")?], |r| r.get(0))?;
-        let ns = uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_URL, b"https://freedombooks.invalid/receipt-fees");
-        let deposit_key = uuid::Uuid::new_v5(&ns, key.as_bytes()).to_string();
+        let deposit_key = receipt_deposit_key(&key);
         let request = json!({"request_key":deposit_key,"bank_id":bank_id,"date":receipt["date"],"reference":receipt["reference"],
             "memo":format!("{number}, received net of fees and adjustments"),"receipt_ids":[receipt["id"]],"adjustments":adjustments});
         let review = review_deposit_tx(tx, actor, c, &request)?;

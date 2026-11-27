@@ -130,7 +130,19 @@ pub fn save_record(
     values: &Value,
     record_id: Option<&str>,
 ) -> FbResult<Value> {
-    book.write(|tx| save_record_tx(tx, actor, company, model, values, record_id))
+    save_record_checked(book, actor, company, model, values, record_id, None)
+}
+
+pub fn save_record_checked(
+    book: &mut Book,
+    actor: UserId,
+    company: CompanyId,
+    model: Model,
+    values: &Value,
+    record_id: Option<&str>,
+    expected: Option<&str>,
+) -> FbResult<Value> {
+    book.write(|tx| save_record_checked_tx(tx, actor, company, model, values, record_id, expected))
 }
 /// Raw/autocommit connections do not prove an owning IMMEDIATE writer.
 /// ```compile_fail
@@ -145,6 +157,13 @@ pub fn save_record_tx(
     model: Model,
     values: &Value,
     record_id: Option<&str>,
+) -> FbResult<Value> {
+    save_record_checked_tx(conn, actor, company, model, values, record_id, None)
+}
+
+fn save_record_checked_tx(
+    conn: &Writer<'_>, actor: UserId, company: CompanyId, model: Model, values: &Value,
+    record_id: Option<&str>, expected: Option<&str>,
 ) -> FbResult<Value> {
     conn.atomic(|| {
         let user = services::access(conn, actor, company)?;
@@ -206,6 +225,14 @@ pub fn save_record_tx(
         }
         if model == Model::Item && before.is_none() && !data.contains_key("taxable") {
             obj["taxable"] = json!(item_taxable_default(obj["kind"].as_str().unwrap_or("")));
+        }
+        if let (Some(expected), Some(current)) = (expected, before.as_ref()) {
+            if current == &obj {
+                return Ok(obj);
+            }
+            if expected != services::snapshot_token(current) {
+                return Err(FbError::validation(format!("This {} changed since you opened the form. Reload it before saving.", model.name())));
+            }
         }
         full_clean(model, &obj)?;
         validate(conn, company, model, &obj)?;

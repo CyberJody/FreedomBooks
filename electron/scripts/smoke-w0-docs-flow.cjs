@@ -5,7 +5,10 @@ const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 
 module.exports=async({app,page,company,invoiceId,estimateUrl,shot,pass})=>{
-  const original=page.url();const out=process.env.FB_SMOKE_SHOTS;
+  const original=page.url();
+  const out=process.env.FB_SMOKE_SHOTS;
+  const profile=page.locator('form[method=post]').filter({has:page.locator('#id_email')});
+  const saveButton=profile.getByRole('button',{name:'Save company settings',exact:true});
   const edit=`fb://app/c/${company}/edit/`;
   const invoice=`fb://app/c/${company}/invoices/${invoiceId}/print/`;
   const estimate=estimateUrl+'print/';
@@ -25,53 +28,64 @@ module.exports=async({app,page,company,invoiceId,estimateUrl,shot,pass})=>{
     assert.ok(fs.existsSync(file));assert.equal(fs.readFileSync(file).subarray(0,5).toString(),'%PDF-');
     const text=spawnSync('pdftotext',['-layout',file,'-'],{encoding:'utf8'});assert.equal(text.status,0,text.stderr);
     fs.writeFileSync(path.join(out,name+'.txt'),text.stdout);
-    if(filled){for(const value of ['42 Sample Lane','Suite 7','Sampleville','Test Region','12345','Sample Country','+1 555 010 0123','billing@example.test','https://example.test','Tax ID: SYNTHETIC-TAX-123','PAYMENT INSTRUCTIONS','Pay by check','<Sample> & test.'])assert.ok(text.stdout.includes(value),`${name}: ${value}`);}
-    else assert.doesNotMatch(text.stdout,/42 Sample Lane|Tax ID:|Payment instructions|billing@example/i);
+    if(filled){for(const value of ['42 Sample Lane','Suite 7','Sampleville','Test Region','12345','Sample Country','+1 555 010 0123','billing@example.test','https://example.test','Tax ID: SYNTHETIC-TAX-123',name.includes('invoice')?'How to pay':'PAYMENT INSTRUCTIONS','Pay by check','<Sample> & test.'])assert.ok(text.stdout.includes(value),`${name}: ${value}`);}
+    else assert.doesNotMatch(text.stdout,/42 Sample Lane|Tax ID:|Payment instructions|How to pay|billing@example/i);
     const info=spawnSync('pdfinfo',[file],{encoding:'utf8'});assert.equal(info.status,0,info.stderr);
+    assert.match(info.stdout,/^Pages:\s+1$/m);
     fs.writeFileSync(path.join(out,name+'-pdfinfo.txt'),info.stdout);
     const render=spawnSync('pdftoppm',['-f','1','-singlefile','-scale-to','1440','-png',file,path.join(out,name+'-page1')],{encoding:'utf8'});assert.equal(render.status,0,render.stderr);
     evidence.push({name,filled,bytes:fs.statSync(file).size});
   };
   const saveSettings=async()=>{
-    await page.click('button[type=submit]');
-    await page.waitForURL(`fb://app/c/${company}/`);
+    await saveButton.click();
+    await page.getByText('Company profile saved.',{exact:true}).waitFor();
   };
   try {
     await page.goto(edit);await shot(page,'w0-settings-empty');
     await page.fill('#id_email','bad email');
-    await page.locator('form[method=post]').evaluate(f=>{f.noValidate=true;});
-    await page.click('button[type=submit]');await page.waitForSelector('.errorlist');
+    await profile.evaluate(f=>{f.noValidate=true;});
+    await saveButton.click();await page.waitForSelector('.errorlist');
     assert.match(await page.locator('main').textContent(),/valid email/);
     await shot(page,'w0-settings-invalid');
     for(const [key,value] of Object.entries(details))await page.fill('#id_'+key,value);
     const empty=path.join(out,'empty-logo.png');fs.writeFileSync(empty,Buffer.alloc(0));
     await page.setInputFiles('#company-logo-file',empty);
-    const tokenBeforeEmpty=await page.inputValue('input[name=fb_command_token]');
-    const [emptyAlert]=await Promise.all([page.waitForEvent('dialog'),page.click('button[type=submit]')]);
+    const tokenBeforeEmpty=await profile.locator('input[name=fb_command_token]').inputValue();
+    const [emptyAlert]=await Promise.all([page.waitForEvent('dialog'),saveButton.click()]);
     assert.match(emptyAlert.message(),/file is empty/);
     assert.equal(page.url(),edit);
-    assert.equal(await page.inputValue('input[name=fb_command_token]'),tokenBeforeEmpty);
+    assert.equal(await profile.locator('input[name=fb_command_token]').inputValue(),tokenBeforeEmpty);
     pass('W0-DOCS empty logo selection is refused before the form token is spent');
     // A misleading extension is harmless: the Rust decoder validates the actual image.
     const bad=path.join(out,'not-a-logo.png');fs.writeFileSync(bad,'<svg><script>sample</script></svg>');
-    await page.setInputFiles('#company-logo-file',bad);await page.click('button[type=submit]');
+    await page.setInputFiles('#company-logo-file',bad);await saveButton.click();
     await page.locator('.errorlist').filter({hasText:'Choose a PNG or JPEG logo'}).waitFor();
     assert.match(await page.locator('main').textContent(),/PNG or JPEG/);
     await page.check('#id_remove_logo');
     await saveSettings();
     await page.goto(edit);
-    await page.setInputFiles('#company-logo-file',path.join(out,'sample-logo.png'));
+    const logo = await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 120; canvas.height = 48;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#e1d2b8'; ctx.fillRect(0,0,120,48);
+      ctx.fillStyle = '#4f2b46'; ctx.fillRect(0,0,35,48);
+      return canvas.toDataURL('image/png').split(',')[1];
+    });
+    await page.setInputFiles('#company-logo-file',{name:'sample-logo.png',mimeType:'image/png',buffer:Buffer.from(logo,'base64')});
     await saveSettings();await page.goto(edit);
     await page.waitForFunction(()=>{const i=document.querySelector('.company-logo-preview');return i&&i.complete&&i.naturalWidth===120;});
     assert.equal(await page.inputValue('#id_street1'),details.street1);
     await shot(page,'w0-settings-filled');
-    await page.locator('button[type=submit]').scrollIntoViewIfNeeded();
+    await saveButton.scrollIntoViewIfNeeded();
     await page.screenshot({path:path.join(out,'w0-settings-filled-bottom.png')});
     pass('W0-DOCS settings validate email and real image type; escaped multiline details and local logo persist');
     for(const [kind,url] of [['invoice',invoice],['estimate',estimate]]){
       await page.goto(url);await page.waitForFunction(()=>{const i=document.querySelector('.business-logo');return i&&i.complete&&i.naturalWidth===120;});
-      assert.equal(await page.locator('.business-contact').count(),10);
-      assert.ok(await page.locator('.payment-instructions').textContent().then(s=>s.includes('<Sample> & test.')));
+      const locality=kind==='invoice' ? ['Sampleville, Test Region 12345'] : [details.city,details.region,details.postal_code];
+      assert.deepEqual(await page.locator('.business-contact').allInnerTexts(),[details.street1,details.street2,...locality,
+        details.country,details.phone,details.email,details.website,'Tax ID: '+details.tax_id]);
+      assert.ok(await page.locator(kind==='invoice'?'.payment-callout':'.payment-instructions').textContent().then(s=>s.includes('<Sample> & test.')));
       await shot(page,'w0-'+kind+'-filled');await save('w0-'+kind+'-filled',true);
     }
     await app.evaluate(()=>{globalThis.__w0.action='print';});
@@ -82,7 +96,7 @@ module.exports=async({app,page,company,invoiceId,estimateUrl,shot,pass})=>{
     for(const key of Object.keys(details))await page.fill('#id_'+key,'');
     await page.check('#id_remove_logo');await saveSettings();
     for(const [kind,url] of [['invoice',invoice],['estimate',estimate]]){
-      await page.goto(url);assert.equal(await page.locator('.business-logo,.business-contact,.payment-instructions').count(),0);
+      await page.goto(url);assert.equal(await page.locator('.business-logo,.business-contact,.payment-instructions,.payment-callout').count(),0);
       await shot(page,'w0-'+kind+'-empty');await save('w0-'+kind+'-empty',false);
     }
     await page.goto(edit);assert.equal(await page.locator('.company-logo-preview').count(),0);

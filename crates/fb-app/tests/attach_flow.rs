@@ -41,6 +41,17 @@ impl Fixture {
         let Outcome::Done { data } = self.app.run(Command::SaveInvoiceDraft { company_id: self.co.to_db(), invoice_id: None, expected_revision: 0, values }).unwrap() else { panic!() };
         format!("/c/{}/invoices/{}/", self.co.to_db(), data["id"].as_str().unwrap())
     }
+    fn bill(&mut self) -> String {
+        let expense = self.account("6000", "EXPENSE");
+        let open = self.app.open_mut().unwrap();
+        let vendor = fb_core::directory::save_record(&mut open.book, open.owner, self.co, fb_core::directory::Model::Vendor, &json!({"display_name":"Synthetic vendor"}), None).unwrap();
+        let bill = fb_core::payables::save_bill(&mut open.book, open.owner, self.co, &json!({
+            "vendor_id": vendor["id"], "date": "2026-10-01", "due_date": "2026-11-01",
+            "request_key": uuid::Uuid::new_v4().to_string(),
+            "lines": [{"description":"Supplies", "quantity":"1", "rate":"10.00", "expense_account_id":expense}]
+        })).unwrap();
+        format!("/c/{}/bills/{}/", self.co.to_db(), bill["id"].as_str().unwrap())
+    }
     fn journal(&mut self) -> String {
         let (bank, equity) = (self.account("1000", "ASSET"), self.account("3000", "EQUITY"));
         let o = self.app.open_mut().unwrap();
@@ -80,6 +91,34 @@ fn attr(html: &str, name: &str) -> String {
 }
 fn value(html: &str, name: &str) -> String {
     html.split_once(&format!("name=\"{name}\" value=\"")).unwrap_or_else(|| panic!("no {name} field: {html}")).1.split('"').next().unwrap().to_owned()
+}
+
+#[test]
+fn both_download_links_export_the_original_pdf_and_png_only_from_the_owning_company() {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    for document in [Fixture::invoice, Fixture::bill, Fixture::journal] {
+        let mut f = Fixture::new();
+        let page = document(&mut f);
+        let open = f.app.open_mut().unwrap();
+        let other = services::create_company(&mut open.book, open.owner, "Second company", "USD", false).unwrap().id;
+        for (name, mime, bytes) in [("receipt.pdf", "application/pdf", PDF.to_vec()), ("scan.png", "image/png", png())] {
+            let ticket = f.attach(&page);
+            let path = f.file(name, &bytes);
+            f.picked(&ticket, Some(&path));
+            let html = screens::render(&mut f.app, &page).unwrap().html;
+            let (before, _) = html.split_once(&format!(" download>{name}</a>")).unwrap();
+            let url = before.rsplit_once("href=\"").unwrap().1.trim_end_matches('"');
+            assert!(html.contains(&format!("href=\"{url}\" download>Download</a>")));
+            let id = url.strip_prefix(&format!("/c/{}/attachments/", f.co.to_db())).unwrap().strip_suffix("/download/").unwrap();
+            let export = |co: CompanyId, id: &str| Command::ExportAttachment { company_id: co.to_db(), attachment_id: id.into() };
+            let Outcome::Done { data } = f.app.run_desktop(export(f.co, id)).unwrap() else { panic!("expected attachment bytes") };
+            assert_eq!(data["filename"], name);
+            assert_eq!(data["mime"], mime);
+            assert_eq!(STANDARD.decode(data["base64"].as_str().unwrap()).unwrap(), bytes);
+            assert!(f.app.run_desktop(export(other, id)).is_err());
+            assert!(f.app.run_desktop(export(f.co, "invalid")).is_err());
+        }
+    }
 }
 
 #[test]

@@ -1,5 +1,6 @@
 {% extends 'ledger/base.html' %}
-{% block content %}<h1>{{ template.name }}</h1>
+{% block content %}
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}<h1>{{ template.name }}</h1>
 <p><a href="{{ url('recurring:list', company.pk) }}">Recurring bills</a>{% if not template.deleted and can_write %} · <a href="{{ url('recurring:edit', company.pk, template.id) }}">Edit template</a>{% endif %}</p>
 <p>{{ template.frequency|title }} from {{ template.start_date }}{% if template.end_date %} through {{ template.end_date }}{% endif %}{% if template.occurrence_limit %}, up to {{ template.occurrence_limit }} scheduled dates (including skipped dates){% endif %}. Terms: {{ template.terms_days }} days. {% if template.deleted %}Deleted{% elif template.active %}Active{% else %}Paused{% endif %}. {% if template.auto_post %}Posts automatically{% else %}Creates drafts for review{% endif %}.</p>
 {% if template.stalled %}<p data-recurring-stalled><strong>More than 36 bill dates are overdue, so no bills are being created.</strong> Choose Pause, then Resume. The oldest dates beyond the newest 36 must be skipped; the newest 36 can be skipped or created.</p>{% endif %}

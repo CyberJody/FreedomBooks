@@ -27,6 +27,16 @@ async function main(){
   // The signed-in person's title-bar menu (a <details> disclosure) holds Switch user and Sign out; Users is under Settings.
   async function userMenu(){await page.locator('.operator details.menu > summary').click();}
   async function signout(){await userMenu();await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.waitForURL(/\/desktop\/sign-in\/$/);assert.equal((await state()).signed_in,false);}
+  async function checkBackupPermission() {
+    const target = page.url().replace(/home\/$/, 'backups/');
+    assert.match(target, /\/backups\/$/);
+    const response = await page.goto(target);
+    assert.equal(response.status(), 403);
+    assert.equal(await page.locator('main h1').innerText(), 'Permission denied');
+    assert.equal(await page.locator('input[type=password]').count(), 0);
+    await page.goBack();
+    pass('direct Backups navigation explains the signed-in user’s permissions');
+  }
   async function settings(){await page.click('nav.appnav a:has-text("Settings")');await page.waitForURL(/\/settings\/$/);}
   async function users(){await settings();await page.locator('main').getByRole('link',{name:'Users',exact:true}).click();await page.waitForSelector('#id_role');}
   async function add(name,role){
@@ -40,9 +50,11 @@ async function main(){
     assert.match(await page.locator('.operator').innerText(),/Avery Owner/);pass('first run requires explicit owner password enrollment before accounting access');
     await add('Pat Bookkeeper','bookkeeper');await signin('Pat Bookkeeper','wrong UI password');await page.waitForSelector('.errorlist');assert.equal((await state()).signed_in,false);pass('wrong per-user password refuses authentication');
     await signin('Pat Bookkeeper');await page.waitForURL(/\/home\/$/);assert.match(await page.locator('.operator').innerText(),/Pat Bookkeeper/);await shot('users-02-bookkeeper');
+    await checkBackupPermission();
     await settings();assert.equal(await page.locator('main').getByRole('link',{name:'Users',exact:true}).count(),0);pass('bookkeeper session shows actual name and lacks administration access');
     await signout();await signin('Avery Owner');await page.waitForURL(/\/home\/$/);
     await add('Riley Reader','readonly');await signin('Riley Reader');await page.waitForURL(/\/home\/$/);assert.match(await page.locator('body').innerText(),/Read-only access/);await shot('users-03-readonly');
+    await checkBackupPermission();
     const companies=JSON.parse(await native('query',[JSON.stringify({type:'Companies'})]));const company=companies[0].id;
     const tokenPage=JSON.parse(await native('render',[`/c/${company}/lists/customers/new/`]));
     const token=/name="fb_command_token" value="([0-9a-f]{64})"/.exec(tokenPage.html)?.[1];assert.ok(token);
